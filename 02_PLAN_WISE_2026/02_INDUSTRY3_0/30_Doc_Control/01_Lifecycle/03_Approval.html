@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Document Control Lifecycle: Approval</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Document Control Lifecycle: Approval</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and purpose</a></li>
+<li><a href="#2-position-of-approval-in-the-document-lifecycle">2. Position of approval in the document lifecycle</a></li>
+<li><a href="#3-key-terminology">3. Key terminology</a></li>
+<li><a href="#4-responsibilities-and-segregation-of-duties">4. Responsibilities and segregation of duties</a></li>
+<li><a href="#5-approval-authority-matrix">5. Approval authority matrix</a><ul>
+<li><a href="#approval-limits">Approval limits</a></li>
+</ul>
+</li>
+<li><a href="#6-approval-workflow">6. Approval workflow</a><ul>
+<li><a href="#step-1-complete-the-review-stage">Step 1: Complete the review stage</a></li>
+<li><a href="#step-2-freeze-the-approval-candidate">Step 2: Freeze the approval candidate</a></li>
+<li><a href="#step-3-verify-approval-requirements">Step 3: Verify approval requirements</a></li>
+<li><a href="#step-4-submit-to-the-authorized-approver">Step 4: Submit to the authorized approver</a></li>
+<li><a href="#step-5-make-and-record-the-decision">Step 5: Make and record the decision</a></li>
+<li><a href="#step-6-check-the-approval-record">Step 6: Check the approval record</a></li>
+<li><a href="#step-7-transfer-to-release">Step 7: Transfer to release</a></li>
+</ul>
+</li>
+<li><a href="#7-approval-decision-criteria">7. Approval decision criteria</a></li>
+<li><a href="#8-approval-of-industrial-automation-documents">8. Approval of industrial automation documents</a><ul>
+<li><a href="#81-plc-program-changes">8.1 PLC program changes</a></li>
+<li><a href="#82-electrical-drawings">8.2 Electrical drawings</a></li>
+<li><a href="#83-cnc-parameters-and-machine-settings">8.3 CNC parameters and machine settings</a></li>
+<li><a href="#84-preventive-maintenance-procedures">8.4 Preventive maintenance procedures</a></li>
+<li><a href="#85-ot-network-configuration-documents">8.5 OT network configuration documents</a></li>
+</ul>
+</li>
+<li><a href="#9-approval-methods-and-evidence">9. Approval methods and evidence</a></li>
+<li><a href="#10-conditional-approval-rejection-and-reapproval">10. Conditional approval, rejection, and reapproval</a><ul>
+<li><a href="#conditional-approval">Conditional approval</a></li>
+<li><a href="#rejection">Rejection</a></li>
+<li><a href="#reapproval-after-changes">Reapproval after changes</a></li>
+</ul>
+</li>
+<li><a href="#11-approval-records-and-audit-trail">11. Approval records and audit trail</a><ul>
+<li><a href="#example-approval-record">Example approval record</a></li>
+</ul>
+</li>
+<li><a href="#12-approval-controls-in-electronic-document-management-systems">12. Approval controls in electronic document management systems</a></li>
+<li><a href="#13-relationship-between-approval-and-change-management">13. Relationship between approval and change management</a></li>
+<li><a href="#14-common-approval-failures">14. Common approval failures</a></li>
+<li><a href="#15-approval-checklist-for-practical-use">15. Approval checklist for practical use</a></li>
+<li><a href="#16-interview-and-workplace-knowledge">16. Interview and workplace knowledge</a></li>
+<li><a href="#17-practical-example-plc-interlock-modification">17. Practical example: PLC interlock modification</a></li>
+<li><a href="#18-final-principles">18. Final principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition-and-purpose">1. Definition and purpose</h2>
+<p>Approval is the formal decision by an authorized person that a document is suitable for its intended purpose and may proceed to the next controlled lifecycle stage, subject to the organization's document-control procedure.</p>
+<p>In industrial environments, approval confirms that the document has the required technical correctness, safety considerations, operational suitability, and organizational authorization. It does not automatically mean that the document has been issued for use on the shop floor.</p>
+<p>Examples include:</p>
+<ul>
+<li>Approving a PLC software modification procedure before it is released to maintenance.</li>
+<li>Approving an electrical schematic after engineering review.</li>
+<li>Approving a preventive maintenance checklist for a CNC machine.</li>
+<li>Approving a machine risk assessment before implementing a safety-related change.</li>
+<li>Approving a standard operating procedure (SOP) for a production process.</li>
+<li>Approving a control plan or inspection procedure used by quality personnel.</li>
+</ul>
+<p>The central principle is that the person who prepares or reviews a document does not automatically have the authority to approve it.</p>
+<h2 id="2-position-of-approval-in-the-document-lifecycle">2. Position of approval in the document lifecycle</h2>
+<p>A typical controlled document lifecycle is:</p>
+<pre><code>Draft
+  ↓
+Review
+  ↓
+Approval
+  ↓
+Release
+  ↓
+Use and Maintenance
+  ↓
+Revision or Withdrawal
+  ↓
+Archival and Retention
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Main question</th>
+<th>Typical outcome</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Draft</td>
+<td>Has the document been prepared?</td>
+<td>Initial version exists</td>
+</tr>
+<tr>
+<td>Review</td>
+<td>Is the content correct, complete, and practical?</td>
+<td>Comments, corrections, or recommendation</td>
+</tr>
+<tr>
+<td>Approval</td>
+<td>Has an authorized owner accepted the document?</td>
+<td>Approved, rejected, or returned for correction</td>
+</tr>
+<tr>
+<td>Release</td>
+<td>Has the approved document been formally issued?</td>
+<td>Controlled version becomes available for intended use</td>
+</tr>
+<tr>
+<td>Use</td>
+<td>Is the current released version being followed?</td>
+<td>Work performed against controlled instructions</td>
+</tr>
+<tr>
+<td>Revision</td>
+<td>Does the document need to change?</td>
+<td>New revision enters the lifecycle</td>
+</tr>
+<tr>
+<td>Withdrawal</td>
+<td>Should the document stop being used?</td>
+<td>Obsolete status and controlled removal</td>
+</tr>
+</tbody>
+</table>
+<p>Approval versus release: Approval is an authorization decision. Release is the controlled act of making the approved version available for use. Some document-control systems combine these actions, but they should remain distinguishable in the procedure and audit trail.</p>
+<h2 id="3-key-terminology">3. Key terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Document owner</td>
+<td>Person or function accountable for the document's purpose, content, and ongoing suitability</td>
+</tr>
+<tr>
+<td>Author</td>
+<td>Person who creates or updates the document</td>
+</tr>
+<tr>
+<td>Reviewer</td>
+<td>Person who checks the document against technical, safety, quality, or operational requirements</td>
+</tr>
+<tr>
+<td>Approver</td>
+<td>Person with delegated authority to accept the document</td>
+</tr>
+<tr>
+<td>Approval authority</td>
+<td>Defined role, position, or individual permitted to approve a document type or risk category</td>
+</tr>
+<tr>
+<td>Approval status</td>
+<td>Current decision state, such as pending, approved, rejected, or returned for correction</td>
+</tr>
+<tr>
+<td>Approval record</td>
+<td>Evidence identifying the approver, decision, date, and applicable document revision</td>
+</tr>
+<tr>
+<td>Revision</td>
+<td>Identifier distinguishing one controlled version from another</td>
+</tr>
+<tr>
+<td>Effective date</td>
+<td>Date from which the released document is intended to apply</td>
+</tr>
+<tr>
+<td>Conditional approval</td>
+<td>Approval subject to explicitly permitted conditions, if the organization's procedure allows it</td>
+</tr>
+<tr>
+<td>Rejection</td>
+<td>Decision that the document is not acceptable in its current form</td>
+</tr>
+<tr>
+<td>Reapproval</td>
+<td>A new approval decision required after specified changes or under a defined review cycle</td>
+</tr>
+<tr>
+<td>Delegated authority</td>
+<td>Formally assigned approval power within defined limits</td>
+</tr>
+<tr>
+<td>Audit trail</td>
+<td>Traceable record of approval actions and subsequent status changes</td>
+</tr>
+</tbody>
+</table>
+<p>The document's approval status must always refer to a specific revision. An approval for Revision A is not automatically valid for Revision B.</p>
+<h2 id="4-responsibilities-and-segregation-of-duties">4. Responsibilities and segregation of duties</h2>
+<p>Document-control processes should define who creates, checks, accepts, and issues each document type.</p>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Primary responsibility</th>
+<th>Typical limitation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Author</td>
+<td>Prepares content and incorporates comments</td>
+<td>Cannot self-approve unless explicitly authorized by procedure</td>
+</tr>
+<tr>
+<td>Technical reviewer</td>
+<td>Checks engineering correctness and technical completeness</td>
+<td>Review does not necessarily grant approval authority</td>
+</tr>
+<tr>
+<td>Safety reviewer</td>
+<td>Checks hazards, safeguards, and safety requirements within their competence</td>
+<td>Cannot replace required technical or management approval</td>
+</tr>
+<tr>
+<td>Quality reviewer</td>
+<td>Checks quality requirements, inspection criteria, and traceability</td>
+<td>Cannot independently authorize unrelated technical changes</td>
+</tr>
+<tr>
+<td>Document owner</td>
+<td>Accountable for the document's purpose and continued validity</td>
+<td>Must follow the defined approval matrix</td>
+</tr>
+<tr>
+<td>Approver</td>
+<td>Makes the formal acceptance decision</td>
+<td>Must have the correct authority and competence</td>
+</tr>
+<tr>
+<td>Document controller</td>
+<td>Verifies records, revision identification, signatures, and workflow completion</td>
+<td>Administrative checks do not substitute for technical approval</td>
+</tr>
+<tr>
+<td>Release authority or controller</td>
+<td>Issues the approved version through the controlled system</td>
+<td>Must not release a revision that has not met required approval conditions</td>
+</tr>
+</tbody>
+</table>
+<p>One person may hold multiple roles in a small organization, but this should be explicitly permitted by the procedure. For high-risk changes, independent checking and approval are important controls against mistakes and conflicts of interest.</p>
+<h2 id="5-approval-authority-matrix">5. Approval authority matrix</h2>
+<p>An organization should define approval authority by document category, technical risk, business impact, and applicable regulatory or customer requirements.</p>
+<p>An illustrative matrix is shown below. It is not a universal authorization scheme; the organization's approved procedure takes precedence.</p>
+<table>
+<thead>
+<tr>
+<th>Document type</th>
+<th>Typical reviewer</th>
+<th>Possible approver</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Routine maintenance checklist</td>
+<td>Maintenance engineer or supervisor</td>
+<td>Authorized maintenance owner</td>
+</tr>
+<tr>
+<td>Electrical schematic</td>
+<td>Electrical engineering specialist</td>
+<td>Design authority or engineering manager</td>
+</tr>
+<tr>
+<td>PLC logic change</td>
+<td>Controls engineer and affected stakeholders</td>
+<td>Authorized controls/design owner</td>
+</tr>
+<tr>
+<td>Safety circuit modification</td>
+<td>Functional safety specialist and engineering reviewer</td>
+<td>Designated safety or engineering authority</td>
+</tr>
+<tr>
+<td>Machine risk assessment</td>
+<td>Competent risk-assessment team</td>
+<td>Designated responsible manager or authority</td>
+</tr>
+<tr>
+<td>Production SOP</td>
+<td>Production, maintenance, and quality representatives as applicable</td>
+<td>Process owner or authorized manager</td>
+</tr>
+<tr>
+<td>Quality inspection plan</td>
+<td>Quality and process engineering</td>
+<td>Authorized quality owner</td>
+</tr>
+<tr>
+<td>Network configuration standard</td>
+<td>OT/network specialist and cybersecurity reviewer where required</td>
+<td>Authorized OT or engineering owner</td>
+</tr>
+<tr>
+<td>Emergency procedure</td>
+<td>Safety, operations, and relevant technical functions</td>
+<td>Designated responsible authority</td>
+</tr>
+</tbody>
+</table>
+<p>The authority matrix should answer five questions:</p>
+<ol>
+<li>Which document types require approval?</li>
+<li>Which role has approval authority?</li>
+<li>What technical or risk conditions trigger additional approvals?</li>
+<li>Is a second, independent approval required?</li>
+<li>What happens when the normal approver is unavailable?</li>
+</ol>
+<h3 id="approval-limits">Approval limits</h3>
+<p>Approval authority may be restricted by:</p>
+<ul>
+<li>Equipment or process criticality.</li>
+<li>Safety consequences.</li>
+<li>Production impact.</li>
+<li>Financial or procurement limits.</li>
+<li>Customer-specific requirements.</li>
+<li>Regulatory obligations.</li>
+<li>Technical competence and authorization.</li>
+<li>Scope of delegated responsibility.</li>
+</ul>
+<p>A job title alone is not sufficient evidence that someone may approve every document. Authority must be defined and traceable.</p>
+<h2 id="6-approval-workflow">6. Approval workflow</h2>
+<p>A controlled approval workflow typically follows these steps.</p>
+<h3 id="step-1-complete-the-review-stage">Step 1: Complete the review stage</h3>
+<p>The author resolves review comments and prepares the document for approval. Outstanding comments must be classified as resolved, accepted with justification where permitted, or still open.</p>
+<p>A document with unresolved critical safety, compliance, or technical issues should not be approved merely because a deadline is approaching.</p>
+<h3 id="step-2-freeze-the-approval-candidate">Step 2: Freeze the approval candidate</h3>
+<p>Identify the exact document version being submitted for approval.</p>
+<p>Record or verify:</p>
+<ul>
+<li>Document title and unique document ID.</li>
+<li>Revision number.</li>
+<li>Document owner.</li>
+<li>Date submitted.</li>
+<li>Applicable equipment, line, process, or site.</li>
+<li>Supporting drawings, calculations, risk assessments, and test evidence.</li>
+<li>Review completion status.</li>
+</ul>
+<p>The version submitted for approval should not be silently edited during the approval process. Material changes should trigger a controlled update and, where necessary, renewed review.</p>
+<h3 id="step-3-verify-approval-requirements">Step 3: Verify approval requirements</h3>
+<p>Before routing the document, establish the required approval roles and order.</p>
+<p>For example, a PLC modification affecting a machine safety function may require technical review, functional safety assessment, and approval by the designated engineering authority. A routine formatting correction may require a much simpler route.</p>
+<p>The route must be based on the organization's procedure, not on whichever person happens to be available.</p>
+<h3 id="step-4-submit-to-the-authorized-approver">Step 4: Submit to the authorized approver</h3>
+<p>Provide the approval candidate with sufficient information to make an informed decision:</p>
+<ul>
+<li>What the document controls.</li>
+<li>Why it is required or being revised.</li>
+<li>What changed from the previous revision.</li>
+<li>The results of technical checks or tests.</li>
+<li>The identified risks and mitigations.</li>
+<li>Any implementation, training, or rollback requirements.</li>
+</ul>
+<h3 id="step-5-make-and-record-the-decision">Step 5: Make and record the decision</h3>
+<p>The approver examines the document against the applicable requirements and selects a permitted decision.</p>
+<p>Common outcomes are:</p>
+<ul>
+<li>Approved: Accepted for progression to release.</li>
+<li>Rejected: Not acceptable in its current form.</li>
+<li>Returned for correction: Changes are required before the decision can be completed.</li>
+<li>Pending: A decision has not yet been made.</li>
+<li>Conditionally approved: Permitted only when the procedure explicitly supports it and the conditions are defined.</li>
+</ul>
+<p>A pending request is not an approval. An email saying "looks fine" is not necessarily a valid approval unless the organization's controlled process recognizes that method and preserves the required evidence.</p>
+<h3 id="step-6-check-the-approval-record">Step 6: Check the approval record</h3>
+<p>The document controller or workflow system verifies that the decision is complete and associated with the correct revision.</p>
+<p>Typical checks include:</p>
+<ul>
+<li>Correct approver identity.</li>
+<li>Authority valid for the document category.</li>
+<li>Approval date and status.</li>
+<li>Revision consistency.</li>
+<li>Required additional approvals.</li>
+<li>Supporting evidence and records.</li>
+<li>Conditions or limitations, if any.</li>
+</ul>
+<h3 id="step-7-transfer-to-release">Step 7: Transfer to release</h3>
+<p>After all required approvals and conditions are satisfied, the document can proceed to the release stage.</p>
+<p>Approval alone should not cause an uncontrolled document to appear on production terminals, maintenance folders, or machine-side workstations as the current valid instruction.</p>
+<h2 id="7-approval-decision-criteria">7. Approval decision criteria</h2>
+<p>Approval is not a popularity vote or a ceremonial click. The approver should have defined acceptance criteria.</p>
+<table>
+<thead>
+<tr>
+<th>Criterion</th>
+<th>Questions to verify</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Technical correctness</td>
+<td>Are calculations, specifications, logic, drawings, and technical statements correct?</td>
+</tr>
+<tr>
+<td>Completeness</td>
+<td>Are all required sections, references, attachments, and responsibilities included?</td>
+</tr>
+<tr>
+<td>Safety</td>
+<td>Are hazards, protective measures, and applicable safety requirements adequately addressed?</td>
+</tr>
+<tr>
+<td>Quality</td>
+<td>Are acceptance criteria, measurement methods, tolerances, and traceability defined where necessary?</td>
+</tr>
+<tr>
+<td>Operational suitability</td>
+<td>Can the intended users follow the instructions under real operating conditions?</td>
+</tr>
+<tr>
+<td>Compatibility</td>
+<td>Does the document match the actual machine, hardware, software, and configuration?</td>
+</tr>
+<tr>
+<td>Maintainability</td>
+<td>Can maintenance personnel diagnose, repair, verify, and restore the system using the document?</td>
+</tr>
+<tr>
+<td>Change impact</td>
+<td>Have affected processes, interfaces, spare parts, training, and related documents been considered?</td>
+</tr>
+<tr>
+<td>Compliance</td>
+<td>Are applicable company, customer, legal, and regulatory requirements addressed?</td>
+</tr>
+<tr>
+<td>Revision integrity</td>
+<td>Is the exact revision being approved clearly identified?</td>
+</tr>
+<tr>
+<td>Verification evidence</td>
+<td>Are required inspections, simulations, tests, or validation results available?</td>
+</tr>
+<tr>
+<td>Implementation readiness</td>
+<td>Are prerequisites, responsibilities, restrictions, and rollback arrangements clear where needed?</td>
+</tr>
+</tbody>
+</table>
+<p>The required depth of checking depends on risk. A minor editorial correction does not require the same technical scrutiny as a change to a machine's safety logic.</p>
+<h2 id="8-approval-of-industrial-automation-documents">8. Approval of industrial automation documents</h2>
+<h3 id="81-plc-program-changes">8.1 PLC program changes</h3>
+<p>A PLC program modification may affect sequencing, interlocks, alarms, machine recovery, production quality, and safety.</p>
+<p>Before approval, verify as applicable:</p>
+<ul>
+<li>Correct PLC, processor, project, and machine identification.</li>
+<li>Change description and reason.</li>
+<li>Before-and-after logic or controlled change record.</li>
+<li>I/O mapping and tag consistency.</li>
+<li>Operating modes, interlocks, permissives, and fault handling.</li>
+<li>Impact on upstream and downstream equipment.</li>
+<li>Backup of the existing approved program.</li>
+<li>Offline verification, simulation, and test evidence where applicable.</li>
+<li>Risk assessment and validation requirements for safety-related changes.</li>
+<li>Recovery and rollback arrangements.</li>
+<li>Required approvals from the designated technical and safety authorities.</li>
+</ul>
+<p>Important: Approval of an ordinary PLC logic change does not authorize bypassing or weakening a safety function. Safety-related changes require the specific engineering, validation, and authorization process applicable to that function.</p>
+<h3 id="82-electrical-drawings">8.2 Electrical drawings</h3>
+<p>Approval should establish that the drawing correctly represents the intended design and that the associated equipment and installation requirements have been addressed.</p>
+<p>Check:</p>
+<ul>
+<li>Drawing number, revision, and machine identification.</li>
+<li>Supply voltage, protective devices, conductor sizes, and grounding or bonding requirements as applicable.</li>
+<li>Terminal numbers, wire numbers, cable references, and cross-references.</li>
+<li>PLC I/O addresses and device tags.</li>
+<li>Safety circuits and protective devices.</li>
+<li>Component ratings and compatibility.</li>
+<li>Changes to field wiring and panel layout.</li>
+<li>Consistency with the actual approved design and supporting documents.</li>
+</ul>
+<p>Where the drawing records an existing installation rather than proposing a new design, the process should distinguish approval of an as-built record from approval to implement a design change.</p>
+<h3 id="83-cnc-parameters-and-machine-settings">8.3 CNC parameters and machine settings</h3>
+<p>Approval may be necessary for changes to protected parameters, axis limits, compensation values, machine builder settings, or other settings that affect accuracy and safe operation.</p>
+<p>Verify:</p>
+<ul>
+<li>Machine and controller identification.</li>
+<li>Parameter backup and baseline.</li>
+<li>Reason for each proposed change.</li>
+<li>OEM restrictions and authorization requirements.</li>
+<li>Potential impact on accuracy, tooling, workholding, and machine limits.</li>
+<li>Test and verification method.</li>
+<li>Restoration procedure if the change fails.</li>
+</ul>
+<p>Never treat a successful test cut as automatic proof that every machine function, safety condition, or parameter dependency is acceptable.</p>
+<h3 id="84-preventive-maintenance-procedures">8.4 Preventive maintenance procedures</h3>
+<p>An approved maintenance procedure should define the intended task, required tools, isolation precautions, inspection points, acceptance limits, escalation criteria, and records to be completed.</p>
+<p>For tasks involving hazardous energy, the required isolation and verification procedures must be consistent with the site's approved safety requirements.</p>
+<h3 id="85-ot-network-configuration-documents">8.5 OT network configuration documents</h3>
+<p>Approval of a network change should consider:</p>
+<ul>
+<li>Device names and IP addressing.</li>
+<li>VLANs, routes, and required communications.</li>
+<li>PLC, HMI, SCADA, historian, and engineering workstation dependencies.</li>
+<li>Firewall or access-control changes.</li>
+<li>Cybersecurity requirements and authorized access.</li>
+<li>Configuration backup and restoration.</li>
+<li>Production impact and recovery planning.</li>
+<li>Verification of communication after implementation.</li>
+</ul>
+<p>A network configuration that works in a test environment is not automatically suitable for a production OT network.</p>
+<h2 id="9-approval-methods-and-evidence">9. Approval methods and evidence</h2>
+<p>The approval method must be accepted by the organization's document-control procedure and appropriate to the document's risk and intended use.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Evidence to retain</th>
+<th>Main control</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wet-ink signature</td>
+<td>Signed original or controlled scanned record</td>
+<td>Verify signer, document identity, and revision</td>
+</tr>
+<tr>
+<td>Electronic signature</td>
+<td>Signature record and associated metadata</td>
+<td>Verify identity, intent, integrity, and applicable requirements</td>
+</tr>
+<tr>
+<td>Document management workflow</td>
+<td>System approval history</td>
+<td>Restrict permissions and preserve audit trail</td>
+</tr>
+<tr>
+<td>Controlled approval form</td>
+<td>Completed form linked to the document</td>
+<td>Confirm form and document revisions match</td>
+</tr>
+<tr>
+<td>Formal approval meeting</td>
+<td>Approved minutes or decision record</td>
+<td>Identify the authority, decision, scope, and document revision</td>
+</tr>
+<tr>
+<td>Approved email-based process</td>
+<td>Retained email or workflow evidence</td>
+<td>Confirm that email approval is permitted and unambiguous</td>
+</tr>
+</tbody>
+</table>
+<p>An image of a signature pasted into a document does not, by itself, prove that the correct person authorized the exact revision. The process must establish authenticity, document integrity, and traceability.</p>
+<p>For electronic approval, useful controls include authenticated user accounts, role-based permissions, timestamps, document version locking, protected audit records, and controls against unauthorized alteration. Additional legal or regulatory requirements may apply depending on the document and jurisdiction.</p>
+<h2 id="10-conditional-approval-rejection-and-reapproval">10. Conditional approval, rejection, and reapproval</h2>
+<h3 id="conditional-approval">Conditional approval</h3>
+<p>Conditional approval is appropriate only if the organization's procedure permits it and the unresolved items do not violate mandatory requirements.</p>
+<p>A valid conditional approval should specify:</p>
+<ul>
+<li>The exact document and revision.</li>
+<li>The conditions that remain open.</li>
+<li>The person responsible for each action.</li>
+<li>The completion deadline or required milestone.</li>
+<li>Whether use is prohibited until the conditions are closed.</li>
+<li>Who verifies closure and whether another approval is required.</li>
+</ul>
+<p>For example, an engineering document might be accepted subject to completing a non-critical administrative correction before release. A condition that leaves a critical safety requirement unresolved must not be used to justify unauthorized implementation.</p>
+<h3 id="rejection">Rejection</h3>
+<p>A rejection should explain why the document is unacceptable and what must change.</p>
+<p>Typical reasons include:</p>
+<ul>
+<li>Incorrect technical data.</li>
+<li>Incomplete risk assessment.</li>
+<li>Missing test evidence.</li>
+<li>Conflict with another controlled document.</li>
+<li>Incorrect machine or equipment identification.</li>
+<li>Unclear acceptance criteria.</li>
+<li>Unresolved critical review comments.</li>
+<li>Approval requested from an unauthorized role.</li>
+</ul>
+<p>The author should correct the issues, update the revision or draft status according to procedure, and resubmit the document through the required workflow.</p>
+<h3 id="reapproval-after-changes">Reapproval after changes</h3>
+<p>Not every edit necessarily requires full reapproval. The change-control procedure should define which modifications trigger renewed review or approval.</p>
+<table>
+<thead>
+<tr>
+<th>Change type</th>
+<th>Typical treatment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Spelling or formatting correction with no technical impact</td>
+<td>Simplified approval may be permitted by procedure</td>
+</tr>
+<tr>
+<td>Technical specification change</td>
+<td>Re-review and reapproval normally required</td>
+</tr>
+<tr>
+<td>PLC logic or machine parameter change</td>
+<td>Technical impact assessment and required authorization</td>
+</tr>
+<tr>
+<td>Safety-related design change</td>
+<td>Applicable safety review, verification, validation, and authorization</td>
+</tr>
+<tr>
+<td>Change to acceptance limits</td>
+<td>Quality and technical approval as applicable</td>
+</tr>
+<tr>
+<td>Change to a referenced document</td>
+<td>Impact assessment and possible reapproval</td>
+</tr>
+<tr>
+<td>Change of document owner</td>
+<td>Ownership and authority records updated; approval needs assessed</td>
+</tr>
+<tr>
+<td>Change to approval authority</td>
+<td>Verify the new authority and any required transfer of responsibility</td>
+</tr>
+</tbody>
+</table>
+<p>The key is impact, not the number of characters changed. A single changed numerical value can matter more than ten pages of corrected formatting.</p>
+<h2 id="11-approval-records-and-audit-trail">11. Approval records and audit trail</h2>
+<p>An approval record must demonstrate who made the decision, what was approved, and under which controlled conditions.</p>
+<p>A useful record contains:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Document ID</td>
+<td>Uniquely identifies the document</td>
+</tr>
+<tr>
+<td>Document title</td>
+<td>States the document's subject</td>
+</tr>
+<tr>
+<td>Revision</td>
+<td>Identifies the exact version approved</td>
+</tr>
+<tr>
+<td>Document owner</td>
+<td>Identifies accountability</td>
+</tr>
+<tr>
+<td>Approval role</td>
+<td>Establishes the capacity in which the person acted</td>
+</tr>
+<tr>
+<td>Approver identity</td>
+<td>Identifies the person or authenticated account</td>
+</tr>
+<tr>
+<td>Decision</td>
+<td>Approved, rejected, returned, or another permitted state</td>
+</tr>
+<tr>
+<td>Decision timestamp</td>
+<td>Establishes when the decision occurred</td>
+</tr>
+<tr>
+<td>Comments</td>
+<td>Records rationale, restrictions, or required corrections</td>
+</tr>
+<tr>
+<td>Supporting records</td>
+<td>Links reviews, calculations, test reports, and risk assessments</td>
+</tr>
+<tr>
+<td>Workflow history</td>
+<td>Shows submission, reassignment, decisions, and status changes</td>
+</tr>
+<tr>
+<td>Release linkage</td>
+<td>Connects the approval to the subsequently released revision</td>
+</tr>
+</tbody>
+</table>
+<p>Approval records should be retained according to the applicable document-retention procedure, customer requirements, and regulatory obligations.</p>
+<h3 id="example-approval-record">Example approval record</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Document ID</td>
+<td><code>PLC-MNT-017</code></td>
+</tr>
+<tr>
+<td>Title</td>
+<td>Engine Test Bench Interlock Maintenance Procedure</td>
+</tr>
+<tr>
+<td>Revision</td>
+<td><code>Rev C</code></td>
+</tr>
+<tr>
+<td>Owner</td>
+<td>Controls Engineering</td>
+</tr>
+<tr>
+<td>Reviewer</td>
+<td>Senior Controls Engineer</td>
+</tr>
+<tr>
+<td>Approver</td>
+<td>Authorized Engineering Manager</td>
+</tr>
+<tr>
+<td>Decision</td>
+<td>Approved</td>
+</tr>
+<tr>
+<td>Decision date</td>
+<td>2026-10-18</td>
+</tr>
+<tr>
+<td>Supporting evidence</td>
+<td>Review checklist and functional test report</td>
+</tr>
+<tr>
+<td>Next stage</td>
+<td>Release control</td>
+</tr>
+</tbody>
+</table>
+<p>This is an illustrative record, not evidence of an actual approval.</p>
+<h2 id="12-approval-controls-in-electronic-document-management-systems">12. Approval controls in electronic document management systems</h2>
+<p>An electronic document management system (EDMS), quality management system (QMS), or enterprise workflow may automate approval, but automation does not replace responsibility.</p>
+<p>Important controls include:</p>
+<ul>
+<li>Role-based access: Only authorized roles can make approval decisions.</li>
+<li>Revision locking: The submitted version cannot be silently changed after approval.</li>
+<li>Workflow enforcement: Required approval stages cannot be skipped without an authorized exception.</li>
+<li>Identity verification: Approval actions are associated with identifiable users.</li>
+<li>Timestamping: Decisions are recorded with reliable dates and times.</li>
+<li>Audit trail: Status changes and approval actions remain traceable.</li>
+<li>Notifications: Approvers are informed when action is required.</li>
+<li>Escalation: Overdue approvals are routed according to the procedure.</li>
+<li>Revision linkage: The approval remains linked to the precise version reviewed.</li>
+<li>Retention and retrieval: Records remain accessible for audits and investigations.</li>
+<li>Permission control: Authors cannot alter approval evidence or impersonate approvers.</li>
+<li>Backup and recovery: Approval records and linked documents are protected against loss.</li>
+</ul>
+<p>A spreadsheet can help track approvals, but a spreadsheet alone does not guarantee document integrity, authorization, or a reliable audit trail. Its suitability depends on the organization's control requirements.</p>
+<h2 id="13-relationship-between-approval-and-change-management">13. Relationship between approval and change management</h2>
+<p>Approval is one control within the broader change-management process. It should not be confused with authorization to execute every activity involved in the change.</p>
+<p>For an industrial equipment modification, the sequence may be:</p>
+<pre><code>Change request
+    ↓
+Impact and risk assessment
+    ↓
+Engineering modification
+    ↓
+Technical review
+    ↓
+Formal approval
+    ↓
+Controlled release
+    ↓
+Implementation under required work controls
+    ↓
+Testing and validation
+    ↓
+As-built documentation and closure
+</code></pre>
+<p>The exact order depends on the organization's procedure and the type of change. For some safety-critical modifications, verification, validation, or additional authorization must occur before the equipment can return to service.</p>
+<p>Approval of a drawing, for example, does not replace work permits, isolation, commissioning checks, production authorization, or required safety validation.</p>
+<h2 id="14-common-approval-failures">14. Common approval failures</h2>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Consequence</th>
+<th>Preventive control</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Self-approval without authorization</td>
+<td>Weak independence and unreliable control</td>
+<td>Defined approval authority matrix</td>
+</tr>
+<tr>
+<td>Approval of the wrong revision</td>
+<td>Uncontrolled or incorrect document may be released</td>
+<td>Revision-specific workflow and document locking</td>
+</tr>
+<tr>
+<td>Verbal approval without a retained record</td>
+<td>Decision cannot be reliably demonstrated</td>
+<td>Approved recordkeeping method</td>
+</tr>
+<tr>
+<td>Missing technical review</td>
+<td>Errors pass directly to the approver</td>
+<td>Mandatory review gates</td>
+</tr>
+<tr>
+<td>Approval by an unauthorized person</td>
+<td>Invalid authorization under the procedure</td>
+<td>Role and delegation verification</td>
+</tr>
+<tr>
+<td>Open critical comments ignored</td>
+<td>Unsafe or defective work may proceed</td>
+<td>Mandatory closure criteria</td>
+</tr>
+<tr>
+<td>Approval treated as release</td>
+<td>Users may access an unissued document</td>
+<td>Separate status and release controls</td>
+</tr>
+<tr>
+<td>Document edited after approval</td>
+<td>Approved content no longer matches the recorded decision</td>
+<td>Version locking and change control</td>
+</tr>
+<tr>
+<td>Generic approval without scope</td>
+<td>Unclear what equipment or process is covered</td>
+<td>Document ID, revision, and scope recorded</td>
+</tr>
+<tr>
+<td>Unclear conditional approval</td>
+<td>Unresolved items may be overlooked</td>
+<td>Explicit conditions, owners, and closure verification</td>
+</tr>
+<tr>
+<td>Approval records deleted or overwritten</td>
+<td>Audit trail becomes unreliable</td>
+<td>Protected retention and access controls</td>
+</tr>
+<tr>
+<td>Old approval reused after a major change</td>
+<td>New risks remain unassessed</td>
+<td>Change-impact assessment and reapproval</td>
+</tr>
+</tbody>
+</table>
+<h2 id="15-approval-checklist-for-practical-use">15. Approval checklist for practical use</h2>
+<p>Before submitting a document:</p>
+<ul>
+<li>Correct document ID, title, revision, and scope.</li>
+<li>Required technical reviews completed.</li>
+<li>Review comments resolved or formally dispositioned.</li>
+<li>Supporting drawings, calculations, and test evidence attached.</li>
+<li>Safety, quality, operational, and compliance impacts assessed as applicable.</li>
+<li>Proposed changes clearly identified.</li>
+<li>Approval roles identified according to the authority matrix.</li>
+<li>Approval candidate protected from uncontrolled edits.</li>
+</ul>
+<p>Before accepting the approval:</p>
+<ul>
+<li>Approver has the required authority and competence.</li>
+<li>Exact revision has been examined.</li>
+<li>Acceptance criteria have been met.</li>
+<li>Required additional approvals are complete.</li>
+<li>Decision, identity, date, and comments are recorded.</li>
+<li>Any permitted conditions are explicit and controlled.</li>
+<li>Approval record is traceable and retrievable.</li>
+</ul>
+<p>Before proceeding to release:</p>
+<ul>
+<li>Approval is valid for the exact revision.</li>
+<li>No mandatory approval conditions remain open.</li>
+<li>Release prerequisites are satisfied.</li>
+<li>Document status is updated through the controlled workflow.</li>
+<li>Release authority or document controller is identified.</li>
+<li>The approved document is ready for the next lifecycle stage.</li>
+</ul>
+<h2 id="16-interview-and-workplace-knowledge">16. Interview and workplace knowledge</h2>
+<p>Q1. What is the difference between review and approval?</p>
+<p>Review checks the content for correctness, completeness, and suitability. Approval is the formal acceptance decision made by an authorized person.</p>
+<p>Q2. Can a reviewer approve a document?</p>
+<p>Yes, if the reviewer also holds the required approval authority and the organization's procedure permits the same person to perform both roles. The requirements for independent review must still be satisfied.</p>
+<p>Q3. Can an approved document be edited?</p>
+<p>Not through uncontrolled editing. A change must follow the defined revision and change-control process. The impact determines whether renewed review or approval is required.</p>
+<p>Q4. Does approval mean the document can immediately be used on the shop floor?</p>
+<p>Not necessarily. Release, effective-date requirements, implementation controls, training, and any required safety or commissioning activities must also be satisfied.</p>
+<p>Q5. What is the most important approval record?</p>
+<p>There is no single field that replaces the others. At minimum, the record must reliably link the decision, approver, date, and exact document revision, together with the required supporting evidence.</p>
+<p>Q6. What should happen if the authorized approver is unavailable?</p>
+<p>Follow the formally defined delegation or escalation process. Do not substitute an unauthorized person's signature simply to clear a workflow queue.</p>
+<p>Q7. Why is approval important in maintenance and automation?</p>
+<p>It establishes accountability for technical decisions, reduces the risk of uncontrolled changes, and provides evidence that the required checks and authorization were completed before the document progressed.</p>
+<p>Q8. What is the difference between approval and validation?</p>
+<p>Approval is an authorization decision. Validation establishes, through the prescribed evidence and testing, that a system or process meets its intended requirements. Depending on the application, validation evidence may be required before approval, before implementation, or before return to service.</p>
+<h2 id="17-practical-example-plc-interlock-modification">17. Practical example: PLC interlock modification</h2>
+<p>A maintenance team proposes changing the interlock sequence on an engine test bench to address a recurring production stoppage.</p>
+<ol>
+<li>The controls engineer prepares the change documentation, including the reason for the change, affected PLC logic, risk assessment, and verification plan.</li>
+<li>The technical reviewer checks the logic, machine interfaces, operating modes, and fault-recovery behavior.</li>
+<li>The relevant safety specialist assesses the change if a safety-related function could be affected.</li>
+<li>The designated approver evaluates the review results, residual risks, test evidence, and authorization requirements.</li>
+<li>The approval decision is recorded against the exact document revision.</li>
+<li>The approved version proceeds to release after the required conditions have been satisfied.</li>
+<li>The change is implemented under the site's applicable work controls, followed by required testing and validation.</li>
+<li>As-built documentation, backups, and closure records are updated.</li>
+</ol>
+<p>If the approver identifies a missing verification test, the document must follow the defined return or rejection process. The team must not treat an urgent breakdown or production target as permission to bypass mandatory controls.</p>
+<h2 id="18-final-principles">18. Final principles</h2>
+<ul>
+<li>Approval is a formal decision, not merely a signature.</li>
+<li>The approver must have the appropriate authority and competence.</li>
+<li>Approval must be traceable to a specific document revision.</li>
+<li>Review, approval, release, implementation, and validation serve different purposes.</li>
+<li>Conditional approval is only acceptable within a defined and controlled procedure.</li>
+<li>Changes after approval require impact assessment and controlled revision.</li>
+<li>Technical urgency does not justify bypassing mandatory safety or authorization requirements.</li>
+<li>Approval records must remain available for audits, troubleshooting, and future engineering changes.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\30_Doc_Control\01_Lifecycle\04_Release - Release: Issued for use</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

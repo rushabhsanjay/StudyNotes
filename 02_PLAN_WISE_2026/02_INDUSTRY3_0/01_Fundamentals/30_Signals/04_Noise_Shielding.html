@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>04. Noise &amp; Shielding: Why Signals Get Noisy and the Fixes</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">04. Noise &amp; Shielding: Why Signals Get Noisy and the Fixes</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-what-does-electrical-noise-look-like">2. What does electrical noise look like?</a></li>
+<li><a href="#3-the-main-sources-of-industrial-electrical-noise">3. The main sources of industrial electrical noise</a></li>
+<li><a href="#4-how-electrical-noise-enters-a-signal">4. How electrical noise enters a signal</a><ul>
+<li><a href="#41-electromagnetic-induction">4.1 Electromagnetic induction</a></li>
+<li><a href="#42-capacitive-coupling">4.2 Capacitive coupling</a></li>
+<li><a href="#43-conducted-noise">4.3 Conducted noise</a></li>
+<li><a href="#44-radiated-electromagnetic-interference">4.4 Radiated electromagnetic interference</a></li>
+</ul>
+</li>
+<li><a href="#5-the-three-part-model-source-path-victim">5. The three-part model: source, path, victim</a></li>
+<li><a href="#6-what-is-cable-shielding">6. What is cable shielding?</a></li>
+<li><a href="#7-shielding-vs-grounding-vs-insulation">7. Shielding vs grounding vs insulation</a></li>
+<li><a href="#8-how-to-ground-a-cable-shield">8. How to ground a cable shield</a><ul>
+<li><a href="#81-single-ended-shield-bonding">8.1 Single-ended shield bonding</a></li>
+<li><a href="#82-both-ended-shield-bonding">8.2 Both-ended shield bonding</a></li>
+<li><a href="#83-practical-distinction">8.3 Practical distinction</a></li>
+</ul>
+</li>
+<li><a href="#9-cable-routing-one-of-the-most-effective-fixes">9. Cable routing: one of the most effective fixes</a></li>
+<li><a href="#10-twisted-pair-and-differential-signals">10. Twisted pair and differential signals</a></li>
+<li><a href="#11-noise-in-420-ma-and-010-v-signals">11. Noise in 4–20 mA and 0–10 V signals</a></li>
+<li><a href="#12-filtering-when-and-how-it-helps">12. Filtering: when and how it helps</a><ul>
+<li><a href="#example-pressure-reading-fluctuation">Example: pressure reading fluctuation</a></li>
+</ul>
+</li>
+<li><a href="#13-noise-troubleshooting-in-an-industrial-plant">13. Noise troubleshooting in an industrial plant</a></li>
+<li><a href="#14-common-symptoms-and-possible-causes">14. Common symptoms and possible causes</a></li>
+<li><a href="#15-interview-questions-and-answers">15. Interview questions and answers</a></li>
+<li><a href="#16-final-mental-model">16. Final mental model</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>In industrial automation, electrical noise is an unwanted electrical disturbance that interferes with a signal, measurement, or control system. Shielding, grounding, correct cable routing, filtering, and proper circuit design help prevent or reduce its effects.</p>
+<p>Noise can cause a PLC input to switch unexpectedly, an analog pressure reading to fluctuate, an encoder to count incorrectly, or a communication network to lose data.</p>
+<p>Industrial environments are particularly challenging because motors, VFDs, contactors, welding equipment, solenoids, and high-current cables can produce electrical disturbances.</p>
+<p>The objective is not simply to add shielding everywhere. It is to identify the source, the coupling path, and the affected circuit, then apply the correct fix.</p>
+<h2 id="2-what-does-electrical-noise-look-like">2. What does electrical noise look like?</h2>
+<p>Consider a pressure transmitter producing a stable 4–20 mA signal. The actual pressure is constant, but the PLC reading fluctuates.</p>
+<p>For example:</p>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Expected pressure</th>
+<th>PLC reading</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10:00:00</td>
+<td>6.0 bar</td>
+<td>6.0 bar</td>
+</tr>
+<tr>
+<td>10:00:01</td>
+<td>6.0 bar</td>
+<td>6.4 bar</td>
+</tr>
+<tr>
+<td>10:00:02</td>
+<td>6.0 bar</td>
+<td>5.7 bar</td>
+</tr>
+<tr>
+<td>10:00:03</td>
+<td>6.0 bar</td>
+<td>6.2 bar</td>
+</tr>
+</tbody>
+</table>
+<p>If the physical pressure is stable, the fluctuations may result from electrical interference, poor connections, grounding problems, an unstable transmitter, or an incorrectly configured input channel.</p>
+<p>Noise is one possible cause, not a diagnosis by itself.</p>
+<h2 id="3-the-main-sources-of-industrial-electrical-noise">3. The main sources of industrial electrical noise</h2>
+<p><img loading="lazy" decoding="async" alt="Энергетика в Украине имеет скрытый козырь: как защитить инфраструктуру и развивать систему — эксперт / NV" src="04_Noise_Shielding_assets/img_001.jpg" /></p>
+<p>3.1 Variable frequency drives (VFDs)</p>
+<p>VFDs switch power electronics rapidly to control motor speed. Their switching edges and motor cables can generate high-frequency electromagnetic interference.</p>
+<p>Typical symptoms: Analog values fluctuate when a motor starts or changes speed; communication errors appear during drive operation.</p>
+<p><img loading="lazy" decoding="async" alt="電磁接触器・開閉器更新～工事事例紹介～｜沖縄FAE" src="04_Noise_Shielding_assets/img_002.jpg" /></p>
+<p>3.2 Contactors, relays, and solenoids</p>
+<p>Energizing and de-energizing an inductive coil can generate voltage transients. These disturbances may couple into nearby control wiring or supply circuits.</p>
+<p>Typical symptoms: PLC inputs change state when a contactor switches; resets or brief disturbances occur when a solenoid de-energizes.</p>
+<p><img loading="lazy" decoding="async" alt="SpeedGun® High-speed Spot Welding Gun | Industrial Automation | LEWA Attendorn GmbH - Empowering the Future" src="04_Noise_Shielding_assets/img_003.jpg" /></p>
+<p>3.3 Welding equipment and high-current systems</p>
+<p>Welding currents and switching equipment can produce strong electromagnetic disturbances.</p>
+<p>Typical symptoms: Sensor instability, communication interruptions, or measurement disturbances correlated with welding cycles.</p>
+<p><img loading="lazy" decoding="async" alt="Power and Control Tray Cables, shielded and unshielded" src="04_Noise_Shielding_assets/img_004.jpg" /></p>
+<p>3.4 Incorrect cable routing</p>
+<p>Long parallel runs of power and signal cables can increase capacitive or inductive coupling.</p>
+<p>Typical symptoms: A sensor works correctly on a short test cable but becomes unreliable when connected through the installed cable route.</p>
+<p>Other possible sources include switching power supplies, poor electrical connections, electrostatic discharge, radio-frequency transmitters, grounding faults, and disturbances conducted through shared power supplies.</p>
+<h2 id="4-how-electrical-noise-enters-a-signal">4. How electrical noise enters a signal</h2>
+<p>There are four useful mechanisms to understand.</p>
+<h3 id="41-electromagnetic-induction">4.1 Electromagnetic induction</h3>
+<p>A changing magnetic field can induce a voltage in a nearby conductor.</p>
+<p>For example, a high-current motor cable runs parallel to a low-level analog sensor cable. Changes in motor current create a changing magnetic field that may induce an unwanted voltage in the sensor circuit.</p>
+<h3 id="42-capacitive-coupling">4.2 Capacitive coupling</h3>
+<p>A changing voltage on one conductor can couple electrically to a nearby conductor through parasitic capacitance.</p>
+<p>This is more likely to be a concern when conductors run close together for long distances, especially when the voltage changes rapidly.</p>
+<h3 id="43-conducted-noise">4.3 Conducted noise</h3>
+<p>Noise can travel through shared power supplies, common conductors, grounding connections, or other electrical paths.</p>
+<p>For example, a switching load causes a disturbance on a poorly designed 24 V DC supply. Several sensors connected to that supply may experience the same disturbance.</p>
+<h3 id="44-radiated-electromagnetic-interference">4.4 Radiated electromagnetic interference</h3>
+<p>An electrical source emits electromagnetic energy that couples into nearby cables or equipment.</p>
+<p>The source may be a drive, welding equipment, a switching circuit, or another high-frequency device.</p>
+<h2 id="5-the-three-part-model-source-path-victim">5. The three-part model: source, path, victim</h2>
+<p>A practical troubleshooting model is:</p>
+<pre><code>NOISE SOURCE
+VFD, contactor, welder, switching circuit
+             |
+             v
+COUPLING PATH
+Magnetic, capacitive, radiated, or conducted
+             |
+             v
+AFFECTED CIRCUIT
+Sensor cable, analog input, encoder, network
+             |
+             v
+OBSERVED SYMPTOM
+Unstable reading, false input, lost communication
+</code></pre>
+<p>The best fix may involve any one of these parts.</p>
+<ul>
+<li>Reduce the noise generated at the source.</li>
+<li>Interrupt or reduce the coupling path.</li>
+<li>Improve the immunity of the affected circuit.</li>
+</ul>
+<p>This is why blindly replacing a sensor often fails to solve an interference problem.</p>
+<h2 id="6-what-is-cable-shielding">6. What is cable shielding?</h2>
+<p>A cable shield is a conductive layer around one or more conductors. Depending on its construction and frequency range, it helps reduce electromagnetic coupling into or out of the cable.</p>
+<p>Common constructions include:</p>
+<ul>
+<li>Braided copper shield.</li>
+<li>Foil shield.</li>
+<li>Foil and braid combination.</li>
+<li>Shielded twisted-pair cable.</li>
+</ul>
+<p>Shielding is commonly used for analog instrumentation, encoder circuits, communication networks, and other sensitive signals where the cable specification requires it.</p>
+<p>However, a shield is not a substitute for correct cable routing, grounding, or circuit design.</p>
+<h2 id="7-shielding-vs-grounding-vs-insulation">7. Shielding vs grounding vs insulation</h2>
+<p>These terms describe different functions.</p>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Main purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Shielding</td>
+<td>Reduce electromagnetic coupling</td>
+</tr>
+<tr>
+<td>Grounding/earthing</td>
+<td>Provide an intentional electrical reference or fault-current path, according to the design</td>
+</tr>
+<tr>
+<td>Insulation</td>
+<td>Prevent unintended electrical contact and leakage</td>
+</tr>
+<tr>
+<td>Twisted pair</td>
+<td>Reduce the effects of external interference and differences in induced voltage</td>
+</tr>
+<tr>
+<td>Filtering</td>
+<td>Attenuate unwanted signal components within a designed frequency range</td>
+</tr>
+<tr>
+<td>Isolation</td>
+<td>Reduce unwanted electrical coupling between circuits</td>
+</tr>
+</tbody>
+</table>
+<p>A shield and a protective earth conductor are not interchangeable. Protective earthing is a safety function, while cable shielding is primarily an electromagnetic compatibility measure, though shield bonding can also affect fault and transient currents.</p>
+<h2 id="8-how-to-ground-a-cable-shield">8. How to ground a cable shield</h2>
+<p>Shield termination depends on the cable, signal type, installation environment, equipment design, and applicable EMC requirements.</p>
+<h3 id="81-single-ended-shield-bonding">8.1 Single-ended shield bonding</h3>
+<p>In some low-frequency analog installations, the shield is bonded at one end to reduce unwanted low-frequency circulating currents caused by differences in ground potential.</p>
+<p>This arrangement may be appropriate for specific circuits, but it is not a universal rule.</p>
+<h3 id="82-both-ended-shield-bonding">8.2 Both-ended shield bonding</h3>
+<p>For many industrial EMC applications, particularly VFD motor cables and high-frequency interference control, the shield is bonded at both ends using a suitable low-impedance connection. This helps provide a path for high-frequency interference currents.</p>
+<p>The termination method matters. A long, thin drain wire can have substantially greater high-frequency impedance than a broad, short shield connection.</p>
+<h3 id="83-practical-distinction">8.3 Practical distinction</h3>
+<table>
+<thead>
+<tr>
+<th>Application</th>
+<th>General consideration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Low-level analog instrumentation</td>
+<td>Follow instrument and PLC manufacturer guidance; evaluate ground-potential differences and signal isolation</td>
+</tr>
+<tr>
+<td>VFD motor cable</td>
+<td>Use the specified shielded cable and EMC gland or termination arrangement; often requires bonding at both ends</td>
+</tr>
+<tr>
+<td>High-speed encoder</td>
+<td>Follow encoder and drive specifications, including connector and shield termination</td>
+</tr>
+<tr>
+<td>Industrial Ethernet</td>
+<td>Use the specified shielded or unshielded cable type and connector bonding arrangement</td>
+</tr>
+<tr>
+<td>Safety-related circuits</td>
+<td>Follow the approved design and applicable safety and electrical standards</td>
+</tr>
+</tbody>
+</table>
+<p>Do not automatically ground every shield at one end or both ends without considering the circuit. Follow the equipment manufacturer's instructions and the plant's approved grounding and EMC design.</p>
+<h2 id="9-cable-routing-one-of-the-most-effective-fixes">9. Cable routing: one of the most effective fixes</h2>
+<p>Correct routing can reduce interference without changing the PLC program or replacing components.</p>
+<p>Recommended practices include:</p>
+<ul>
+<li>Keep sensitive analog and communication cables separated from motor power cables.</li>
+<li>Avoid long parallel runs between signal cables and VFD output cables.</li>
+<li>Cross power and signal cables at approximately 90 degrees when crossing is necessary.</li>
+<li>Use separate cable trays or compartments where specified.</li>
+<li>Keep cable lengths and loop areas appropriate to the circuit.</li>
+<li>Use the cable type specified for the device and environment.</li>
+<li>Use proper connectors, glands, and shield terminations.</li>
+<li>Avoid loose, damaged, or poorly terminated shield connections.</li>
+</ul>
+<p>Required separation distances depend on cable types, power levels, shielding, tray arrangement, and applicable standards. Use the plant design rules rather than assuming a universal distance.</p>
+<h2 id="10-twisted-pair-and-differential-signals">10. Twisted pair and differential signals</h2>
+<p>Twisted-pair cable consists of two conductors twisted together along the cable.</p>
+<p>The twists help each conductor experience similar electromagnetic interference, reducing the differential disturbance seen by the receiver.</p>
+<p>Differential interfaces compare the voltage between two signal conductors instead of relying solely on one signal relative to ground.</p>
+<p>Examples include:</p>
+<ul>
+<li>RS-485.</li>
+<li>Many encoder interfaces.</li>
+<li>Certain industrial communication and instrumentation circuits.</li>
+</ul>
+<p>Twisted pair does not eliminate every type of noise. Correct termination, cable impedance, routing, grounding, and receiver specifications remain important.</p>
+<h2 id="11-noise-in-420-ma-and-010-v-signals">11. Noise in 4–20 mA and 0–10 V signals</h2>
+<p>These signal types respond differently to common installation problems.</p>
+<table>
+<thead>
+<tr>
+<th>Characteristic</th>
+<th>4–20 mA current loop</th>
+<th>0–10 V signal</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cable resistance</td>
+<td>Generally less influential while the loop remains within compliance limits</td>
+<td>Can cause voltage drop and measurement error</td>
+</tr>
+<tr>
+<td>Ground-potential differences</td>
+<td>Depends on loop isolation and wiring arrangement</td>
+<td>Can directly affect the measured voltage reference</td>
+</tr>
+<tr>
+<td>Electromagnetic interference</td>
+<td>Can still cause errors</td>
+<td>Can still cause errors</td>
+</tr>
+<tr>
+<td>Broken signal conductor</td>
+<td>May cause under-range or loop-fault indication</td>
+<td>May appear as zero or another misleading voltage</td>
+</tr>
+<tr>
+<td>Key checks</td>
+<td>Loop power, polarity, resistance, current, channel configuration</td>
+<td>Signal voltage, common reference, cable drop, grounding, channel configuration</td>
+</tr>
+</tbody>
+</table>
+<p>A 4–20 mA loop is often more robust for long field wiring, but it is not immune to interference or wiring faults.</p>
+<h2 id="12-filtering-when-and-how-it-helps">12. Filtering: when and how it helps</h2>
+<p>Filtering reduces unwanted variations in a signal. It can be implemented in transmitter electronics, analog input modules, PLC software, or control-system processing.</p>
+<p>Common approaches include:</p>
+<ul>
+<li>Analog input module filtering.</li>
+<li>Low-pass filters.</li>
+<li>Moving-average filters.</li>
+<li>Software smoothing.</li>
+<li>Input debounce for suitable digital signals.</li>
+<li>Hysteresis for switching decisions.</li>
+</ul>
+<h3 id="example-pressure-reading-fluctuation">Example: pressure reading fluctuation</h3>
+<p>Suppose a pressure reading fluctuates slightly around 6.0 bar because of measurement noise.</p>
+<p>A suitable low-pass filter may reduce the displayed fluctuation. However, excessive filtering introduces delay.</p>
+<p>That delay can be dangerous if the signal is used for fast control or protection. A filter must not mask a genuine process change or compromise a protective function.</p>
+<p>Filtering should be applied only after checking for wiring faults, grounding problems, poor connections, and other underlying causes.</p>
+<h2 id="13-noise-troubleshooting-in-an-industrial-plant">13. Noise troubleshooting in an industrial plant</h2>
+<p>Suppose an analog pressure value fluctuates whenever a nearby conveyor VFD accelerates.</p>
+<p>Use a structured approach:</p>
+<ol>
+<li>Confirm whether the physical pressure is actually changing.</li>
+<li>Compare the timing of the disturbance with VFD operation.</li>
+<li>Inspect signal-cable routing relative to motor and power cables.</li>
+<li>Check the transmitter supply, loop wiring, shield termination, and grounding.</li>
+<li>Verify PLC analog input configuration and diagnostics.</li>
+<li>Measure the electrical signal using appropriate instruments and procedures.</li>
+<li>Compare readings at suitable points to narrow the coupling path.</li>
+<li>Apply a controlled corrective action, such as correcting cable routing or shield termination.</li>
+<li>Repeat the test under the same operating conditions.</li>
+<li>Document the cause, correction, and verification results.</li>
+</ol>
+<p>Do not disconnect protective earth conductors or randomly alter shield connections while equipment is energized. Grounding changes must follow the approved electrical design and safe work procedures.</p>
+<h2 id="14-common-symptoms-and-possible-causes">14. Common symptoms and possible causes</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>First checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Analog value fluctuates when a VFD runs</td>
+<td>EMI, routing, grounding, or actual process variation</td>
+<td>Compare process measurement, signal wiring, drive timing</td>
+</tr>
+<tr>
+<td>PLC input flickers when a contactor switches</td>
+<td>Transient coupling or supply disturbance</td>
+<td>Coil suppression, wiring separation, supply quality</td>
+</tr>
+<tr>
+<td>Encoder position jumps</td>
+<td>Noise, shielding, termination, wiring, or encoder fault</td>
+<td>Cable and connector condition, signal interface, grounding</td>
+</tr>
+<tr>
+<td>Communication drops during welding</td>
+<td>EMI, bonding, routing, network or device issue</td>
+<td>Cable specification, shield bonding, topology, error diagnostics</td>
+</tr>
+<tr>
+<td>Several sensors fail together</td>
+<td>Shared power supply, common wiring, or network issue</td>
+<td>24 V DC supply, common terminals, distribution wiring</td>
+</tr>
+<tr>
+<td>Signal becomes stable when temporary cable is used</td>
+<td>Installed cable route, termination, or cable damage</td>
+<td>Routing, connectors, shield continuity</td>
+</tr>
+<tr>
+<td>Reading is stable but consistently wrong</td>
+<td>Scaling, calibration, or configuration</td>
+<td>Raw value, input range, transmitter settings</td>
+</tr>
+</tbody>
+</table>
+<p>These symptoms guide investigation; they do not establish a cause without measurement and verification.</p>
+<h2 id="15-interview-questions-and-answers">15. Interview questions and answers</h2>
+<p>Q1. What is electrical noise in automation?</p>
+<p>An unwanted electrical disturbance that affects a signal, measurement, or control circuit.</p>
+<p>Q2. What are common sources of industrial noise?</p>
+<p>VFDs, motors, contactors, solenoids, welding equipment, switching power supplies, and poorly arranged wiring.</p>
+<p>Q3. What is the difference between shielding and grounding?</p>
+<p>Shielding reduces electromagnetic coupling. Grounding establishes an intentional electrical reference or fault-current path according to the design.</p>
+<p>Q4. Why are analog signals often affected by noise?</p>
+<p>They encode a varying measurement or command, so unwanted electrical disturbances can alter the value the receiving equipment measures.</p>
+<p>Q5. Why is cable separation important?</p>
+<p>It reduces capacitive and inductive coupling between high-disturbance power circuits and sensitive signal circuits.</p>
+<p>Q6. Should a cable shield always be grounded at one end?</p>
+<p>No. The correct arrangement depends on the signal, frequency, equipment, grounding design, and manufacturer's requirements. Both-ended bonding is common in many high-frequency EMC applications.</p>
+<p>Q7. Why not simply apply a software filter?</p>
+<p>A filter can reduce unwanted variation, but it can also delay genuine changes and conceal an underlying wiring or interference problem.</p>
+<h2 id="16-final-mental-model">16. Final mental model</h2>
+<p>When a signal becomes noisy, investigate three areas:</p>
+<ul>
+<li>Source: What equipment is generating the disturbance?</li>
+<li>Path: How is the disturbance reaching the circuit?</li>
+<li>Victim: Which cable, sensor, input module, or communication link is affected?</li>
+</ul>
+<p>Then select the appropriate corrective action: improve routing, use the correct cable, fix grounding or shield termination, correct supply and wiring problems, improve isolation, or apply justified filtering.</p>
+<p>The objective is not merely to make the displayed value look stable. It is to ensure that the measured signal reliably represents the real machine or process condition.</p>
+<p>Next section: 31_Reading_Drawings | Reading drawings.</p>
+<p>The first topic will be 01_Electrical_Symbols | Electrical symbols: IEC symbols and reference tags, covering how to identify electrical components and interpret their standardized symbols and designations in industrial drawings.</p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

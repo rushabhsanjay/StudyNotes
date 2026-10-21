@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CNC Fault: Servo, Axis Drive and Motor</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">CNC Fault: Servo, Axis Drive and Motor</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-of-cnc-servo-troubleshooting">1. Purpose of CNC Servo Troubleshooting</a></li>
+<li><a href="#2-cnc-servo-system-architecture">2. CNC Servo System Architecture</a></li>
+<li><a href="#3-important-servo-terminology">3. Important Servo Terminology</a></li>
+<li><a href="#4-main-components-of-a-cnc-servo-system">4. Main Components of a CNC Servo System</a><ul>
+<li><a href="#41-servo-drive">4.1 Servo drive</a></li>
+<li><a href="#42-servo-motor">4.2 Servo motor</a></li>
+<li><a href="#43-encoder-or-feedback-device">4.3 Encoder or feedback device</a></li>
+<li><a href="#44-mechanical-transmission">4.4 Mechanical transmission</a></li>
+<li><a href="#45-holding-brake">4.5 Holding brake</a></li>
+</ul>
+</li>
+<li><a href="#5-servo-fault-classification">5. Servo Fault Classification</a></li>
+<li><a href="#6-servo-ready-and-servo-enable-problems">6. Servo-Ready and Servo-Enable Problems</a><ul>
+<li><a href="#troubleshooting-sequence">Troubleshooting sequence</a></li>
+</ul>
+</li>
+<li><a href="#7-servo-overcurrent-faults">7. Servo Overcurrent Faults</a><ul>
+<li><a href="#possible-causes">Possible causes</a></li>
+<li><a href="#diagnostic-procedure">Diagnostic procedure</a></li>
+<li><a href="#symptom-based-interpretation">Symptom-based interpretation</a></li>
+</ul>
+</li>
+<li><a href="#8-servo-overload-and-overtemperature">8. Servo Overload and Overtemperature</a><ul>
+<li><a href="#81-overload">8.1 Overload</a></li>
+<li><a href="#82-overtemperature">8.2 Overtemperature</a></li>
+<li><a href="#diagnostic-approach">Diagnostic approach</a></li>
+</ul>
+</li>
+<li><a href="#9-encoder-and-feedback-faults">9. Encoder and Feedback Faults</a><ul>
+<li><a href="#91-common-symptoms">9.1 Common symptoms</a></li>
+<li><a href="#92-diagnostic-sequence">9.2 Diagnostic sequence</a></li>
+<li><a href="#93-incremental-versus-absolute-encoder-considerations">9.3 Incremental versus absolute encoder considerations</a></li>
+</ul>
+</li>
+<li><a href="#10-following-error-and-position-deviation">10. Following Error and Position Deviation</a><ul>
+<li><a href="#possible-causes_1">Possible causes</a></li>
+<li><a href="#troubleshooting-approach">Troubleshooting approach</a></li>
+</ul>
+</li>
+<li><a href="#11-mechanical-axis-faults">11. Mechanical Axis Faults</a><ul>
+<li><a href="#111-ballscrew-and-coupling-problems">11.1 Ballscrew and coupling problems</a></li>
+<li><a href="#112-linear-guideway-and-lubrication-problems">11.2 Linear guideway and lubrication problems</a></li>
+<li><a href="#113-cable-chain-and-moving-cable-problems">11.3 Cable-chain and moving-cable problems</a></li>
+</ul>
+</li>
+<li><a href="#12-servo-motor-electrical-testing">12. Servo Motor Electrical Testing</a><ul>
+<li><a href="#121-winding-resistance">12.1 Winding resistance</a></li>
+<li><a href="#122-insulation-resistance">12.2 Insulation resistance</a></li>
+<li><a href="#123-phase-and-cable-checks">12.3 Phase and cable checks</a></li>
+</ul>
+</li>
+<li><a href="#13-servo-holding-brake-faults">13. Servo Holding Brake Faults</a><ul>
+<li><a href="#symptoms">Symptoms</a></li>
+<li><a href="#diagnostic-sequence">Diagnostic sequence</a></li>
+</ul>
+</li>
+<li><a href="#14-dc-bus-and-regenerative-faults">14. DC Bus and Regenerative Faults</a><ul>
+<li><a href="#possible-causes_2">Possible causes</a></li>
+<li><a href="#diagnostic-procedure_1">Diagnostic procedure</a></li>
+</ul>
+</li>
+<li><a href="#15-servo-parameters-and-tuning">15. Servo Parameters and Tuning</a><ul>
+<li><a href="#common-configuration-related-symptoms">Common configuration-related symptoms</a></li>
+<li><a href="#correct-approach">Correct approach</a></li>
+</ul>
+</li>
+<li><a href="#16-servo-drive-and-motor-replacement">16. Servo Drive and Motor Replacement</a><ul>
+<li><a href="#before-replacement">Before replacement</a></li>
+<li><a href="#after-replacement">After replacement</a></li>
+</ul>
+</li>
+<li><a href="#17-practical-cnc-servo-breakdown-cases">17. Practical CNC Servo Breakdown Cases</a><ul>
+<li><a href="#case-1-axis-does-not-move-and-servo-ready-is-off">Case 1: Axis does not move and servo-ready is OFF</a></li>
+<li><a href="#case-2-overcurrent-during-axis-acceleration">Case 2: Overcurrent during axis acceleration</a></li>
+<li><a href="#case-3-encoder-alarm-appears-intermittently">Case 3: Encoder alarm appears intermittently</a></li>
+<li><a href="#case-4-following-error-occurs-at-a-particular-position">Case 4: Following error occurs at a particular position</a></li>
+<li><a href="#case-5-servo-motor-becomes-hot-during-normal-production">Case 5: Servo motor becomes hot during normal production</a></li>
+</ul>
+</li>
+<li><a href="#18-servo-preventive-maintenance-checklist">18. Servo Preventive Maintenance Checklist</a><ul>
+<li><a href="#drive-and-electrical-system">Drive and electrical system</a></li>
+<li><a href="#motor-and-mechanical-transmission">Motor and mechanical transmission</a></li>
+<li><a href="#feedback-and-configuration">Feedback and configuration</a></li>
+</ul>
+</li>
+<li><a href="#19-servo-breakdown-record-template">19. Servo Breakdown Record Template</a></li>
+<li><a href="#20-interview-questions-and-answers">20. Interview Questions and Answers</a><ul>
+<li><a href="#q1-what-is-the-function-of-a-cnc-servo-system">Q1. What is the function of a CNC servo system?</a></li>
+<li><a href="#q2-what-is-following-error">Q2. What is following error?</a></li>
+<li><a href="#q3-what-causes-a-servo-overcurrent-alarm">Q3. What causes a servo overcurrent alarm?</a></li>
+<li><a href="#q4-why-might-a-servo-ready-signal-remain-off">Q4. Why might a servo-ready signal remain OFF?</a></li>
+<li><a href="#q5-how-do-you-distinguish-a-motor-fault-from-a-mechanical-fault">Q5. How do you distinguish a motor fault from a mechanical fault?</a></li>
+<li><a href="#q6-what-causes-an-encoder-alarm">Q6. What causes an encoder alarm?</a></li>
+<li><a href="#q7-why-should-following-error-limits-not-be-increased-just-to-clear-an-alarm">Q7. Why should following-error limits not be increased just to clear an alarm?</a></li>
+<li><a href="#q8-what-causes-dc-bus-overvoltage-during-deceleration">Q8. What causes DC-bus overvoltage during deceleration?</a></li>
+<li><a href="#q9-what-precautions-are-required-before-replacing-a-servo-drive">Q9. What precautions are required before replacing a servo drive?</a></li>
+<li><a href="#q10-why-can-an-axis-fault-at-only-one-position">Q10. Why can an axis fault at only one position?</a></li>
+</ul>
+</li>
+<li><a href="#21-completion-checklist">21. Completion Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\19_Breakdown\05_CNC_Fault\04_Servo</code></p>
+<h2 id="1-purpose-of-cnc-servo-troubleshooting">1. Purpose of CNC Servo Troubleshooting</h2>
+<p>The servo system controls the position, speed, and torque of CNC machine axes. It enables precise movement of components such as X, Y, and Z axes, rotary axes, tool turrets, and other servo-controlled mechanisms.</p>
+<p>A servo-related breakdown may appear as:</p>
+<ul>
+<li>Axis fails to move or remains disabled.</li>
+<li>Servo-ready signal is missing.</li>
+<li>Servo drive displays an alarm.</li>
+<li>Axis moves in the wrong direction or does not reach the commanded position.</li>
+<li>Position deviation or following error occurs.</li>
+<li>Axis movement becomes noisy, jerky, or unstable.</li>
+<li>Overcurrent or overload alarm occurs during acceleration.</li>
+<li>Servo motor or drive overheats.</li>
+<li>Encoder or feedback communication alarm appears.</li>
+<li>Axis moves correctly when cold but faults after warming up.</li>
+<li>CNC reports an axis alarm even though the underlying cause is mechanical.</li>
+</ul>
+<p>Core diagnostic principle: A servo alarm does not automatically mean the servo motor or drive is defective. The fault may originate from incoming power, the DC bus, motor cables, encoder feedback, mechanical loading, brake release, parameters, cooling, or the CNC/PLC command and enable chain.</p>
+<h2 id="2-cnc-servo-system-architecture">2. CNC Servo System Architecture</h2>
+<pre><code>CNC Program / Axis Command
+            ↓
+       CNC Motion Control
+            ↓
+     Position / Speed Command
+            ↓
+        Servo Drive
+            ↓
+       Power Converter
+            ↓
+        Servo Motor
+            ↓
+    Coupling / Ballscrew / Gear
+            ↓
+       Machine Axis Motion
+            ↓
+     Position Feedback Sensor
+            ↓
+       Servo Drive / CNC
+            ↓
+     Position Error Correction
+</code></pre>
+<p>The exact feedback architecture depends on the machine. Some systems use motor-mounted encoders; others also use linear scales or separate machine-position feedback.</p>
+<p>A servo system is a closed-loop control system. It compares commanded motion with measured feedback and adjusts motor torque to reduce the error.</p>
+<h2 id="3-important-servo-terminology">3. Important Servo Terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Servo motor</td>
+<td>Motor designed for controlled position, speed, and torque operation</td>
+</tr>
+<tr>
+<td>Servo drive / amplifier</td>
+<td>Electronic unit that controls motor current and motion response</td>
+</tr>
+<tr>
+<td>Axis</td>
+<td>Controlled direction or rotational movement of a machine</td>
+</tr>
+<tr>
+<td>Encoder</td>
+<td>Device that measures motor or machine position and, depending on type, speed</td>
+</tr>
+<tr>
+<td>Resolver</td>
+<td>Electromagnetic position sensor used in some motor systems</td>
+</tr>
+<tr>
+<td>Position command</td>
+<td>Requested target position or movement</td>
+</tr>
+<tr>
+<td>Position feedback</td>
+<td>Measured position returned by the feedback device</td>
+</tr>
+<tr>
+<td>Following error</td>
+<td>Difference between commanded and measured position</td>
+</tr>
+<tr>
+<td>Torque</td>
+<td>Rotational force produced by the motor</td>
+</tr>
+<tr>
+<td>Current loop</td>
+<td>Control loop regulating motor current and torque</td>
+</tr>
+<tr>
+<td>Speed loop</td>
+<td>Control loop regulating motor speed</td>
+</tr>
+<tr>
+<td>Position loop</td>
+<td>Control loop regulating position</td>
+</tr>
+<tr>
+<td>Servo-ready</td>
+<td>Status indicating the servo system satisfies its readiness conditions</td>
+</tr>
+<tr>
+<td>Servo enable</td>
+<td>Command that permits the drive to enter its enabled operating state</td>
+</tr>
+<tr>
+<td>DC bus</td>
+<td>Internal DC link supplying the drive's power-conversion stage</td>
+</tr>
+<tr>
+<td>Regenerative braking</td>
+<td>Process in which a motor returns energy to the drive during deceleration or overhauling motion</td>
+</tr>
+<tr>
+<td>Brake resistor</td>
+<td>Component that dissipates regenerated energy when required by the drive design</td>
+</tr>
+<tr>
+<td>Holding brake</td>
+<td>Brake that holds an axis when required, especially during power-off conditions</td>
+</tr>
+<tr>
+<td>Ballscrew</td>
+<td>Mechanical transmission converting rotary movement into linear movement</td>
+</tr>
+<tr>
+<td>Backlash</td>
+<td>Lost motion caused by clearance in a mechanical transmission</td>
+</tr>
+<tr>
+<td>Homing / reference return</td>
+<td>Procedure establishing a known reference position</td>
+</tr>
+<tr>
+<td>Absolute encoder</td>
+<td>Encoder that provides an absolute position within its specified range</td>
+</tr>
+<tr>
+<td>Incremental encoder</td>
+<td>Encoder that reports movement relative to a reference or counting state</td>
+</tr>
+<tr>
+<td>Electronic gearing</td>
+<td>Configured relationship between a command source and motor movement</td>
+</tr>
+<tr>
+<td>Servo tuning</td>
+<td>Adjustment of control-loop parameters for stable and accurate motion</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-main-components-of-a-cnc-servo-system">4. Main Components of a CNC Servo System</h2>
+<h3 id="41-servo-drive">4.1 Servo drive</h3>
+<p>The servo drive receives motion commands and regulates motor current, speed, and position-related functions according to the system architecture.</p>
+<p>Common drive faults include:</p>
+<ul>
+<li>Overcurrent.</li>
+<li>Overload.</li>
+<li>Overtemperature.</li>
+<li>DC-bus undervoltage or overvoltage.</li>
+<li>Encoder communication failure.</li>
+<li>Motor identification or configuration error.</li>
+<li>Power-stage failure.</li>
+<li>Cooling-fan failure.</li>
+<li>Internal drive alarm.</li>
+</ul>
+<p>Always record the exact drive alarm code and text. Alarm numbering differs by manufacturer and model.</p>
+<h3 id="42-servo-motor">4.2 Servo motor</h3>
+<p>The motor converts electrical energy into controlled mechanical movement.</p>
+<p>Possible faults include:</p>
+<ul>
+<li>Winding insulation degradation.</li>
+<li>Phase-to-phase electrical fault.</li>
+<li>Damaged motor cable.</li>
+<li>Bearing damage.</li>
+<li>Excessive temperature.</li>
+<li>Mechanical overload.</li>
+<li>Brake not releasing.</li>
+<li>Contamination or moisture ingress.</li>
+<li>Encoder or feedback-device failure.</li>
+</ul>
+<p>A motor that does not rotate may have a healthy motor but a disabled drive, an engaged brake, a missing command, or a mechanical obstruction.</p>
+<h3 id="43-encoder-or-feedback-device">4.3 Encoder or feedback device</h3>
+<p>Feedback allows the control system to determine actual movement.</p>
+<p>Possible faults include:</p>
+<ul>
+<li>Damaged feedback cable.</li>
+<li>Loose or contaminated connector.</li>
+<li>Encoder electronics failure.</li>
+<li>Incorrect feedback configuration.</li>
+<li>Noise or grounding problems.</li>
+<li>Incorrect encoder supply.</li>
+<li>Mechanical damage to the feedback device.</li>
+<li>Incorrect feedback direction or scaling after replacement.</li>
+</ul>
+<p>Feedback faults may result in encoder alarms, position errors, unstable motion, or failure to establish reference.</p>
+<h3 id="44-mechanical-transmission">4.4 Mechanical transmission</h3>
+<p>The motor's movement is transferred to the machine through components such as:</p>
+<ul>
+<li>Ballscrew and nut.</li>
+<li>Linear guideways.</li>
+<li>Couplings.</li>
+<li>Gearboxes.</li>
+<li>Belts.</li>
+<li>Bearings.</li>
+<li>Rotary tables.</li>
+<li>Tool-turret mechanisms.</li>
+</ul>
+<p>Mechanical faults can overload an electrically healthy servo system. Excessive friction, binding, lubrication failure, damaged bearings, or a jammed mechanism may produce drive alarms.</p>
+<h3 id="45-holding-brake">4.5 Holding brake</h3>
+<p>Some vertical axes and other mechanisms use a holding brake to prevent unwanted movement when the motor is not energized.</p>
+<p>A brake may fail to release because of:</p>
+<ul>
+<li>Missing brake supply.</li>
+<li>Defective brake coil.</li>
+<li>Failed relay or output circuit.</li>
+<li>Incorrect PLC/PMC sequence.</li>
+<li>Brake wear or mechanical sticking.</li>
+<li>Incorrect drive configuration.</li>
+</ul>
+<p>Never assume that a motor can safely support a vertical load after power isolation. Follow the machine-specific procedure for supporting and securing the axis.</p>
+<h2 id="5-servo-fault-classification">5. Servo Fault Classification</h2>
+<table>
+<thead>
+<tr>
+<th>Fault category</th>
+<th>Typical symptoms</th>
+<th>Initial diagnostic direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Power supply</td>
+<td>Drive does not power up or DC-bus alarm appears</td>
+<td>Check incoming supply, fuses, contactors, and DC-bus diagnostics</td>
+</tr>
+<tr>
+<td>Servo enable</td>
+<td>Axis remains disabled or not ready</td>
+<td>Check CNC/PLC enable conditions and drive status</td>
+</tr>
+<tr>
+<td>Overcurrent</td>
+<td>Drive trips during movement or acceleration</td>
+<td>Check motor cable, motor, mechanical load, and drive diagnostics</td>
+</tr>
+<tr>
+<td>Overload</td>
+<td>Alarm appears after sustained operation</td>
+<td>Check load, friction, duty cycle, acceleration, and motor sizing</td>
+</tr>
+<tr>
+<td>Overtemperature</td>
+<td>Drive or motor temperature alarm</td>
+<td>Check cooling, load, fan, and ambient conditions</td>
+</tr>
+<tr>
+<td>Feedback</td>
+<td>Encoder alarm, unstable position, or following error</td>
+<td>Check encoder cable, connector, supply, configuration, and sensor</td>
+</tr>
+<tr>
+<td>Mechanical</td>
+<td>Jerky movement, binding, or abnormal noise</td>
+<td>Inspect transmission, lubrication, alignment, and load</td>
+</tr>
+<tr>
+<td>Brake</td>
+<td>Axis fails to move or vertical axis behaves abnormally</td>
+<td>Check brake-release command, supply, feedback, and mechanism</td>
+</tr>
+<tr>
+<td>Regeneration</td>
+<td>DC-bus overvoltage during deceleration</td>
+<td>Check deceleration profile, regenerative unit, and braking components</td>
+</tr>
+<tr>
+<td>Parameter/configuration</td>
+<td>Incorrect movement, tuning alarm, or commissioning issue</td>
+<td>Verify approved configuration and change history</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>Drive unavailable or communication alarm</td>
+<td>Check network, interface, power, and device status</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6-servo-ready-and-servo-enable-problems">6. Servo-Ready and Servo-Enable Problems</h2>
+<p>A CNC axis generally requires several conditions before movement is permitted.</p>
+<p>These may include:</p>
+<ul>
+<li>Control power available.</li>
+<li>Servo drive powered and healthy.</li>
+<li>No active drive fault.</li>
+<li>Required safety conditions satisfied.</li>
+<li>CNC motion system ready.</li>
+<li>PLC/PMC permissives satisfied.</li>
+<li>Brake-release conditions satisfied where applicable.</li>
+<li>Valid communication and feedback.</li>
+<li>Reference or position conditions appropriate to the operation.</li>
+</ul>
+<p>The exact readiness chain depends on the machine design.</p>
+<h3 id="troubleshooting-sequence">Troubleshooting sequence</h3>
+<ol>
+<li>Read the CNC axis alarm and servo-drive alarm.</li>
+<li>Check whether the drive is powered and displays normal status.</li>
+<li>Check the drive's ready and enable states.</li>
+<li>Review the PLC/PMC permissives that control servo enable.</li>
+<li>Check communication and feedback status.</li>
+<li>Verify brake-release status if the axis uses a brake.</li>
+<li>Identify the first missing condition before replacing any component.</li>
+</ol>
+<p>Important distinction: A missing servo-enable command is not the same as a servo drive that receives enable but refuses to become ready. The first points toward command logic or permissives; the second requires examination of the drive's fault and readiness status.</p>
+<h2 id="7-servo-overcurrent-faults">7. Servo Overcurrent Faults</h2>
+<p>An overcurrent alarm indicates that the drive has detected current beyond an allowed condition. The exact detection method and threshold depend on the drive.</p>
+<h3 id="possible-causes">Possible causes</h3>
+<ul>
+<li>Shorted or damaged motor cable.</li>
+<li>Motor winding fault.</li>
+<li>Ground fault.</li>
+<li>Damaged power transistor or drive power stage.</li>
+<li>Mechanical obstruction.</li>
+<li>Excessive acceleration or deceleration demand.</li>
+<li>Incorrect motor configuration.</li>
+<li>Damaged motor connector.</li>
+<li>Incorrect wiring after maintenance.</li>
+</ul>
+<h3 id="diagnostic-procedure">Diagnostic procedure</h3>
+<ol>
+<li>Record the exact alarm and the motion condition when it occurred.</li>
+<li>Determine whether the fault occurs at power-up, enable, acceleration, steady movement, or deceleration.</li>
+<li>Check the motor cable and connectors under safe isolation.</li>
+<li>Inspect the mechanical transmission for binding.</li>
+<li>Verify the motor and drive configuration.</li>
+<li>Use the manufacturer's approved motor and cable testing procedures.</li>
+<li>Replace or repair the confirmed faulty component.</li>
+</ol>
+<p>Do not repeatedly reset an overcurrent fault and command movement. Repeated attempts can worsen damage to the drive or motor.</p>
+<h3 id="symptom-based-interpretation">Symptom-based interpretation</h3>
+<table>
+<thead>
+<tr>
+<th>Fault timing</th>
+<th>Possible direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Immediately on enable</td>
+<td>Wiring, motor connection, drive power stage, configuration, or brake/load issue</td>
+</tr>
+<tr>
+<td>During acceleration</td>
+<td>Excessive load, binding, acceleration demand, cable or motor fault</td>
+</tr>
+<tr>
+<td>During steady motion</td>
+<td>Mechanical resistance, motor/cable fault, or sustained overload</td>
+</tr>
+<tr>
+<td>During deceleration</td>
+<td>Regenerative or deceleration-related issue, although overcurrent may have other causes</td>
+</tr>
+<tr>
+<td>Only at a particular position</td>
+<td>Local mechanical binding, damaged transmission, cable movement, or position-dependent load</td>
+</tr>
+</tbody>
+</table>
+<p>These are diagnostic clues, not definitive fault codes.</p>
+<h2 id="8-servo-overload-and-overtemperature">8. Servo Overload and Overtemperature</h2>
+<h3 id="81-overload">8.1 Overload</h3>
+<p>An overload fault may occur when the motor or drive experiences excessive load over time.</p>
+<p>Possible causes include:</p>
+<ul>
+<li>Excessive mechanical friction.</li>
+<li>Poor lubrication.</li>
+<li>Misalignment.</li>
+<li>Damaged bearings.</li>
+<li>Excessive payload.</li>
+<li>Excessive acceleration.</li>
+<li>High-duty-cycle operation.</li>
+<li>Incorrect motor sizing.</li>
+<li>Holding brake not fully released.</li>
+</ul>
+<p>Check whether the alarm occurs during a specific movement, under a particular load, or after a repeatable period of operation.</p>
+<h3 id="82-overtemperature">8.2 Overtemperature</h3>
+<p>Possible causes include:</p>
+<ul>
+<li>Cooling fan failure.</li>
+<li>Blocked drive ventilation.</li>
+<li>High cabinet temperature.</li>
+<li>Motor cooling failure.</li>
+<li>Excessive continuous load.</li>
+<li>Loose or high-resistance electrical connection.</li>
+<li>Faulty temperature sensor.</li>
+</ul>
+<h3 id="diagnostic-approach">Diagnostic approach</h3>
+<ul>
+<li>Review temperature and load-related diagnostic data.</li>
+<li>Inspect cooling paths and filters according to the maintenance procedure.</li>
+<li>Check for mechanical resistance.</li>
+<li>Verify the machine's specified operating conditions.</li>
+<li>Confirm that any temperature alarm is genuine and not caused by a sensor or wiring fault.</li>
+</ul>
+<p>Do not disable thermal protection to keep the machine running.</p>
+<h2 id="9-encoder-and-feedback-faults">9. Encoder and Feedback Faults</h2>
+<p>Feedback problems can cause the drive to lose confidence in the axis's actual position.</p>
+<h3 id="91-common-symptoms">9.1 Common symptoms</h3>
+<ul>
+<li>Encoder or feedback alarm.</li>
+<li>Axis fails to enable.</li>
+<li>Following error.</li>
+<li>Incorrect position display.</li>
+<li>Unstable or jerky motion.</li>
+<li>Reference return failure.</li>
+<li>Axis position changes unexpectedly after power-up.</li>
+</ul>
+<h3 id="92-diagnostic-sequence">9.2 Diagnostic sequence</h3>
+<ol>
+<li>Record the exact feedback alarm.</li>
+<li>Check the drive's feedback status and diagnostic information.</li>
+<li>Inspect the feedback cable and connectors under safe conditions.</li>
+<li>Verify the specified feedback supply and interface.</li>
+<li>Check for cable damage, contamination, or mechanical stress.</li>
+<li>Verify feedback type and configuration against the approved machine data.</li>
+<li>Follow the manufacturer's encoder test or replacement procedure.</li>
+</ol>
+<p>Feedback cables may carry sensitive signals. Incorrect probing, unsuitable cable routing, poor shielding, or improper grounding can introduce faults that resemble a failed encoder.</p>
+<h3 id="93-incremental-versus-absolute-encoder-considerations">9.3 Incremental versus absolute encoder considerations</h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Incremental encoder</th>
+<th>Absolute encoder</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Position information</td>
+<td>Derived from counted movement relative to a reference</td>
+<td>Provides an encoded absolute position within its supported range</td>
+</tr>
+<tr>
+<td>Reference return</td>
+<td>Often required after power loss or loss of position information</td>
+<td>May be unnecessary if the system retains and validates absolute position</td>
+</tr>
+<tr>
+<td>Typical concerns</td>
+<td>Lost counts, signal quality, reference procedure</td>
+<td>Battery or retention requirements on applicable designs, communication, position validity</td>
+</tr>
+<tr>
+<td>Replacement considerations</td>
+<td>Correct mounting, signals, and reference procedure</td>
+<td>Correct type, configuration, position initialization, and commissioning</td>
+</tr>
+</tbody>
+</table>
+<p>An absolute encoder does not guarantee that the machine can always skip reference return. Machine configuration, encoder type, safety requirements, and position-validity checks determine the actual behavior.</p>
+<h2 id="10-following-error-and-position-deviation">10. Following Error and Position Deviation</h2>
+<p>Following error is the difference between the commanded position and the measured position.</p>
+<div class="math-display">\[ e(t)=x\_{\text{command}}(t)-x\_{\text{feedback}}(t) \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(e(t)\)</span> is the following error.</li>
+<li><span class="math-inline">\(x\_{\text{command}}(t)\)</span> is the commanded position.</li>
+<li><span class="math-inline">\(x\_{\text{feedback}}(t)\)</span> is the measured position.</li>
+</ul>
+<p>A following-error alarm occurs when the error exceeds the configured or system-defined limit.</p>
+<h3 id="possible-causes_1">Possible causes</h3>
+<ul>
+<li>Mechanical binding.</li>
+<li>Excessive load.</li>
+<li>Incorrect servo tuning.</li>
+<li>Encoder or feedback problem.</li>
+<li>Excessive acceleration.</li>
+<li>Motor or drive fault.</li>
+<li>Coupling or ballscrew damage.</li>
+<li>Brake not released.</li>
+<li>Incorrect position scaling or configuration.</li>
+</ul>
+<h3 id="troubleshooting-approach">Troubleshooting approach</h3>
+<ol>
+<li>Identify the affected axis and alarm threshold if available.</li>
+<li>Determine whether the fault occurs during acceleration, constant-speed motion, deceleration, or at a particular position.</li>
+<li>Check mechanical resistance and lubrication.</li>
+<li>Check drive current and load diagnostics.</li>
+<li>Check feedback quality.</li>
+<li>Review approved motion and tuning parameters.</li>
+<li>Change tuning only under an authorized procedure and with a recorded baseline.</li>
+</ol>
+<p>Do not increase the following-error limit merely to suppress the alarm. That can hide a genuine motion-control or mechanical problem.</p>
+<h2 id="11-mechanical-axis-faults">11. Mechanical Axis Faults</h2>
+<p>Electrical troubleshooting must include the mechanical load because a servo drive responds to the resistance it encounters.</p>
+<h3 id="111-ballscrew-and-coupling-problems">11.1 Ballscrew and coupling problems</h3>
+<p>Possible symptoms:</p>
+<ul>
+<li>Abnormal noise.</li>
+<li>Excessive following error.</li>
+<li>Position repeatability problems.</li>
+<li>High motor load.</li>
+<li>Binding at specific positions.</li>
+<li>Backlash or lost motion.</li>
+</ul>
+<p>Possible causes include wear, misalignment, damaged bearings, coupling damage, lubrication problems, or contamination.</p>
+<h3 id="112-linear-guideway-and-lubrication-problems">11.2 Linear guideway and lubrication problems</h3>
+<p>Insufficient lubrication or damaged guideways may increase friction and motor load.</p>
+<p>Investigate:</p>
+<ul>
+<li>Lubrication-system alarms.</li>
+<li>Oil level and delivery, where applicable.</li>
+<li>Guideway contamination.</li>
+<li>Mechanical resistance.</li>
+<li>Uneven movement.</li>
+<li>Evidence of wear or damage.</li>
+</ul>
+<h3 id="113-cable-chain-and-moving-cable-problems">11.3 Cable-chain and moving-cable problems</h3>
+<p>Axis cables flex during machine movement. Damage may therefore appear only at certain positions.</p>
+<p>Symptoms can include intermittent encoder alarms, motor faults, or drive trips that occur at repeatable travel locations.</p>
+<p>Inspect cable routing, bending radius, strain relief, and connector condition according to the machine builder's procedure.</p>
+<h2 id="12-servo-motor-electrical-testing">12. Servo Motor Electrical Testing</h2>
+<p>Motor testing must follow the drive and motor manufacturer's specifications.</p>
+<h3 id="121-winding-resistance">12.1 Winding resistance</h3>
+<p>Resistance measurements can help identify an open winding or significant phase imbalance on suitable motor designs.</p>
+<p>However, servo motor winding resistance may be very low. Ordinary handheld meters may not provide enough accuracy to identify small differences reliably.</p>
+<ul>
+<li>Isolate the motor from the drive according to the prescribed procedure.</li>
+<li>Identify the motor terminal arrangement.</li>
+<li>Use the specified test method and instrument.</li>
+<li>Compare results with the manufacturer's limits or baseline.</li>
+<li>Do not infer winding health from resistance alone.</li>
+</ul>
+<h3 id="122-insulation-resistance">12.2 Insulation resistance</h3>
+<p>Insulation testing may help identify insulation deterioration, but the test voltage and method must be appropriate for the motor.</p>
+<p>Never apply an insulation tester to a motor while it remains connected to the servo drive, encoder electronics, or other sensitive electronic components unless the manufacturer explicitly authorizes that arrangement.</p>
+<p>Disconnect and isolate equipment according to the approved procedure. Some motor and feedback systems require additional precautions.</p>
+<h3 id="123-phase-and-cable-checks">12.3 Phase and cable checks</h3>
+<p>Check for:</p>
+<ul>
+<li>Open conductors.</li>
+<li>Phase-to-phase shorts.</li>
+<li>Phase-to-ground faults.</li>
+<li>Damaged insulation.</li>
+<li>Poor terminal connections.</li>
+<li>Connector contamination.</li>
+<li>Cable damage caused by repeated movement.</li>
+</ul>
+<p>A cable fault can produce the same symptom as a motor or drive fault, so test the relevant sections separately using an approved method.</p>
+<h2 id="13-servo-holding-brake-faults">13. Servo Holding Brake Faults</h2>
+<p>A holding brake may be used to prevent a vertical axis from falling when servo torque is unavailable.</p>
+<h3 id="symptoms">Symptoms</h3>
+<ul>
+<li>Axis fails to move despite a valid motion command.</li>
+<li>Drive reports excessive load during attempted movement.</li>
+<li>Brake-release confirmation is missing.</li>
+<li>Vertical axis behaves abnormally during enable or disable.</li>
+<li>Brake-related alarm appears.</li>
+</ul>
+<h3 id="diagnostic-sequence">Diagnostic sequence</h3>
+<ol>
+<li>Identify whether the axis has a holding brake.</li>
+<li>Confirm the machine's required safety and support conditions.</li>
+<li>Check the brake-release command and sequence conditions.</li>
+<li>Check the specified brake supply and interface circuit.</li>
+<li>Verify feedback where provided.</li>
+<li>Investigate mechanical sticking or brake wear using the approved service procedure.</li>
+</ol>
+<p>Do not energize or manually release a brake without the prescribed load-support precautions. A vertical axis can move unexpectedly when the brake releases.</p>
+<h2 id="14-dc-bus-and-regenerative-faults">14. DC Bus and Regenerative Faults</h2>
+<p>During motor deceleration, the motor may return energy to the drive. Depending on the drive architecture, this energy may be returned to the supply or dissipated through a braking system.</p>
+<p>A DC-bus overvoltage alarm may occur when the regenerated energy exceeds the system's ability to absorb or return it.</p>
+<h3 id="possible-causes_2">Possible causes</h3>
+<ul>
+<li>Excessive deceleration demand.</li>
+<li>High-inertia load.</li>
+<li>Incorrect regenerative-system configuration.</li>
+<li>Braking resistor or regenerative unit fault.</li>
+<li>Supply-related issue.</li>
+<li>Incorrect drive parameters.</li>
+<li>Mechanical or operating conditions that produce excessive regeneration.</li>
+</ul>
+<h3 id="diagnostic-procedure_1">Diagnostic procedure</h3>
+<ol>
+<li>Record whether the alarm occurs during acceleration, steady motion, or deceleration.</li>
+<li>Check the drive's DC-bus diagnostic data.</li>
+<li>Review the approved deceleration settings and machine load.</li>
+<li>Check the regenerative system and braking components as specified.</li>
+<li>Verify configuration against the machine builder's approved data.</li>
+<li>Correct the confirmed cause and validate operation.</li>
+</ol>
+<p>Do not alter deceleration parameters or braking-resistor arrangements without checking the drive's specifications and the machine's safety requirements.</p>
+<h2 id="15-servo-parameters-and-tuning">15. Servo Parameters and Tuning</h2>
+<p>Servo parameters define how the drive and CNC coordinate motor behavior.</p>
+<p>They may include:</p>
+<ul>
+<li>Motor identification and rated data.</li>
+<li>Encoder type and resolution.</li>
+<li>Position scaling.</li>
+<li>Electronic gearing.</li>
+<li>Current and speed limits.</li>
+<li>Acceleration and deceleration settings.</li>
+<li>Position-loop and speed-loop gains.</li>
+<li>Following-error thresholds.</li>
+<li>Brake-control settings.</li>
+<li>Reference and homing configuration.</li>
+</ul>
+<h3 id="common-configuration-related-symptoms">Common configuration-related symptoms</h3>
+<ul>
+<li>Incorrect movement distance.</li>
+<li>Unexpected direction.</li>
+<li>Position error.</li>
+<li>Unstable motion.</li>
+<li>Excessive noise or vibration.</li>
+<li>Poor settling after movement.</li>
+<li>Servo-ready failure following a drive replacement.</li>
+</ul>
+<h3 id="correct-approach">Correct approach</h3>
+<ol>
+<li>Record the existing configuration.</li>
+<li>Verify the exact motor and drive combination.</li>
+<li>Compare the configuration with the approved machine data.</li>
+<li>Identify any recent parameter changes.</li>
+<li>Restore settings only from a verified machine-specific backup.</li>
+<li>Follow the approved commissioning and tuning process.</li>
+<li>Validate travel, positioning, and machine operation according to the manufacturer's procedure.</li>
+</ol>
+<p>Do not copy parameters from another axis or machine merely because the hardware appears similar. Motor ratings, transmission ratios, feedback devices, and mechanical loads may differ.</p>
+<h2 id="16-servo-drive-and-motor-replacement">16. Servo Drive and Motor Replacement</h2>
+<p>Before replacing a drive or motor, confirm the root cause and identify compatibility requirements.</p>
+<h3 id="before-replacement">Before replacement</h3>
+<ul>
+<li>Record the exact CNC and drive alarm.</li>
+<li>Record drive and motor model numbers.</li>
+<li>Record hardware and firmware revisions where applicable.</li>
+<li>Identify encoder and feedback type.</li>
+<li>Verify drive-to-motor compatibility.</li>
+<li>Back up the required configuration.</li>
+<li>Identify brake, cooling, and cable requirements.</li>
+<li>Follow the machine's energy-isolation and stored-energy procedures.</li>
+</ul>
+<h3 id="after-replacement">After replacement</h3>
+<ul>
+<li>Verify wiring and connector compatibility.</li>
+<li>Confirm correct configuration and parameters.</li>
+<li>Perform manufacturer-required initialization or commissioning.</li>
+<li>Verify feedback status.</li>
+<li>Verify servo-ready and enable status.</li>
+<li>Check brake operation where applicable.</li>
+<li>Perform the authorized reference and functional tests.</li>
+<li>Verify axis movement, positioning, and alarms under the prescribed procedure.</li>
+</ul>
+<p>A replacement drive that powers up successfully is not necessarily commissioned correctly.</p>
+<h2 id="17-practical-cnc-servo-breakdown-cases">17. Practical CNC Servo Breakdown Cases</h2>
+<h3 id="case-1-axis-does-not-move-and-servo-ready-is-off">Case 1: Axis does not move and servo-ready is OFF</h3>
+<p>Reported condition: The CNC is operational, but an axis does not enable.</p>
+<p>Diagnostic steps:</p>
+<ol>
+<li>Record the CNC axis alarm and drive alarm.</li>
+<li>Check drive power and status.</li>
+<li>Check enable commands and PLC/PMC permissives.</li>
+<li>Check feedback and communication status.</li>
+<li>Verify brake-release conditions if applicable.</li>
+<li>Identify the first missing readiness condition.</li>
+</ol>
+<p>Possible causes: Missing enable command, active drive alarm, communication failure, brake issue, or feedback fault.</p>
+<p>Verification: Confirm that the axis becomes ready and operates correctly under the approved test procedure.</p>
+<h3 id="case-2-overcurrent-during-axis-acceleration">Case 2: Overcurrent during axis acceleration</h3>
+<p>Reported condition: The axis moves briefly and trips when acceleration begins.</p>
+<p>Diagnostic steps:</p>
+<ol>
+<li>Record the exact alarm and motion conditions.</li>
+<li>Inspect motor cable and connectors under safe isolation.</li>
+<li>Check mechanical resistance and transmission condition.</li>
+<li>Review drive load and current diagnostics.</li>
+<li>Test the motor and cable according to the manufacturer's procedure.</li>
+<li>Identify whether the fault follows the motor, cable, mechanical load, or drive.</li>
+</ol>
+<p>Possible causes: Mechanical binding, cable damage, winding fault, excessive acceleration demand, or drive power-stage fault.</p>
+<p>Verification: Run the prescribed motion test and confirm that current, load, and fault behavior are normal.</p>
+<h3 id="case-3-encoder-alarm-appears-intermittently">Case 3: Encoder alarm appears intermittently</h3>
+<p>Reported condition: The machine runs normally for part of the travel, then reports a feedback alarm.</p>
+<p>Diagnostic steps:</p>
+<ol>
+<li>Record the axis position and operating condition when the alarm occurs.</li>
+<li>Check feedback diagnostics.</li>
+<li>Inspect the cable chain and moving cable routing.</li>
+<li>Check connectors and shielding under safe conditions.</li>
+<li>Test the feedback circuit using the approved method.</li>
+<li>Replace the confirmed defective component.</li>
+</ol>
+<p>Possible causes: Intermittent cable conductor, connector fault, encoder failure, electrical interference, or feedback configuration problem.</p>
+<p>Verification: Test the full relevant travel range and confirm stable feedback.</p>
+<h3 id="case-4-following-error-occurs-at-a-particular-position">Case 4: Following error occurs at a particular position</h3>
+<p>Reported condition: An axis faults at a repeatable position.</p>
+<p>Diagnostic steps:</p>
+<ol>
+<li>Record the position and movement direction.</li>
+<li>Check whether the fault occurs during acceleration, steady movement, or deceleration.</li>
+<li>Inspect for mechanical binding or an obstruction.</li>
+<li>Review lubrication and transmission condition.</li>
+<li>Check motor load and feedback data.</li>
+<li>Investigate moving-cable problems where applicable.</li>
+</ol>
+<p>Possible causes: Local mechanical resistance, damaged ballscrew or guideway, cable-chain damage, or a feedback problem.</p>
+<p>Verification: Confirm smooth movement and acceptable positioning over the relevant travel range.</p>
+<h3 id="case-5-servo-motor-becomes-hot-during-normal-production">Case 5: Servo motor becomes hot during normal production</h3>
+<p>Reported condition: Motor temperature rises and a thermal alarm appears after extended operation.</p>
+<p>Diagnostic steps:</p>
+<ol>
+<li>Record operating duration and load conditions.</li>
+<li>Review motor and drive load diagnostics.</li>
+<li>Check mechanical resistance and lubrication.</li>
+<li>Verify motor cooling arrangements.</li>
+<li>Check duty cycle, acceleration demand, and motor configuration.</li>
+<li>Investigate the temperature sensor and wiring if the reported temperature is inconsistent.</li>
+</ol>
+<p>Possible causes: Excessive load, friction, inadequate cooling, incorrect sizing, or temperature-feedback fault.</p>
+<p>Verification: Confirm that the root cause is corrected and that the motor operates within specified limits during the approved production-representative test.</p>
+<h2 id="18-servo-preventive-maintenance-checklist">18. Servo Preventive Maintenance Checklist</h2>
+<h3 id="drive-and-electrical-system">Drive and electrical system</h3>
+<ul>
+<li>Review recurring drive alarms and reset history.</li>
+<li>Check drive status and diagnostic indicators.</li>
+<li>Inspect cooling fans and ventilation paths.</li>
+<li>Inspect accessible motor-power and feedback connectors under safe isolation.</li>
+<li>Check cable routing and strain relief.</li>
+<li>Investigate unexplained DC-bus, overcurrent, and overload alarms.</li>
+</ul>
+<h3 id="motor-and-mechanical-transmission">Motor and mechanical transmission</h3>
+<ul>
+<li>Check for abnormal noise and vibration.</li>
+<li>Inspect the axis transmission for signs of binding or damage.</li>
+<li>Verify lubrication-system condition.</li>
+<li>Inspect moving cable chains.</li>
+<li>Investigate repeatable position-dependent faults.</li>
+<li>Check brake condition according to the maintenance plan.</li>
+</ul>
+<h3 id="feedback-and-configuration">Feedback and configuration</h3>
+<ul>
+<li>Review encoder and feedback alarms.</li>
+<li>Maintain verified CNC and drive backups.</li>
+<li>Record drive and motor model numbers.</li>
+<li>Record approved parameter changes.</li>
+<li>Follow the prescribed brake and encoder maintenance procedures.</li>
+<li>Verify axis reference and positioning after relevant maintenance.</li>
+</ul>
+<h2 id="19-servo-breakdown-record-template">19. Servo Breakdown Record Template</h2>
+<pre><code>Machine ID:
+Machine Builder:
+CNC Manufacturer / Model:
+Axis Name:
+Servo Drive Manufacturer / Model:
+Servo Motor Model:
+Encoder / Feedback Type:
+
+Reported Symptom:
+CNC Alarm Number / Text:
+Drive Alarm Number / Text:
+Axis Position at Fault:
+Operating Mode:
+Motion Condition:
+Fault Timing:
+
+Drive Power Status:
+Servo-Ready Status:
+Enable Command Status:
+Brake Status:
+Encoder / Feedback Status:
+DC-Bus Status:
+Motor Temperature:
+Drive Temperature:
+Motor Current / Load Data:
+Mechanical Condition:
+
+Recent Maintenance:
+Recent Parameter Changes:
+Recent Cable or Motor Work:
+
+Diagnostic Findings:
+Confirmed Root Cause:
+Corrective Action:
+Component Replaced:
+Configuration Verified:
+Feedback Verified:
+Brake Verified:
+Axis Reference Verified:
+Functional Test Result:
+
+Technician:
+Work Order:
+Date:
+</code></pre>
+<h2 id="20-interview-questions-and-answers">20. Interview Questions and Answers</h2>
+<h3 id="q1-what-is-the-function-of-a-cnc-servo-system">Q1. What is the function of a CNC servo system?</h3>
+<p>It controls the position, speed, and torque of machine axes to achieve the movement required by the CNC program.</p>
+<h3 id="q2-what-is-following-error">Q2. What is following error?</h3>
+<p>It is the difference between commanded position and measured feedback position. Excessive error can result from mechanical resistance, feedback faults, tuning problems, or insufficient drive capability.</p>
+<h3 id="q3-what-causes-a-servo-overcurrent-alarm">Q3. What causes a servo overcurrent alarm?</h3>
+<p>Possible causes include a motor or cable fault, mechanical obstruction, excessive acceleration demand, incorrect configuration, or drive power-stage failure.</p>
+<h3 id="q4-why-might-a-servo-ready-signal-remain-off">Q4. Why might a servo-ready signal remain OFF?</h3>
+<p>The drive may have an active alarm, missing enable command, invalid feedback, communication fault, unmet permissive, or brake-related issue.</p>
+<h3 id="q5-how-do-you-distinguish-a-motor-fault-from-a-mechanical-fault">Q5. How do you distinguish a motor fault from a mechanical fault?</h3>
+<p>Compare drive diagnostics and approved electrical test results with the mechanical condition, movement behavior, and load data. Neither alarm text nor motor temperature alone proves the root cause.</p>
+<h3 id="q6-what-causes-an-encoder-alarm">Q6. What causes an encoder alarm?</h3>
+<p>Potential causes include damaged feedback wiring, connector faults, encoder failure, incorrect configuration, supply problems, or electrical interference.</p>
+<h3 id="q7-why-should-following-error-limits-not-be-increased-just-to-clear-an-alarm">Q7. Why should following-error limits not be increased just to clear an alarm?</h3>
+<p>The limit may be protecting against genuine loss of positioning accuracy or a mechanical or feedback fault. Increasing it can conceal the underlying problem.</p>
+<h3 id="q8-what-causes-dc-bus-overvoltage-during-deceleration">Q8. What causes DC-bus overvoltage during deceleration?</h3>
+<p>Regenerated energy may exceed the system's capacity to absorb or return it. Deceleration settings, load inertia, and the regenerative system should be investigated.</p>
+<h3 id="q9-what-precautions-are-required-before-replacing-a-servo-drive">Q9. What precautions are required before replacing a servo drive?</h3>
+<p>Record alarms and configuration, isolate hazardous energy, verify stored-energy discharge requirements, confirm compatibility, protect backups, and follow the manufacturer's replacement and commissioning procedure.</p>
+<h3 id="q10-why-can-an-axis-fault-at-only-one-position">Q10. Why can an axis fault at only one position?</h3>
+<p>Possible causes include localized mechanical binding, transmission damage, cable-chain faults, or position-dependent feedback problems.</p>
+<h2 id="21-completion-checklist">21. Completion Checklist</h2>
+<ul>
+<li>Understand CNC servo architecture and closed-loop control.</li>
+<li>Identify the servo drive, motor, feedback device, and mechanical transmission.</li>
+<li>Diagnose servo-ready and enable faults.</li>
+<li>Understand overcurrent, overload, and overtemperature alarms.</li>
+<li>Troubleshoot encoder and following-error faults.</li>
+<li>Recognize mechanical binding and brake-related faults.</li>
+<li>Understand DC-bus and regenerative faults.</li>
+<li>Handle servo parameters and replacement procedures safely.</li>
+<li>Complete a structured breakdown record and verify the repair.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\19_Breakdown\05_CNC_Fault\05_Spindle - Spindle: Spindle drive and motor</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

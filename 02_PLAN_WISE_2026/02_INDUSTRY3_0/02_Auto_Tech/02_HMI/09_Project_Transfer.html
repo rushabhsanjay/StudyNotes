@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>09_Project_Transfer: HMI Project Transfer, Upload, Download and Restore</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">09_Project_Transfer: HMI Project Transfer, Upload, Download and Restore</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-why-hmi-project-transfer-is-important">2. Why HMI Project Transfer Is Important</a></li>
+<li><a href="#3-basic-project-transfer-architecture">3. Basic Project Transfer Architecture</a></li>
+<li><a href="#4-source-project-versus-runtime-application">4. Source Project Versus Runtime Application</a><ul>
+<li><a href="#41-engineering-source-project">4.1 Engineering Source Project</a></li>
+<li><a href="#42-runtime-application">4.2 Runtime Application</a></li>
+<li><a href="#43-why-the-distinction-matters">4.3 Why the distinction matters</a></li>
+</ul>
+</li>
+<li><a href="#5-upload-download-backup-restore-and-archive">5. Upload, Download, Backup, Restore and Archive</a><ul>
+<li><a href="#important-terminology-note">Important terminology note</a></li>
+</ul>
+</li>
+<li><a href="#6-uploading-an-hmi-project">6. Uploading an HMI Project</a><ul>
+<li><a href="#common-reasons-for-uploading">Common reasons for uploading</a></li>
+<li><a href="#general-procedure">General procedure</a></li>
+<li><a href="#possible-upload-limitations">Possible upload limitations</a></li>
+</ul>
+</li>
+<li><a href="#7-downloading-an-hmi-project">7. Downloading an HMI Project</a><ul>
+<li><a href="#general-procedure_1">General procedure</a></li>
+<li><a href="#critical-precautions">Critical precautions</a></li>
+</ul>
+</li>
+<li><a href="#8-backing-up-an-hmi-project">8. Backing Up an HMI Project</a><ul>
+<li><a href="#recommended-backup-practices">Recommended backup practices</a></li>
+</ul>
+</li>
+<li><a href="#9-restoring-an-hmi-project">9. Restoring an HMI Project</a><ul>
+<li><a href="#general-restore-procedure">General restore procedure</a></li>
+<li><a href="#restore-does-not-always-mean-full-system-recovery">Restore does not always mean full system recovery</a></li>
+</ul>
+</li>
+<li><a href="#10-project-version-and-compatibility">10. Project Version and Compatibility</a><ul>
+<li><a href="#example">Example</a></li>
+</ul>
+</li>
+<li><a href="#11-project-naming-and-revision-control">11. Project Naming and Revision Control</a></li>
+<li><a href="#12-common-project-transfer-problems">12. Common Project Transfer Problems</a></li>
+<li><a href="#13-practical-example-replacing-an-automotive-hmi-panel">13. Practical Example: Replacing an Automotive HMI Panel</a><ul>
+<li><a href="#step-1-identify-the-original-system">Step 1: Identify the original system</a></li>
+<li><a href="#step-2-find-the-approved-source">Step 2: Find the approved source</a></li>
+<li><a href="#step-3-check-replacement-compatibility">Step 3: Check replacement compatibility</a></li>
+<li><a href="#step-4-prepare-the-project">Step 4: Prepare the project</a></li>
+<li><a href="#step-5-preserve-recoverable-information">Step 5: Preserve recoverable information</a></li>
+<li><a href="#step-6-transfer-the-application">Step 6: Transfer the application</a></li>
+<li><a href="#step-7-verify-communication">Step 7: Verify communication</a></li>
+<li><a href="#step-8-test-functions">Step 8: Test functions</a></li>
+<li><a href="#step-9-release-the-recovered-panel">Step 9: Release the recovered panel</a></li>
+</ul>
+</li>
+<li><a href="#14-project-transfer-and-production-safety">14. Project Transfer and Production Safety</a></li>
+<li><a href="#15-interview-questions-and-answers">15. Interview Questions and Answers</a></li>
+<li><a href="#16-practical-exercises">16. Practical Exercises</a></li>
+<li><a href="#17-final-mental-model">17. Final Mental Model</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>HMI project transfer is the process of moving an HMI application between engineering software, a computer, an HMI panel, or a backup location.</p>
+<p>It is used during commissioning, maintenance, troubleshooting, project modification, panel replacement, and system recovery.</p>
+<p>For example, if an HMI panel on an automotive production line fails, maintenance may need to retrieve an existing project backup, transfer the correct application to a replacement panel, restore its configuration, and verify communication with the PLC.</p>
+<p>The key operations are:</p>
+<ul>
+<li>Upload: Retrieve a project or supported data from a target device to an engineering computer.</li>
+<li>Download: Transfer an engineering project or application to a target HMI device.</li>
+<li>Backup: Save a recoverable copy of the project or device configuration.</li>
+<li>Restore: Recover a project or configuration from a backup.</li>
+<li>Archive: Package a project and its required resources for storage or transfer.</li>
+</ul>
+<p>These terms can vary by manufacturer and software. In some engineering environments, upload and download describe different directions depending on the selected device or object. Always verify the direction shown by the specific software.</p>
+<h2 id="2-why-hmi-project-transfer-is-important">2. Why HMI Project Transfer Is Important</h2>
+<p>HMI project transfer is required in several practical situations.</p>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>Required operation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>New HMI installation</td>
+<td>Download the approved project</td>
+</tr>
+<tr>
+<td>Existing panel needs modification</td>
+<td>Retrieve the available source, or locate the maintained engineering project</td>
+</tr>
+<tr>
+<td>HMI panel replacement</td>
+<td>Restore or download the compatible project and configuration</td>
+</tr>
+<tr>
+<td>Engineering changes</td>
+<td>Modify, validate, archive, and download the revised project</td>
+</tr>
+<tr>
+<td>Accidental project loss</td>
+<td>Recover from a valid backup</td>
+</tr>
+<tr>
+<td>HMI hardware upgrade</td>
+<td>Convert or migrate the project if supported, then download</td>
+</tr>
+<tr>
+<td>Firmware upgrade</td>
+<td>Verify compatibility and follow the manufacturer's migration procedure</td>
+</tr>
+<tr>
+<td>Project documentation</td>
+<td>Archive the source project and related resources</td>
+</tr>
+<tr>
+<td>Commissioning</td>
+<td>Transfer and verify the application on the target device</td>
+</tr>
+</tbody>
+</table>
+<p>A reliable transfer process reduces downtime and helps prevent the loss of project configuration, graphics, scripts, communication settings, and other application resources.</p>
+<h2 id="3-basic-project-transfer-architecture">3. Basic Project Transfer Architecture</h2>
+<pre><code>          Engineering Computer
+        +-----------------------+
+        | HMI Engineering       |
+        | Software              |
+        |                       |
+        | Source Project        |
+        +-----------+-----------+
+                    |
+                    v
+          Transfer Interface
+       Ethernet / USB / Serial
+                    |
+                    v
+             Target HMI
+        +-----------------------+
+        | Runtime Application   |
+        | HMI Tags              |
+        | Screens and Alarms    |
+        | Communication Setup   |
+        +-----------+-----------+
+                    |
+                    v
+                   PLC
+                    |
+                    v
+             Machine Process
+</code></pre>
+<p>The engineering computer holds the editable project when the source is available. The HMI panel runs the deployed runtime application.</p>
+<p>These are not necessarily identical artifacts. A runtime application on a panel may not contain all the original editable source information.</p>
+<h2 id="4-source-project-versus-runtime-application">4. Source Project Versus Runtime Application</h2>
+<p>This distinction is one of the most important concepts in HMI maintenance.</p>
+<h3 id="41-engineering-source-project">4.1 Engineering Source Project</h3>
+<p>The engineering source is the project used to create or modify the HMI application.</p>
+<p>Depending on the platform, it may contain:</p>
+<ul>
+<li>Screens and graphical objects.</li>
+<li>HMI tags.</li>
+<li>PLC communication configuration.</li>
+<li>Alarms and event configuration.</li>
+<li>Trends and logging configuration.</li>
+<li>Recipes.</li>
+<li>Scripts.</li>
+<li>User management settings.</li>
+<li>Language resources.</li>
+<li>Fonts, graphics, and other external resources.</li>
+<li>Runtime settings.</li>
+<li>Device and hardware configuration.</li>
+</ul>
+<p>The exact contents depend on the engineering software and project type.</p>
+<h3 id="42-runtime-application">4.2 Runtime Application</h3>
+<p>The runtime application is the deployed application executed by the HMI device.</p>
+<p>It may contain compiled or generated resources, runtime configuration, and other platform-specific files.</p>
+<p>A runtime application may not provide the complete editable source project.</p>
+<h3 id="43-why-the-distinction-matters">4.3 Why the distinction matters</h3>
+<p>Suppose an HMI panel is operating normally, but the original engineering computer has failed.</p>
+<p>The panel may still run the application, yet the maintenance engineer may be unable to retrieve a fully editable project from it.</p>
+<p>Some platforms support uploading an editable project or retrieving selected configuration data. Others may permit only a runtime backup or limited recovery.</p>
+<p>Never assume that a working HMI panel contains a complete, editable copy of its original project.</p>
+<h2 id="5-upload-download-backup-restore-and-archive">5. Upload, Download, Backup, Restore and Archive</h2>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>General direction or purpose</th>
+<th>Typical result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Upload</td>
+<td>Target device to engineering computer, where supported</td>
+<td>Retrieved project or device data</td>
+</tr>
+<tr>
+<td>Download</td>
+<td>Engineering computer to target device</td>
+<td>Deployed HMI application</td>
+</tr>
+<tr>
+<td>Backup</td>
+<td>Create a recoverable copy of project or device state</td>
+<td>Backup file or archive</td>
+</tr>
+<tr>
+<td>Restore</td>
+<td>Recover from a previously saved copy</td>
+<td>Recovered project or device configuration</td>
+</tr>
+<tr>
+<td>Archive</td>
+<td>Package a project and related resources</td>
+<td>Stored project package</td>
+</tr>
+<tr>
+<td>Migration</td>
+<td>Adapt a project to a different software version, device, or platform</td>
+<td>Converted project, if supported</td>
+</tr>
+</tbody>
+</table>
+<h3 id="important-terminology-note">Important terminology note</h3>
+<p>The word upload is not used identically across all engineering tools. Some tools use different labels for retrieving a project, transferring a runtime backup, or reading configuration from a device.</p>
+<p>Before performing the operation, confirm:</p>
+<ol>
+<li>The source.</li>
+<li>The destination.</li>
+<li>Whether the operation retrieves editable source or runtime data.</li>
+<li>Whether existing data on the destination may be overwritten.</li>
+</ol>
+<h2 id="6-uploading-an-hmi-project">6. Uploading an HMI Project</h2>
+<p>Uploading attempts to retrieve project or configuration data from a target device to an engineering computer.</p>
+<h3 id="common-reasons-for-uploading">Common reasons for uploading</h3>
+<ul>
+<li>The original project is unavailable.</li>
+<li>The panel contains a newer configuration than the available engineering copy.</li>
+<li>The project needs to be recovered for maintenance.</li>
+<li>A supported device configuration needs to be inspected.</li>
+</ul>
+<h3 id="general-procedure">General procedure</h3>
+<ol>
+<li>Identify the exact HMI model and firmware.</li>
+<li>Identify the engineering software and supported project format.</li>
+<li>Connect to the correct HMI using an approved transfer interface.</li>
+<li>Verify the target device identity.</li>
+<li>Check whether project upload is supported for that device and application.</li>
+<li>Select the appropriate upload or retrieval operation.</li>
+<li>Save the retrieved data in a controlled project directory.</li>
+<li>Open or validate the retrieved project using compatible engineering software.</li>
+<li>Check screens, tags, scripts, communication settings, and required external resources.</li>
+<li>Archive the recovered project and record its origin.</li>
+</ol>
+<h3 id="possible-upload-limitations">Possible upload limitations</h3>
+<p>Upload may be unavailable or incomplete because:</p>
+<ul>
+<li>The project was configured to prevent source retrieval.</li>
+<li>The panel contains only a compiled runtime application.</li>
+<li>The engineering software does not support reverse conversion.</li>
+<li>The source project is protected.</li>
+<li>The project version is incompatible with the installed engineering software.</li>
+<li>External resources or original files are missing.</li>
+<li>The device supports only a particular backup or recovery mechanism.</li>
+</ul>
+<p>If upload is unavailable, locate the maintained source project or a verified backup rather than assuming the runtime can be converted into the original source.</p>
+<h2 id="7-downloading-an-hmi-project">7. Downloading an HMI Project</h2>
+<p>Downloading transfers a project or runtime application from the engineering computer to the target HMI.</p>
+<p>This is commonly required during initial installation, project updates, and panel replacement.</p>
+<h3 id="general-procedure_1">General procedure</h3>
+<ol>
+<li>Confirm the target HMI model and supported firmware.</li>
+<li>Open the correct engineering project.</li>
+<li>Verify that the project matches the intended machine or station.</li>
+<li>Compile or validate the project where required.</li>
+<li>Resolve relevant errors and warnings.</li>
+<li>Verify PLC communication settings.</li>
+<li>Confirm that required graphics, scripts, recipes, and external resources are available.</li>
+<li>Back up the existing application and configuration as appropriate.</li>
+<li>Connect to the intended HMI.</li>
+<li>Verify the target device identity.</li>
+<li>Download the application using the manufacturer's supported procedure.</li>
+<li>Follow the tool's instructions concerning runtime stop, restart, or replacement of existing application data.</li>
+<li>Confirm that the application starts correctly.</li>
+<li>Verify communication, displays, alarms, commands, and required functions.</li>
+<li>Record the project revision and commissioning result.</li>
+</ol>
+<h3 id="critical-precautions">Critical precautions</h3>
+<p>Downloading may replace the currently deployed application and may interrupt production.</p>
+<p>Before proceeding, confirm:</p>
+<ul>
+<li>The machine is in an approved state for the transfer.</li>
+<li>The correct panel and project are selected.</li>
+<li>The current application can be recovered.</li>
+<li>Required user settings, recipes, and configuration data are preserved where necessary.</li>
+<li>The download will not unintentionally modify the PLC project or another device.</li>
+</ul>
+<p>The exact effects of downloading depend on the HMI platform and transfer method.</p>
+<h2 id="8-backing-up-an-hmi-project">8. Backing Up an HMI Project</h2>
+<p>A backup is a recoverable copy of the project or device configuration.</p>
+<p>A useful backup strategy distinguishes several types of data.</p>
+<table>
+<thead>
+<tr>
+<th>Backup type</th>
+<th>What it may contain</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Engineering project backup</td>
+<td>Editable project files and project resources</td>
+</tr>
+<tr>
+<td>Project archive</td>
+<td>Packaged project and supported dependencies</td>
+</tr>
+<tr>
+<td>Runtime backup</td>
+<td>Deployed application or supported runtime data</td>
+</tr>
+<tr>
+<td>Device configuration backup</td>
+<td>Supported panel-specific settings</td>
+</tr>
+<tr>
+<td>Recipe backup</td>
+<td>Recipe records and parameter sets</td>
+</tr>
+<tr>
+<td>User and security backup</td>
+<td>Supported user accounts, roles, or security configuration</td>
+</tr>
+<tr>
+<td>Communication documentation</td>
+<td>Device addresses, paths, and connection settings</td>
+</tr>
+</tbody>
+</table>
+<p>Not every HMI platform supports every backup type.</p>
+<h3 id="recommended-backup-practices">Recommended backup practices</h3>
+<ul>
+<li>Keep an approved copy of the editable source project.</li>
+<li>Store a project archive when supported.</li>
+<li>Record the HMI model and software version.</li>
+<li>Record the project revision and backup date.</li>
+<li>Include required external resources and dependencies.</li>
+<li>Keep a known-good version separate from the latest working copy.</li>
+<li>Store backups in an approved location with suitable access controls.</li>
+<li>Maintain a documented naming convention.</li>
+<li>Verify that the backup can actually be opened or restored.</li>
+<li>Keep recovery instructions with the backup.</li>
+</ul>
+<p>A file that exists is not automatically a usable backup. The project must be compatible, complete enough for its intended purpose, and recoverable.</p>
+<h2 id="9-restoring-an-hmi-project">9. Restoring an HMI Project</h2>
+<p>Restoring means recovering a project, application, or supported device configuration from a previously saved copy.</p>
+<p>Restoration is commonly required after:</p>
+<ul>
+<li>HMI hardware failure.</li>
+<li>Accidental deletion.</li>
+<li>Project corruption.</li>
+<li>An unsuccessful software update.</li>
+<li>Incorrect project modification.</li>
+<li>Replacement of an obsolete panel.</li>
+</ul>
+<h3 id="general-restore-procedure">General restore procedure</h3>
+<ol>
+<li>Identify the failed or replacement HMI.</li>
+<li>Confirm the exact hardware model and compatibility requirements.</li>
+<li>Locate the latest known-good backup.</li>
+<li>Verify its project revision and source.</li>
+<li>Confirm the required engineering software and firmware compatibility.</li>
+<li>Inspect the backup for missing dependencies or resources.</li>
+<li>Back up any recoverable information from the existing device, where appropriate.</li>
+<li>Prepare the target panel according to the manufacturer's procedure.</li>
+<li>Restore or download the compatible application and required configuration.</li>
+<li>Verify communication with the PLC and connected systems.</li>
+<li>Check recipes, alarms, trends, security, and other relevant features.</li>
+<li>Test required operations under approved commissioning conditions.</li>
+<li>Document the recovery and retain the restored project as required.</li>
+</ol>
+<h3 id="restore-does-not-always-mean-full-system-recovery">Restore does not always mean full system recovery</h3>
+<p>A runtime backup may not include all original source files. A project archive may not include current device-side data, such as recipes or logs, unless the platform includes them in the archive.</p>
+<p>Therefore, determine what the backup actually contains before relying on it for full recovery.</p>
+<h2 id="10-project-version-and-compatibility">10. Project Version and Compatibility</h2>
+<p>HMI projects depend on software versions, device families, firmware, and runtime capabilities.</p>
+<p>A project created in one engineering software version may not open or deploy directly to a different version.</p>
+<p>Compatibility checks may include:</p>
+<ul>
+<li>Engineering software version.</li>
+<li>HMI hardware model.</li>
+<li>Runtime version.</li>
+<li>Firmware revision.</li>
+<li>Supported communication drivers.</li>
+<li>Project format.</li>
+<li>Required libraries or add-ons.</li>
+<li>External resources.</li>
+<li>Security settings.</li>
+</ul>
+<h3 id="example">Example</h3>
+<p>An existing HMI project may have been developed for an older panel generation. A replacement panel may use a newer runtime or different hardware family.</p>
+<p>The project may require migration, conversion, or redesign rather than a direct download.</p>
+<p>Migration can also change object behavior, available functions, or communication configuration. A successful conversion does not automatically prove that the machine interface works correctly.</p>
+<h2 id="11-project-naming-and-revision-control">11. Project Naming and Revision Control</h2>
+<p>A clear naming convention helps prevent the wrong project from being downloaded to the wrong panel.</p>
+<p>Example directory structure:</p>
+<pre><code>HMI_PROJECTS/
+|
++-- FR1010/
+|   |
+|   +-- SOURCE/
+|   +-- ARCHIVES/
+|   +-- DEVICE_BACKUPS/
+|   +-- RELEASED/
+|   +-- TEST/
+|   +-- DOCUMENTATION/
+|
++-- FR1030/
+    |
+    +-- SOURCE/
+    +-- ARCHIVES/
+    +-- DEVICE_BACKUPS/
+    +-- RELEASED/
+    +-- TEST/
+    +-- DOCUMENTATION/
+</code></pre>
+<p>This is an illustrative structure.</p>
+<p>Example filename:</p>
+<pre><code>FR1010_HMI_Rev03_2026-10-13
+</code></pre>
+<p>A revision record may include:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Project</td>
+<td>FR1010 HMI</td>
+</tr>
+<tr>
+<td>Revision</td>
+<td>Rev03</td>
+</tr>
+<tr>
+<td>Target device</td>
+<td>Approved panel model</td>
+</tr>
+<tr>
+<td>Engineering software</td>
+<td>Recorded version</td>
+</tr>
+<tr>
+<td>Change description</td>
+<td>Added diagnostic information</td>
+</tr>
+<tr>
+<td>Tested by</td>
+<td>Authorized engineer</td>
+</tr>
+<tr>
+<td>Approval status</td>
+<td>Approved for deployment</td>
+</tr>
+<tr>
+<td>Backup location</td>
+<td>Controlled project repository</td>
+</tr>
+</tbody>
+</table>
+<p>The record should distinguish a working project from a released project.</p>
+<h2 id="12-common-project-transfer-problems">12. Common Project Transfer Problems</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Investigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Upload option is unavailable</td>
+<td>Platform does not support source upload or source retrieval is restricted</td>
+<td>Check device and software capabilities</td>
+</tr>
+<tr>
+<td>Retrieved project is not editable</td>
+<td>Only runtime or compiled data was available</td>
+<td>Locate the original source or a compatible archive</td>
+</tr>
+<tr>
+<td>Download fails</td>
+<td>Incorrect device selection, connection failure, or compatibility problem</td>
+<td>Verify device identity, transfer path, and software messages</td>
+</tr>
+<tr>
+<td>Project will not compile</td>
+<td>Missing resources, incompatible versions, or project errors</td>
+<td>Review compiler diagnostics and dependencies</td>
+</tr>
+<tr>
+<td>Download succeeds but HMI does not run</td>
+<td>Runtime incompatibility, missing resources, startup configuration, or application error</td>
+<td>Check runtime status and diagnostic messages</td>
+</tr>
+<tr>
+<td>PLC communication fails after download</td>
+<td>Incorrect IP, driver, device path, or tag configuration</td>
+<td>Compare deployed settings with the approved configuration</td>
+</tr>
+<tr>
+<td>Graphics or fonts are missing</td>
+<td>External resources were not included or installed</td>
+<td>Check resource dependencies</td>
+</tr>
+<tr>
+<td>Recipes are missing after restore</td>
+<td>Recipe data was not part of the backup or was stored separately</td>
+<td>Locate and restore the appropriate recipe data</td>
+</tr>
+<tr>
+<td>Panel works differently after migration</td>
+<td>Unsupported features or changed runtime behavior</td>
+<td>Compare the migrated project and test affected functions</td>
+</tr>
+<tr>
+<td>Wrong project is downloaded</td>
+<td>Similar filenames or incorrect target selection</td>
+<td>Verify station ID, revision, and target device before transfer</td>
+</tr>
+<tr>
+<td>Previous application is lost</td>
+<td>Existing application was overwritten without a verified backup</td>
+<td>Follow the approved recovery procedure</td>
+</tr>
+<tr>
+<td>Security settings differ after recovery</td>
+<td>Device configuration or credentials were not restored as expected</td>
+<td>Verify supported security backup and setup procedures</td>
+</tr>
+</tbody>
+</table>
+<h2 id="13-practical-example-replacing-an-automotive-hmi-panel">13. Practical Example: Replacing an Automotive HMI Panel</h2>
+<p>Suppose an HMI panel on station <code>FR1010</code> fails and needs replacement.</p>
+<h3 id="step-1-identify-the-original-system">Step 1: Identify the original system</h3>
+<p>Record the panel model, runtime version, engineering software version, PLC address, communication driver, and relevant project revision.</p>
+<h3 id="step-2-find-the-approved-source">Step 2: Find the approved source</h3>
+<p>Locate the released engineering project or a verified project archive.</p>
+<p>Do not automatically assume the failed panel can supply the editable source.</p>
+<h3 id="step-3-check-replacement-compatibility">Step 3: Check replacement compatibility</h3>
+<p>Confirm that the replacement panel supports the project or determine whether migration is required.</p>
+<h3 id="step-4-prepare-the-project">Step 4: Prepare the project</h3>
+<p>Validate the project, confirm the target device configuration, and ensure that required graphics, scripts, tags, and communication settings are present.</p>
+<h3 id="step-5-preserve-recoverable-information">Step 5: Preserve recoverable information</h3>
+<p>Where possible, preserve required recipes, settings, or other device-side data using the platform's supported backup methods.</p>
+<h3 id="step-6-transfer-the-application">Step 6: Transfer the application</h3>
+<p>Download or restore the compatible project using the approved engineering procedure.</p>
+<h3 id="step-7-verify-communication">Step 7: Verify communication</h3>
+<p>Confirm that the replacement HMI communicates with the correct PLC and displays current values.</p>
+<h3 id="step-8-test-functions">Step 8: Test functions</h3>
+<p>Verify machine-state indications, alarms, diagnostics, recipes, permitted commands, and other required functions.</p>
+<h3 id="step-9-release-the-recovered-panel">Step 9: Release the recovered panel</h3>
+<p>Document the project revision, transfer result, verification results, and any differences from the original system.</p>
+<p>The aim is not merely to make the screen appear. The aim is to restore the intended, verified HMI functionality.</p>
+<h2 id="14-project-transfer-and-production-safety">14. Project Transfer and Production Safety</h2>
+<p>HMI project transfer can affect production, operator controls, and machine behavior.</p>
+<p>Before changing a live system:</p>
+<ol>
+<li>Obtain the required authorization.</li>
+<li>Follow the plant's change-control procedure.</li>
+<li>Confirm the machine's approved transfer state.</li>
+<li>Back up the current project and relevant device data.</li>
+<li>Verify the correct target and project revision.</li>
+<li>Avoid unapproved changes to PLC logic or safety-related configuration.</li>
+<li>Follow applicable isolation and safety procedures for physical work.</li>
+<li>Test the restored application before releasing the machine.</li>
+<li>Document the change and rollback method.</li>
+</ol>
+<p>A project transfer must not be used to bypass safety functions, defeat interlocks, or introduce unapproved machine behavior.</p>
+<h2 id="15-interview-questions-and-answers">15. Interview Questions and Answers</h2>
+<p>Q1. What is HMI project transfer?</p>
+<p>It is the process of moving an HMI project, application, or supported configuration between engineering software, storage, and a target HMI device.</p>
+<p>Q2. What is the difference between upload and download?</p>
+<p>Generally, upload retrieves data from a target device to the engineering computer, while download transfers an application from the engineering computer to the target. Specific software terminology may differ.</p>
+<p>Q3. Can every HMI runtime application be uploaded as an editable project?</p>
+<p>No. Upload capability depends on the platform, project configuration, and device. A runtime application may not contain the original editable source.</p>
+<p>Q4. What is the difference between backup and archive?</p>
+<p>A backup preserves data for recovery. An archive packages a project and supported resources for storage or transfer. Some platforms use these terms differently, so the actual contents must be verified.</p>
+<p>Q5. Why is a backup necessary before downloading?</p>
+<p>Downloading may replace the existing application. A verified backup provides a recovery path if the transfer or subsequent testing fails.</p>
+<p>Q6. Why might a project fail on a replacement HMI?</p>
+<p>The project may be incompatible with the new hardware, firmware, runtime, engineering software, or required resources.</p>
+<p>Q7. What is project migration?</p>
+<p>Migration adapts a project to a different supported software version, device generation, or platform. It may require conversion and functional retesting.</p>
+<p>Q8. Why might PLC communication fail after a successful download?</p>
+<p>The project may contain an incorrect PLC address, driver, communication path, tag configuration, or security setting.</p>
+<p>Q9. What should be verified after restoring an HMI?</p>
+<p>Verify runtime startup, PLC communication, current data, alarms, diagnostics, recipes, permissions, and the required operator functions.</p>
+<p>Q10. What is the difference between the engineering source and runtime application?</p>
+<p>The engineering source is used to modify the project. The runtime application is deployed to execute on the HMI. They may not contain the same information.</p>
+<p>Q11. Why is revision control important?</p>
+<p>It helps ensure that the correct, approved project is transferred to the correct device and supports traceability and recovery.</p>
+<p>Q12. What is the most important precaution before project transfer?</p>
+<p>Verify the target device, project revision, compatibility, current backup, and approved transfer conditions before replacing the deployed application.</p>
+<h2 id="16-practical-exercises">16. Practical Exercises</h2>
+<p>Use a simulator or approved non-production HMI.</p>
+<ol>
+<li>Create a small HMI project with several screens and PLC tags.</li>
+<li>Save the editable engineering source.</li>
+<li>Create an archive or backup using the supported software function.</li>
+<li>Record the engineering software and target-device versions.</li>
+<li>Perform a download to a test HMI or simulator.</li>
+<li>Verify runtime startup and tag communication.</li>
+<li>Make a controlled project change and create a new revision.</li>
+<li>Compare the working revision with the released revision.</li>
+<li>Restore the earlier backup in the test environment.</li>
+<li>Verify that the restored project contains the expected screens and configuration.</li>
+<li>Determine whether the selected platform supports source upload, runtime backup, or both.</li>
+<li>Document what each backup type actually contains.</li>
+<li>Write a recovery procedure for a failed HMI panel.</li>
+<li>Create a pre-download checklist and post-download verification checklist.</li>
+</ol>
+<h2 id="17-final-mental-model">17. Final Mental Model</h2>
+<p>HMI project transfer is a controlled engineering and recovery process.</p>
+<pre><code>       Editable Source Project
+                 |
+                 v
+        Validate / Compile
+                 |
+                 v
+       Backup / Archive
+                 |
+                 v
+       Verify Target Device
+                 |
+                 v
+          Download / Restore
+                 |
+                 v
+         Runtime Verification
+                 |
+                 v
+        PLC Communication Test
+                 |
+                 v
+       Functional Verification
+                 |
+                 v
+         Approved Deployment
+</code></pre>
+<p>Remember the distinctions:</p>
+<ul>
+<li>Source project: Editable engineering files.</li>
+<li>Runtime application: Application deployed to the HMI.</li>
+<li>Upload: Retrieve project or supported device data.</li>
+<li>Download: Transfer an application to the target.</li>
+<li>Backup: Preserve data for recovery.</li>
+<li>Restore: Recover from a saved copy.</li>
+<li>Archive: Package a project and its supported resources.</li>
+<li>Migration: Adapt a project to another supported version or device.</li>
+</ul>
+<p>A reliable transfer process preserves the ability to recover, verifies compatibility, and confirms that the deployed HMI behaves as intended.</p>
+<p>Next topic: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\02_Auto_Tech\02_HMI\10_Platforms\01_WinCC - WinCC</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

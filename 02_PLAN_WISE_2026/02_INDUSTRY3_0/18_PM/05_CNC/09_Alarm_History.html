@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CNC Alarm History</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">CNC Alarm History</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-alarm-warning-fault-and-event">2. Alarm, Warning, Fault, and Event</a></li>
+<li><a href="#3-where-cnc-alarms-originate">3. Where CNC Alarms Originate</a></li>
+<li><a href="#4-information-recorded-in-alarm-history">4. Information Recorded in Alarm History</a></li>
+<li><a href="#5-current-alarms-vs-alarm-history">5. Current Alarms vs Alarm History</a></li>
+<li><a href="#6-understanding-alarm-codes">6. Understanding Alarm Codes</a></li>
+<li><a href="#7-first-out-and-consequential-alarms">7. First-Out and Consequential Alarms</a></li>
+<li><a href="#8-alarm-history-investigation-procedure">8. Alarm History Investigation Procedure</a><ul>
+<li><a href="#step-1-make-the-machine-safe">Step 1: Make the machine safe</a></li>
+<li><a href="#step-2-capture-the-alarm-details">Step 2: Capture the alarm details</a></li>
+<li><a href="#step-3-check-the-preceding-events">Step 3: Check the preceding events</a></li>
+<li><a href="#step-4-check-the-affected-subsystem">Step 4: Check the affected subsystem</a></li>
+<li><a href="#step-5-establish-the-root-cause">Step 5: Establish the root cause</a></li>
+<li><a href="#step-6-correct-and-validate">Step 6: Correct and validate</a></li>
+<li><a href="#step-7-document-the-result">Step 7: Document the result</a></li>
+</ul>
+</li>
+<li><a href="#9-common-cnc-alarm-categories-and-troubleshooting">9. Common CNC Alarm Categories and Troubleshooting</a></li>
+<li><a href="#10-servo-alarm-history">10. Servo Alarm History</a></li>
+<li><a href="#11-spindle-alarm-history">11. Spindle Alarm History</a></li>
+<li><a href="#12-plc-and-interlock-alarm-history">12. PLC and Interlock Alarm History</a></li>
+<li><a href="#13-alarm-frequency-and-recurrence-analysis">13. Alarm Frequency and Recurrence Analysis</a></li>
+<li><a href="#14-alarm-history-and-root-cause-analysis">14. Alarm History and Root Cause Analysis</a><ul>
+<li><a href="#example-intermittent-servo-alarm">Example: Intermittent servo alarm</a></li>
+</ul>
+</li>
+<li><a href="#15-alarm-history-retention-and-data-management">15. Alarm History Retention and Data Management</a></li>
+<li><a href="#16-preventive-maintenance-for-cnc-alarm-history">16. Preventive Maintenance for CNC Alarm History</a></li>
+<li><a href="#17-sap-pm-and-maintenance-reporting">17. SAP PM and Maintenance Reporting</a></li>
+<li><a href="#18-key-engineering-principles">18. Key Engineering Principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>CNC alarm history is the stored record of alarms, warnings, faults, and other diagnostic events generated by a Computer Numerical Control machine. It helps maintenance engineers identify what happened, when it happened, which subsystem was affected, and what conditions may have caused the failure.</p>
+<p>Alarm history is particularly valuable for intermittent faults. A machine may operate normally when the technician arrives, even though a sensor, servo drive, spindle, communication link, or machine sequence failed several times during production.</p>
+<p>Alarm history supports:</p>
+<ul>
+<li>Breakdown troubleshooting and root cause analysis.</li>
+<li>Identification of recurring faults.</li>
+<li>Investigation of intermittent failures.</li>
+<li>Correlation of CNC, servo, spindle, PLC, and machine events.</li>
+<li>Reduction of mean time to repair (MTTR).</li>
+<li>Verification of corrective and preventive actions.</li>
+<li>Maintenance planning and reliability improvement.</li>
+<li>Production downtime analysis and audit traceability.</li>
+</ul>
+<p>Important: An alarm identifies a detected abnormal condition. It does not always identify the root cause. For example, a servo following-error alarm may result from mechanical binding, feedback failure, excessive load, incorrect configuration, or a drive problem.</p>
+<h2 id="2-alarm-warning-fault-and-event">2. Alarm, Warning, Fault, and Event</h2>
+<p>These terms are related but should not automatically be treated as identical. Exact terminology varies by CNC manufacturer.</p>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Alarm</td>
+<td>A detected condition requiring attention or preventing an operation</td>
+<td>Axis reference return incomplete</td>
+</tr>
+<tr>
+<td>Warning</td>
+<td>A condition requiring attention that may not immediately stop operation</td>
+<td>Lubrication maintenance warning</td>
+</tr>
+<tr>
+<td>Fault</td>
+<td>A detected failure in a device or function</td>
+<td>Servo amplifier fault</td>
+</tr>
+<tr>
+<td>Event</td>
+<td>A recorded state change or operational occurrence</td>
+<td>Program started or mode changed</td>
+</tr>
+<tr>
+<td>Diagnostic message</td>
+<td>Information intended to help identify a condition</td>
+<td>Feedback signal not detected</td>
+</tr>
+<tr>
+<td>Interlock message</td>
+<td>Indicates that a required operating condition is not satisfied</td>
+<td>Door closed confirmation missing</td>
+</tr>
+<tr>
+<td>Emergency-stop event</td>
+<td>Indicates activation of an emergency-stop function or related status</td>
+<td>Emergency-stop circuit activated</td>
+</tr>
+</tbody>
+</table>
+<p>Some controllers use the word alarm for nearly all abnormal conditions. Interpret the message using the relevant controller manual and machine documentation.</p>
+<h2 id="3-where-cnc-alarms-originate">3. Where CNC Alarms Originate</h2>
+<p>A CNC machine is a system of interconnected subsystems. An alarm displayed on the CNC screen may originate from a different component.</p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Typical alarm category</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CNC controller</td>
+<td>Control and configuration</td>
+<td>Invalid program command</td>
+</tr>
+<tr>
+<td>Servo amplifier</td>
+<td>Axis motion and drive</td>
+<td>Following error</td>
+</tr>
+<tr>
+<td>Spindle drive</td>
+<td>Spindle operation</td>
+<td>Drive overcurrent</td>
+</tr>
+<tr>
+<td>CNC PLC or ladder</td>
+<td>Machine sequence and interlocks</td>
+<td>Clamp confirmation missing</td>
+</tr>
+<tr>
+<td>Feedback device</td>
+<td>Position or speed feedback</td>
+<td>Encoder communication fault</td>
+</tr>
+<tr>
+<td>Sensors and switches</td>
+<td>Machine condition detection</td>
+<td>Reference switch not detected</td>
+</tr>
+<tr>
+<td>Hydraulic system</td>
+<td>Pressure and actuation</td>
+<td>Low hydraulic pressure</td>
+</tr>
+<tr>
+<td>Pneumatic system</td>
+<td>Air supply and actuation</td>
+<td>Low air pressure</td>
+</tr>
+<tr>
+<td>Lubrication system</td>
+<td>Lubrication and protection</td>
+<td>Low lubrication pressure</td>
+</tr>
+<tr>
+<td>Coolant system</td>
+<td>Coolant delivery</td>
+<td>Coolant flow fault</td>
+</tr>
+<tr>
+<td>Tool changer</td>
+<td>Tool-handling sequence</td>
+<td>Tool change incomplete</td>
+</tr>
+<tr>
+<td>Communication network</td>
+<td>Device connectivity</td>
+<td>Drive or remote I/O communication loss</td>
+</tr>
+<tr>
+<td>Safety system</td>
+<td>Protective functions</td>
+<td>Guard or safety circuit not satisfied</td>
+</tr>
+</tbody>
+</table>
+<p>An alarm displayed by the CNC may be a summary of a lower-level fault received from the drive or PLC. Troubleshooting should identify the original source rather than stopping at the first message visible on the screen.</p>
+<h2 id="4-information-recorded-in-alarm-history">4. Information Recorded in Alarm History</h2>
+<p>The amount of information retained depends on the controller, firmware, configuration, and storage capacity.</p>
+<p>Common fields include:</p>
+<ul>
+<li>Alarm number or code.</li>
+<li>Alarm description.</li>
+<li>Date and time.</li>
+<li>Affected axis, spindle, channel, or subsystem.</li>
+<li>Alarm occurrence or activation status.</li>
+<li>Alarm reset or clearance information, where supported.</li>
+<li>Program number and block number, where available.</li>
+<li>Operating mode or machine state.</li>
+<li>Additional diagnostic or drive information.</li>
+</ul>
+<p>Not every CNC records every field. Some controllers store only a limited number of recent alarms, while others provide richer event logs or allow alarm data to be exported.</p>
+<p>When an intermittent fault occurs, record the alarm details before clearing the history. Some systems overwrite old events when their history buffer becomes full.</p>
+<h2 id="5-current-alarms-vs-alarm-history">5. Current Alarms vs Alarm History</h2>
+<p>Current alarms and historical alarms serve different purposes.</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Current alarm display</th>
+<th>Alarm history</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Primary purpose</td>
+<td>Shows active abnormal conditions</td>
+<td>Shows previously recorded events</td>
+</tr>
+<tr>
+<td>Typical use</td>
+<td>Determine why the machine cannot proceed now</td>
+<td>Investigate what happened earlier</td>
+</tr>
+<tr>
+<td>Time information</td>
+<td>May show activation time or status</td>
+<td>May preserve historical timestamps</td>
+</tr>
+<tr>
+<td>Fault repetition</td>
+<td>May show only the current occurrence</td>
+<td>Can reveal repeated occurrences</td>
+</tr>
+<tr>
+<td>Diagnostic value</td>
+<td>Useful for immediate fault isolation</td>
+<td>Useful for trends and intermittent failures</td>
+</tr>
+<tr>
+<td>Retention</td>
+<td>Changes as alarms become active or clear</td>
+<td>Depends on history capacity and retention rules</td>
+</tr>
+</tbody>
+</table>
+<p>A cleared alarm may remain in history, but the exact behavior depends on the control.</p>
+<p>Clearing an alarm is not equivalent to correcting its cause. Repeatedly resetting the CNC until the alarm disappears can destroy useful evidence and allow an unresolved fault to return during production.</p>
+<h2 id="6-understanding-alarm-codes">6. Understanding Alarm Codes</h2>
+<p>Alarm codes help identify a condition, but their meanings are controller-specific.</p>
+<p>The same numerical code can represent different conditions on different CNC families or software revisions. Even within one controller family, the interpretation may depend on the affected axis, drive, or machine-builder implementation.</p>
+<p>For each alarm, identify:</p>
+<ol>
+<li>The controller or device that generated it.</li>
+<li>The exact alarm number and complete description.</li>
+<li>The affected axis, spindle, channel, or machine function.</li>
+<li>The operating condition when it occurred.</li>
+<li>Any related alarms recorded immediately before it.</li>
+<li>The relevant manual or machine-builder troubleshooting procedure.</li>
+</ol>
+<p>Do not diagnose a fault using an alarm number copied from another machine without confirming the controller model and applicable documentation.</p>
+<h2 id="7-first-out-and-consequential-alarms">7. First-Out and Consequential Alarms</h2>
+<p>A major troubleshooting challenge is that one initial failure can generate several secondary alarms.</p>
+<p>For example, loss of a feedback signal may cause a servo drive to fault. The CNC may then report an axis movement fault, while the PLC detects that the axis is not ready and prevents the machine sequence from continuing.</p>
+<p>The resulting alarm list may contain several messages, but they may share one initiating cause.</p>
+<p>A useful conceptual sequence is:</p>
+<pre><code>Initial Failure
+    ↓
+Affected Device Reports Fault
+    ↓
+CNC Detects Abnormal Axis or Spindle State
+    ↓
+PLC Detects Missing Ready or Completion Signal
+    ↓
+Machine Sequence Stops
+</code></pre>
+<p>This is an illustrative pattern, not a universal alarm sequence.</p>
+<p>The first-out alarm is the earliest relevant fault that initiated the failure chain. It may not always be the first message visible on the screen because scan timing, communication delays, timestamp resolution, and controller logging behavior can affect event order.</p>
+<p>Use timestamps, device diagnostics, and the machine's electrical and control architecture to reconstruct the sequence.</p>
+<h2 id="8-alarm-history-investigation-procedure">8. Alarm History Investigation Procedure</h2>
+<h3 id="step-1-make-the-machine-safe">Step 1: Make the machine safe</h3>
+<p>Before inspecting or resetting a fault, assess the machine state and any associated hazards.</p>
+<ul>
+<li>Follow the machine's safety and isolation procedures.</li>
+<li>Do not enter hazardous areas while motion or stored energy may remain.</li>
+<li>Do not bypass interlocks or safety functions to continue production.</li>
+<li>Use the required lockout/tagout or equivalent site procedure before work that requires hazardous-energy isolation.</li>
+</ul>
+<h3 id="step-2-capture-the-alarm-details">Step 2: Capture the alarm details</h3>
+<p>Record the exact alarm number, full message, timestamp, affected device, and current machine state.</p>
+<p>If several alarms are present, capture the complete list in its displayed order.</p>
+<h3 id="step-3-check-the-preceding-events">Step 3: Check the preceding events</h3>
+<p>Review the history immediately before the main alarm. Look for:</p>
+<ul>
+<li>Drive-ready status changes.</li>
+<li>Communication errors.</li>
+<li>Sensor-state changes.</li>
+<li>Power-supply or voltage events.</li>
+<li>Reference-return failures.</li>
+<li>Lubrication or pressure warnings.</li>
+<li>Tool-change sequence interruptions.</li>
+<li>Operator resets or emergency-stop events.</li>
+</ul>
+<p>The preceding event may be more useful than the most prominent alarm.</p>
+<h3 id="step-4-check-the-affected-subsystem">Step 4: Check the affected subsystem</h3>
+<p>Use the controller diagnostics, drive display, PLC status, electrical drawings, and relevant device manuals.</p>
+<p>Examples:</p>
+<ul>
+<li>For a servo fault, inspect drive status, feedback, mechanical loading, and following-error data.</li>
+<li>For a spindle fault, inspect the spindle-drive alarm, motor condition, feedback, and operating limits.</li>
+<li>For a tool-change fault, inspect the sequence state, sensors, actuators, and PLC permissives.</li>
+<li>For a communication fault, inspect the affected network device, power supply, connections, and diagnostic status.</li>
+</ul>
+<h3 id="step-5-establish-the-root-cause">Step 5: Establish the root cause</h3>
+<p>Separate the observed symptom from the confirmed failure mechanism.</p>
+<p>For example:</p>
+<ul>
+<li>Symptom: CNC reports axis following error.</li>
+<li>Possible causes: excessive load, mechanical binding, feedback fault, incorrect configuration, or drive problem.</li>
+<li>Confirmed cause: established through appropriate inspection and diagnostic evidence.</li>
+</ul>
+<h3 id="step-6-correct-and-validate">Step 6: Correct and validate</h3>
+<p>Apply the approved corrective action. Reset the alarm only when permitted by the machine procedure and after the cause has been addressed.</p>
+<p>Verify machine operation under controlled conditions before releasing it to production.</p>
+<h3 id="step-7-document-the-result">Step 7: Document the result</h3>
+<p>Record the alarm, diagnosis, root cause, corrective action, test results, and any follow-up work required.</p>
+<h2 id="9-common-cnc-alarm-categories-and-troubleshooting">9. Common CNC Alarm Categories and Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Alarm category</th>
+<th>Possible causes</th>
+<th>Diagnostic checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Servo following error</td>
+<td>Mechanical binding, excessive load, feedback issue, drive fault, incorrect tuning</td>
+<td>Drive diagnostics, feedback, mechanical inspection, motion history</td>
+</tr>
+<tr>
+<td>Encoder or feedback alarm</td>
+<td>Damaged cable, loose connector, failed encoder, power issue, configuration mismatch</td>
+<td>Connector inspection, approved signal diagnostics, drive status</td>
+</tr>
+<tr>
+<td>Reference-return alarm</td>
+<td>Switch failure, incorrect reference configuration, blocked movement, feedback problem</td>
+<td>Switch state, axis position, reference procedure</td>
+</tr>
+<tr>
+<td>Spindle alarm</td>
+<td>Drive overload, motor problem, feedback fault, excessive load, incorrect limits</td>
+<td>Spindle-drive alarm, load data, motor and transmission checks</td>
+</tr>
+<tr>
+<td>Tool-change alarm</td>
+<td>Sensor failure, missing permissive, actuator fault, sequence interruption</td>
+<td>PLC status, sensor signals, actuator condition, tool changer mechanism</td>
+</tr>
+<tr>
+<td>Lubrication alarm</td>
+<td>Low lubricant, pressure loss, blocked line, pump failure, faulty switch</td>
+<td>Reservoir level, pressure, pump operation, line condition</td>
+</tr>
+<tr>
+<td>Hydraulic or pneumatic alarm</td>
+<td>Low pressure, leakage, supply problem, failed valve</td>
+<td>Pressure indication, leakage inspection, valve status</td>
+</tr>
+<tr>
+<td>CNC program alarm</td>
+<td>Invalid command, incorrect format, unsupported function, sequence error</td>
+<td>Program block, controller manual, modal state</td>
+</tr>
+<tr>
+<td>Parameter or configuration alarm</td>
+<td>Invalid data, incompatible configuration, memory issue</td>
+<td>Backup comparison, configuration records, approved recovery process</td>
+</tr>
+<tr>
+<td>Network or remote I/O alarm</td>
+<td>Loss of communication, device power failure, network issue</td>
+<td>Device diagnostics, network status, supply and connection checks</td>
+</tr>
+<tr>
+<td>Emergency-stop or safety alarm</td>
+<td>Emergency-stop activation, guard status, safety-system fault</td>
+<td>Approved safety diagnostics and inspection</td>
+</tr>
+<tr>
+<td>Overtemperature alarm</td>
+<td>Cooling problem, excessive load, failed fan, high ambient temperature</td>
+<td>Temperature diagnostics, airflow, cooling circuit, operating load</td>
+</tr>
+</tbody>
+</table>
+<p>Alarm descriptions are examples. The actual meaning and permitted corrective actions must be confirmed using the applicable machine documentation.</p>
+<h2 id="10-servo-alarm-history">10. Servo Alarm History</h2>
+<p>Servo-related history is especially useful because a CNC axis fault may originate in the drive, feedback system, mechanics, or motion command.</p>
+<p>Review:</p>
+<ul>
+<li>Which axis failed.</li>
+<li>Whether the alarm occurred during rapid movement, cutting, acceleration, deceleration, or reference return.</li>
+<li>Whether the alarm followed a collision or mechanical intervention.</li>
+<li>Drive-ready and feedback status.</li>
+<li>Following-error or position-deviation data.</li>
+<li>Motor temperature and load information, where available.</li>
+<li>Encoder or communication faults preceding the main alarm.</li>
+<li>Whether the problem affects one axis or several axes.</li>
+</ul>
+<p>If only one axis fails, investigate its specific motor, drive, feedback, mechanics, and wiring. If multiple axes fail simultaneously, consider shared causes such as power supply, common communication infrastructure, controller state, or a machine-wide event.</p>
+<p>These are diagnostic priorities, not proof of the cause.</p>
+<h2 id="11-spindle-alarm-history">11. Spindle Alarm History</h2>
+<p>Spindle alarms may arise during startup, acceleration, constant-speed operation, deceleration, orientation, or synchronized machining.</p>
+<p>Useful information includes:</p>
+<ul>
+<li>Commanded spindle speed.</li>
+<li>Actual spindle speed, where available.</li>
+<li>Drive fault code.</li>
+<li>Spindle load or current.</li>
+<li>Gear range and operating mode.</li>
+<li>Feedback or encoder status.</li>
+<li>Motor temperature.</li>
+<li>The machining operation being performed.</li>
+<li>Whether the alarm followed a tool change or mechanical intervention.</li>
+</ul>
+<p>A spindle alarm during acceleration may suggest an issue related to load, drive capability, mechanical resistance, or configuration. An orientation alarm may involve feedback, the orientation sequence, or machine-specific control logic.</p>
+<p>The alarm timing helps narrow the investigation, but the drive diagnostics and machine design determine the next test.</p>
+<h2 id="12-plc-and-interlock-alarm-history">12. PLC and Interlock Alarm History</h2>
+<p>Machine sequences often depend on multiple conditions being satisfied in a defined order.</p>
+<p>A tool-change sequence, for example, may require:</p>
+<ul>
+<li>Spindle stopped.</li>
+<li>Axis positioned at the required location.</li>
+<li>Tool changer in the correct initial position.</li>
+<li>Required clamp or release state confirmed.</li>
+<li>Sensor feedback received.</li>
+<li>Tool-change completion confirmed.</li>
+</ul>
+<p>If one condition is not met, the PLC may prevent the sequence from proceeding. The CNC may display a message such as tool change incomplete, even when the underlying cause is a failed sensor or actuator.</p>
+<p>Troubleshooting should identify the exact step where the sequence stopped.</p>
+<p>Use the PLC diagnostic or ladder-monitoring tools approved for the machine to inspect relevant permissives and status signals. Do not force outputs or bypass conditions simply to advance the sequence.</p>
+<h2 id="13-alarm-frequency-and-recurrence-analysis">13. Alarm Frequency and Recurrence Analysis</h2>
+<p>Alarm history becomes more useful when repeated events are analysed over time.</p>
+<p>Useful measurements include:</p>
+<ul>
+<li>Number of occurrences per shift.</li>
+<li>Number of occurrences per production cycle.</li>
+<li>Total downtime attributed to an alarm category.</li>
+<li>Mean time between failures (MTBF), where failure-event definitions are consistent.</li>
+<li>Mean time to repair (MTTR).</li>
+<li>Repeat-fault rate after corrective action.</li>
+<li>Distribution by machine, axis, drive, and subsystem.</li>
+</ul>
+<p>For a defined reporting period:</p>
+<div class="math-display">\[ \text{Alarm occurrence rate} = \frac{\text{Number of occurrences}}{\text{Reporting period}} \]</div>
+<p>If a particular alarm occurs 24 times over 12 operating hours:</p>
+<div class="math-display">\[ \text{Alarm occurrence rate} = \frac{24}{12} = 2 \text{ occurrences/hour} \]</div>
+<p>This rate indicates recurrence, not severity. A rare alarm may cause a long shutdown, while a frequent warning may have little production impact.</p>
+<p>Avoid counting every secondary alarm as an independent failure when several messages arise from the same initiating event.</p>
+<h2 id="14-alarm-history-and-root-cause-analysis">14. Alarm History and Root Cause Analysis</h2>
+<p>Alarm history provides evidence for root cause analysis (RCA), but it must be combined with machine inspection and operating context.</p>
+<p>A useful investigation record includes:</p>
+<ul>
+<li>Problem statement.</li>
+<li>Date and time of the event.</li>
+<li>Machine and affected subsystem.</li>
+<li>Exact alarm messages.</li>
+<li>Preceding and subsequent events.</li>
+<li>Production operation in progress.</li>
+<li>Physical and electrical observations.</li>
+<li>Diagnostic measurements.</li>
+<li>Confirmed root cause.</li>
+<li>Corrective action.</li>
+<li>Verification results.</li>
+<li>Preventive action and responsible owner.</li>
+</ul>
+<h3 id="example-intermittent-servo-alarm">Example: Intermittent servo alarm</h3>
+<p>Observed symptom: An axis intermittently stops during rapid movement.</p>
+<p>Alarm history: A feedback-related alarm appears shortly before the CNC reports a servo fault.</p>
+<p>Investigation: The technician checks the drive diagnostics, feedback cable, connectors, and relevant electrical drawings.</p>
+<p>Possible confirmed finding: A damaged feedback cable produces intermittent signal loss during machine movement.</p>
+<p>Corrective action: Replace the cable using the approved procedure, inspect the routing and strain relief, and verify operation under controlled conditions.</p>
+<p>Preventive action: Review cable routing and add the relevant inspection to the maintenance plan if justified by the findings.</p>
+<p>The example illustrates a method, not a diagnosis that should be applied to every similar alarm.</p>
+<h2 id="15-alarm-history-retention-and-data-management">15. Alarm History Retention and Data Management</h2>
+<p>Alarm history may be stored in volatile memory, non-volatile memory, a controller event log, a separate industrial computer, or an external monitoring system.</p>
+<p>Retention depends on the controller and configuration. Older events may be overwritten when the history buffer reaches capacity.</p>
+<p>Recommended practices include:</p>
+<ul>
+<li>Capture important alarms before clearing or resetting the controller.</li>
+<li>Export records using supported functions where available.</li>
+<li>Record timestamps and time-zone conventions where relevant.</li>
+<li>Synchronize machine and plant-system clocks according to site policy.</li>
+<li>Preserve the original alarm text and code.</li>
+<li>Restrict unauthorized modification of stored records.</li>
+<li>Keep diagnostic exports associated with the maintenance notification or work order.</li>
+<li>Protect production and machine data according to plant cybersecurity requirements.</li>
+</ul>
+<p>A screenshot may be useful for immediate evidence, but structured exported records are generally better for trend analysis if the controller supports them.</p>
+<h2 id="16-preventive-maintenance-for-cnc-alarm-history">16. Preventive Maintenance for CNC Alarm History</h2>
+<p>Alarm-history review can be included in preventive maintenance, especially for critical machines and equipment with recurring breakdowns.</p>
+<p>A practical checklist includes:</p>
+<ul>
+<li>Review repeated CNC alarms since the previous inspection.</li>
+<li>Identify alarms involving servo, spindle, feedback, and communication.</li>
+<li>Review recurring machine-sequence and interlock faults.</li>
+<li>Identify alarms that repeatedly return after reset.</li>
+<li>Check whether previous corrective actions were effective.</li>
+<li>Capture important diagnostic information before clearing history.</li>
+<li>Verify the controller clock where timestamp accuracy matters.</li>
+<li>Confirm that required diagnostic exports are stored correctly.</li>
+<li>Update RCA and maintenance records for significant failures.</li>
+<li>Escalate unresolved recurring alarms for engineering investigation.</li>
+</ul>
+<p>Do not clear historical records merely to make the display look tidy. Preserve relevant evidence according to the plant's retention and maintenance procedures.</p>
+<h2 id="17-sap-pm-and-maintenance-reporting">17. SAP PM and Maintenance Reporting</h2>
+<p>Alarm history can be connected to maintenance records so recurring faults become visible across shifts and maintenance teams.</p>
+<p>Useful SAP PM or equivalent maintenance-system fields include:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Equipment or functional location</td>
+<td>Identifies the affected machine</td>
+</tr>
+<tr>
+<td>Alarm code and description</td>
+<td>Records the detected condition</td>
+</tr>
+<tr>
+<td>Occurrence timestamp</td>
+<td>Establishes event timing</td>
+</tr>
+<tr>
+<td>Production condition</td>
+<td>Identifies the operating context</td>
+</tr>
+<tr>
+<td>Breakdown duration</td>
+<td>Records the production impact</td>
+</tr>
+<tr>
+<td>Suspected cause</td>
+<td>Captures the initial diagnosis</td>
+</tr>
+<tr>
+<td>Confirmed root cause</td>
+<td>Records the evidence-based finding</td>
+</tr>
+<tr>
+<td>Corrective action</td>
+<td>Documents the repair</td>
+</tr>
+<tr>
+<td>Verification result</td>
+<td>Confirms whether the fault was resolved</td>
+</tr>
+<tr>
+<td>Follow-up action</td>
+<td>Tracks preventive measures</td>
+</tr>
+<tr>
+<td>Related work order</td>
+<td>Links the investigation to maintenance activity</td>
+</tr>
+</tbody>
+</table>
+<p>The exact fields and workflow depend on the site's SAP configuration.</p>
+<p>For recurring alarms, analyse the machine history rather than treating each occurrence as an unrelated breakdown. This helps distinguish a temporary symptom from a persistent reliability problem.</p>
+<h2 id="18-key-engineering-principles">18. Key Engineering Principles</h2>
+<ul>
+<li>Alarm history is diagnostic evidence, not a complete root cause analysis.</li>
+<li>Identify the originating subsystem before changing parameters or replacing components.</li>
+<li>The first relevant fault may be more important than the final alarm displayed.</li>
+<li>Correlate CNC, servo, spindle, PLC, sensor, and network events where available.</li>
+<li>Preserve useful alarm information before clearing it.</li>
+<li>Confirm alarm meanings using the exact controller and machine documentation.</li>
+<li>Never bypass safety functions or machine interlocks to clear an alarm.</li>
+<li>Validate corrective actions under controlled conditions.</li>
+<li>Track recurring alarms and verify the effectiveness of preventive actions.</li>
+<li>Maintain traceable alarm and repair records to support reliability improvement.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\18_PM\06_Robots\01_Controller - Controller</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

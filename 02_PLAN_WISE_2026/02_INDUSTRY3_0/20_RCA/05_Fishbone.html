@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fishbone Analysis</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Fishbone Analysis</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-purpose-and-applications">2. Purpose and applications</a></li>
+<li><a href="#3-basic-structure">3. Basic structure</a></li>
+<li><a href="#4-selecting-the-problem-statement">4. Selecting the problem statement</a></li>
+<li><a href="#5-common-fishbone-categories">5. Common fishbone categories</a></li>
+<li><a href="#6-category-selection-for-industrial-automation">6. Category selection for industrial automation</a></li>
+<li><a href="#7-worked-example-1-plc-remote-io-communication-failure">7. Worked example 1: PLC remote I/O communication failure</a><ul>
+<li><a href="#problem-statement">Problem statement</a></li>
+<li><a href="#fishbone-cause-investigation">Fishbone cause investigation</a></li>
+<li><a href="#how-to-use-the-diagram">How to use the diagram</a></li>
+</ul>
+</li>
+<li><a href="#8-worked-example-2-cnc-spindle-overtemperature">8. Worked example 2: CNC spindle overtemperature</a><ul>
+<li><a href="#problem-statement_1">Problem statement</a></li>
+<li><a href="#example-of-evidence-based-narrowing">Example of evidence-based narrowing</a></li>
+</ul>
+</li>
+<li><a href="#9-worked-example-3-false-photoelectric-sensor-detection">9. Worked example 3: False photoelectric sensor detection</a><ul>
+<li><a href="#problem-statement_2">Problem statement</a></li>
+<li><a href="#investigation-sequence">Investigation sequence</a></li>
+</ul>
+</li>
+<li><a href="#10-worked-example-4-repeated-motor-overload">10. Worked example 4: Repeated motor overload</a><ul>
+<li><a href="#problem-statement_3">Problem statement</a></li>
+</ul>
+</li>
+<li><a href="#11-how-to-build-a-fishbone-analysis-step-by-step">11. How to build a fishbone analysis step by step</a><ul>
+<li><a href="#step-1-assemble-relevant-evidence">Step 1: Assemble relevant evidence</a></li>
+<li><a href="#step-2-define-the-effect">Step 2: Define the effect</a></li>
+<li><a href="#step-3-select-suitable-categories">Step 3: Select suitable categories</a></li>
+<li><a href="#step-4-generate-potential-causes">Step 4: Generate potential causes</a></li>
+<li><a href="#step-5-add-sub-causes">Step 5: Add sub-causes</a></li>
+<li><a href="#step-6-prioritize-hypotheses">Step 6: Prioritize hypotheses</a></li>
+<li><a href="#step-7-validate-causes">Step 7: Validate causes</a></li>
+<li><a href="#step-8-confirm-causal-relationships">Step 8: Confirm causal relationships</a></li>
+<li><a href="#step-9-implement-corrective-actions">Step 9: Implement corrective actions</a></li>
+<li><a href="#step-10-verify-effectiveness">Step 10: Verify effectiveness</a></li>
+</ul>
+</li>
+<li><a href="#12-cause-prioritization">12. Cause prioritization</a></li>
+<li><a href="#13-fishbone-analysis-versus-5-whys">13. Fishbone analysis versus 5 Whys</a></li>
+<li><a href="#14-common-fishbone-mistakes">14. Common fishbone mistakes</a></li>
+<li><a href="#15-reusable-fishbone-worksheet">15. Reusable fishbone worksheet</a></li>
+<li><a href="#16-interview-questions-and-answers">16. Interview questions and answers</a></li>
+<li><a href="#17-completion-checklist">17. Completion checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>A fishbone diagram, also called an Ishikawa diagram or cause-and-effect diagram, is a structured problem-analysis tool used to identify, organize, and investigate possible causes of a specific problem.</p>
+<p>It is called a fishbone diagram because its structure resembles a fish skeleton. The problem is written at the head, the main cause categories form the large bones, and individual possible causes branch from them.</p>
+<p>In industrial maintenance, fishbone analysis is useful when a machine breakdown, quality defect, process deviation, or recurring fault may have several contributing causes.</p>
+<p>The purpose is to organize possible explanations systematically rather than immediately blaming one component, operator, or maintenance activity.</p>
+<p>Important distinction: A fishbone diagram identifies and organizes potential causes. It does not prove that any listed cause actually produced the failure. Each significant hypothesis must be validated using evidence.</p>
+<h2 id="2-purpose-and-applications">2. Purpose and applications</h2>
+<p>Fishbone analysis is particularly useful when:</p>
+<ul>
+<li>A breakdown has several plausible technical causes.</li>
+<li>A fault recurs despite replacing components.</li>
+<li>A quality defect appears intermittently.</li>
+<li>A machine performs differently under different loads or environmental conditions.</li>
+<li>Several departments contribute to the same problem.</li>
+<li>An RCA team needs to structure brainstorming before conducting detailed tests.</li>
+<li>The team needs to connect troubleshooting findings to a corrective action plan.</li>
+</ul>
+<p>Common applications include PLC and remote I/O communication failures, CNC spindle trips, robot motion faults, VFD overtemperature, false sensor detection, electrical panel failures, poor product quality, and recurring maintenance delays.</p>
+<h2 id="3-basic-structure">3. Basic structure</h2>
+<p>A fishbone diagram contains four main elements:</p>
+<ol>
+<li>Problem statement: The specific effect being investigated.</li>
+<li>Major cause categories: Broad groups used to organize hypotheses.</li>
+<li>Potential causes: Individual conditions that may contribute to the problem.</li>
+<li>Sub-causes: More detailed explanations of how a potential cause could occur.</li>
+</ol>
+<pre><code>Machine ────────────┐
+Method ─────────────┤
+Material ───────────┤
+Measurement ────────┼──→ PROBLEM / EFFECT
+Environment ────────┤
+People / Organization┘
+</code></pre>
+<p>This is a simplified structural illustration. A full fishbone diagram normally places the problem at one end, with major branches feeding into a central spine.</p>
+<h2 id="4-selecting-the-problem-statement">4. Selecting the problem statement</h2>
+<p>The quality of a fishbone analysis depends heavily on how the problem is defined.</p>
+<p>A vague problem produces an unmanageable list of guesses. A specific problem gives the team a clear target for investigation.</p>
+<table>
+<thead>
+<tr>
+<th>Weak problem statement</th>
+<th>Better problem statement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC problem</td>
+<td>PLC loses communication with remote I/O station R12 intermittently during automatic operation</td>
+</tr>
+<tr>
+<td>Motor failure</td>
+<td>Conveyor motor trips on overload during high-load production</td>
+</tr>
+<tr>
+<td>CNC problem</td>
+<td>CNC spindle drive reports overtemperature after sustained machining</td>
+</tr>
+<tr>
+<td>Sensor issue</td>
+<td>Photoelectric sensor intermittently reports part present when the fixture is empty</td>
+</tr>
+<tr>
+<td>Robot breakdown</td>
+<td>Robot axis reports a feedback fault during movement through a specific section of its travel</td>
+</tr>
+<tr>
+<td>Quality issue</td>
+<td>Part dimensions exceed the specified tolerance after a tool change</td>
+</tr>
+</tbody>
+</table>
+<p>A good problem statement describes what is happening, where it occurs, and under what conditions. It avoids embedding an unverified cause in the problem definition.</p>
+<p>For example, "machine stops because the operator failed to inspect the cable" is unsuitable if the operator's action and the cable's role have not yet been established.</p>
+<h2 id="5-common-fishbone-categories">5. Common fishbone categories</h2>
+<p>A common industrial approach uses the 6M categories: Machine, Method, Material, Measurement, Mother Nature or Environment, and Manpower or People.</p>
+<p>The exact categories can be adapted to the problem. Some plants use additional categories such as management, maintenance, software, or information systems.</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Investigation focus</th>
+<th>Industrial examples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine</td>
+<td>Equipment condition, design, and hardware</td>
+<td>Worn bearings, defective I/O module, damaged drive fan, loose connector</td>
+</tr>
+<tr>
+<td>Method</td>
+<td>Procedures, sequence, and work practices</td>
+<td>Incorrect setup sequence, inadequate commissioning test, unsuitable maintenance interval</td>
+</tr>
+<tr>
+<td>Material</td>
+<td>Components and consumables</td>
+<td>Incorrect cable type, unsuitable sensor, contaminated lubricant, defective spare</td>
+</tr>
+<tr>
+<td>Measurement</td>
+<td>Sensors, instruments, and data quality</td>
+<td>Miscalibrated instrument, incorrect scaling, stale SCADA value, inaccurate test method</td>
+</tr>
+<tr>
+<td>Environment</td>
+<td>External operating conditions</td>
+<td>Heat, dust, coolant, vibration, moisture, electromagnetic interference</td>
+</tr>
+<tr>
+<td>People / Organization</td>
+<td>Human-system interaction and organizational controls</td>
+<td>Inadequate training, unclear work instructions, poor shift handover, uncontrolled changes</td>
+</tr>
+</tbody>
+</table>
+<p>These categories are prompts for investigation, not a requirement to find a cause in every category.</p>
+<h2 id="6-category-selection-for-industrial-automation">6. Category selection for industrial automation</h2>
+<p>The classic 6M structure is not always the most convenient for PLC, CNC, robot, and SCADA faults. The categories can be adjusted to match the technical system.</p>
+<p>A useful alternative is:</p>
+<ul>
+<li>Hardware and power.</li>
+<li>Wiring and physical connections.</li>
+<li>Network and communication.</li>
+<li>Software and configuration.</li>
+<li>Process and operating conditions.</li>
+<li>Maintenance and change control.</li>
+</ul>
+<p>For an industrial network fault, this grouping may make it easier to identify relevant hypotheses than a generic category such as Material.</p>
+<p>Avoid duplicating causes across categories without a clear reason. If a damaged cable is placed under Wiring, the associated cable-routing standard may be placed under Method or Maintenance because it represents a different causal level.</p>
+<h2 id="7-worked-example-1-plc-remote-io-communication-failure">7. Worked example 1: PLC remote I/O communication failure</h2>
+<h3 id="problem-statement">Problem statement</h3>
+<p>A production machine intermittently stops because the PLC reports a communication fault with remote I/O station R12.</p>
+<p>The machine recovers after the communication fault is cleared, but the problem returns during production.</p>
+<h3 id="fishbone-cause-investigation">Fishbone cause investigation</h3>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Potential causes to investigate</th>
+<th>Evidence or test</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine</td>
+<td>Remote I/O module fault, switch fault, unstable device power</td>
+<td>Module diagnostics, switch logs, power measurements</td>
+</tr>
+<tr>
+<td>Method</td>
+<td>Incorrect network configuration, unsuitable recovery sequence</td>
+<td>Configuration comparison, event sequence, approved functional tests</td>
+</tr>
+<tr>
+<td>Material</td>
+<td>Damaged or unsuitable Ethernet cable, defective connector</td>
+<td>Cable inspection, approved cable test, connector inspection</td>
+</tr>
+<tr>
+<td>Measurement</td>
+<td>Misleading diagnostics, incorrect timestamps, stale PLC status</td>
+<td>Compare device, switch, and PLC event records</td>
+</tr>
+<tr>
+<td>Environment</td>
+<td>Electrical interference, vibration, heat, moisture</td>
+<td>Correlate fault timing with environmental and operating conditions</td>
+</tr>
+<tr>
+<td>People / Organization</td>
+<td>Incomplete change records, incorrect replacement procedure</td>
+<td>Review maintenance history, backups, and approved configuration records</td>
+</tr>
+</tbody>
+</table>
+<h3 id="how-to-use-the-diagram">How to use the diagram</h3>
+<p>The table generates hypotheses. It does not identify the root cause by itself.</p>
+<p>Suppose the investigation finds that:</p>
+<ul>
+<li>The remote I/O device has stable power.</li>
+<li>The switch log records repeated physical link interruptions.</li>
+<li>The interruptions correlate with machine movement.</li>
+<li>Inspection reveals cable abrasion at a moving cable carrier.</li>
+</ul>
+<p>The evidence supports investigating cable damage and movement-related installation conditions first.</p>
+<p>Further inspection may reveal that the cable routing permits repeated rubbing against a metal edge. If this mechanism is confirmed, corrective actions may include replacing the cable, correcting the route and support, and updating the installation standard.</p>
+<p>The final conclusion must follow the evidence. If the cable test is normal and the fault continues, other branches must remain open.</p>
+<h2 id="8-worked-example-2-cnc-spindle-overtemperature">8. Worked example 2: CNC spindle overtemperature</h2>
+<h3 id="problem-statement_1">Problem statement</h3>
+<p>A CNC spindle drive intermittently trips on overtemperature during sustained machining operations.</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Possible causes</th>
+<th>Investigation approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine</td>
+<td>Failed fan, blocked heatsink, cooling circuit fault</td>
+<td>Check fan operation, cooling flow, drive diagnostics</td>
+</tr>
+<tr>
+<td>Method</td>
+<td>Incorrect duty cycle, unsuitable machining conditions</td>
+<td>Compare operating cycle, spindle load, and approved process limits</td>
+</tr>
+<tr>
+<td>Material</td>
+<td>Restricted filter, unsuitable coolant, contamination</td>
+<td>Inspect filter, cooling system, and contamination</td>
+</tr>
+<tr>
+<td>Measurement</td>
+<td>Faulty temperature feedback, incorrect temperature interpretation</td>
+<td>Compare drive diagnostics with approved independent measurements</td>
+</tr>
+<tr>
+<td>Environment</td>
+<td>High ambient temperature, poor cabinet ventilation</td>
+<td>Trend cabinet temperature and inspect airflow</td>
+</tr>
+<tr>
+<td>People / Organization</td>
+<td>Missing cooling inspection, undocumented parameter change</td>
+<td>Review PM records, parameter backups, and change history</td>
+</tr>
+</tbody>
+</table>
+<h3 id="example-of-evidence-based-narrowing">Example of evidence-based narrowing</h3>
+<p>If the drive's internal temperature rises steadily, the cabinet is hotter than its specified operating range, and airflow is restricted, cooling becomes a strong hypothesis.</p>
+<p>If cabinet temperature is normal but the drive reports an abnormal temperature, the team should investigate drive cooling, internal temperature sensing, loading, and other relevant conditions.</p>
+<p>A fishbone analysis prevents the team from automatically assuming that every overtemperature trip means a defective drive.</p>
+<h2 id="9-worked-example-3-false-photoelectric-sensor-detection">9. Worked example 3: False photoelectric sensor detection</h2>
+<h3 id="problem-statement_2">Problem statement</h3>
+<p>A photoelectric sensor intermittently reports a part as present when the fixture is empty, causing an automatic sequence fault.</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Possible causes</th>
+<th>Investigation approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine</td>
+<td>Defective sensor, damaged input module</td>
+<td>Compare sensor output with PLC input state</td>
+</tr>
+<tr>
+<td>Method</td>
+<td>Incorrect sensor position, unsuitable detection setup</td>
+<td>Inspect alignment, sensing distance, and target geometry</td>
+</tr>
+<tr>
+<td>Material</td>
+<td>Unsuitable sensor type for reflective targets</td>
+<td>Check sensor specifications and target characteristics</td>
+</tr>
+<tr>
+<td>Measurement</td>
+<td>Incorrect PLC input filtering, incorrect signal interpretation</td>
+<td>Monitor input transitions and compare with the physical sensor output</td>
+</tr>
+<tr>
+<td>Environment</td>
+<td>Coolant, dust, vibration, ambient light, reflections</td>
+<td>Reproduce conditions safely and inspect the detection zone</td>
+</tr>
+<tr>
+<td>People / Organization</td>
+<td>Incomplete acceptance test, incorrect replacement selection</td>
+<td>Review commissioning records and spare-part specifications</td>
+</tr>
+</tbody>
+</table>
+<h3 id="investigation-sequence">Investigation sequence</h3>
+<ol>
+<li>Monitor the sensor's physical output and the corresponding PLC input.</li>
+<li>Determine whether the false detection originates at the sensor or downstream in the electrical or PLC signal path.</li>
+<li>Inspect target geometry, reflective surfaces, mounting, wiring, and supply stability.</li>
+<li>Test relevant conditions using an approved method.</li>
+<li>Validate the selected corrective action under both part-present and part-absent conditions.</li>
+</ol>
+<p>If the sensor output itself switches incorrectly, investigate sensing conditions and the sensor. If the sensor output remains OFF but the PLC input changes ON, investigate wiring, interference, input circuitry, or logic instead.</p>
+<h2 id="10-worked-example-4-repeated-motor-overload">10. Worked example 4: Repeated motor overload</h2>
+<h3 id="problem-statement_3">Problem statement</h3>
+<p>A conveyor motor repeatedly trips on overload when production load increases.</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Possible causes</th>
+<th>Investigation approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine</td>
+<td>Bearing damage, belt misalignment, gearbox wear, motor defect</td>
+<td>Mechanical inspection, motor current, vibration and temperature checks</td>
+</tr>
+<tr>
+<td>Method</td>
+<td>Incorrect startup sequence, unsuitable process loading</td>
+<td>Review sequence, operating conditions, and approved limits</td>
+</tr>
+<tr>
+<td>Material</td>
+<td>Incorrect lubricant, contamination, unsuitable replacement bearing</td>
+<td>Inspect lubrication and component specifications</td>
+</tr>
+<tr>
+<td>Measurement</td>
+<td>Incorrect overload setting, inaccurate current measurement</td>
+<td>Verify protection configuration and compare measurements</td>
+</tr>
+<tr>
+<td>Environment</td>
+<td>High ambient temperature, dust, restricted cooling</td>
+<td>Check cooling, temperature, and contamination</td>
+</tr>
+<tr>
+<td>People / Organization</td>
+<td>Inadequate inspection requirements, poor repair quality</td>
+<td>Review PM records, previous repairs, and work instructions</td>
+</tr>
+</tbody>
+</table>
+<p>Suppose the investigation finds that the motor current is high on all phases, the supply is balanced, and the conveyor bearing has excessive mechanical resistance. The mechanical system becomes the priority for further investigation.</p>
+<p>If inspection then confirms bearing damage associated with an inadequate lubrication arrangement, the team can develop a corrective action around the verified bearing failure mechanism and maintenance controls.</p>
+<p>The fishbone diagram helps broaden the investigation before the team commits to one explanation.</p>
+<h2 id="11-how-to-build-a-fishbone-analysis-step-by-step">11. How to build a fishbone analysis step by step</h2>
+<h3 id="step-1-assemble-relevant-evidence">Step 1: Assemble relevant evidence</h3>
+<p>Collect the available fault history, operating conditions, physical observations, measurements, maintenance records, and recent changes.</p>
+<p>Do not delay urgent safety containment while gathering information.</p>
+<h3 id="step-2-define-the-effect">Step 2: Define the effect</h3>
+<p>Write one specific problem statement. If several unrelated failures are grouped into one statement, create separate analyses or clearly identify their relationship.</p>
+<h3 id="step-3-select-suitable-categories">Step 3: Select suitable categories</h3>
+<p>Use the classic 6M categories or a system-specific structure. Select categories that reflect the failure being investigated.</p>
+<h3 id="step-4-generate-potential-causes">Step 4: Generate potential causes</h3>
+<p>Ask the people with relevant knowledge to identify plausible causes without immediately dismissing unfamiliar ideas.</p>
+<p>Encourage technical specificity. "Electrical problem" is too broad. "Intermittent 24 VDC supply drop at the remote I/O station during solenoid switching" is more testable, if there is a reason to suspect it.</p>
+<h3 id="step-5-add-sub-causes">Step 5: Add sub-causes</h3>
+<p>Break broad hypotheses into more specific mechanisms.</p>
+<p>For example:</p>
+<pre><code>Communication fault
+    ↓
+Physical network interruption
+    ↓
+Cable or connector issue
+    ↓
+Cable abrasion during carrier movement
+    ↓
+Insufficient routing clearance or cable support
+</code></pre>
+<p>This is a candidate chain, not a proven conclusion.</p>
+<h3 id="step-6-prioritize-hypotheses">Step 6: Prioritize hypotheses</h3>
+<p>Prioritize based on available evidence, likelihood, safety or quality consequences, recurrence, and the cost or practicality of testing.</p>
+<p>Do not automatically select the easiest cause to test or the cause the team already suspects.</p>
+<h3 id="step-7-validate-causes">Step 7: Validate causes</h3>
+<p>For each important hypothesis, record:</p>
+<ul>
+<li>Evidence supporting it.</li>
+<li>Evidence contradicting it.</li>
+<li>The test or observation needed.</li>
+<li>The result.</li>
+<li>Whether the hypothesis remains open, is supported, or is rejected.</li>
+</ul>
+<h3 id="step-8-confirm-causal-relationships">Step 8: Confirm causal relationships</h3>
+<p>Identify which conditions actually produced or contributed to the problem. A cause may be plausible but still lack sufficient evidence.</p>
+<h3 id="step-9-implement-corrective-actions">Step 9: Implement corrective actions</h3>
+<p>Map each confirmed cause to a specific action. Separate immediate containment from permanent correction and broader risk reduction.</p>
+<h3 id="step-10-verify-effectiveness">Step 10: Verify effectiveness</h3>
+<p>Monitor the relevant failure mode under representative operating conditions. If the failure returns, revisit the analysis rather than simply repeating the previous repair.</p>
+<h2 id="12-cause-prioritization">12. Cause prioritization</h2>
+<p>A fishbone diagram may contain dozens of potential causes. Investigating every possibility equally is rarely practical.</p>
+<p>A simple hypothesis-prioritization table can help.</p>
+<table>
+<thead>
+<tr>
+<th>Hypothesis</th>
+<th>Supporting evidence</th>
+<th>Consequence if true</th>
+<th>Next test</th>
+<th>Priority</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Damaged network cable</td>
+<td>Link interruptions correlate with machine movement</td>
+<td>Production stoppage</td>
+<td>Inspect cable and perform an approved test</td>
+<td>High</td>
+</tr>
+<tr>
+<td>Remote I/O module failure</td>
+<td>No direct evidence yet</td>
+<td>Production stoppage</td>
+<td>Review module diagnostics and approved substitution procedure</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>Incorrect PLC logic</td>
+<td>No logic-related evidence yet</td>
+<td>Incorrect sequence behavior</td>
+<td>Review PLC trace and fault response</td>
+<td>Low pending evidence</td>
+</tr>
+<tr>
+<td>Shared power supply disturbance</td>
+<td>Other devices remain stable during the event</td>
+<td>Multiple-device failure</td>
+<td>Review supply diagnostics and measurements</td>
+<td>Medium</td>
+</tr>
+</tbody>
+</table>
+<p>These priority labels are illustrative, not calculated probabilities. Update them when new evidence becomes available.</p>
+<p>Safety-critical risks require appropriate controls even when their probability is uncertain. Do not defer a necessary safety response simply because a hypothesis is not yet the leading explanation.</p>
+<h2 id="13-fishbone-analysis-versus-5-whys">13. Fishbone analysis versus 5 Whys</h2>
+<p>The two methods complement each other.</p>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Fishbone</th>
+<th>5 Whys</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Main purpose</td>
+<td>Organize multiple possible causes</td>
+<td>Trace a causal chain into underlying conditions</td>
+</tr>
+<tr>
+<td>Structure</td>
+<td>Multiple branches from a central problem</td>
+<td>Sequential why questions, with additional branches if necessary</td>
+</tr>
+<tr>
+<td>Best use</td>
+<td>Broad or poorly understood problems</td>
+<td>More clearly defined causal paths</td>
+</tr>
+<tr>
+<td>Main strength</td>
+<td>Reduces the risk of overlooking categories</td>
+<td>Encourages investigation beyond the immediate symptom</td>
+</tr>
+<tr>
+<td>Main limitation</td>
+<td>Lists hypotheses without proving them</td>
+<td>Can oversimplify a multi-cause failure</td>
+</tr>
+<tr>
+<td>Evidence requirement</td>
+<td>Required to validate each important branch</td>
+<td>Required to validate each causal link</td>
+</tr>
+<tr>
+<td>Typical combination</td>
+<td>Generate and group hypotheses</td>
+<td>Investigate promising hypotheses in greater depth</td>
+</tr>
+</tbody>
+</table>
+<p>A practical sequence is:</p>
+<pre><code>Define the problem
+    ↓
+Build fishbone analysis
+    ↓
+Identify plausible causes across categories
+    ↓
+Prioritize and test hypotheses
+    ↓
+Use 5 Whys on supported causal paths
+    ↓
+Confirm root causes
+    ↓
+Implement and verify corrective actions
+</code></pre>
+<p>Do not run 5 Whys mechanically on every fishbone branch. Investigate the branches that are plausible and relevant to the evidence.</p>
+<h2 id="14-common-fishbone-mistakes">14. Common fishbone mistakes</h2>
+<table>
+<thead>
+<tr>
+<th>Mistake</th>
+<th>Why it matters</th>
+<th>Better practice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Writing a vague problem statement</td>
+<td>Produces a broad, unfocused analysis</td>
+<td>Define the failure, conditions, and impact</td>
+</tr>
+<tr>
+<td>Treating every branch as a fact</td>
+<td>Confuses brainstorming with diagnosis</td>
+<td>Label branches as hypotheses until verified</td>
+</tr>
+<tr>
+<td>Using only one category</td>
+<td>Can miss important contributing conditions</td>
+<td>Select suitable categories and consider alternatives</td>
+</tr>
+<tr>
+<td>Blaming a person as the final explanation</td>
+<td>May conceal equipment or process weaknesses</td>
+<td>Investigate the conditions and controls around the action</td>
+</tr>
+<tr>
+<td>Listing causes that simply repeat the problem</td>
+<td>Does not explain the mechanism</td>
+<td>Describe how the condition could produce the failure</td>
+</tr>
+<tr>
+<td>Adding many unrelated causes</td>
+<td>Makes prioritization difficult</td>
+<td>Keep causes relevant to the defined problem</td>
+</tr>
+<tr>
+<td>Assuming a diagram proves the RCA</td>
+<td>A diagram does not establish causation</td>
+<td>Collect evidence and test hypotheses</td>
+</tr>
+<tr>
+<td>Failing to assign actions</td>
+<td>Analysis does not translate into improvement</td>
+<td>Assign owners, due dates, and verification criteria</td>
+</tr>
+<tr>
+<td>Ignoring recurrence after repair</td>
+<td>The proposed cause or action may be incomplete</td>
+<td>Monitor effectiveness and reopen the investigation if necessary</td>
+</tr>
+</tbody>
+</table>
+<h2 id="15-reusable-fishbone-worksheet">15. Reusable fishbone worksheet</h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>What to record</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Problem statement</td>
+<td>Specific failure, location, conditions, and impact</td>
+</tr>
+<tr>
+<td>Machine</td>
+<td>Hardware, design, power, and equipment condition</td>
+</tr>
+<tr>
+<td>Method</td>
+<td>Procedures, sequence, setup, and maintenance methods</td>
+</tr>
+<tr>
+<td>Material</td>
+<td>Components, cables, connectors, lubricants, and consumables</td>
+</tr>
+<tr>
+<td>Measurement</td>
+<td>Sensors, instrumentation, PLC signals, diagnostics, and data quality</td>
+</tr>
+<tr>
+<td>Environment</td>
+<td>Temperature, vibration, contamination, moisture, and interference</td>
+</tr>
+<tr>
+<td>People / Organization</td>
+<td>Training, instructions, handover, workload, and change control</td>
+</tr>
+<tr>
+<td>Other relevant categories</td>
+<td>Software, network, process, management, or other system-specific factors</td>
+</tr>
+<tr>
+<td>Priority hypotheses</td>
+<td>Causes selected for further investigation</td>
+</tr>
+<tr>
+<td>Evidence collected</td>
+<td>Measurements, logs, inspection results, and test outcomes</td>
+</tr>
+<tr>
+<td>Confirmed causes</td>
+<td>Causal conditions supported by evidence</td>
+</tr>
+<tr>
+<td>Corrective actions</td>
+<td>Actions linked to each confirmed cause</td>
+</tr>
+<tr>
+<td>Owner and due date</td>
+<td>Responsibility and target completion</td>
+</tr>
+<tr>
+<td>Effectiveness verification</td>
+<td>Defined test, operating period, and acceptance criteria</td>
+</tr>
+</tbody>
+</table>
+<h2 id="16-interview-questions-and-answers">16. Interview questions and answers</h2>
+<p>Q1. What is a fishbone diagram?</p>
+<p>A fishbone diagram is a cause-and-effect analysis tool used to organize potential causes of a defined problem into categories and sub-causes.</p>
+<p>Q2. What are the common fishbone categories?</p>
+<p>The classic 6M categories are Machine, Method, Material, Measurement, Environment, and Manpower or People. The categories can be adapted to suit the problem.</p>
+<p>Q3. Does a fishbone diagram identify the root cause automatically?</p>
+<p>No. It organizes hypotheses. The suspected causes must be tested and validated with evidence.</p>
+<p>Q4. When would you use fishbone analysis instead of 5 Whys?</p>
+<p>Fishbone analysis is useful when many different causes may explain the problem. The 5 Whys is useful for investigating a plausible causal chain in greater depth. They are often used together.</p>
+<p>Q5. How would you use fishbone analysis for a PLC communication fault?</p>
+<p>I would define the fault precisely, investigate hardware, wiring, network, configuration, power, environment, and maintenance controls, then prioritize and test the hypotheses against PLC and network diagnostics.</p>
+<p>Q6. Can a fishbone diagram include organizational causes?</p>
+<p>Yes. Training, procedures, change control, inspection standards, spare-part selection, and handover may contribute to a failure when the evidence supports the relationship.</p>
+<p>Q7. How do you decide which cause to investigate first?</p>
+<p>Consider the available evidence, safety and quality consequences, recurrence, likelihood, and practicality of testing. Update priorities as new evidence appears.</p>
+<p>Q8. How do you close a fishbone analysis?</p>
+<p>Validate the relevant causal hypotheses, document confirmed causes, assign corrective actions, and verify their effectiveness under appropriate operating conditions.</p>
+<h2 id="17-completion-checklist">17. Completion checklist</h2>
+<ul>
+<li>The problem statement is specific and factual.</li>
+<li>Suitable cause categories have been selected.</li>
+<li>Potential causes are separated from confirmed causes.</li>
+<li>Technical, process, environmental, measurement, and organizational factors have been considered where relevant.</li>
+<li>Hypotheses are prioritized using evidence and risk.</li>
+<li>Important causes are tested rather than assumed.</li>
+<li>5 Whys or another suitable RCA method is used where deeper analysis is needed.</li>
+<li>Corrective actions address confirmed causes.</li>
+<li>Actions have assigned owners and due dates.</li>
+<li>Similar machines or processes are considered where appropriate.</li>
+<li>Effectiveness is verified using defined criteria.</li>
+<li>The analysis is revised if new evidence contradicts the proposed explanation.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\20_RCA\06_Fault_Tree_Awareness - Fault-tree awareness</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

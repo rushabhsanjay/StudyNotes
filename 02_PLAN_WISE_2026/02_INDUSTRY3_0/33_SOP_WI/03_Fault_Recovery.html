@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fault Recovery</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Fault Recovery</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-essential-fault-recovery-terminology">2. Essential Fault-Recovery Terminology</a></li>
+<li><a href="#3-fault-classification">3. Fault Classification</a></li>
+<li><a href="#4-the-fault-recovery-lifecycle">4. The Fault-Recovery Lifecycle</a></li>
+<li><a href="#5-step-1-assess-safety-and-contain-the-fault">5. Step 1: Assess Safety and Contain the Fault</a><ul>
+<li><a href="#51-initial-response">5.1 Initial response</a></li>
+</ul>
+</li>
+<li><a href="#6-step-2-capture-the-evidence">6. Step 2: Capture the Evidence</a><ul>
+<li><a href="#61-useful-evidence-sources">6.1 Useful evidence sources</a></li>
+</ul>
+</li>
+<li><a href="#7-step-3-classify-and-prioritize-the-fault">7. Step 3: Classify and Prioritize the Fault</a><ul>
+<li><a href="#71-questions-for-prioritization">7.1 Questions for prioritization</a></li>
+</ul>
+</li>
+<li><a href="#8-step-4-diagnose-systematically">8. Step 4: Diagnose Systematically</a><ul>
+<li><a href="#81-recommended-diagnostic-order">8.1 Recommended diagnostic order</a></li>
+<li><a href="#82-command-versus-feedback-method">8.2 Command-versus-feedback method</a></li>
+</ul>
+</li>
+<li><a href="#9-plc-and-io-fault-recovery">9. PLC and I/O Fault Recovery</a><ul>
+<li><a href="#91-plc-diagnostic-checklist">9.1 PLC diagnostic checklist</a></li>
+<li><a href="#92-example-cylinder-does-not-extend">9.2 Example: Cylinder does not extend</a></li>
+<li><a href="#93-plc-fault-versus-process-fault">9.3 PLC fault versus process fault</a></li>
+</ul>
+</li>
+<li><a href="#10-vfd-and-servo-fault-recovery">10. VFD and Servo Fault Recovery</a><ul>
+<li><a href="#101-common-vfd-fault-groups">10.1 Common VFD fault groups</a></li>
+<li><a href="#102-recovery-procedure">10.2 Recovery procedure</a></li>
+<li><a href="#103-servo-following-error">10.3 Servo following error</a></li>
+</ul>
+</li>
+<li><a href="#11-cnc-and-robot-fault-recovery">11. CNC and Robot Fault Recovery</a><ul>
+<li><a href="#111-cnc-recovery">11.1 CNC recovery</a></li>
+<li><a href="#112-robot-recovery">11.2 Robot recovery</a></li>
+</ul>
+</li>
+<li><a href="#12-industrial-network-and-communication-faults">12. Industrial Network and Communication Faults</a><ul>
+<li><a href="#121-diagnostic-checks">12.1 Diagnostic checks</a></li>
+<li><a href="#122-important-distinction">12.2 Important distinction</a></li>
+</ul>
+</li>
+<li><a href="#13-intermittent-faults">13. Intermittent Faults</a><ul>
+<li><a href="#131-diagnostic-strategy">13.1 Diagnostic strategy</a></li>
+</ul>
+</li>
+<li><a href="#14-fault-reset-recovery-and-restart">14. Fault Reset, Recovery, and Restart</a><ul>
+<li><a href="#141-generic-recovery-checklist">14.1 Generic recovery checklist</a></li>
+</ul>
+</li>
+<li><a href="#15-recovery-after-power-failure-or-controller-restart">15. Recovery After Power Failure or Controller Restart</a><ul>
+<li><a href="#151-recovery-procedure">15.1 Recovery procedure</a></li>
+</ul>
+</li>
+<li><a href="#16-fault-recovery-in-test-beds-and-quality-systems">16. Fault Recovery in Test Beds and Quality Systems</a><ul>
+<li><a href="#161-recovery-priorities">16.1 Recovery priorities</a></li>
+</ul>
+</li>
+<li><a href="#17-root-cause-analysis-and-capa">17. Root Cause Analysis and CAPA</a><ul>
+<li><a href="#171-example-repeated-proximity-sensor-failure">17.1 Example: Repeated proximity-sensor failure</a></li>
+<li><a href="#172-five-whys">17.2 Five Whys</a></li>
+<li><a href="#173-capa-actions">17.3 CAPA actions</a></li>
+</ul>
+</li>
+<li><a href="#18-fault-recovery-documentation">18. Fault Recovery Documentation</a></li>
+<li><a href="#19-sap-and-maintenance-workflow">19. SAP and Maintenance Workflow</a></li>
+<li><a href="#20-reliability-metrics">20. Reliability Metrics</a><ul>
+<li><a href="#201-mean-time-to-repair-or-restore">20.1 Mean Time to Repair or Restore</a></li>
+<li><a href="#202-mean-time-between-failures">20.2 Mean Time Between Failures</a></li>
+<li><a href="#203-why-the-metrics-matter">20.3 Why the metrics matter</a></li>
+</ul>
+</li>
+<li><a href="#21-practical-troubleshooting-example-vfd-controlled-conveyor">21. Practical Troubleshooting Example: VFD-Controlled Conveyor</a><ul>
+<li><a href="#initial-investigation">Initial investigation</a></li>
+<li><a href="#example-diagnostic-interpretation">Example diagnostic interpretation</a></li>
+<li><a href="#recovery-and-release">Recovery and release</a></li>
+</ul>
+</li>
+<li><a href="#22-common-fault-recovery-mistakes">22. Common Fault-Recovery Mistakes</a></li>
+<li><a href="#23-interview-questions-and-answers">23. Interview Questions and Answers</a></li>
+<li><a href="#24-final-fault-recovery-principles">24. Final Fault-Recovery Principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\33_SOP_WI\03_Fault_Recovery</code></p>
+<h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>Fault recovery is the controlled process of identifying an abnormal machine condition, determining its cause, correcting the problem, restoring the equipment to a known state, and verifying that it can safely return to operation.</p>
+<p>In industrial automation, a fault may originate in electrical hardware, PLC logic, sensors, actuators, drives, CNC systems, robots, industrial networks, utilities, mechanical equipment, process conditions, or operator setup.</p>
+<p>Fault recovery is not simply clearing an alarm and restarting the machine. The objective is to restore the machine's intended functionality without creating another fault, damaging equipment, losing process integrity, or exposing personnel to hazards.</p>
+<p>The main objectives are:</p>
+<ul>
+<li>Identify and classify the fault accurately.</li>
+<li>Establish and maintain the required safe state.</li>
+<li>Preserve diagnostic evidence before it disappears.</li>
+<li>Determine the initiating cause and contributing factors.</li>
+<li>Correct the fault using an approved method.</li>
+<li>Verify the repair and restore the required machine conditions.</li>
+<li>Restart through the approved recovery sequence.</li>
+<li>Record the fault, repair, verification, and return-to-service status.</li>
+<li>Prevent recurrence through RCA, CAPA, and appropriate engineering changes.</li>
+</ul>
+<h2 id="2-essential-fault-recovery-terminology">2. Essential Fault-Recovery Terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fault</td>
+<td>An abnormal condition that prevents or degrades the intended function</td>
+</tr>
+<tr>
+<td>Failure</td>
+<td>Loss of the ability to perform a required function</td>
+</tr>
+<tr>
+<td>Alarm</td>
+<td>An indication that a condition requires attention</td>
+</tr>
+<tr>
+<td>Trip</td>
+<td>A protective or control response that stops or inhibits an operation</td>
+</tr>
+<tr>
+<td>Interlock</td>
+<td>A condition or function that prevents an operation when specified requirements are not met</td>
+</tr>
+<tr>
+<td>Permissive</td>
+<td>A condition that must be satisfied before an operation is allowed</td>
+</tr>
+<tr>
+<td>Diagnostic code</td>
+<td>A code identifying a detected condition or suspected failure</td>
+</tr>
+<tr>
+<td>Fault reset</td>
+<td>An authorized command to clear a resettable fault state after the required conditions are met</td>
+</tr>
+<tr>
+<td>Recovery sequence</td>
+<td>Approved steps for returning equipment to a known operating state</td>
+</tr>
+<tr>
+<td>Root cause</td>
+<td>The underlying cause or causes that explain why the problem occurred</td>
+</tr>
+<tr>
+<td>Containment</td>
+<td>Immediate measures that limit the impact of a fault</td>
+</tr>
+<tr>
+<td>Corrective action</td>
+<td>Action taken to eliminate the cause of a detected problem</td>
+</tr>
+<tr>
+<td>Preventive action</td>
+<td>Action intended to prevent recurrence or occurrence of a similar problem, according to the applicable quality system</td>
+</tr>
+<tr>
+<td>MTTR</td>
+<td>Mean time to repair or restore, as defined by the site's measurement method</td>
+</tr>
+<tr>
+<td>MTBF</td>
+<td>Mean time between failures, according to the selected reliability definition</td>
+</tr>
+<tr>
+<td>Return to service</td>
+<td>The controlled release of equipment for its intended operation after required checks</td>
+</tr>
+</tbody>
+</table>
+<p>A fault code may identify the condition detected by the controller without identifying the actual failed component. For example, a drive overcurrent trip indicates that a current-related threshold was exceeded, not necessarily that the drive itself is defective.</p>
+<h2 id="3-fault-classification">3. Fault Classification</h2>
+<p>Correct classification helps determine the diagnostic approach, urgency, escalation path, and recovery requirements.</p>
+<table>
+<thead>
+<tr>
+<th>Fault category</th>
+<th>Examples</th>
+<th>Typical diagnostic direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Electrical</td>
+<td>Blown fuse, supply loss, loose terminal</td>
+<td>Supply condition, protection, wiring, load</td>
+</tr>
+<tr>
+<td>Sensor/instrumentation</td>
+<td>Proximity sensor not switching, analog value out of range</td>
+<td>Sensor, target, wiring, power, scaling</td>
+</tr>
+<tr>
+<td>Actuator</td>
+<td>Cylinder not extending, solenoid valve not operating</td>
+<td>Air supply, valve, actuator, feedback</td>
+</tr>
+<tr>
+<td>PLC/control logic</td>
+<td>Sequence stuck, incorrect transition</td>
+<td>Logic conditions, state, timers, I/O</td>
+</tr>
+<tr>
+<td>HMI</td>
+<td>Screen frozen, command unavailable</td>
+<td>HMI application, communication, permissions</td>
+</tr>
+<tr>
+<td>VFD/servo</td>
+<td>Overcurrent, overtemperature, following error</td>
+<td>Drive diagnostics, motor, load, feedback</td>
+</tr>
+<tr>
+<td>CNC</td>
+<td>Reference error, spindle fault, tool-change failure</td>
+<td>CNC alarm, axes, tools, auxiliaries</td>
+</tr>
+<tr>
+<td>Robot</td>
+<td>Motion fault, path interruption, external interlock</td>
+<td>Robot alarm, position, safeguarding, handshake</td>
+</tr>
+<tr>
+<td>Industrial network</td>
+<td>Device offline, intermittent communication</td>
+<td>Link, power, topology, addressing, diagnostics</td>
+</tr>
+<tr>
+<td>Mechanical</td>
+<td>Jam, broken coupling, excessive friction</td>
+<td>Physical inspection, alignment, lubrication</td>
+</tr>
+<tr>
+<td>Pneumatic/hydraulic</td>
+<td>Pressure loss, leakage, slow movement</td>
+<td>Supply, valves, hoses, cylinders, filters</td>
+</tr>
+<tr>
+<td>Process/quality</td>
+<td>Incorrect measurement, failed test</td>
+<td>Recipe, tooling, process conditions, calibration</td>
+</tr>
+<tr>
+<td>Software/configuration</td>
+<td>Incorrect parameter, incompatible revision</td>
+<td>Change history, configuration, approved backups</td>
+</tr>
+<tr>
+<td>Utility/environment</td>
+<td>Power, cooling, air, temperature problem</td>
+<td>Utility source, distribution, site conditions</td>
+</tr>
+</tbody>
+</table>
+<p>A single failure can cross several categories. A failed sensor may cause a PLC sequence timeout, which then blocks a VFD command and produces a machine-level alarm.</p>
+<h2 id="4-the-fault-recovery-lifecycle">4. The Fault-Recovery Lifecycle</h2>
+<pre><code>Fault detected
+      ↓
+Assess immediate danger
+      ↓
+Stop or contain the process as required
+      ↓
+Record the alarm and machine state
+      ↓
+Classify the fault and identify affected functions
+      ↓
+Inspect evidence and test likely causes
+      ↓
+Identify and correct the cause
+      ↓
+Verify the repair and required safeguards
+      ↓
+Restore the machine to a known state
+      ↓
+Execute the approved restart procedure
+      ↓
+Validate operation and product/process quality
+      ↓
+Record closure and investigate recurrence where required
+</code></pre>
+<p>This is a general framework. The actual sequence depends on the fault severity, machine design, and site procedures. An emergency requires immediate hazard control before routine diagnostic work.</p>
+<h2 id="5-step-1-assess-safety-and-contain-the-fault">5. Step 1: Assess Safety and Contain the Fault</h2>
+<p>Before troubleshooting, determine whether the condition creates an immediate hazard.</p>
+<p>Examples include:</p>
+<ul>
+<li>Unexpected or uncontrolled motion.</li>
+<li>Guard or safety-system failure.</li>
+<li>Smoke, burning smell, electrical arcing, or fire.</li>
+<li>Hydraulic or pneumatic leakage that creates danger.</li>
+<li>Suspended or elevated loads that may fall.</li>
+<li>High temperature, pressure, or rotating equipment hazards.</li>
+<li>Unexpected release of a clamped or restrained component.</li>
+<li>A machine that may restart unexpectedly.</li>
+</ul>
+<h3 id="51-initial-response">5.1 Initial response</h3>
+<ol>
+<li>Protect people first.</li>
+<li>Use the applicable normal stop or emergency response according to the situation.</li>
+<li>Keep personnel clear of hazardous areas.</li>
+<li>Notify the responsible supervisor or emergency team as required.</li>
+<li>Apply LOTO when the planned inspection or repair requires hazardous-energy isolation.</li>
+<li>Preserve the equipment in the required safe state.</li>
+<li>Prevent unauthorized reset or restart.</li>
+</ol>
+<p>Important: An emergency stop is not equivalent to LOTO. Before work involving hazardous energy, isolate, secure, and verify the relevant energy sources according to the approved procedure.</p>
+<p>Do not enter a hazardous area merely because the HMI shows that the machine has stopped.</p>
+<h2 id="6-step-2-capture-the-evidence">6. Step 2: Capture the Evidence</h2>
+<p>A good technician records what happened before changing the machine state unnecessarily. Resetting a fault, cycling power, or clearing a controller history may remove useful evidence.</p>
+<p>Record the following where applicable:</p>
+<ul>
+<li>Exact alarm message and diagnostic code.</li>
+<li>Date and time of the event.</li>
+<li>Equipment ID, station, and affected component.</li>
+<li>Operating mode at the time of failure.</li>
+<li>Production cycle, workpiece, program, recipe, or operation in progress.</li>
+<li>Machine position and sequence step.</li>
+<li>Relevant sensor and actuator states.</li>
+<li>PLC, drive, CNC, robot, and network diagnostic information.</li>
+<li>Recent repairs, parameter changes, or software downloads.</li>
+<li>Utility conditions and abnormal environmental observations.</li>
+<li>Whether the fault is continuous, intermittent, or repeatable.</li>
+<li>Immediate effects on production, safety, and quality.</li>
+</ul>
+<h3 id="61-useful-evidence-sources">6.1 Useful evidence sources</h3>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Useful information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HMI alarm history</td>
+<td>Operator-visible fault and sequence context</td>
+</tr>
+<tr>
+<td>PLC diagnostics</td>
+<td>Controller faults, I/O status, program state</td>
+</tr>
+<tr>
+<td>VFD/servo history</td>
+<td>Trip codes, current, voltage, thermal or feedback-related events</td>
+</tr>
+<tr>
+<td>CNC alarm history</td>
+<td>Axis, spindle, tool, program, and machine alarms</td>
+</tr>
+<tr>
+<td>Robot controller</td>
+<td>Motion faults, position information, external conditions</td>
+</tr>
+<tr>
+<td>Industrial switch</td>
+<td>Link status, port errors, device connectivity</td>
+</tr>
+<tr>
+<td>Electrical drawings</td>
+<td>Supply path, protection, terminal, and circuit relationships</td>
+</tr>
+<tr>
+<td>I/O list</td>
+<td>Signal names, addresses, expected functions</td>
+</tr>
+<tr>
+<td>Maintenance history</td>
+<td>Previous failures and replaced components</td>
+</tr>
+<tr>
+<td>SAP work orders</td>
+<td>Repair records, component history, downtime data</td>
+</tr>
+<tr>
+<td>SCADA/historian</td>
+<td>Process trends, timestamps, event sequence</td>
+</tr>
+<tr>
+<td>Physical inspection</td>
+<td>Damage, leakage, loose connections, contamination, heat</td>
+</tr>
+</tbody>
+</table>
+<p>A displayed alarm and a trend from several seconds before the alarm may provide more diagnostic value than the alarm text alone.</p>
+<h2 id="7-step-3-classify-and-prioritize-the-fault">7. Step 3: Classify and Prioritize the Fault</h2>
+<p>Not every fault has the same urgency. Use the site's approved severity classification.</p>
+<table>
+<thead>
+<tr>
+<th>Priority</th>
+<th>General interpretation</th>
+<th>Response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Critical</td>
+<td>Immediate personnel hazard or serious equipment risk</td>
+<td>Apply emergency response and prevent unsafe operation</td>
+</tr>
+<tr>
+<td>High</td>
+<td>Major equipment failure or production loss</td>
+<td>Contain, notify responsible personnel, and investigate promptly</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>Degraded function or intermittent fault</td>
+<td>Diagnose according to risk and production impact</td>
+</tr>
+<tr>
+<td>Low</td>
+<td>Non-critical indication with no immediate operational impact</td>
+<td>Record and resolve according to the approved maintenance plan</td>
+</tr>
+</tbody>
+</table>
+<p>These categories are illustrative. Site-defined severity levels, escalation thresholds, and response times take precedence.</p>
+<h3 id="71-questions-for-prioritization">7.1 Questions for prioritization</h3>
+<ul>
+<li>Is anyone exposed to immediate danger?</li>
+<li>Can the fault cause secondary damage?</li>
+<li>Is the machine in an unpredictable state?</li>
+<li>Does the fault affect a safety-related function?</li>
+<li>Is product quality or traceability compromised?</li>
+<li>Is the fault isolated to one station or affecting an entire line?</li>
+<li>Can the equipment continue under an explicitly approved degraded mode?</li>
+<li>Is a specialist or authorized person required?</li>
+</ul>
+<p>Never continue operation under a degraded condition unless the applicable risk assessment, engineering approval, and site procedure explicitly permit it.</p>
+<h2 id="8-step-4-diagnose-systematically">8. Step 4: Diagnose Systematically</h2>
+<p>A structured diagnosis avoids unnecessary component replacement and random parameter changes.</p>
+<h3 id="81-recommended-diagnostic-order">8.1 Recommended diagnostic order</h3>
+<ol>
+<li>Confirm the symptom. Establish what failed and what should have happened.</li>
+<li>Review the alarm. Identify the triggering condition and related diagnostics.</li>
+<li>Check the machine state. Determine the active sequence step, mode, position, and command state.</li>
+<li>Verify utilities. Check relevant power, air, hydraulic, cooling, and communication supplies.</li>
+<li>Compare command and feedback. Determine whether the command was issued and whether the expected response occurred.</li>
+<li>Inspect the affected circuit or mechanism. Follow drawings and approved diagnostic instructions.</li>
+<li>Test likely causes. Use appropriate instruments and safe methods.</li>
+<li>Confirm the cause. Establish evidence that the identified defect explains the symptom.</li>
+<li>Correct the cause. Repair, adjust, or replace the affected component under authorization.</li>
+<li>Verify the result. Test the relevant function and required protective measures before restart.</li>
+</ol>
+<p>This order is a guide, not a requirement to delay urgent safety action. The safest and most informative diagnostic step may vary by fault.</p>
+<h3 id="82-command-versus-feedback-method">8.2 Command-versus-feedback method</h3>
+<p>A useful troubleshooting principle is to compare what the controller requested with what the equipment actually did.</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Expected feedback</th>
+<th>Possible diagnostic areas if feedback is missing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VFD run command</td>
+<td>Drive running status or speed feedback</td>
+<td>Drive permissives, control source, supply, drive fault</td>
+</tr>
+<tr>
+<td>Cylinder extend command</td>
+<td>Extended-position sensor</td>
+<td>Air pressure, valve, cylinder, obstruction, sensor</td>
+</tr>
+<tr>
+<td>Clamp command</td>
+<td>Clamped confirmation</td>
+<td>Pneumatics/hydraulics, mechanics, switch, wiring</td>
+</tr>
+<tr>
+<td>Robot start request</td>
+<td>Robot cycle-active status</td>
+<td>Mode, robot fault, external interlock, handshake</td>
+</tr>
+<tr>
+<td>CNC cycle start</td>
+<td>Cycle-active or program execution status</td>
+<td>Mode, alarm, door/interlock state, program readiness</td>
+</tr>
+<tr>
+<td>PLC-to-device command</td>
+<td>Device response</td>
+<td>Network, remote I/O, device power, configuration</td>
+</tr>
+<tr>
+<td>Test start command</td>
+<td>Valid test-running status</td>
+<td>Fixture readiness, test recipe, instrumentation, permissives</td>
+</tr>
+</tbody>
+</table>
+<p>The feedback itself must be verified. A stuck sensor can report the expected state even when the mechanism has not reached it.</p>
+<h2 id="9-plc-and-io-fault-recovery">9. PLC and I/O Fault Recovery</h2>
+<p>PLC faults often appear as sequence failures, missing outputs, incorrect feedback, or communication alarms.</p>
+<h3 id="91-plc-diagnostic-checklist">9.1 PLC diagnostic checklist</h3>
+<ul>
+<li>Confirm controller RUN/STOP or equivalent operating status.</li>
+<li>Check controller and module diagnostics.</li>
+<li>Identify whether the fault is local to the CPU, remote I/O, field device, or communication path.</li>
+<li>Check the relevant input signal and its physical state.</li>
+<li>Check the output command and whether it reaches the intended device.</li>
+<li>Verify interlocks, permissives, timers, and sequence conditions.</li>
+<li>Review recent program changes and fault history.</li>
+<li>Confirm whether the controller is executing the expected sequence step.</li>
+<li>Check for module, configuration, addressing, or network errors.</li>
+<li>Preserve the original program and diagnostic evidence before making approved changes.</li>
+</ul>
+<h3 id="92-example-cylinder-does-not-extend">9.2 Example: Cylinder does not extend</h3>
+<p>Expected sequence:</p>
+<pre><code>PLC issues extend command
+        ↓
+Output module energizes the valve
+        ↓
+Valve directs air to the cylinder
+        ↓
+Cylinder extends
+        ↓
+Extended-position sensor activates
+        ↓
+PLC accepts the completed step
+</code></pre>
+<p>If the extended sensor never activates, investigate the chain in order:</p>
+<ul>
+<li>Is the extend command present?</li>
+<li>Is the output module healthy and the output actually switching?</li>
+<li>Is the valve receiving the correct electrical signal?</li>
+<li>Is the required air pressure available?</li>
+<li>Is the valve operating correctly?</li>
+<li>Is the cylinder mechanically free to move?</li>
+<li>Is the sensor correctly positioned and functioning?</li>
+<li>Is the sensor signal reaching the PLC input?</li>
+<li>Is the PLC logic monitoring the correct signal and expected transition?</li>
+</ul>
+<p>Do not force the extended sensor input to make the sequence continue. Doing so can conceal a real mechanical or pneumatic failure.</p>
+<h3 id="93-plc-fault-versus-process-fault">9.3 PLC fault versus process fault</h3>
+<p>A process sequence may stop even when the PLC is healthy.</p>
+<p>For example, the PLC may be correctly waiting for a clamp-confirmation input that never arrives. The underlying fault could be a failed valve, low pressure, a damaged sensor, or a wiring problem rather than a PLC failure.</p>
+<p>Do not replace a PLC merely because the machine is stuck in a sequence. First establish whether the controller, field signals, and actual process are behaving as designed.</p>
+<h2 id="10-vfd-and-servo-fault-recovery">10. VFD and Servo Fault Recovery</h2>
+<p>Drives provide diagnostic information about electrical supply, motor load, temperature, current, speed, and feedback. The exact meaning of a code depends on the manufacturer and model.</p>
+<h3 id="101-common-vfd-fault-groups">10.1 Common VFD fault groups</h3>
+<table>
+<thead>
+<tr>
+<th>Fault group</th>
+<th>Potential causes to investigate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Overcurrent</td>
+<td>Short circuit, acceleration demand, excessive load, mechanical jam</td>
+</tr>
+<tr>
+<td>Overvoltage</td>
+<td>Regenerative energy, deceleration settings, supply conditions</td>
+</tr>
+<tr>
+<td>Undervoltage</td>
+<td>Supply dip, phase or connection problem, power supply issue</td>
+</tr>
+<tr>
+<td>Overtemperature</td>
+<td>Cooling failure, blocked airflow, excessive load, ambient temperature</td>
+</tr>
+<tr>
+<td>Ground fault</td>
+<td>Cable, motor insulation, wiring, or drive-side problem</td>
+</tr>
+<tr>
+<td>Motor overload</td>
+<td>Excessive load, incorrect motor data, sustained high current</td>
+</tr>
+<tr>
+<td>Communication fault</td>
+<td>Network interruption, device power, addressing, configuration</td>
+</tr>
+<tr>
+<td>Encoder/feedback fault</td>
+<td>Sensor, cable, connector, power, signal integrity, configuration</td>
+</tr>
+</tbody>
+</table>
+<p>These are diagnostic possibilities, not conclusions. Follow the drive manufacturer's troubleshooting procedure.</p>
+<h3 id="102-recovery-procedure">10.2 Recovery procedure</h3>
+<ol>
+<li>Record the exact trip code and relevant history.</li>
+<li>Determine whether the drive stopped because of a genuine load or supply problem.</li>
+<li>Check the driven machine for mechanical binding or obstruction using the approved safe method.</li>
+<li>Verify motor and drive data, cooling, wiring, and supply conditions as relevant.</li>
+<li>Apply hazardous-energy isolation before work requiring access to energized or moving equipment.</li>
+<li>Follow the manufacturer's instructions for discharge time and verification where drive internals are involved.</li>
+<li>Correct the identified fault.</li>
+<li>Restore the approved operating conditions and perform the required checks.</li>
+<li>Reset and restart only when authorized.</li>
+<li>Confirm correct rotation, feedback, current, speed, and load behavior as applicable.</li>
+</ol>
+<p>Never assume the drive is safe to touch because the display is blank or the motor has stopped. The DC bus and other circuits may retain hazardous energy.</p>
+<h3 id="103-servo-following-error">10.3 Servo following error</h3>
+<p>A following error occurs when the actual position differs from the commanded position beyond the configured tolerance.</p>
+<p>Potential causes include:</p>
+<ul>
+<li>Mechanical obstruction or excessive load.</li>
+<li>Incorrect tuning or motion settings.</li>
+<li>Encoder or feedback problems.</li>
+<li>Coupling or transmission damage.</li>
+<li>Incorrect scaling or configuration.</li>
+<li>Insufficient torque or drive-related problems.</li>
+</ul>
+<p>Check the alarm history, axis behavior, mechanical condition, feedback signals, and configuration according to the manufacturer's procedure. Do not simply increase the allowable error limit to suppress the fault.</p>
+<h2 id="11-cnc-and-robot-fault-recovery">11. CNC and Robot Fault Recovery</h2>
+<h3 id="111-cnc-recovery">11.1 CNC recovery</h3>
+<p>Typical CNC faults include reference errors, axis alarms, spindle faults, tool-change failures, lubrication alarms, and interrupted program execution.</p>
+<p>Recovery should include:</p>
+<ul>
+<li>Record the complete alarm and affected axis or subsystem.</li>
+<li>Identify the operation in progress and the machine's physical state.</li>
+<li>Check the OEM diagnostic guidance and relevant maintenance history.</li>
+<li>Verify the tooling, workpiece, fixture, offsets, and axis reference as applicable.</li>
+<li>Investigate the actual cause before clearing the alarm.</li>
+<li>Use only the approved recovery sequence for the interrupted operation.</li>
+<li>Confirm that the machine and workpiece are in a valid state before resuming or restarting the program.</li>
+<li>Perform the required quality verification after recovery.</li>
+</ul>
+<p>Restarting a CNC program from the beginning can be unsafe or produce scrap if the tool, workpiece, coolant, spindle, or machine position is not in the expected state.</p>
+<h3 id="112-robot-recovery">11.2 Robot recovery</h3>
+<p>Typical robot faults include motion errors, external-axis faults, position errors, collision or overload events, safety-system interruptions, and PLC handshake failures.</p>
+<p>Recovery should include:</p>
+<ul>
+<li>Record the robot alarm and relevant controller status.</li>
+<li>Determine whether the fault relates to motion, tooling, an external device, communication, or safeguarding.</li>
+<li>Verify the robot's position and the state of fixtures, workpieces, and peripheral equipment.</li>
+<li>Follow the robot OEM's prescribed recovery instructions.</li>
+<li>Confirm that the safeguarded area is clear before any authorized movement.</li>
+<li>Restore required external interlocks and communication.</li>
+<li>Verify the intended program, tool, and operating mode.</li>
+<li>Complete the prescribed test and production-release checks.</li>
+</ul>
+<p>A robot collision or unexpected movement requires careful inspection before resuming operation. Clearing the alarm alone does not establish that the robot, tool, fixture, and workpiece are undamaged.</p>
+<h2 id="12-industrial-network-and-communication-faults">12. Industrial Network and Communication Faults</h2>
+<p>Industrial communication faults may affect PLC remote I/O, VFDs, robot controllers, CNC equipment, HMIs, SCADA, or data-collection applications.</p>
+<h3 id="121-diagnostic-checks">12.1 Diagnostic checks</h3>
+<ul>
+<li>Check device power and status indicators.</li>
+<li>Verify physical link status and cable condition.</li>
+<li>Inspect switch-port diagnostics and relevant error counters.</li>
+<li>Confirm IP address, subnet, device identity, and configuration where applicable.</li>
+<li>Check for duplicate addresses or unintended topology changes.</li>
+<li>Verify the affected communication connection and protocol configuration.</li>
+<li>Compare timestamps and event logs across devices.</li>
+<li>Determine whether the issue affects control communication, monitoring, or both.</li>
+<li>Confirm the actual machine state before attempting recovery.</li>
+</ul>
+<h3 id="122-important-distinction">12.2 Important distinction</h3>
+<table>
+<thead>
+<tr>
+<th>Communication symptom</th>
+<th>Possible implication</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HMI cannot communicate with PLC</td>
+<td>Operator commands or displayed state may be unavailable or stale</td>
+</tr>
+<tr>
+<td>PLC cannot communicate with remote I/O</td>
+<td>Control functions may be inhibited or enter their designed fault response</td>
+</tr>
+<tr>
+<td>Drive communication lost</td>
+<td>Commands, status, or diagnostics may be unavailable</td>
+</tr>
+<tr>
+<td>SCADA values stop updating</td>
+<td>Monitoring may be stale even if the machine continues operating</td>
+</tr>
+<tr>
+<td>SQL writes fail</td>
+<td>Data logging may be incomplete while the process continues</td>
+</tr>
+<tr>
+<td>Grafana dashboard shows old values</td>
+<td>Visualization may not represent the current machine state</td>
+</tr>
+</tbody>
+</table>
+<p>The machine's designed response to communication loss determines whether production can continue. Never infer that the machine is safe or stopped merely because its HMI, network connection, or dashboard is unavailable.</p>
+<p>For data systems, verify timestamps, tag quality, database writes, and data gaps before treating the collected records as complete.</p>
+<h2 id="13-intermittent-faults">13. Intermittent Faults</h2>
+<p>An intermittent fault appears and disappears, often making it difficult to reproduce. These faults can be more challenging than permanent failures because the system may work normally during inspection.</p>
+<p>Typical causes include:</p>
+<ul>
+<li>Loose terminals or connectors.</li>
+<li>Cable damage affected by movement or vibration.</li>
+<li>Electromagnetic interference.</li>
+<li>Intermittent sensor failure.</li>
+<li>Thermal expansion or overheating.</li>
+<li>Unstable power or utilities.</li>
+<li>Network packet loss or communication disturbances.</li>
+<li>Mechanical binding at specific positions.</li>
+<li>Incorrect timing assumptions in sequence logic.</li>
+<li>Components degrading with age or load.</li>
+</ul>
+<h3 id="131-diagnostic-strategy">13.1 Diagnostic strategy</h3>
+<ul>
+<li>Record the exact time and operating conditions of each occurrence.</li>
+<li>Identify the common sequence step, position, load, temperature, or machine state.</li>
+<li>Review event histories and trends.</li>
+<li>Inspect cables and connectors under the approved isolation procedure.</li>
+<li>Check relevant power, grounding, shielding, and communication conditions.</li>
+<li>Use suitable monitoring or diagnostic tools.</li>
+<li>Change one variable at a time when safe and technically appropriate.</li>
+<li>Verify whether the suspected cause explains both the failure and its disappearance.</li>
+</ul>
+<p>Avoid repeated power cycling as the main diagnostic method. It can temporarily hide a problem while erasing useful evidence.</p>
+<h2 id="14-fault-reset-recovery-and-restart">14. Fault Reset, Recovery, and Restart</h2>
+<p>These are different activities.</p>
+<table>
+<thead>
+<tr>
+<th>Activity</th>
+<th>Purpose</th>
+<th>Required outcome</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fault reset</td>
+<td>Clears a resettable fault state after required conditions are satisfied</td>
+<td>Fault state is reset</td>
+</tr>
+<tr>
+<td>Recovery</td>
+<td>Restores equipment and process state after the event</td>
+<td>Machine is in a known, valid state</td>
+</tr>
+<tr>
+<td>Restart</td>
+<td>Initiates operation again under approved conditions</td>
+<td>Equipment resumes its intended function</td>
+</tr>
+<tr>
+<td>Verification</td>
+<td>Confirms the repair and required functions</td>
+<td>Evidence supports return to service</td>
+</tr>
+<tr>
+<td>Return to service</td>
+<td>Releases equipment for intended operation</td>
+<td>Required approvals and acceptance criteria are met</td>
+</tr>
+</tbody>
+</table>
+<p>A reset can be successful while the original defect remains. For example, a drive may reset successfully but trip again because the mechanical load is still jammed.</p>
+<h3 id="141-generic-recovery-checklist">14.1 Generic recovery checklist</h3>
+<ul>
+<li>Immediate hazards are controlled.</li>
+<li>The fault code and machine state have been recorded.</li>
+<li>The initiating cause has been investigated.</li>
+<li>Required energy isolation has been applied for the work performed.</li>
+<li>The defect has been corrected.</li>
+<li>Tools, temporary wiring, and diagnostic equipment have been removed where appropriate.</li>
+<li>Guards and required safeguards are restored.</li>
+<li>Required safety and functional checks have passed.</li>
+<li>The machine is in the correct initial or recovery state.</li>
+<li>Required programs, parameters, and tooling are verified.</li>
+<li>Restart authorization is obtained where required.</li>
+<li>The first operation or cycle is monitored.</li>
+<li>Product and process quality are verified where affected.</li>
+<li>The fault and corrective action are recorded.</li>
+</ul>
+<h2 id="15-recovery-after-power-failure-or-controller-restart">15. Recovery After Power Failure or Controller Restart</h2>
+<p>A power failure can leave the machine in a state that differs from the state assumed by the control program.</p>
+<p>Potential consequences include:</p>
+<ul>
+<li>Loss of axis reference.</li>
+<li>Interrupted machining or assembly cycles.</li>
+<li>Uncertain fixture or actuator positions.</li>
+<li>Incomplete workpiece processing.</li>
+<li>Loss of unsaved data.</li>
+<li>Incorrect assumptions about the current automatic sequence step.</li>
+<li>Controller, drive, or network initialization faults.</li>
+</ul>
+<h3 id="151-recovery-procedure">15.1 Recovery procedure</h3>
+<ol>
+<li>Determine the nature and extent of the power interruption.</li>
+<li>Verify the current physical state of the machine.</li>
+<li>Check PLC, CNC, robot, drive, and HMI status.</li>
+<li>Confirm that the required safety functions are ready.</li>
+<li>Verify axis references and actuator positions where relevant.</li>
+<li>Inspect any workpiece or process that was interrupted.</li>
+<li>Determine whether the current cycle can be recovered or must be safely abandoned.</li>
+<li>Follow the machine-specific restart or recovery instructions.</li>
+<li>Perform required functional checks and quality verification.</li>
+<li>Record data loss, process interruption, and corrective actions.</li>
+</ol>
+<p>Do not assume that retained PLC memory proves the machine's physical state is correct. A stored bit may indicate that a clamp was closed before power loss, while the physical clamp may have changed position afterward.</p>
+<h2 id="16-fault-recovery-in-test-beds-and-quality-systems">16. Fault Recovery in Test Beds and Quality Systems</h2>
+<p>For engine, transmission, component, or end-of-line test equipment, fault recovery must protect both personnel and measurement integrity.</p>
+<p>Examples include:</p>
+<ul>
+<li>Pressure not reaching the required test condition.</li>
+<li>Speed feedback disagreeing with the command.</li>
+<li>Torque or pressure measurement outside expected limits.</li>
+<li>Sensor signal loss or implausible measurement.</li>
+<li>Incorrect test recipe or product identification.</li>
+<li>Fixture clamping failure.</li>
+<li>Communication loss between instrumentation and control software.</li>
+<li>Failed database write or incomplete traceability record.</li>
+</ul>
+<h3 id="161-recovery-priorities">16.1 Recovery priorities</h3>
+<ol>
+<li>Establish the safe state of rotating, pressurized, heated, or otherwise hazardous equipment.</li>
+<li>Identify the exact failed test step and captured values.</li>
+<li>Determine whether the issue lies in the DUT (device under test), fixture, instrumentation, software, or utility supply.</li>
+<li>Check sensor calibration and test-system verification requirements.</li>
+<li>Verify the test recipe, limits, product identification, and fixture configuration.</li>
+<li>Correct the cause and repeat the prescribed verification.</li>
+<li>Determine whether the interrupted test result remains valid or must be rejected.</li>
+<li>Preserve traceability and identify potentially affected products.</li>
+<li>Resume testing only after the defined acceptance conditions are met.</li>
+</ol>
+<p>A failed test does not automatically prove that the product is defective. Equally, a successful retest does not automatically invalidate the first failure. The site's quality procedure must determine disposition and retest requirements.</p>
+<h2 id="17-root-cause-analysis-and-capa">17. Root Cause Analysis and CAPA</h2>
+<p>When a fault is repeated, severe, safety-related, or otherwise significant, recovery should extend beyond restoring operation.</p>
+<p>Root Cause Analysis (RCA) identifies why the problem occurred. Corrective and Preventive Action (CAPA) establishes actions to address the cause and reduce recurrence.</p>
+<h3 id="171-example-repeated-proximity-sensor-failure">17.1 Example: Repeated proximity-sensor failure</h3>
+<p>Observed problem: A station repeatedly stops because the PLC does not receive the expected sensor signal.</p>
+<p>Possible immediate causes:</p>
+<ul>
+<li>Sensor misalignment.</li>
+<li>Damaged cable.</li>
+<li>Failed sensor.</li>
+<li>Incorrect sensor supply.</li>
+<li>Loose connector.</li>
+<li>Incorrect PLC input configuration.</li>
+<li>Electrical noise.</li>
+</ul>
+<p>A disciplined RCA should determine which cause is supported by evidence rather than replacing the sensor repeatedly.</p>
+<table>
+<thead>
+<tr>
+<th>RCA element</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Problem statement</td>
+<td>Station intermittently fails to detect the fixture position</td>
+</tr>
+<tr>
+<td>Immediate symptom</td>
+<td>Required PLC input does not change state</td>
+</tr>
+<tr>
+<td>Evidence</td>
+<td>Fault timestamps correlate with fixture movement and cable flexing</td>
+</tr>
+<tr>
+<td>Confirmed cause</td>
+<td>Cable conductor intermittently opens during movement</td>
+</tr>
+<tr>
+<td>Correction</td>
+<td>Replace the damaged cable and restore correct routing</td>
+</tr>
+<tr>
+<td>Corrective action</td>
+<td>Inspect similar cable routes and add appropriate strain relief</td>
+</tr>
+<tr>
+<td>Verification</td>
+<td>Perform the specified repeated functional test under representative conditions</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Record the failure, repair, affected equipment, and verification result</td>
+</tr>
+</tbody>
+</table>
+<p>The cable-flexing example is illustrative, not a diagnosis of any actual machine.</p>
+<h3 id="172-five-whys">17.2 Five Whys</h3>
+<p>The Five Whys technique repeatedly asks why a problem occurred to identify deeper contributing causes.</p>
+<p>Example:</p>
+<ul>
+<li>Why did the station stop? The position signal was lost.</li>
+<li>Why was the signal lost? The sensor output became intermittent.</li>
+<li>Why was the output intermittent? The sensor supply connection was unstable.</li>
+<li>Why was the connection unstable? The connector was not secured correctly.</li>
+<li>Why was it not secured? The installation or inspection standard did not adequately control connector retention.</li>
+</ul>
+<p>The investigation must verify each answer with evidence. Five Whys is not a license to invent a tidy story after the repair.</p>
+<h3 id="173-capa-actions">17.3 CAPA actions</h3>
+<ul>
+<li>Correct the confirmed defect.</li>
+<li>Inspect similar equipment where the same failure mechanism may exist.</li>
+<li>Improve cable routing, mounting, protection, or environmental controls where justified.</li>
+<li>Update the SOP, drawing, spare strategy, or PM instructions where necessary.</li>
+<li>Train affected personnel when the procedure changes.</li>
+<li>Verify that the corrective action is effective.</li>
+<li>Monitor recurrence and document the result.</li>
+</ul>
+<h2 id="18-fault-recovery-documentation">18. Fault Recovery Documentation</h2>
+<p>A fault-recovery record should allow another technician to understand what happened, what was tested, what was changed, and why the machine was released.</p>
+<p>Recommended fields:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Equipment identification</td>
+<td>Asset number, machine, station</td>
+</tr>
+<tr>
+<td>Event details</td>
+<td>Date, time, shift, operating mode</td>
+</tr>
+<tr>
+<td>Fault description</td>
+<td>Exact alarm, code, symptom</td>
+</tr>
+<tr>
+<td>Operational impact</td>
+<td>Downtime, affected function, production impact</td>
+</tr>
+<tr>
+<td>Safety and quality impact</td>
+<td>Hazards, affected product, containment</td>
+</tr>
+<tr>
+<td>Diagnostic evidence</td>
+<td>Measurements, logs, I/O states, observations</td>
+</tr>
+<tr>
+<td>Confirmed cause</td>
+<td>Root or immediate cause supported by evidence</td>
+</tr>
+<tr>
+<td>Corrective work</td>
+<td>Repair, replacement, adjustment, configuration change</td>
+</tr>
+<tr>
+<td>Components used</td>
+<td>Part number, quantity, traceability as required</td>
+</tr>
+<tr>
+<td>Verification</td>
+<td>Functional checks and acceptance results</td>
+</tr>
+<tr>
+<td>Restart authorization</td>
+<td>Required approval or release</td>
+</tr>
+<tr>
+<td>Follow-up action</td>
+<td>RCA, CAPA, PM, engineering change</td>
+</tr>
+<tr>
+<td>Closure</td>
+<td>Responsible person and completion time</td>
+</tr>
+</tbody>
+</table>
+<p>Avoid entries such as "checked OK," "reset done," or "machine running." They do not explain what was checked, what was found, or why the repair is considered complete.</p>
+<h2 id="19-sap-and-maintenance-workflow">19. SAP and Maintenance Workflow</h2>
+<p>In a structured maintenance environment, the fault should connect to the maintenance notification, work order, material consumption, and technical closure process used by the site.</p>
+<p>A typical workflow is:</p>
+<pre><code>Operator reports fault
+        ↓
+Maintenance notification or service request
+        ↓
+Fault classification and priority
+        ↓
+Work order creation or assignment
+        ↓
+Diagnosis and corrective maintenance
+        ↓
+Spare part issue and repair documentation
+        ↓
+Functional verification
+        ↓
+Production handover or return to service
+        ↓
+Technical completion and closure
+        ↓
+RCA/CAPA or preventive action when required
+</code></pre>
+<p>Actual SAP transaction codes, approval stages, and closure requirements depend on the site's configuration.</p>
+<p>Useful maintenance data includes:</p>
+<ul>
+<li>Equipment or functional location.</li>
+<li>Failure symptom, cause, and remedy codes.</li>
+<li>Downtime start and end.</li>
+<li>Labor and material consumption.</li>
+<li>Replaced component and serial number where relevant.</li>
+<li>Work performed and diagnostic findings.</li>
+<li>Verification and production handover.</li>
+<li>Follow-up action and recurrence status.</li>
+</ul>
+<p>Good data improves spare planning, repeat-failure analysis, MTTR/MTBF calculations, and maintenance prioritization.</p>
+<h2 id="20-reliability-metrics">20. Reliability Metrics</h2>
+<h3 id="201-mean-time-to-repair-or-restore">20.1 Mean Time to Repair or Restore</h3>
+<p>MTTR has multiple definitions in industry. The organization must specify whether it measures active repair time, total restoration time, or another agreed interval.</p>
+<p>When defined as total restoration time divided by the number of restoration events:</p>
+<div class="math-display">\[ MTTR = \frac{\text{Total restoration time}}{\text{Number of restoration events}} \]</div>
+<p>Example: If four restoration events take 20, 30, 40, and 50 minutes, the mean restoration time is:</p>
+<div class="math-display">\[ MTTR = \frac{20+30+40+50}{4} = 35\text{ minutes} \]</div>
+<h3 id="202-mean-time-between-failures">20.2 Mean Time Between Failures</h3>
+<p>For a repairable asset, a common operational calculation is:</p>
+<div class="math-display">\[ MTBF = \frac{\text{Total operating time}}{\text{Number of failures}} \]</div>
+<p>Example: If equipment operates for 600 hours and experiences six qualifying failures:</p>
+<div class="math-display">\[ MTBF = \frac{600}{6} = 100\text{ hours} \]</div>
+<p>The result is meaningful only if the organization consistently defines operating time and qualifying failures.</p>
+<h3 id="203-why-the-metrics-matter">20.3 Why the metrics matter</h3>
+<ul>
+<li>Lower restoration time may indicate better diagnostics, spare availability, or repair methods.</li>
+<li>Higher time between failures may indicate improved reliability.</li>
+<li>Repeated short downtime events may reveal an intermittent problem hidden by low total downtime.</li>
+<li>A reduction in downtime should not be accepted if it results from incomplete verification or unsafe shortcuts.</li>
+</ul>
+<h2 id="21-practical-troubleshooting-example-vfd-controlled-conveyor">21. Practical Troubleshooting Example: VFD-Controlled Conveyor</h2>
+<p>Symptom: Conveyor stops during production, and the HMI reports a drive fault.</p>
+<h3 id="initial-investigation">Initial investigation</h3>
+<ul>
+<li>Record the exact drive alarm and timestamp.</li>
+<li>Check the PLC sequence state and conveyor command.</li>
+<li>Verify the drive's own fault history.</li>
+<li>Establish whether the drive received a run command before the trip.</li>
+<li>Determine whether the fault is associated with the supply, motor, load, or communication.</li>
+<li>Inspect for a mechanical jam using the approved safe procedure.</li>
+<li>Apply LOTO before physical work that requires hazardous-energy isolation.</li>
+</ul>
+<h3 id="example-diagnostic-interpretation">Example diagnostic interpretation</h3>
+<table>
+<thead>
+<tr>
+<th>Observation</th>
+<th>Interpretation to investigate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC never issued the run command</td>
+<td>Missing permissive, sequence condition, or control logic issue</td>
+</tr>
+<tr>
+<td>Run command was issued but drive reports not ready</td>
+<td>Drive fault, command-source mismatch, or drive readiness issue</td>
+</tr>
+<tr>
+<td>Drive tripped on overcurrent</td>
+<td>Excessive load, jam, electrical fault, or drive/motor problem</td>
+</tr>
+<tr>
+<td>Drive is running but conveyor does not move</td>
+<td>Coupling, transmission, mechanical jam, or feedback issue</td>
+</tr>
+<tr>
+<td>Conveyor moves but PLC reports no movement feedback</td>
+<td>Sensor, encoder, wiring, scaling, or logic issue</td>
+</tr>
+<tr>
+<td>Fault occurs only under heavy load</td>
+<td>Load-dependent mechanical or electrical problem</td>
+</tr>
+<tr>
+<td>Fault occurs after a network interruption</td>
+<td>Communication path or control-source issue</td>
+</tr>
+</tbody>
+</table>
+<h3 id="recovery-and-release">Recovery and release</h3>
+<ol>
+<li>Confirm the actual cause using evidence.</li>
+<li>Correct the mechanical, electrical, or control defect.</li>
+<li>Complete the required inspection and functional checks.</li>
+<li>Verify that guards and safety functions are in their required condition.</li>
+<li>Reset the drive using the approved procedure.</li>
+<li>Perform a controlled test and monitor current, speed, and movement as appropriate.</li>
+<li>Verify material transfer and downstream coordination.</li>
+<li>Confirm production and quality acceptance.</li>
+<li>Document the fault and corrective work.</li>
+<li>Initiate RCA/CAPA if the event meets the site's criteria.</li>
+</ol>
+<h2 id="22-common-fault-recovery-mistakes">22. Common Fault-Recovery Mistakes</h2>
+<table>
+<thead>
+<tr>
+<th>Mistake</th>
+<th>Consequence</th>
+<th>Better practice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Resetting before recording the alarm</td>
+<td>Loss of diagnostic evidence</td>
+<td>Capture the alarm and relevant state first</td>
+</tr>
+<tr>
+<td>Replacing parts based only on symptoms</td>
+<td>Unnecessary cost and recurring faults</td>
+<td>Test and confirm the suspected cause</td>
+</tr>
+<tr>
+<td>Forcing PLC inputs or outputs</td>
+<td>Hidden faults and hazardous movement</td>
+<td>Diagnose the physical signal path</td>
+</tr>
+<tr>
+<td>Repeatedly power cycling equipment</td>
+<td>Temporary symptom suppression and lost evidence</td>
+<td>Use controlled diagnostic steps</td>
+</tr>
+<tr>
+<td>Ignoring machine position after a fault</td>
+<td>Collision or incorrect sequence recovery</td>
+<td>Verify physical and controller states</td>
+</tr>
+<tr>
+<td>Restarting without quality review</td>
+<td>Defective or untraceable product</td>
+<td>Apply the approved quality-disposition process</td>
+</tr>
+<tr>
+<td>Treating an HMI alarm as the root cause</td>
+<td>Misdiagnosis</td>
+<td>Investigate the initiating condition</td>
+</tr>
+<tr>
+<td>Skipping post-repair testing</td>
+<td>Latent defect remains</td>
+<td>Verify the repair against defined acceptance criteria</td>
+</tr>
+<tr>
+<td>Closing the work order with vague comments</td>
+<td>Poor history and weak recurrence analysis</td>
+<td>Record findings, actions, and results</td>
+</tr>
+<tr>
+<td>Changing parameters without approval</td>
+<td>New faults or loss of validated settings</td>
+<td>Use change control and approved baselines</td>
+</tr>
+</tbody>
+</table>
+<h2 id="23-interview-questions-and-answers">23. Interview Questions and Answers</h2>
+<p>Q1. What is fault recovery?</p>
+<p>Fault recovery is the controlled process of identifying a fault, containing its effects, correcting the cause, verifying the repair, and restoring equipment to a known and acceptable operating state.</p>
+<p>Q2. What is the difference between an alarm and a root cause?</p>
+<p>An alarm reports a detected condition. The root cause explains why the condition occurred. For example, a sequence-timeout alarm may result from low air pressure, a faulty sensor, a failed valve, or a mechanical obstruction.</p>
+<p>Q3. Why should fault evidence be recorded before resetting?</p>
+<p>Resetting or power cycling may clear alarm history, change machine state, or remove clues needed to identify an intermittent or sequence-related problem.</p>
+<p>Q4. What is the command-versus-feedback method?</p>
+<p>It compares the control command with the actual device response. A missing response helps narrow diagnosis to the output path, device, utilities, mechanical process, feedback path, or logic.</p>
+<p>Q5. What is the difference between fault reset and fault correction?</p>
+<p>Reset clears a permitted fault state. Correction removes the underlying defect. A fault can reset successfully and immediately recur if the cause remains.</p>
+<p>Q6. What should be checked before restarting after a PLC fault?</p>
+<p>Verify the controller and I/O status, actual machine state, safety readiness, sequence state, affected devices, and relevant configuration. Follow the machine-specific recovery procedure before restarting.</p>
+<p>Q7. How do you troubleshoot an intermittent sensor fault?</p>
+<p>Correlate the event with time, position, temperature, and movement; inspect the sensor, target, supply, wiring, connectors, and input diagnostics; then test likely causes using an approved method.</p>
+<p>Q8. Why is LOTO important during fault recovery?</p>
+<p>It controls hazardous energy when servicing or repair requires isolation. A stopped machine or active emergency stop does not guarantee that hazardous energy has been isolated.</p>
+<p>Q9. What is the purpose of RCA and CAPA?</p>
+<p>RCA identifies the underlying cause of a problem. CAPA establishes and verifies actions intended to correct the issue and prevent recurrence.</p>
+<p>Q10. When can equipment return to production?</p>
+<p>Only after the cause has been addressed to the required extent, applicable safety and functional checks have passed, the machine is in a valid state, quality requirements are satisfied, and required authorization has been obtained.</p>
+<h2 id="24-final-fault-recovery-principles">24. Final Fault-Recovery Principles</h2>
+<ul>
+<li>Safety and containment come before routine diagnosis.</li>
+<li>Record diagnostic evidence before resetting or cycling power whenever safe and practical.</li>
+<li>An alarm identifies a condition, not necessarily the failed component.</li>
+<li>Compare commands, physical behavior, and feedback to isolate the fault.</li>
+<li>Verify the root cause rather than replacing parts by guesswork.</li>
+<li>Follow OEM-specific procedures for PLCs, drives, CNC systems, robots, and industrial networks.</li>
+<li>Use LOTO when the task requires hazardous-energy isolation.</li>
+<li>Verify both equipment functionality and product/process quality before release.</li>
+<li>Record repair details and initiate RCA/CAPA for recurring or significant failures.</li>
+<li>A successful reset is not proof of a successful repair.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\33_SOP_WI\04_Backup_Procedures - Backup procedures</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

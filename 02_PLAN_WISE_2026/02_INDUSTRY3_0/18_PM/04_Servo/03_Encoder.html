@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Servo Encoder</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Servo Encoder</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-encoder-position-in-a-servo-system">2. Encoder Position in a Servo System</a></li>
+<li><a href="#3-why-encoders-are-important">3. Why Encoders Are Important</a></li>
+<li><a href="#4-main-encoder-types">4. Main Encoder Types</a><ul>
+<li><a href="#41-incremental-encoder">4.1 Incremental encoder</a></li>
+<li><a href="#42-absolute-encoder">4.2 Absolute encoder</a></li>
+<li><a href="#43-resolver">4.3 Resolver</a></li>
+<li><a href="#44-optical-and-magnetic-encoders">4.4 Optical and magnetic encoders</a></li>
+</ul>
+</li>
+<li><a href="#5-encoder-signals-and-interfaces">5. Encoder Signals and Interfaces</a></li>
+<li><a href="#6-quadrature-signals-a-b-and-z">6. Quadrature Signals: A, B, and Z</a><ul>
+<li><a href="#index-channel-z">Index channel Z</a></li>
+<li><a href="#differential-signals">Differential signals</a></li>
+</ul>
+</li>
+<li><a href="#7-encoder-resolution-and-counting">7. Encoder Resolution and Counting</a></li>
+<li><a href="#8-encoder-resolution-versus-accuracy">8. Encoder Resolution Versus Accuracy</a></li>
+<li><a href="#9-encoder-feedback-and-closed-loop-control">9. Encoder Feedback and Closed-Loop Control</a></li>
+<li><a href="#10-encoder-mounting-and-mechanical-installation">10. Encoder Mounting and Mechanical Installation</a></li>
+<li><a href="#11-encoder-cable-and-connector-health">11. Encoder Cable and Connector Health</a></li>
+<li><a href="#12-encoder-shielding-and-electromagnetic-interference">12. Encoder Shielding and Electromagnetic Interference</a></li>
+<li><a href="#13-encoder-configuration-parameters">13. Encoder Configuration Parameters</a></li>
+<li><a href="#14-encoder-faults-and-their-symptoms">14. Encoder Faults and Their Symptoms</a></li>
+<li><a href="#15-incremental-versus-absolute-encoder-maintenance-comparison">15. Incremental Versus Absolute Encoder: Maintenance Comparison</a></li>
+<li><a href="#16-homing-and-reference-position">16. Homing and Reference Position</a></li>
+<li><a href="#17-encoder-and-servo-commutation">17. Encoder and Servo Commutation</a></li>
+<li><a href="#18-safe-encoder-inspection-and-testing">18. Safe Encoder Inspection and Testing</a></li>
+<li><a href="#19-practical-example-intermittent-encoder-fault-on-a-robot-axis">19. Practical Example: Intermittent Encoder Fault on a Robot Axis</a><ul>
+<li><a href="#situation">Situation</a></li>
+<li><a href="#investigation">Investigation</a></li>
+<li><a href="#possible-findings">Possible findings</a></li>
+<li><a href="#corrective-action">Corrective action</a></li>
+</ul>
+</li>
+<li><a href="#20-encoder-replacement-and-compatibility">20. Encoder Replacement and Compatibility</a></li>
+<li><a href="#21-preventive-maintenance-checklist">21. Preventive Maintenance Checklist</a><ul>
+<li><a href="#physical-condition">Physical condition</a></li>
+<li><a href="#feedback-and-configuration">Feedback and configuration</a></li>
+<li><a href="#after-maintenance">After maintenance</a></li>
+</ul>
+</li>
+<li><a href="#22-encoder-records-for-maintenance-engineering">22. Encoder Records for Maintenance Engineering</a></li>
+<li><a href="#23-key-engineering-principles">23. Key Engineering Principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>A servo encoder is a feedback device that measures the position of a rotating shaft and provides information used by a servo drive or motion controller to regulate movement. Depending on its type and configuration, an encoder can also provide information used to determine speed, direction, and movement over time.</p>
+<p>In a servo system, the encoder is commonly mounted on the motor shaft or integrated into the motor assembly. Its feedback allows the control system to compare commanded motion with actual motion.</p>
+<p>Encoders are essential in CNC axes, industrial robots, indexing tables, precision feeders, packaging machinery, and automated assembly equipment.</p>
+<p>The objective of encoder maintenance is to preserve reliable feedback, correct position measurement, stable motion control, and repeatable machine accuracy.</p>
+<h2 id="2-encoder-position-in-a-servo-system">2. Encoder Position in a Servo System</h2>
+<pre><code>PLC / CNC / Motion Controller
+            ↓
+       Motion Command
+            ↓
+         Servo Drive
+            ↓
+         Servo Motor
+            ↓
+     Mechanical Movement
+            ↓
+      Encoder Measures
+       Shaft Position
+            ↓
+       Feedback Signal
+            ↓
+         Servo Drive
+            ↓
+Position / Speed Regulation
+</code></pre>
+<p>The exact architecture depends on the system. Some drives process the encoder signals directly, while other systems exchange feedback information through a supported digital interface or motion network.</p>
+<p>An encoder measures the movement of the shaft or component to which it is mechanically coupled. It does not automatically measure the true position of every downstream machine component.</p>
+<p>For example, a motor encoder may report correct motor rotation while a loose coupling, damaged gearbox, or ballscrew problem causes the machine table to move incorrectly.</p>
+<h2 id="3-why-encoders-are-important">3. Why Encoders Are Important</h2>
+<p>Encoder feedback supports several important functions:</p>
+<ul>
+<li>Position measurement.</li>
+<li>Speed estimation or feedback.</li>
+<li>Direction detection.</li>
+<li>Closed-loop motion control.</li>
+<li>Positioning repeatability.</li>
+<li>Synchronization between axes.</li>
+<li>Detection of following errors.</li>
+<li>Homing and reference operations, depending on the system.</li>
+<li>Motion monitoring and fault diagnosis.</li>
+</ul>
+<p>Without valid feedback, a servo system designed for closed-loop operation may be unable to control motion correctly.</p>
+<p>A feedback fault can cause an axis to stop, produce a following-error alarm, lose its reference position, or behave unpredictably. The exact response depends on the drive and machine configuration.</p>
+<h2 id="4-main-encoder-types">4. Main Encoder Types</h2>
+<h3 id="41-incremental-encoder">4.1 Incremental encoder</h3>
+<p>An incremental encoder generates signals representing movement relative to a reference.</p>
+<p>A common quadrature incremental encoder provides two channels, usually called <code>A</code> and <code>B</code>. The channels are offset in phase, allowing supported electronics to determine direction and count transitions.</p>
+<p>Some incremental encoders also provide an index or reference channel, commonly called <code>Z</code>, which produces a reference event once per revolution or according to the encoder design.</p>
+<p>Typical features:</p>
+<ul>
+<li>Position is derived by counting signal transitions.</li>
+<li>Direction can be determined from the phase relationship between channels.</li>
+<li>Position information generally depends on the counter state being maintained.</li>
+<li>A reference or homing procedure may be required after power loss.</li>
+<li>Signal quality and counter handling affect measurement reliability.</li>
+</ul>
+<p>Not every incremental encoder uses the same signal format or voltage levels. Some provide differential outputs, while others use single-ended interfaces.</p>
+<h3 id="42-absolute-encoder">4.2 Absolute encoder</h3>
+<p>An absolute encoder provides a coded position value corresponding to a shaft position.</p>
+<p>Depending on its design, it may provide single-turn position, multi-turn position, or both.</p>
+<ul>
+<li>Single-turn absolute encoder: Reports position within one revolution.</li>
+<li>Multi-turn absolute encoder: Reports position across multiple revolutions within its supported range.</li>
+</ul>
+<p>Absolute encoders can allow a system to recover position after power interruption without performing the same type of incremental homing sequence, but this depends on the encoder technology, drive configuration, retained position data, and machine requirements.</p>
+<p>Do not assume that every absolute encoder retains multi-turn position indefinitely without power. Some designs use batteries, energy-harvesting methods, or other technologies with specific operating requirements.</p>
+<h3 id="43-resolver">4.3 Resolver</h3>
+<p>A resolver is an electromechanical position sensor that uses electromagnetic coupling to produce signals related to shaft angle.</p>
+<p>Resolvers are used in some industrial motion applications where their construction and environmental characteristics are suitable.</p>
+<p>They require compatible excitation and signal-processing circuitry. A resolver is not an encoder in the strict technical sense, although both can provide rotor-position feedback.</p>
+<h3 id="44-optical-and-magnetic-encoders">4.4 Optical and magnetic encoders</h3>
+<p>Encoders may use optical or magnetic sensing principles.</p>
+<table>
+<thead>
+<tr>
+<th>Technology</th>
+<th>Operating principle</th>
+<th>Maintenance considerations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Optical</td>
+<td>Detects light patterns or optical code tracks</td>
+<td>Contamination, optical damage, alignment</td>
+</tr>
+<tr>
+<td>Magnetic</td>
+<td>Detects magnetic fields or encoded magnetic patterns</td>
+<td>Magnetic interference, sensor alignment, mechanical damage</td>
+</tr>
+<tr>
+<td>Resolver</td>
+<td>Uses electromagnetic coupling and signal processing</td>
+<td>Wiring, excitation, signal integrity, mechanical condition</td>
+</tr>
+</tbody>
+</table>
+<p>The actual environmental robustness depends on the complete device design, enclosure, sealing, connector, and installation conditions. It is unsafe to assume that all magnetic encoders tolerate every environment or that every optical encoder is unsuitable for industrial conditions.</p>
+<h2 id="5-encoder-signals-and-interfaces">5. Encoder Signals and Interfaces</h2>
+<p>The electrical interface must match the encoder and the receiving drive or controller.</p>
+<p>Common signal arrangements include:</p>
+<table>
+<thead>
+<tr>
+<th>Interface</th>
+<th>Typical characteristics</th>
+<th>Important checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Single-ended incremental</td>
+<td>Signal channels referenced to a common electrical reference</td>
+<td>Voltage levels, common reference, noise susceptibility</td>
+</tr>
+<tr>
+<td>Differential incremental</td>
+<td>Complementary signal pairs, often using an RS-422-compatible interface</td>
+<td>Correct differential receiver and pair wiring</td>
+</tr>
+<tr>
+<td>Absolute serial interface</td>
+<td>Transmits coded position using a supported digital protocol</td>
+<td>Protocol compatibility, wiring, configuration</td>
+</tr>
+<tr>
+<td>Resolver interface</td>
+<td>Uses excitation and returned signals related to shaft angle</td>
+<td>Excitation requirements, signal wiring, compatible interface</td>
+</tr>
+<tr>
+<td>Integrated digital feedback</td>
+<td>Manufacturer-specific feedback system</td>
+<td>Exact drive and motor compatibility</td>
+</tr>
+</tbody>
+</table>
+<p>The interface must match the electrical specifications, signal format, connector pinout, and supported drive configuration.</p>
+<p>Do not connect an encoder based only on its connector shape. Two devices may use similar connectors while having different pin assignments, supply requirements, or communication protocols.</p>
+<h2 id="6-quadrature-signals-a-b-and-z">6. Quadrature Signals: A, B, and Z</h2>
+<p>A common incremental encoder uses two channels, <code>A</code> and <code>B</code>, with a phase difference between them.</p>
+<p>The receiving electronics determine direction from the order in which the channels change state.</p>
+<p>For example, one direction may produce the sequence:</p>
+<pre><code>A: 00 → 10 → 11 → 01 → 00
+B: 00 → 00 → 10 → 11 → 01
+</code></pre>
+<p>This illustrates the state sequence of a quadrature signal pair. The interpretation of forward and reverse depends on channel assignment and the receiving interface.</p>
+<p>If the A and B channels are exchanged, the interpreted direction may reverse.</p>
+<h3 id="index-channel-z">Index channel Z</h3>
+<p>The <code>Z</code> channel, where provided, generates a reference pulse or index event. It can be used for reference finding, position verification, or other functions supported by the control system.</p>
+<p>An index pulse is not automatically the machine's absolute home position. The homing sequence may also require a proximity switch, limit switch, reference marker, or controller-defined procedure.</p>
+<h3 id="differential-signals">Differential signals</h3>
+<p>Differential interfaces transmit complementary signal pairs, such as <code>A+</code> and <code>A-</code>, to improve noise immunity when correctly implemented.</p>
+<p>The receiver interprets the voltage difference between the pair rather than relying solely on one signal relative to a common reference.</p>
+<p>Maintenance checks include:</p>
+<ul>
+<li>Correct pair identification.</li>
+<li>Correct polarity.</li>
+<li>Compatible transmitter and receiver.</li>
+<li>Proper cable type and termination.</li>
+<li>Shielding and routing according to the manufacturer's requirements.</li>
+<li>Connector condition and continuity.</li>
+</ul>
+<p>Do not apply generic voltage expectations to every encoder. Verify the specific electrical interface.</p>
+<h2 id="7-encoder-resolution-and-counting">7. Encoder Resolution and Counting</h2>
+<p>Encoder resolution describes how finely the encoder represents shaft movement. The stated resolution may be expressed as lines, pulses, counts, or position units, depending on the encoder and interface.</p>
+<p>For an incremental encoder, distinguish between cycles per revolution, pulses per revolution, and counts per revolution. These terms are not always used consistently by manufacturers.</p>
+<p>For a quadrature encoder with <span class="math-inline">\(N\)</span> electrical cycles per revolution, a receiver using four-edge counting may obtain:</p>
+<div class="math-display">\[ \text{Counts per revolution}=4N \]</div>
+<p>This applies when the encoder specification defines <span class="math-inline">\(N\)</span> as cycles per revolution and the receiver counts all four quadrature transitions.</p>
+<p>For example, an encoder providing 1024 cycles per revolution can produce 4096 counts per revolution under four-edge quadrature counting.</p>
+<p>The calculated angular increment per count is:</p>
+<div class="math-display">\[ \Delta\theta=\frac{360^\circ}{\text{Counts per revolution}} \]</div>
+<p>For 4096 counts per revolution:</p>
+<div class="math-display">\[ \Delta\theta=\frac{360^\circ}{4096}\approx0.0879^\circ \]</div>
+<p>This is the count interval at the encoder shaft, not a guarantee of the total machine positioning accuracy.</p>
+<p>Actual positioning accuracy also depends on encoder accuracy, mechanical transmission, backlash, coupling condition, structural compliance, control performance, and installation.</p>
+<h2 id="8-encoder-resolution-versus-accuracy">8. Encoder Resolution Versus Accuracy</h2>
+<p>These concepts must not be confused.</p>
+<ul>
+<li>Resolution: The smallest distinguishable change in measured position.</li>
+<li>Accuracy: How closely the reported position corresponds to the true position.</li>
+<li>Repeatability: How consistently the same target position is reached under defined conditions.</li>
+<li>Repeatability error: Variation between repeated positioning results.</li>
+<li>Interpolation: Electronic estimation of finer position increments within a signal period.</li>
+<li>Positioning error: Difference between the commanded or target position and the actual measured or independently verified position.</li>
+</ul>
+<p>A high-resolution encoder does not automatically produce a highly accurate machine.</p>
+<p>For example, a servo motor may use a high-resolution encoder while a worn gearbox introduces backlash. The encoder may measure motor-shaft position accurately, yet the output mechanism may not reach the intended position consistently.</p>
+<h2 id="9-encoder-feedback-and-closed-loop-control">9. Encoder Feedback and Closed-Loop Control</h2>
+<p>The servo control system compares the commanded motion with feedback from the encoder.</p>
+<p>A simplified position-error relationship is:</p>
+<div class="math-display">\[ e(t)=x\_{\text{command}}(t)-x\_{\text{feedback}}(t) \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(e(t)\)</span> is the position error.</li>
+<li><span class="math-inline">\(x\_{\text{command}}(t)\)</span> is the commanded position.</li>
+<li><span class="math-inline">\(x\_{\text{feedback}}(t)\)</span> is the position reported by the feedback system.</li>
+</ul>
+<p>The controller and drive respond according to their control algorithms, configured limits, and operating mode.</p>
+<p>An increasing position error may result from insufficient torque, mechanical resistance, a sudden load change, incorrect scaling, feedback loss, or a motion profile that exceeds the system's capability.</p>
+<p>The encoder reports position information. It does not independently determine the root cause of a following-error alarm.</p>
+<h2 id="10-encoder-mounting-and-mechanical-installation">10. Encoder Mounting and Mechanical Installation</h2>
+<p>Correct mechanical installation is essential for reliable feedback.</p>
+<p>Check:</p>
+<ul>
+<li>Encoder mounting and alignment.</li>
+<li>Shaft coupling condition.</li>
+<li>Fasteners and retaining hardware.</li>
+<li>Mechanical runout where applicable.</li>
+<li>Cable strain relief.</li>
+<li>Connector locking.</li>
+<li>Protection against vibration and contamination.</li>
+<li>Compatibility with the motor and feedback interface.</li>
+</ul>
+<p>Some encoders are integrated into the motor and are not intended for routine field disassembly. Others use external mounting arrangements.</p>
+<p>Do not disassemble an integrated feedback device without the manufacturer's approved procedure. Incorrect assembly can affect alignment, calibration, sealing, or feedback performance.</p>
+<h2 id="11-encoder-cable-and-connector-health">11. Encoder Cable and Connector Health</h2>
+<p>Encoder cables can be exposed to vibration, continuous flexing, oil, coolant, dust, and electromagnetic interference.</p>
+<p>Common cable-related faults include:</p>
+<ul>
+<li>Broken conductors inside the cable.</li>
+<li>Loose connector pins.</li>
+<li>Damaged insulation.</li>
+<li>Incorrect cable type.</li>
+<li>Poor shield termination.</li>
+<li>Incorrect pinout.</li>
+<li>Connector contamination.</li>
+<li>Cable routing too close to motor power cables.</li>
+<li>Excessive bending or strain in a moving cable carrier.</li>
+</ul>
+<p>For moving axes, inspect the cable over its full travel range where safe and practical. A cable may pass a stationary continuity check but fail when flexed during machine movement.</p>
+<p>Use only approved test methods and avoid disconnecting feedback cables while the system is energized unless the manufacturer explicitly permits the operation.</p>
+<h2 id="12-encoder-shielding-and-electromagnetic-interference">12. Encoder Shielding and Electromagnetic Interference</h2>
+<p>Servo motor power cables carry rapidly switched electrical waveforms. These can couple noise into nearby feedback wiring if cable routing and shielding are inadequate.</p>
+<p>Symptoms of feedback interference can include:</p>
+<ul>
+<li>Intermittent encoder alarms.</li>
+<li>Position jumps.</li>
+<li>Incorrect direction detection.</li>
+<li>Following-error faults.</li>
+<li>Unstable speed feedback.</li>
+<li>Random axis stops.</li>
+<li>Problems that appear only during high-speed motion or heavy motor loading.</li>
+</ul>
+<p>Corrective checks include:</p>
+<ol>
+<li>Inspect the feedback cable and connectors.</li>
+<li>Verify cable type and shielding requirements.</li>
+<li>Inspect shield termination and bonding.</li>
+<li>Check the separation between motor power and feedback cables.</li>
+<li>Review connector pin assignments and grounding arrangements.</li>
+<li>Check whether the fault correlates with acceleration, deceleration, or motor current.</li>
+<li>Use manufacturer-supported diagnostic tools to verify feedback quality.</li>
+</ol>
+<p>Do not assume that every intermittent feedback problem is caused by electromagnetic interference. Mechanical movement, damaged conductors, encoder defects, and incorrect configuration can produce similar symptoms.</p>
+<h2 id="13-encoder-configuration-parameters">13. Encoder Configuration Parameters</h2>
+<p>The drive or controller may require parameters describing the encoder and its relationship to the motor or machine.</p>
+<p>Common configuration items include:</p>
+<ul>
+<li>Feedback type.</li>
+<li>Encoder protocol or interface.</li>
+<li>Resolution or position scaling.</li>
+<li>Electrical signal format.</li>
+<li>Motor-feedback compatibility.</li>
+<li>Rotation direction or polarity.</li>
+<li>Commutation-related feedback configuration where applicable.</li>
+<li>Single-turn and multi-turn data handling.</li>
+<li>Reference or homing behavior.</li>
+<li>Position units and scaling.</li>
+<li>Supported feedback-loss response.</li>
+</ul>
+<p>Parameter names and availability vary by manufacturer.</p>
+<p>Incorrect feedback configuration can make a healthy encoder behave as if it were defective.</p>
+<p>Before changing a configuration, record the approved settings and verify the motor and encoder model. Do not copy encoder parameters from another axis merely because the motors appear similar.</p>
+<h2 id="14-encoder-faults-and-their-symptoms">14. Encoder Faults and Their Symptoms</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible causes</th>
+<th>Diagnostic approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Encoder fault immediately after power-up</td>
+<td>Incorrect configuration, disconnected cable, incompatible feedback device</td>
+<td>Verify device compatibility, connector, and configuration</td>
+</tr>
+<tr>
+<td>Fault during movement</td>
+<td>Cable break, loose connector, vibration, electrical interference</td>
+<td>Inspect moving cable sections and correlate fault timing</td>
+</tr>
+<tr>
+<td>Position jumps unexpectedly</td>
+<td>Signal corruption, feedback fault, scaling issue, mechanical coupling problem</td>
+<td>Compare drive diagnostics with independent mechanical observations</td>
+</tr>
+<tr>
+<td>Wrong direction reported</td>
+<td>Channel assignment, polarity, configuration, wiring issue</td>
+<td>Verify manufacturer wiring and direction configuration</td>
+</tr>
+<tr>
+<td>Position is lost after power interruption</td>
+<td>Incremental feedback reference requirement or absolute-position retention issue</td>
+<td>Review encoder type and homing/position-retention procedure</td>
+</tr>
+<tr>
+<td>Following error under load</td>
+<td>Mechanical resistance, torque limit, feedback problem, unsuitable motion profile</td>
+<td>Review torque demand, actual position, and mechanical condition</td>
+</tr>
+<tr>
+<td>Repeated reference or homing failure</td>
+<td>Index signal issue, reference switch problem, incorrect homing sequence</td>
+<td>Check the full reference procedure and relevant signals</td>
+</tr>
+<tr>
+<td>Intermittent alarm when cable flexes</td>
+<td>Internal conductor damage or connector problem</td>
+<td>Inspect and test the cable using an approved method</td>
+</tr>
+<tr>
+<td>Axis position is repeatable at the motor but not at the load</td>
+<td>Backlash, coupling slip, gearbox or ballscrew issue</td>
+<td>Inspect the mechanical transmission</td>
+</tr>
+<tr>
+<td>Feedback communication error</td>
+<td>Protocol mismatch, wiring fault, device fault, incompatible interface</td>
+<td>Verify protocol, configuration, and connection diagnostics</td>
+</tr>
+</tbody>
+</table>
+<p>These are possible causes, not definitive diagnoses. Use fault codes, signal diagnostics, configuration records, and physical inspection to narrow the cause.</p>
+<h2 id="15-incremental-versus-absolute-encoder-maintenance-comparison">15. Incremental Versus Absolute Encoder: Maintenance Comparison</h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Incremental encoder</th>
+<th>Absolute encoder</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Position output</td>
+<td>Relative movement through signal transitions</td>
+<td>Coded position value</td>
+</tr>
+<tr>
+<td>Position after power loss</td>
+<td>Often requires re-establishing position through homing</td>
+<td>May retain position, depending on design and configuration</td>
+</tr>
+<tr>
+<td>Direction detection</td>
+<td>Commonly through quadrature channels or supported interface</td>
+<td>Depends on the interface and position-processing system</td>
+</tr>
+<tr>
+<td>Reference operation</td>
+<td>Often requires homing or a reference procedure</td>
+<td>May reduce homing requirements, but machine reference requirements still apply</td>
+</tr>
+<tr>
+<td>Typical failure concerns</td>
+<td>Missing counts, signal loss, counter/reference problems</td>
+<td>Invalid position data, communication errors, retention or battery issues where applicable</td>
+</tr>
+<tr>
+<td>Configuration</td>
+<td>Counting method, resolution, signal format</td>
+<td>Protocol, position format, single-turn/multi-turn configuration</td>
+</tr>
+<tr>
+<td>Replacement checks</td>
+<td>Electrical interface, resolution, signal format</td>
+<td>Protocol, position format, retention method, compatibility</td>
+</tr>
+</tbody>
+</table>
+<p>Neither type is universally better for every application. Selection depends on motion requirements, feedback architecture, environmental conditions, safety requirements, and cost.</p>
+<h2 id="16-homing-and-reference-position">16. Homing and Reference Position</h2>
+<p>Homing establishes a known machine reference position according to the motion controller's configured procedure.</p>
+<p>A homing routine may use:</p>
+<ul>
+<li>A limit switch.</li>
+<li>A proximity sensor.</li>
+<li>An encoder index pulse.</li>
+<li>An absolute encoder position.</li>
+<li>A mechanical reference.</li>
+<li>A combination of supported reference signals.</li>
+</ul>
+<p>An absolute encoder can report shaft position without first counting movement from a powered-up starting point. However, this does not automatically establish the machine's correct coordinate system after motor replacement, coupling work, gearbox changes, or mechanical movement while power was absent.</p>
+<p>Following maintenance, verify the machine's reference procedure and any required coordinate validation before releasing the axis for production.</p>
+<p>Never assume that an encoder's reported position alone proves that the tool, fixture, robot, or machine table is at its intended physical location.</p>
+<h2 id="17-encoder-and-servo-commutation">17. Encoder and Servo Commutation</h2>
+<p>In some servo motor systems, feedback information is also used to establish or estimate rotor electrical position for motor commutation.</p>
+<p>Correct commutation allows the drive to energize the motor windings in a way that produces the intended torque.</p>
+<p>Depending on the motor and feedback technology, commutation information may come from:</p>
+<ul>
+<li>An absolute encoder.</li>
+<li>A dedicated commutation track or sensor.</li>
+<li>Hall-effect sensors.</li>
+<li>A resolver or other supported feedback device.</li>
+<li>A manufacturer-specific identification or initialization procedure.</li>
+</ul>
+<p>Incorrect feedback configuration or incompatible replacement components can cause the motor to fail to start, produce abnormal torque, vibrate, or generate feedback or commutation faults.</p>
+<p>Do not apply a generic alignment or initialization procedure across different servo families. Use the manufacturer's specified process for the exact motor and drive combination.</p>
+<h2 id="18-safe-encoder-inspection-and-testing">18. Safe Encoder Inspection and Testing</h2>
+<p>Encoder work must follow the machine's electrical and mechanical safety procedures.</p>
+<p>A general approach is:</p>
+<ol>
+<li>Identify the motor, encoder, drive, and connector types.</li>
+<li>Record the fault code and available feedback diagnostics.</li>
+<li>Stop the machine using the approved procedure.</li>
+<li>Isolate relevant energy sources and apply lockout/tagout.</li>
+<li>Account for DC bus energy, gravity loads, stored mechanical energy, and automatic movement risks.</li>
+<li>Verify the equipment is safe before disconnecting or inspecting connectors.</li>
+<li>Inspect the cable, connector, strain relief, shielding, and mounting.</li>
+<li>Perform only manufacturer-approved continuity, signal, or diagnostic tests.</li>
+<li>Restore all connections and protective covers correctly.</li>
+<li>Conduct the approved reference, motion, and positioning tests.</li>
+<li>Record the results and any replacement or configuration changes.</li>
+</ol>
+<p>Do not apply a megohmmeter test voltage to an encoder or its electronics. If motor insulation testing is required, isolate the feedback device and all other sensitive electronics according to the motor manufacturer's procedure.</p>
+<h2 id="19-practical-example-intermittent-encoder-fault-on-a-robot-axis">19. Practical Example: Intermittent Encoder Fault on a Robot Axis</h2>
+<h3 id="situation">Situation</h3>
+<p>A robot axis operates normally at low speed but occasionally reports a feedback fault during fast movement. The fault becomes more frequent after the cable carrier is serviced.</p>
+<h3 id="investigation">Investigation</h3>
+<ol>
+<li>Record the exact alarm code and the motion conditions when it occurs.</li>
+<li>Check the drive's feedback diagnostics and event history.</li>
+<li>Inspect the feedback cable and connectors along the axis travel.</li>
+<li>Verify the cable type, connector pinout, and shielding arrangement.</li>
+<li>Check for excessive bending, strain, abrasion, or internal conductor damage.</li>
+<li>Compare the fault timing with motor acceleration and movement direction.</li>
+<li>Confirm that the encoder configuration matches the installed motor and feedback device.</li>
+<li>If the cable and connections are healthy, investigate the encoder and drive interface using the manufacturer's approved test method.</li>
+</ol>
+<h3 id="possible-findings">Possible findings</h3>
+<ul>
+<li>A conductor inside the moving cable has fractured.</li>
+<li>A connector pin is loose or damaged.</li>
+<li>The cable shield termination was disturbed during maintenance.</li>
+<li>The encoder is incompatible with the configured interface.</li>
+<li>The encoder or drive feedback interface is defective.</li>
+</ul>
+<h3 id="corrective-action">Corrective action</h3>
+<p>Repair or replace the verified defective component using approved parts and wiring. Restore the required shielding and strain relief, verify the feedback diagnostics, and conduct controlled motion tests across the required travel range.</p>
+<p>Record the fault, physical findings, replacement details, and verification results. Do not replace the servo drive before checking the external feedback circuit and the evidence available from the diagnostics.</p>
+<h2 id="20-encoder-replacement-and-compatibility">20. Encoder Replacement and Compatibility</h2>
+<p>A replacement encoder must be compatible with the complete motion system.</p>
+<p>Verify:</p>
+<ul>
+<li>Manufacturer and exact model or approved successor.</li>
+<li>Mechanical mounting and shaft interface.</li>
+<li>Encoder technology.</li>
+<li>Electrical interface and supply requirements.</li>
+<li>Signal format or communication protocol.</li>
+<li>Resolution and position format.</li>
+<li>Single-turn or multi-turn capability.</li>
+<li>Connector type and pinout.</li>
+<li>Cable requirements and shielding.</li>
+<li>Environmental and temperature ratings.</li>
+<li>Drive and motor compatibility.</li>
+<li>Required initialization, calibration, or configuration procedure.</li>
+</ul>
+<p>A physically compatible encoder may still be electrically or functionally incompatible.</p>
+<p>For an integrated motor encoder, replacement may require specialized tools, calibration, or manufacturer service. If the encoder is part of the motor's commutation system, incorrect installation can affect motor torque production and control stability.</p>
+<p>After replacement, verify feedback validity, direction, position scaling, reference behavior, and motion performance. Complete any required safety and commissioning checks before returning the machine to production.</p>
+<h2 id="21-preventive-maintenance-checklist">21. Preventive Maintenance Checklist</h2>
+<h3 id="physical-condition">Physical condition</h3>
+<ul>
+<li>Inspect accessible encoder connectors and cable condition.</li>
+<li>Check cable strain relief and moving cable carriers.</li>
+<li>Inspect for oil, coolant, moisture, dust, or connector contamination.</li>
+<li>Check mounting and coupling condition where applicable.</li>
+<li>Verify that the cable is not crushed, excessively bent, or abraded.</li>
+<li>Inspect shield termination and routing according to the installation design.</li>
+</ul>
+<h3 id="feedback-and-configuration">Feedback and configuration</h3>
+<ul>
+<li>Review active and historical encoder faults.</li>
+<li>Verify the feedback device and drive compatibility.</li>
+<li>Check the configured resolution and interface.</li>
+<li>Review position jumps, feedback interruptions, and following-error events.</li>
+<li>Verify homing and reference behavior where required.</li>
+<li>Confirm correct feedback direction and scaling.</li>
+<li>Investigate faults that correlate with cable movement or high-speed operation.</li>
+</ul>
+<h3 id="after-maintenance">After maintenance</h3>
+<ul>
+<li>Confirm connectors and protective covers are restored.</li>
+<li>Verify feedback status using the manufacturer's diagnostic tool.</li>
+<li>Perform the approved reference procedure.</li>
+<li>Test movement under controlled conditions.</li>
+<li>Verify positioning and repeatability against the applicable acceptance criteria.</li>
+<li>Record the encoder model, configuration changes, and test results.</li>
+<li>Update the maintenance history and approved spare records.</li>
+</ul>
+<h2 id="22-encoder-records-for-maintenance-engineering">22. Encoder Records for Maintenance Engineering</h2>
+<p>Maintain a record of each encoder and its associated axis.</p>
+<table>
+<thead>
+<tr>
+<th>Record field</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine and axis identification</td>
+<td>Locates the affected motion system</td>
+</tr>
+<tr>
+<td>Motor model and serial number</td>
+<td>Confirms the encoder's motor association</td>
+</tr>
+<tr>
+<td>Encoder manufacturer and model</td>
+<td>Supports correct spare selection</td>
+</tr>
+<tr>
+<td>Encoder technology and interface</td>
+<td>Prevents incompatible replacements</td>
+</tr>
+<tr>
+<td>Resolution and position format</td>
+<td>Supports configuration verification</td>
+</tr>
+<tr>
+<td>Connector and cable part numbers</td>
+<td>Supports troubleshooting and spare management</td>
+</tr>
+<tr>
+<td>Drive model and firmware</td>
+<td>Establishes interface compatibility</td>
+</tr>
+<tr>
+<td>Approved feedback configuration</td>
+<td>Provides a known-good baseline</td>
+</tr>
+<tr>
+<td>Fault history</td>
+<td>Identifies recurring issues</td>
+</tr>
+<tr>
+<td>Cable and connector inspection results</td>
+<td>Tracks physical deterioration</td>
+</tr>
+<tr>
+<td>Replacement and calibration records</td>
+<td>Preserves traceability</td>
+</tr>
+<tr>
+<td>Homing and positioning test results</td>
+<td>Confirms post-maintenance operation</td>
+</tr>
+</tbody>
+</table>
+<p>These records should be linked to the relevant machine, servo axis, and maintenance order according to the plant's documentation process.</p>
+<p>For recurring failures, record whether the fault occurs at a particular position, speed, direction, temperature, or cable movement condition. These correlations can be more useful than the alarm count alone.</p>
+<h2 id="23-key-engineering-principles">23. Key Engineering Principles</h2>
+<ul>
+<li>An encoder measures the position of the shaft or component to which it is coupled, not necessarily the final machine load.</li>
+<li>Resolution, accuracy, and repeatability are different characteristics.</li>
+<li>Incremental and absolute encoders require different approaches to position recovery and configuration.</li>
+<li>Encoder signal format, supply, protocol, resolution, and pinout must match the receiving system.</li>
+<li>Cable damage and connector problems can produce intermittent faults that are difficult to reproduce during stationary inspection.</li>
+<li>Shielding and cable routing must follow the manufacturer's EMC requirements.</li>
+<li>A following-error alarm does not prove that the encoder is defective.</li>
+<li>Mechanical backlash, coupling slip, and transmission wear can cause position errors even when encoder feedback is valid.</li>
+<li>Encoder replacement may require calibration, initialization, or commutation configuration.</li>
+<li>Never apply an insulation-test voltage through encoder electronics.</li>
+<li>After feedback maintenance, verify reference behavior and controlled motion before returning the axis to service.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\18_PM\04_Servo\04_Connections - Connections</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

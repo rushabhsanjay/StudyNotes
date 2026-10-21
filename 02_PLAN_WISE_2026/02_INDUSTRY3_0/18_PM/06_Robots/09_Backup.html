@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robot Backup and Recovery in Preventive Maintenance</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Robot Backup and Recovery in Preventive Maintenance</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and purpose</a></li>
+<li><a href="#2-why-robot-backups-are-essential">2. Why robot backups are essential</a></li>
+<li><a href="#3-what-should-be-backed-up">3. What should be backed up?</a></li>
+<li><a href="#4-types-of-robot-backup">4. Types of robot backup</a></li>
+<li><a href="#5-backup-frequency-and-triggers">5. Backup frequency and triggers</a></li>
+<li><a href="#6-standard-backup-procedure">6. Standard backup procedure</a><ul>
+<li><a href="#61-before-backup">6.1 Before backup</a></li>
+<li><a href="#62-during-backup">6.2 During backup</a></li>
+<li><a href="#63-after-backup">6.3 After backup</a></li>
+</ul>
+</li>
+<li><a href="#7-backup-naming-and-revision-control">7. Backup naming and revision control</a></li>
+<li><a href="#8-backup-storage-and-protection">8. Backup storage and protection</a></li>
+<li><a href="#9-backup-integrity-and-verification">9. Backup integrity and verification</a><ul>
+<li><a href="#91-verification-levels">9.1 Verification levels</a></li>
+<li><a href="#92-checksums">9.2 Checksums</a></li>
+<li><a href="#93-restore-testing">9.3 Restore testing</a></li>
+</ul>
+</li>
+<li><a href="#10-manufacturer-specific-backup-considerations">10. Manufacturer-specific backup considerations</a></li>
+<li><a href="#11-controller-replacement-and-recovery">11. Controller replacement and recovery</a><ul>
+<li><a href="#important-distinction-program-recovery-versus-position-recovery">Important distinction: program recovery versus position recovery</a></li>
+</ul>
+</li>
+<li><a href="#12-backup-recovery-after-battery-or-encoder-problems">12. Backup recovery after battery or encoder problems</a></li>
+<li><a href="#13-program-and-configuration-comparison">13. Program and configuration comparison</a></li>
+<li><a href="#14-troubleshooting-backup-failures">14. Troubleshooting backup failures</a></li>
+<li><a href="#15-backup-versus-restore-key-differences">15. Backup versus restore: key differences</a></li>
+<li><a href="#16-cybersecurity-and-access-control">16. Cybersecurity and access control</a></li>
+<li><a href="#17-practical-industrial-example-robot-loading-a-cnc-machine">17. Practical industrial example: robot loading a CNC machine</a><ul>
+<li><a href="#recovery-sequence">Recovery sequence</a></li>
+<li><a href="#example-of-a-recovery-fault">Example of a recovery fault</a></li>
+</ul>
+</li>
+<li><a href="#18-preventive-maintenance-checklist">18. Preventive maintenance checklist</a><ul>
+<li><a href="#routine-backup-pm">Routine backup PM</a></li>
+<li><a href="#periodic-recovery-readiness-review">Periodic recovery-readiness review</a></li>
+</ul>
+</li>
+<li><a href="#19-maintenance-records-and-sap-pm-traceability">19. Maintenance records and SAP PM traceability</a></li>
+<li><a href="#20-common-mistakes-and-interview-points">20. Common mistakes and interview points</a><ul>
+<li><a href="#common-mistakes">Common mistakes</a></li>
+<li><a href="#interview-questions">Interview questions</a></li>
+</ul>
+</li>
+<li><a href="#21-completion-criteria">21. Completion criteria</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition-and-purpose">1. Definition and purpose</h2>
+<p>A robot backup is a controlled copy of the robot controller's programs, configuration, calibration-related data, system parameters, and other required files, saved so the automation system can be restored after a failure, controller replacement, data corruption, accidental modification, or maintenance activity.</p>
+<p>In preventive maintenance (PM), backup is not simply copying a folder to a USB drive. It is a process of creating, verifying, identifying, securing, and periodically testing recovery data.</p>
+<p>The main objective is to restore the robot to a known, validated operating condition while minimizing downtime, quality risk, and the possibility of unexpected motion.</p>
+<h2 id="2-why-robot-backups-are-essential">2. Why robot backups are essential</h2>
+<p>Robot controllers contain more than motion programs. They also store configuration and system information that determines how programs interact with motors, encoders, tools, frames, I/O, and external equipment.</p>
+<p>Typical reasons for needing a backup include:</p>
+<ul>
+<li>Controller hardware failure or replacement.</li>
+<li>Corrupted controller memory or file system.</li>
+<li>Accidental deletion or modification of a program.</li>
+<li>Incorrect mastering, calibration, or configuration changes.</li>
+<li>Battery failure causing loss of supported retained data.</li>
+<li>Software upgrades, controller migrations, or maintenance interventions.</li>
+<li>Recovery after a failed program edit or commissioning change.</li>
+<li>Investigation of recurring faults or unexplained changes in robot behavior.</li>
+<li>Restoration after a cybersecurity incident or unauthorized change.</li>
+</ul>
+<p>Key principle: A robot that powers on successfully is not necessarily restored correctly. Programs, configuration, mastering, tool data, safety settings, and external interfaces must be verified according to the controller and application requirements.</p>
+<h2 id="3-what-should-be-backed-up">3. What should be backed up?</h2>
+<p>The exact backup contents depend on the robot manufacturer, controller generation, software version, backup method, and application. A general inventory is shown below.</p>
+<table>
+<thead>
+<tr>
+<th>Backup item</th>
+<th>Purpose</th>
+<th>Risk if missing or incorrect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Robot programs</td>
+<td>Stores motion routines and logic</td>
+<td>Production sequence may be unavailable or incorrect</td>
+</tr>
+<tr>
+<td>Subprograms and libraries</td>
+<td>Stores reusable routines</td>
+<td>Main programs may fail because dependencies are missing</td>
+</tr>
+<tr>
+<td>Tool data and TCP definitions</td>
+<td>Defines tool geometry and reference point</td>
+<td>Tool may approach or contact a workpiece incorrectly</td>
+</tr>
+<tr>
+<td>User frames and work objects</td>
+<td>Defines coordinate references</td>
+<td>Robot may move to incorrect physical positions</td>
+</tr>
+<tr>
+<td>Position and motion data</td>
+<td>Stores taught positions and motion settings</td>
+<td>Incorrect trajectory or process location</td>
+</tr>
+<tr>
+<td>I/O configuration and mappings</td>
+<td>Connects robot signals to PLC and equipment</td>
+<td>Handshake and machine sequencing may fail</td>
+</tr>
+<tr>
+<td>System parameters</td>
+<td>Defines controller and application behavior</td>
+<td>Controller may not operate as intended</td>
+</tr>
+<tr>
+<td>Payload and load data</td>
+<td>Defines tool and workpiece characteristics</td>
+<td>Motion accuracy and dynamic performance may be affected</td>
+</tr>
+<tr>
+<td>Calibration and mastering-related data</td>
+<td>Supports correct axis position interpretation</td>
+<td>Incorrect robot geometry or position may result</td>
+</tr>
+<tr>
+<td>Communication settings</td>
+<td>Supports fieldbus and network integration</td>
+<td>PLC, HMI, or supervisory communication may fail</td>
+</tr>
+<tr>
+<td>Safety configuration and validation records</td>
+<td>Documents configured safety functions and their approved state</td>
+<td>Safety functions may require specialist restoration and revalidation</td>
+</tr>
+<tr>
+<td>Application packages and options</td>
+<td>Identifies installed functions and dependencies</td>
+<td>Restored system may lack required features</td>
+</tr>
+<tr>
+<td>Alarm and diagnostic records</td>
+<td>Supports fault investigation</td>
+<td>Historical troubleshooting evidence may be lost</td>
+</tr>
+<tr>
+<td>Version and change records</td>
+<td>Identifies the approved system state</td>
+<td>Technicians may restore an outdated or unapproved version</td>
+</tr>
+</tbody>
+</table>
+<p>Not every backup contains all these items. For example, a program-only archive may not contain controller calibration data, safety configuration, licenses, or every system parameter. Never assume that a file named <code>FULL_BACKUP</code> contains everything needed for complete recovery.</p>
+<h2 id="4-types-of-robot-backup">4. Types of robot backup</h2>
+<table>
+<thead>
+<tr>
+<th>Backup type</th>
+<th>Description</th>
+<th>Typical use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Program backup</td>
+<td>Robot programs and related application files</td>
+<td>Recover deleted or modified routines</td>
+</tr>
+<tr>
+<td>Application backup</td>
+<td>Programs plus selected process, tool, frame, and application data</td>
+<td>Restore a robot application</td>
+</tr>
+<tr>
+<td>Controller backup</td>
+<td>Controller-supported collection of system and application data</td>
+<td>Recover a controller after a supported failure</td>
+</tr>
+<tr>
+<td>Configuration backup</td>
+<td>Parameters, I/O, communication, and other system settings</td>
+<td>Compare or restore configuration</td>
+</tr>
+<tr>
+<td>Safety configuration record</td>
+<td>Approved safety-related configuration and validation evidence</td>
+<td>Support controlled safety restoration</td>
+</tr>
+<tr>
+<td>Offline engineering project</td>
+<td>Project maintained using the manufacturer's engineering software</td>
+<td>Develop, compare, simulate, and prepare changes</td>
+</tr>
+<tr>
+<td>Disaster-recovery package</td>
+<td>Recovery files, versions, dependencies, instructions, and records</td>
+<td>Restore the automation system after major failure</td>
+</tr>
+</tbody>
+</table>
+<p>A backup type is defined by its actual contents and restoration capability, not its filename.</p>
+<h2 id="5-backup-frequency-and-triggers">5. Backup frequency and triggers</h2>
+<p>Backup frequency should be based on change rate, production criticality, recovery requirements, and site procedures.</p>
+<table>
+<thead>
+<tr>
+<th>Trigger</th>
+<th>Required action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Initial commissioning</td>
+<td>Create an approved baseline backup</td>
+</tr>
+<tr>
+<td>Before modifying a program</td>
+<td>Capture the current approved state</td>
+</tr>
+<tr>
+<td>After an approved program change</td>
+<td>Save and verify the new revision</td>
+</tr>
+<tr>
+<td>After mastering or calibration work</td>
+<td>Preserve required supported data and records</td>
+</tr>
+<tr>
+<td>After controller parameter changes</td>
+<td>Back up the updated configuration</td>
+</tr>
+<tr>
+<td>Before software upgrade or migration</td>
+<td>Create a verified recovery point and check compatibility</td>
+</tr>
+<tr>
+<td>After major maintenance</td>
+<td>Confirm system integrity and capture the approved state</td>
+</tr>
+<tr>
+<td>Periodic PM</td>
+<td>Verify backup availability, integrity, age, and restore readiness</td>
+</tr>
+<tr>
+<td>After abnormal data loss</td>
+<td>Preserve remaining evidence before attempting recovery</td>
+</tr>
+<tr>
+<td>After controller replacement</td>
+<td>Restore using an approved procedure and validate the result</td>
+</tr>
+</tbody>
+</table>
+<p>For critical production robots, a site may require backups after every approved change and scheduled periodic copies. The interval must be defined by the plant's maintenance and recovery policy rather than guessed.</p>
+<h2 id="6-standard-backup-procedure">6. Standard backup procedure</h2>
+<h3 id="61-before-backup">6.1 Before backup</h3>
+<ol>
+<li>Identify the robot cell, robot number, controller model, serial number, software version, and production function.</li>
+<li>Confirm whether the robot is in production, maintenance, commissioning, or a controlled shutdown state.</li>
+<li>Identify the approved backup method for that controller.</li>
+<li>Confirm authorization and follow plant access-control procedures.</li>
+<li>Check for active faults, unfinished changes, or abnormal conditions that should be documented.</li>
+<li>Record the currently approved program revision and relevant configuration details.</li>
+<li>Select a destination with sufficient space and appropriate access control.</li>
+<li>Use the manufacturer's documented procedure to determine whether the controller must be idle, stopped, or in a particular mode.</li>
+</ol>
+<p>Do not interrupt a production robot or change its operating mode merely to obtain a backup without the required coordination and authorization.</p>
+<h3 id="62-during-backup">6.2 During backup</h3>
+<ol>
+<li>Start the supported backup operation.</li>
+<li>Confirm that the operation completes without reported errors.</li>
+<li>Record warnings, omitted files, unsupported components, or permission problems.</li>
+<li>Do not disconnect storage or power off equipment while a backup operation is still active.</li>
+<li>Preserve the original backup output before performing any conversion, extraction, or editing.</li>
+</ol>
+<h3 id="63-after-backup">6.3 After backup</h3>
+<ol>
+<li>Confirm that the expected files and folders exist.</li>
+<li>Check the reported backup completion status.</li>
+<li>Compare the archive contents against the expected backup scope.</li>
+<li>Record the date, robot identity, controller/software version, and backup type.</li>
+<li>Where supported, generate a cryptographic checksum such as SHA-256 for file-integrity verification.</li>
+<li>Copy the backup to the approved secondary storage location.</li>
+<li>Verify that the secondary copy can be accessed by authorized personnel.</li>
+<li>Update the backup register and maintenance record.</li>
+<li>Confirm that the backup is not the only copy of critical recovery data.</li>
+</ol>
+<p>A successful copy operation proves that data was copied. It does not prove that the data is complete, compatible, or restorable.</p>
+<h2 id="7-backup-naming-and-revision-control">7. Backup naming and revision control</h2>
+<p>Use a consistent naming convention that supports identification and traceability.</p>
+<p>Example:</p>
+<pre><code>PLANT_AREA_CELL_ROBOT_BACKUPTYPE_YYYY-MM-DD_REVISION
+</code></pre>
+<p>Example filename:</p>
+<pre><code>PUNE_BIW_ROBOT07_CONTROLLER_2026-10-16_R03
+</code></pre>
+<p>The filename is only an example. Use the plant's approved naming standard.</p>
+<p>A backup register should include:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Plant and area</td>
+<td>BIW, robotic line</td>
+</tr>
+<tr>
+<td>Cell and robot ID</td>
+<td>Cell 03, Robot 07</td>
+</tr>
+<tr>
+<td>Controller model</td>
+<td>Manufacturer-specific controller model</td>
+</tr>
+<tr>
+<td>Robot model and serial number</td>
+<td>Recorded from equipment identification</td>
+</tr>
+<tr>
+<td>Software version</td>
+<td>Exact controller software version</td>
+</tr>
+<tr>
+<td>Backup type</td>
+<td>Controller, program, configuration, or full recovery package</td>
+</tr>
+<tr>
+<td>Backup timestamp</td>
+<td>Date and time of creation</td>
+</tr>
+<tr>
+<td>Approved revision</td>
+<td>Revision linked to the change record</td>
+</tr>
+<tr>
+<td>Source and destination</td>
+<td>Controller or engineering workstation and approved repository</td>
+</tr>
+<tr>
+<td>Integrity status</td>
+<td>Checksum or other verification result</td>
+</tr>
+<tr>
+<td>Backup status</td>
+<td>Verified, incomplete, failed, or superseded</td>
+</tr>
+<tr>
+<td>Owner and approver</td>
+<td>Responsible engineer and authorized approver</td>
+</tr>
+<tr>
+<td>Related maintenance/change record</td>
+<td>Work order or change request reference</td>
+</tr>
+</tbody>
+</table>
+<p>Avoid filenames such as <code>latest</code>, <code>new</code>, <code>final_final</code>, or <code>backup2</code>. Those labels are not revision control; they are evidence of a naming system surrendering to entropy.</p>
+<h2 id="8-backup-storage-and-protection">8. Backup storage and protection</h2>
+<p>Robot backup files can contain proprietary programs, machine layouts, process parameters, network settings, and operational information. Treat them as controlled industrial assets.</p>
+<p>Recommended controls:</p>
+<ul>
+<li>Maintain an approved primary copy and a separate secondary copy.</li>
+<li>Store backups on access-controlled engineering storage.</li>
+<li>Keep a protected offline or otherwise isolated copy where required by site cybersecurity policy.</li>
+<li>Restrict write access to authorized personnel.</li>
+<li>Maintain version history so accidental overwrites can be reversed.</li>
+<li>Scan transferred files according to approved cybersecurity procedures.</li>
+<li>Avoid unapproved USB drives and personal cloud storage.</li>
+<li>Encrypt backups when required by company policy.</li>
+<li>Protect any credentials or secrets that might be present in exported configuration.</li>
+<li>Test restore procedures in a controlled environment whenever practical.</li>
+<li>Retain approved baseline and historical revisions according to plant policy.</li>
+</ul>
+<p>A useful storage structure is:</p>
+<pre><code>ROBOT_BACKUPS/
+    PLANT_AREA/
+        CELL_ID/
+            ROBOT_ID/
+                CONTROLLER_VERSION/
+                    APPROVED_BASELINE/
+                    APPROVED_REVISIONS/
+                    RESTORE_DOCUMENTATION/
+                    CHECKSUMS/
+</code></pre>
+<p>This is a logical organization example, not a requirement to use these exact folders.</p>
+<h2 id="9-backup-integrity-and-verification">9. Backup integrity and verification</h2>
+<p>Backup verification should confirm more than file existence.</p>
+<h3 id="91-verification-levels">9.1 Verification levels</h3>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Verification</th>
+<th>What it proves</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Level 1</td>
+<td>File or archive exists</td>
+<td>A file was created</td>
+</tr>
+<tr>
+<td>Level 2</td>
+<td>Size and contents are plausible</td>
+<td>The output is not obviously incomplete</td>
+</tr>
+<tr>
+<td>Level 3</td>
+<td>Archive integrity or checksum verified</td>
+<td>The file matches the verified copy or recorded checksum</td>
+</tr>
+<tr>
+<td>Level 4</td>
+<td>Version and controller compatibility confirmed</td>
+<td>The backup is suitable for the intended target, subject to other checks</td>
+</tr>
+<tr>
+<td>Level 5</td>
+<td>Controlled restore test completed</td>
+<td>The documented recovery method works for the tested scope</td>
+</tr>
+</tbody>
+</table>
+<p>A checksum can detect changes to a file but cannot prove that the file represents the correct approved machine configuration.</p>
+<h3 id="92-checksums">9.2 Checksums</h3>
+<p>A cryptographic checksum produces a fixed-length value from file contents. If the contents change, the checksum will normally change.</p>
+<p>For a file <span class="math-inline">\(F\)</span>, its SHA-256 checksum is:</p>
+<div class="math-display">\[ H = \operatorname{SHA256}(F) \]</div>
+<p>Calculate the checksum after creating the backup and compare it with the value calculated from the copied file. Matching values support file-integrity verification.</p>
+<p>Do not edit a backup archive and then treat the old checksum as valid. Any change to the archive requires a new checksum record.</p>
+<h3 id="93-restore-testing">9.3 Restore testing</h3>
+<p>A restore test should use an approved test controller, engineering environment, simulator, or controlled maintenance window as appropriate.</p>
+<p>The test should verify:</p>
+<ul>
+<li>Backup can be opened or restored using supported tools.</li>
+<li>The target controller and software version are compatible.</li>
+<li>Required programs and dependencies are present.</li>
+<li>Tool data, frames, configuration, and communication settings are accounted for.</li>
+<li>Required calibration, mastering, and safety steps are understood.</li>
+<li>The restored application can be validated without introducing an uncontrolled production motion risk.</li>
+</ul>
+<p>Never conduct a restore experiment on a live production controller merely to see what happens.</p>
+<h2 id="10-manufacturer-specific-backup-considerations">10. Manufacturer-specific backup considerations</h2>
+<p>Robot backup procedures are not universal. Controller generations within the same brand may use different tools, file formats, and restoration rules.</p>
+<table>
+<thead>
+<tr>
+<th>Manufacturer</th>
+<th>Common robot programming environment</th>
+<th>Backup considerations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FANUC</td>
+<td>Teach Pendant, TP programs, and supported controller utilities</td>
+<td>Confirm controller-specific image or application backup scope and mastering-related data requirements</td>
+</tr>
+<tr>
+<td>KUKA</td>
+<td>KUKA System Software (KSS), WorkVisual, controller-supported archive functions</td>
+<td>Check archive scope, software versions, machine data, technology packages, and recovery prerequisites</td>
+</tr>
+<tr>
+<td>ABB</td>
+<td>RobotStudio, RAPID programs, controller backup functions</td>
+<td>Verify system configuration, RAPID modules, calibration-related data, options, and controller compatibility</td>
+</tr>
+<tr>
+<td>Yaskawa Motoman</td>
+<td>INFORM programs and controller-specific programming tools</td>
+<td>Confirm job files, parameters, system data, and the applicable controller's backup method</td>
+</tr>
+<tr>
+<td>Kawasaki</td>
+<td>AS language programs and controller-specific utilities</td>
+<td>Verify program data, auxiliary files, parameters, and controller-specific restoration requirements</td>
+</tr>
+<tr>
+<td>Mitsubishi</td>
+<td>MELFA robot programming tools and controller-specific utilities</td>
+<td>Verify programs, parameters, positioning data, and compatible controller/software versions</td>
+</tr>
+</tbody>
+</table>
+<p>These are examples of common environments, not a guarantee that every tool or backup type is supported by every controller model.</p>
+<p>Before backing up or restoring, identify the exact controller model and software revision. Use the manufacturer's instructions for that specific system.</p>
+<h2 id="11-controller-replacement-and-recovery">11. Controller replacement and recovery</h2>
+<p>Controller replacement is more complex than copying program files. The replacement controller may have different hardware, firmware, software options, communication modules, safety configuration, or supported backup formats.</p>
+<p>A controlled recovery process generally includes:</p>
+<ol>
+<li>Identify the failed controller and replacement controller.</li>
+<li>Record robot model, serial number, controller type, software version, and installed options.</li>
+<li>Confirm that the available backup is appropriate for the replacement hardware and software.</li>
+<li>Confirm required licenses, software packages, and communication dependencies.</li>
+<li>Restore data using the manufacturer's approved procedure.</li>
+<li>Follow required mastering, calibration, and encoder-position recovery procedures.</li>
+<li>Verify tool data, frames, payload, I/O mappings, fieldbus configuration, and external interfaces.</li>
+<li>Verify safety-related configuration and perform required validation using qualified personnel.</li>
+<li>Conduct controlled motion tests under the approved risk assessment and commissioning procedure.</li>
+<li>Verify PLC handshakes, interlocks, machine sequence, process quality, and fault recovery.</li>
+<li>Obtain the required approval before returning the robot to automatic production.</li>
+<li>Create a new verified backup of the restored, validated state.</li>
+</ol>
+<h3 id="important-distinction-program-recovery-versus-position-recovery">Important distinction: program recovery versus position recovery</h3>
+<p>Restoring a program file does not necessarily restore correct physical positioning.</p>
+<p>Robot positioning depends on several interacting elements:</p>
+<ul>
+<li>Robot mastering or calibration state.</li>
+<li>Encoder position and retained data.</li>
+<li>Tool center point (TCP).</li>
+<li>User frames or work-object definitions.</li>
+<li>Mechanical condition and any changes to the robot or tool.</li>
+<li>Controller and robot compatibility.</li>
+<li>The coordinate and configuration data used by the program.</li>
+</ul>
+<p>If mastering or calibration is incorrect, a program may execute without a syntax error while the robot moves to an unintended physical location. Motion validation must therefore be treated as a separate recovery requirement.</p>
+<h2 id="12-backup-recovery-after-battery-or-encoder-problems">12. Backup recovery after battery or encoder problems</h2>
+<p>Battery-related data loss and encoder-related problems require special care because their effects differ by robot design.</p>
+<p>A battery may support retention of encoder position, controller memory, or other data. Battery failure does not automatically mean all programs have been lost, and replacing the battery does not automatically recover lost position information.</p>
+<p>Use this approach:</p>
+<ul>
+<li>Determine the actual alarm and affected data from the controller documentation.</li>
+<li>Do not assume that restoring a general backup will recover the robot's current mechanical reference.</li>
+<li>Preserve existing controller data and diagnostic evidence where possible.</li>
+<li>Follow the manufacturer-approved battery replacement and position-recovery procedures.</li>
+<li>If mastering or calibration data is suspected to be incorrect, stop automatic operation and involve qualified personnel.</li>
+<li>Validate axis position, tool geometry, frames, and critical taught points before production release.</li>
+<li>Document any required remastering, calibration, or re-teaching activity.</li>
+</ul>
+<p>Never bypass a mastering or calibration requirement just to clear an alarm and restart production. The cost of a controlled recovery is usually lower than the cost of a collision, damaged tooling, or defective parts.</p>
+<h2 id="13-program-and-configuration-comparison">13. Program and configuration comparison</h2>
+<p>When a robot behaves differently after maintenance, comparing the current state with an approved backup can help identify unintended changes.</p>
+<p>Compare, as applicable:</p>
+<ul>
+<li>Program names, revisions, and modification timestamps.</li>
+<li>Motion instructions, taught positions, speeds, and blending settings.</li>
+<li>Tool and frame definitions.</li>
+<li>Payload values.</li>
+<li>I/O assignments and signal polarity.</li>
+<li>Registers, variables, and process parameters.</li>
+<li>Communication configuration.</li>
+<li>System parameters and installed software options.</li>
+<li>Safety configuration and its approved validation record.</li>
+</ul>
+<p>Do not assume that two files are functionally identical because their names match. Conversely, a file timestamp difference alone does not prove a functional change.</p>
+<p>Use supported vendor comparison tools or controlled file comparisons. Some proprietary backup formats cannot be meaningfully compared as plain text.</p>
+<h2 id="14-troubleshooting-backup-failures">14. Troubleshooting backup failures</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible causes</th>
+<th>Corrective action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backup operation fails to start</td>
+<td>Insufficient permission, unsupported mode, controller restrictions</td>
+<td>Verify access, operating state, and controller-specific procedure</td>
+</tr>
+<tr>
+<td>Backup is incomplete</td>
+<td>Storage capacity, interruption, communication failure</td>
+<td>Check error messages, storage, connection, and operation logs; repeat under controlled conditions</td>
+</tr>
+<tr>
+<td>Archive cannot be opened</td>
+<td>Corruption, unsupported format, incompatible software</td>
+<td>Verify file integrity and use a compatible supported tool</td>
+</tr>
+<tr>
+<td>Backup files are unexpectedly small</td>
+<td>Incomplete scope or omitted data</td>
+<td>Check the backup type and expected contents before accepting it</td>
+</tr>
+<tr>
+<td>Restore is rejected</td>
+<td>Controller or software incompatibility, unsupported format</td>
+<td>Confirm target compatibility and the manufacturer's recovery requirements</td>
+</tr>
+<tr>
+<td>Restored programs cannot run</td>
+<td>Missing dependencies, options, configuration, or I/O mappings</td>
+<td>Check program references, installed options, configuration, and interface mappings</td>
+</tr>
+<tr>
+<td>Robot positions are incorrect</td>
+<td>Mastering, calibration, TCP, frame, or position-data issue</td>
+<td>Stop automatic operation and perform the approved diagnostic and validation procedure</td>
+</tr>
+<tr>
+<td>PLC communication fails after restore</td>
+<td>Incorrect network or fieldbus settings, mismatched I/O configuration</td>
+<td>Verify addresses, module configuration, mappings, and handshake signals</td>
+</tr>
+<tr>
+<td>Latest backup is missing</td>
+<td>Inadequate version control or incorrect storage location</td>
+<td>Search the approved repository, review maintenance records, and establish a controlled backup process</td>
+</tr>
+<tr>
+<td>Checksums differ</td>
+<td>File changed during transfer, corruption, or a different file was selected</td>
+<td>Re-copy from the verified source and investigate before using the file</td>
+</tr>
+<tr>
+<td>Restore works but production quality is poor</td>
+<td>Incorrect process parameters, tool/frame data, calibration, or program revision</td>
+<td>Validate process-critical data and perform approved quality checks</td>
+</tr>
+</tbody>
+</table>
+<p>When a backup fails, preserve the failure message and record the corrective action. Repeatedly clicking the backup command is not a recovery strategy, even if it is a popular human tradition.</p>
+<h2 id="15-backup-versus-restore-key-differences">15. Backup versus restore: key differences</h2>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Backup</th>
+<th>Restore</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Purpose</td>
+<td>Preserve the current state</td>
+<td>Recover a required state</td>
+</tr>
+<tr>
+<td>Direction</td>
+<td>Controller or engineering system to protected storage</td>
+<td>Approved storage to a target system</td>
+</tr>
+<tr>
+<td>Primary risk</td>
+<td>Missing or incomplete recovery data</td>
+<td>Overwriting valid data or introducing an incompatible configuration</td>
+</tr>
+<tr>
+<td>Verification</td>
+<td>Check completeness, integrity, identity, and version</td>
+<td>Check compatibility, configuration, behavior, and safety</td>
+</tr>
+<tr>
+<td>Production impact</td>
+<td>Often low, but controller state and procedure may impose restrictions</td>
+<td>Potentially high because configuration and programs may be overwritten</td>
+</tr>
+<tr>
+<td>Approval</td>
+<td>Follow site backup and data-control procedures</td>
+<td>Follow formal recovery/change authorization and release procedures</td>
+</tr>
+</tbody>
+</table>
+<p>A restore operation must identify exactly which data will be replaced. If the restore scope is uncertain, stop and clarify it before proceeding.</p>
+<h2 id="16-cybersecurity-and-access-control">16. Cybersecurity and access control</h2>
+<p>Robot backups can be used to recover from equipment failure, but they can also expose sensitive engineering information or be used to introduce unauthorized changes.</p>
+<p>Good practices include:</p>
+<ul>
+<li>Use named accounts and role-based access where supported.</li>
+<li>Restrict controller write access and backup repository modification rights.</li>
+<li>Record who created, modified, transferred, or restored a backup.</li>
+<li>Maintain a protected approved baseline.</li>
+<li>Preserve evidence when unauthorized modifications are suspected.</li>
+<li>Use approved malware scanning and transfer procedures.</li>
+<li>Keep backup storage separate from the robot's normal operating environment where practical.</li>
+<li>Do not store passwords or credentials in plain-text backup notes.</li>
+<li>Verify the origin and integrity of backup files before restoring them.</li>
+<li>Follow the plant's industrial cybersecurity and incident-response procedures.</li>
+</ul>
+<p>A checksum helps verify that a file has not changed relative to a known checksum. It does not establish who created the file or whether the file is trustworthy. Use access controls, revision records, and approved storage to establish provenance.</p>
+<h2 id="17-practical-industrial-example-robot-loading-a-cnc-machine">17. Practical industrial example: robot loading a CNC machine</h2>
+<p>Consider a robot that picks a component from a fixture, loads it into a CNC machine, waits for machining to finish, and unloads the completed part.</p>
+<p>The robot controller stores the motion program, taught positions, tool definition, frame data, and relevant I/O configuration. The PLC coordinates the robot with the CNC machine.</p>
+<p>A controller fault requires restoration from the approved backup.</p>
+<h3 id="recovery-sequence">Recovery sequence</h3>
+<ol>
+<li>Confirm the robot is isolated or in the required controlled maintenance state.</li>
+<li>Identify the approved backup revision and verify its integrity.</li>
+<li>Confirm controller compatibility and restore using the documented procedure.</li>
+<li>Verify mastering, calibration, TCP, work frames, payload, and taught positions as required.</li>
+<li>Verify robot-to-PLC signals, including machine-ready, door status, chuck status, cycle-complete, and robot-in-position feedback, according to the cell design.</li>
+<li>Check the robot program against the approved revision.</li>
+<li>Conduct the prescribed controlled motion validation with the machine and personnel in safe conditions.</li>
+<li>Test the handshake sequence without producing parts where the approved commissioning procedure permits.</li>
+<li>Complete a controlled production trial and inspect the resulting parts.</li>
+<li>Record the recovery, validation, approval, and new backup status.</li>
+</ol>
+<h3 id="example-of-a-recovery-fault">Example of a recovery fault</h3>
+<p>Suppose the robot program reaches the instruction that waits for the CNC machine's <code>MACHINE_READY</code> signal, but the signal never becomes true.</p>
+<p>Possible causes include:</p>
+<ul>
+<li>The restored I/O mapping differs from the approved configuration.</li>
+<li>The PLC signal address has changed.</li>
+<li>The fieldbus connection is not established.</li>
+<li>The CNC machine has not completed its initialization.</li>
+<li>An interlock prevents the machine-ready signal from being issued.</li>
+<li>The robot program is waiting on the wrong signal or an incorrect condition.</li>
+</ul>
+<p>The correct method is to trace the signal from its source through the PLC and communication interface to the robot input, then verify the program's wait condition. Do not force the signal or bypass the interlock simply to make the cycle continue.</p>
+<h2 id="18-preventive-maintenance-checklist">18. Preventive maintenance checklist</h2>
+<h3 id="routine-backup-pm">Routine backup PM</h3>
+<ul>
+<li>Verify robot ID, controller model, and software version.</li>
+<li>Confirm the approved backup scope and method.</li>
+<li>Check whether the latest backup corresponds to the current approved configuration.</li>
+<li>Confirm backup completion and review reported warnings.</li>
+<li>Verify archive integrity or checksums where applicable.</li>
+<li>Confirm the backup includes the required programs and dependencies.</li>
+<li>Check the protected secondary copy.</li>
+<li>Verify repository access and version history.</li>
+<li>Review changes made since the last approved backup.</li>
+<li>Confirm backup records are complete and traceable.</li>
+<li>Check restore instructions and recovery prerequisites.</li>
+<li>Verify that required mastering, calibration, and safety validation records are available.</li>
+<li>Record failures, corrective actions, and approval status.</li>
+</ul>
+<h3 id="periodic-recovery-readiness-review">Periodic recovery-readiness review</h3>
+<ul>
+<li>Confirm the replacement controller or recovery environment requirements are documented.</li>
+<li>Verify software versions, licenses, and application dependencies are identified.</li>
+<li>Confirm the restore procedure is current and approved.</li>
+<li>Review the last restore test or recovery exercise.</li>
+<li>Confirm responsibilities for technical validation and production release.</li>
+<li>Verify that critical backups are protected from unauthorized modification.</li>
+</ul>
+<h2 id="19-maintenance-records-and-sap-pm-traceability">19. Maintenance records and SAP PM traceability</h2>
+<p>Robot backup activities should be documented as part of the maintenance management system.</p>
+<p>Depending on the plant's SAP PM setup, record the following in the relevant maintenance notification, order, task list, or linked engineering change record:</p>
+<ul>
+<li>Equipment number and functional location.</li>
+<li>Robot ID and controller identity.</li>
+<li>Backup date and time.</li>
+<li>Backup type and approved revision.</li>
+<li>Source and repository location.</li>
+<li>Integrity verification result.</li>
+<li>Related breakdown, preventive maintenance, or change request.</li>
+<li>Any backup failure and corrective action.</li>
+<li>Restoration details, if a restore was performed.</li>
+<li>Validation results and production-release approval.</li>
+<li>Responsible technician and approver.</li>
+</ul>
+<p>The backup itself should be stored in the approved repository, with the maintenance record linking to it through the plant's authorized document-control method. Avoid relying on an attachment in a single maintenance order as the only recovery copy.</p>
+<h2 id="20-common-mistakes-and-interview-points">20. Common mistakes and interview points</h2>
+<h3 id="common-mistakes">Common mistakes</h3>
+<ul>
+<li>Assuming every backup is a complete controller image.</li>
+<li>Backing up only the main program and omitting subprograms or dependencies.</li>
+<li>Failing to capture the approved state before making changes.</li>
+<li>Overwriting the baseline with an unvalidated program revision.</li>
+<li>Restoring data without checking controller and software compatibility.</li>
+<li>Assuming a successful restore means mastering and calibration are correct.</li>
+<li>Forgetting tool, frame, payload, and communication settings.</li>
+<li>Failing to validate safety-related configuration after a relevant change or restore.</li>
+<li>Keeping every backup on the same removable drive.</li>
+<li>Treating a checksum as proof that a backup is correct and complete.</li>
+<li>Returning the robot to automatic mode before functional and quality checks are complete.</li>
+</ul>
+<h3 id="interview-questions">Interview questions</h3>
+<p>1. What is the difference between a program backup and a controller backup?</p>
+<p>A program backup primarily preserves application routines and related files. A controller backup may preserve a broader set of system and application data, depending on the supported method and its scope.</p>
+<p>2. Why is a backup required before program modification?</p>
+<p>It provides a recovery point if the change introduces an error, damages a program, or causes unexpected behavior.</p>
+<p>3. Does restoring a robot backup guarantee correct robot positioning?</p>
+<p>No. Mastering, calibration, encoder-related data, TCP, frames, and mechanical conditions may require separate verification.</p>
+<p>4. How do you verify a backup?</p>
+<p>Check the operation status, expected contents, version and controller identity, archive integrity, and checksums where applicable. A controlled restore test provides stronger evidence of recoverability.</p>
+<p>5. Why should backups be stored separately from the controller?</p>
+<p>A controller failure, memory corruption, or other local incident may make data stored only on the controller unavailable.</p>
+<p>6. What should be done after restoring a robot controller?</p>
+<p>Verify compatibility, programs, configuration, mastering and calibration requirements, communication, safety functions, motion behavior, process quality, and the required approvals before returning the robot to production.</p>
+<p>7. Can a robot backup replace a safety validation?</p>
+<p>No. Safety-related functions must be verified and validated according to the applicable design, manufacturer instructions, risk assessment, and site procedures.</p>
+<h2 id="21-completion-criteria">21. Completion criteria</h2>
+<p>A robot backup PM activity is complete when:</p>
+<ul>
+<li>The correct robot and approved backup scope have been identified.</li>
+<li>The backup has completed successfully and its integrity has been checked.</li>
+<li>A protected secondary copy exists where required.</li>
+<li>The backup revision is traceable to the approved configuration.</li>
+<li>Recovery dependencies and prerequisites are documented.</li>
+<li>Backup records have been updated.</li>
+<li>Any discrepancy has been resolved or formally recorded.</li>
+<li>Restore readiness has been reviewed according to the plant's maintenance policy.</li>
+</ul>
+<p>The ultimate objective is recoverability, not merely the existence of files. A backup is valuable only when its identity, integrity, compatibility, and restoration requirements are understood.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\18_PM\06_Robots\10_Alarm_History - Alarm history</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

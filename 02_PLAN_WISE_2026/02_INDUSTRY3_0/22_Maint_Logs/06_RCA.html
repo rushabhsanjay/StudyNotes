@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Root Cause Analysis (RCA)</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Root Cause Analysis (RCA)</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-of-root-cause-analysis">1. Definition of Root Cause Analysis</a></li>
+<li><a href="#2-objectives-of-rca">2. Objectives of RCA</a></li>
+<li><a href="#3-symptom-failure-mode-direct-cause-root-cause-and-consequence">3. Symptom, Failure Mode, Direct Cause, Root Cause, and Consequence</a></li>
+<li><a href="#4-the-difference-between-rca-and-troubleshooting">4. The Difference Between RCA and Troubleshooting</a></li>
+<li><a href="#5-when-is-rca-required">5. When Is RCA Required?</a></li>
+<li><a href="#6-rca-investigation-workflow">6. RCA Investigation Workflow</a></li>
+<li><a href="#7-step-1-define-the-problem">7. Step 1: Define the Problem</a><ul>
+<li><a href="#weak-problem-statement">Weak problem statement</a></li>
+<li><a href="#better-problem-statement">Better problem statement</a></li>
+<li><a href="#problem-definition-checklist">Problem definition checklist</a></li>
+</ul>
+</li>
+<li><a href="#8-step-2-make-the-situation-safe-and-contain-the-failure">8. Step 2: Make the Situation Safe and Contain the Failure</a></li>
+<li><a href="#9-step-3-collect-evidence">9. Step 3: Collect Evidence</a><ul>
+<li><a href="#91-electrical-and-electronic-evidence">9.1 Electrical and electronic evidence</a></li>
+<li><a href="#92-automation-and-software-evidence">9.2 Automation and software evidence</a></li>
+<li><a href="#93-mechanical-and-process-evidence">9.3 Mechanical and process evidence</a></li>
+<li><a href="#94-maintenance-and-operational-evidence">9.4 Maintenance and operational evidence</a></li>
+</ul>
+</li>
+<li><a href="#10-facts-assumptions-and-hypotheses">10. Facts, Assumptions, and Hypotheses</a></li>
+<li><a href="#11-step-4-build-a-timeline-of-events">11. Step 4: Build a Timeline of Events</a><ul>
+<li><a href="#example">Example</a></li>
+</ul>
+</li>
+<li><a href="#12-step-5-generate-possible-causes">12. Step 5: Generate Possible Causes</a></li>
+<li><a href="#13-fishbone-diagram-and-the-6m-method">13. Fishbone Diagram and the 6M Method</a></li>
+<li><a href="#14-the-5-whys-method">14. The 5 Whys Method</a><ul>
+<li><a href="#example-repeated-sensor-cable-failure">Example: Repeated sensor cable failure</a></li>
+<li><a href="#limitations-of-5-whys">Limitations of 5 Whys</a></li>
+</ul>
+</li>
+<li><a href="#15-fault-tree-analysis-fta">15. Fault Tree Analysis (FTA)</a><ul>
+<li><a href="#and-and-or-logic">AND and OR logic</a></li>
+</ul>
+</li>
+<li><a href="#16-failure-mode-and-effects-analysis-fmea">16. Failure Mode and Effects Analysis (FMEA)</a></li>
+<li><a href="#17-pareto-analysis">17. Pareto Analysis</a></li>
+<li><a href="#18-step-6-verify-the-root-cause">18. Step 6: Verify the Root Cause</a><ul>
+<li><a href="#example-vfd-overcurrent-trip">Example: VFD overcurrent trip</a></li>
+</ul>
+</li>
+<li><a href="#19-direct-cause-vs-systemic-cause">19. Direct Cause vs Systemic Cause</a></li>
+<li><a href="#20-human-factors-and-maintenance-errors">20. Human Factors and Maintenance Errors</a></li>
+<li><a href="#21-rca-in-electrical-maintenance">21. RCA in Electrical Maintenance</a><ul>
+<li><a href="#investigation-method">Investigation method</a></li>
+</ul>
+</li>
+<li><a href="#22-rca-in-plc-and-automation-systems">22. RCA in PLC and Automation Systems</a><ul>
+<li><a href="#common-investigation-areas">Common investigation areas</a></li>
+<li><a href="#example_1">Example</a></li>
+</ul>
+</li>
+<li><a href="#23-rca-in-vfd-and-servo-systems">23. RCA in VFD and Servo Systems</a><ul>
+<li><a href="#vfd-investigation">VFD investigation</a></li>
+<li><a href="#servo-investigation">Servo investigation</a></li>
+</ul>
+</li>
+<li><a href="#24-rca-in-cnc-and-robot-systems">24. RCA in CNC and Robot Systems</a><ul>
+<li><a href="#cnc-examples">CNC examples</a></li>
+<li><a href="#robot-examples">Robot examples</a></li>
+</ul>
+</li>
+<li><a href="#25-rca-for-network-and-communication-failures">25. RCA for Network and Communication Failures</a><ul>
+<li><a href="#example_2">Example</a></li>
+</ul>
+</li>
+<li><a href="#26-rca-for-repeated-or-intermittent-failures">26. RCA for Repeated or Intermittent Failures</a></li>
+<li><a href="#27-corrective-action-selection-after-rca">27. Corrective Action Selection After RCA</a></li>
+<li><a href="#28-rca-documentation-template">28. RCA Documentation Template</a><ul>
+<li><a href="#a-identification">A. Identification</a></li>
+<li><a href="#b-problem-definition">B. Problem definition</a></li>
+<li><a href="#c-evidence-collected">C. Evidence collected</a></li>
+<li><a href="#d-event-timeline">D. Event timeline</a></li>
+<li><a href="#e-cause-analysis">E. Cause analysis</a></li>
+<li><a href="#f-corrective-actions">F. Corrective actions</a></li>
+<li><a href="#g-verification-and-closure">G. Verification and closure</a></li>
+</ul>
+</li>
+<li><a href="#29-linking-rca-to-breakdown-failure-downtime-car-and-capa">29. Linking RCA to Breakdown, Failure, Downtime, CAR, and CAPA</a></li>
+<li><a href="#30-rca-metrics-and-reliability-analysis">30. RCA Metrics and Reliability Analysis</a><ul>
+<li><a href="#failure-recurrence-rate">Failure recurrence rate</a></li>
+</ul>
+</li>
+<li><a href="#31-common-rca-mistakes">31. Common RCA Mistakes</a></li>
+<li><a href="#32-practical-rca-checklist">32. Practical RCA Checklist</a></li>
+<li><a href="#33-interview-questions-and-answers">33. Interview Questions and Answers</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition-of-root-cause-analysis">1. Definition of Root Cause Analysis</h2>
+<p>Root Cause Analysis (RCA) is a structured investigation process used to identify and verify the underlying reasons why a failure, breakdown, defect, or abnormal condition occurred and why existing controls did not prevent it or limit its impact.</p>
+<p>In industrial maintenance, RCA goes beyond identifying the failed component. It investigates the physical, electrical, electronic, software, operational, and organizational conditions that allowed the failure to occur.</p>
+<p>For example, a PLC-controlled machine repeatedly stops because of a sensor fault. Replacing the sensor restores operation, but the failure returns after several shifts. RCA investigates why the sensor keeps failing, whether the installation contributes to the failure, and why preventive maintenance or design controls did not detect the problem earlier.</p>
+<p>The objective is to establish a cause supported by evidence and use that finding to select effective corrective actions.</p>
+<p>RCA is not a search for someone to blame. It is a search for the conditions and mechanisms that produced the failure.</p>
+<h2 id="2-objectives-of-rca">2. Objectives of RCA</h2>
+<p>RCA helps maintenance and engineering teams to:</p>
+<ul>
+<li>Identify the physical or logical mechanism behind a failure.</li>
+<li>Distinguish symptoms from direct causes, contributing factors, and systemic causes.</li>
+<li>Understand the sequence of events before, during, and after a breakdown.</li>
+<li>Determine why the existing protective or preventive controls were insufficient.</li>
+<li>Reduce recurring breakdowns and unnecessary component replacement.</li>
+<li>Improve machine availability, reliability, safety, and product quality.</li>
+<li>Establish evidence-based corrective actions.</li>
+<li>Improve PM schedules, inspection methods, drawings, software, and maintenance procedures.</li>
+<li>Identify similar risks on other machines.</li>
+<li>Support Corrective Action Reports (CAR), Corrective and Preventive Action (CAPA), and reliability improvement.</li>
+<li>Preserve technical knowledge for future breakdown investigations.</li>
+</ul>
+<h2 id="3-symptom-failure-mode-direct-cause-root-cause-and-consequence">3. Symptom, Failure Mode, Direct Cause, Root Cause, and Consequence</h2>
+<p>These terms describe different parts of a failure investigation.</p>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+<th>Industrial example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Symptom</td>
+<td>What was observed</td>
+<td>Machine stops during automatic operation</td>
+</tr>
+<tr>
+<td>Alarm indication</td>
+<td>What the control system reports</td>
+<td>Sensor timeout alarm</td>
+</tr>
+<tr>
+<td>Failure mode</td>
+<td>How a component or function failed</td>
+<td>Sensor output becomes intermittent</td>
+</tr>
+<tr>
+<td>Direct cause</td>
+<td>Immediate physical or logical condition producing the failure</td>
+<td>Sensor signal is lost when the cable moves</td>
+</tr>
+<tr>
+<td>Contributing factor</td>
+<td>Condition increasing the likelihood or severity of the failure</td>
+<td>Cable is routed through a sharp bend</td>
+</tr>
+<tr>
+<td>Root cause</td>
+<td>Validated underlying cause or causes that the investigation identifies as requiring action</td>
+<td>Cable routing was designed without adequate clearance for the full motion envelope</td>
+</tr>
+<tr>
+<td>Consequence</td>
+<td>Result of the failure</td>
+<td>Production cycle interrupted</td>
+</tr>
+</tbody>
+</table>
+<p>The exact terminology varies between RCA methods and organizations. The important requirement is to distinguish the observed event from the evidence-supported explanation.</p>
+<p>A failed sensor may be the component that stopped functioning, but the reason it failed may lie elsewhere.</p>
+<h2 id="4-the-difference-between-rca-and-troubleshooting">4. The Difference Between RCA and Troubleshooting</h2>
+<p>Troubleshooting and RCA are related but have different primary objectives.</p>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Troubleshooting</th>
+<th>Root Cause Analysis</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Main objective</td>
+<td>Restore the required function</td>
+<td>Understand why the failure occurred and how to prevent recurrence</td>
+</tr>
+<tr>
+<td>Typical timing</td>
+<td>During the breakdown</td>
+<td>During or after the breakdown investigation</td>
+</tr>
+<tr>
+<td>Main focus</td>
+<td>Locate and correct the immediate fault</td>
+<td>Identify and validate underlying causes</td>
+</tr>
+<tr>
+<td>Example</td>
+<td>Replace a confirmed failed encoder cable</td>
+<td>Determine why the cable was repeatedly damaged and correct the routing design</td>
+</tr>
+<tr>
+<td>Completion evidence</td>
+<td>Functional test passes</td>
+<td>Cause is supported by evidence and effective corrective actions are identified</td>
+</tr>
+</tbody>
+</table>
+<p>Troubleshooting may provide the evidence required for RCA. RCA may also reveal that the original troubleshooting approach needs improvement.</p>
+<p>A machine running again does not prove that the underlying cause has been eliminated.</p>
+<h2 id="5-when-is-rca-required">5. When Is RCA Required?</h2>
+<p>The level of investigation should be proportionate to risk, impact, recurrence, and complexity.</p>
+<p>Common triggers include:</p>
+<ul>
+<li>Repeated breakdowns involving the same equipment or failure mode.</li>
+<li>Major production downtime.</li>
+<li>Critical machine or process failure.</li>
+<li>Safety incidents or potentially hazardous events.</li>
+<li>Quality defects linked to equipment behavior.</li>
+<li>Failures occurring soon after maintenance.</li>
+<li>Repeated failure of replacement components.</li>
+<li>Significant repair or replacement costs.</li>
+<li>Obsolete or unsupported automation equipment creating operational risk.</li>
+<li>Recurring PLC, CNC, robot, servo, VFD, or network faults.</li>
+<li>Audit nonconformities.</li>
+<li>Failures affecting several machines or production lines.</li>
+<li>Corrective actions that did not prevent recurrence.</li>
+</ul>
+<p>A minor, isolated fault may require only routine troubleshooting and documentation. A recurring or high-consequence failure usually warrants a more formal investigation.</p>
+<h2 id="6-rca-investigation-workflow">6. RCA Investigation Workflow</h2>
+<p>A disciplined RCA follows a repeatable sequence.</p>
+<pre><code>Failure or abnormal condition detected
+        ↓
+Make the situation safe and control the impact
+        ↓
+Define the problem precisely
+        ↓
+Collect evidence and preserve diagnostic records
+        ↓
+Build the event timeline
+        ↓
+Identify possible causes
+        ↓
+Test hypotheses against evidence
+        ↓
+Verify direct, contributing, and systemic causes
+        ↓
+Select corrective actions
+        ↓
+Implement and technically verify the actions
+        ↓
+Monitor effectiveness
+        ↓
+Document findings and standardize improvements
+</code></pre>
+<p>The process is iterative. If a hypothesis fails testing, revise it rather than forcing the evidence to support the initial assumption.</p>
+<h2 id="7-step-1-define-the-problem">7. Step 1: Define the Problem</h2>
+<p>A good problem statement describes the observable failure without assuming its cause.</p>
+<p>Use the following structure:</p>
+<p>Equipment + observed failure + operating condition + frequency or timing + impact.</p>
+<h3 id="weak-problem-statement">Weak problem statement</h3>
+<p>"PLC problem. Machine stopped."</p>
+<p>This gives almost no useful diagnostic information.</p>
+<h3 id="better-problem-statement">Better problem statement</h3>
+<p>"Machine ST-12 stopped during automatic operation after the PLC reported a remote I/O communication fault. The event occurred four times during the shift and interrupted production for a combined 38 minutes."</p>
+<p>This statement identifies the equipment, operating condition, alarm, recurrence, and impact without prematurely declaring the root cause.</p>
+<h3 id="problem-definition-checklist">Problem definition checklist</h3>
+<ul>
+<li>Identify the equipment and affected subsystem.</li>
+<li>Describe what happened in observable terms.</li>
+<li>Record when and under what conditions it occurred.</li>
+<li>Include the exact alarm or fault code where available.</li>
+<li>Quantify downtime, quality impact, or other consequences.</li>
+<li>Identify whether the problem is new, recurring, or intermittent.</li>
+<li>Separate verified facts from assumptions.</li>
+<li>Define what is included and excluded from the investigation.</li>
+</ul>
+<p>A vague problem statement produces vague hypotheses and weak corrective actions.</p>
+<h2 id="8-step-2-make-the-situation-safe-and-contain-the-failure">8. Step 2: Make the Situation Safe and Contain the Failure</h2>
+<p>Before investigating, ensure that personnel, equipment, product, and the surrounding process are protected.</p>
+<p>Possible actions include:</p>
+<ul>
+<li>Stop equipment using the approved procedure.</li>
+<li>Isolate hazardous energy where required.</li>
+<li>Apply lockout/tagout and verify isolation before work that requires it.</li>
+<li>Prevent defective product from proceeding.</li>
+<li>Preserve relevant controller diagnostics before resets when safe and practical.</li>
+<li>Notify production, quality, safety, or engineering personnel as required.</li>
+<li>Assess whether similar equipment may have the same defect.</li>
+<li>Establish approved operating restrictions if temporary operation is permitted.</li>
+</ul>
+<p>Do not sacrifice safety to preserve evidence. If immediate action is needed to protect people or equipment, take that action first and document what occurred.</p>
+<h2 id="9-step-3-collect-evidence">9. Step 3: Collect Evidence</h2>
+<p>RCA quality depends on evidence quality.</p>
+<h3 id="91-electrical-and-electronic-evidence">9.1 Electrical and electronic evidence</h3>
+<ul>
+<li>Supply voltage and current measurements.</li>
+<li>24 V DC control supply condition.</li>
+<li>Fuse, breaker, contactor, and overload status.</li>
+<li>Terminal tightness and signs of overheating.</li>
+<li>Grounding and shielding condition.</li>
+<li>Sensor output and PLC input status.</li>
+<li>Motor winding or insulation test results where appropriate.</li>
+<li>Drive fault history and available electrical diagnostics.</li>
+</ul>
+<h3 id="92-automation-and-software-evidence">9.2 Automation and software evidence</h3>
+<ul>
+<li>PLC diagnostic buffer and event history.</li>
+<li>Relevant tag values and I/O states.</li>
+<li>Program and firmware revisions.</li>
+<li>Recent logic, parameter, or configuration changes.</li>
+<li>HMI and SCADA alarm history.</li>
+<li>CNC and robot diagnostic records.</li>
+<li>VFD and servo alarm histories.</li>
+<li>Network switch and remote I/O diagnostics.</li>
+<li>Communication status and timestamps.</li>
+</ul>
+<h3 id="93-mechanical-and-process-evidence">9.3 Mechanical and process evidence</h3>
+<ul>
+<li>Mechanical resistance, binding, or abnormal movement.</li>
+<li>Lubrication condition.</li>
+<li>Bearing, coupling, belt, and gear condition.</li>
+<li>Sensor alignment and mounting.</li>
+<li>Cable routing and mechanical protection.</li>
+<li>Hydraulic or pneumatic pressure.</li>
+<li>Temperature, vibration, and contamination.</li>
+<li>Operating load, cycle rate, and process conditions.</li>
+</ul>
+<h3 id="94-maintenance-and-operational-evidence">9.4 Maintenance and operational evidence</h3>
+<ul>
+<li>Previous breakdown reports.</li>
+<li>Failure reports and downtime records.</li>
+<li>Maintenance work orders.</li>
+<li>Spare-part replacement history.</li>
+<li>Previous RCA and CAR records.</li>
+<li>PM task history and inspection results.</li>
+<li>Vendor repair findings.</li>
+<li>Operator observations and production logs.</li>
+</ul>
+<p>Record the source, timestamp, units, measurement method, equipment state, and relevant conditions for important evidence.</p>
+<h2 id="10-facts-assumptions-and-hypotheses">10. Facts, Assumptions, and Hypotheses</h2>
+<p>Do not treat a plausible explanation as a confirmed cause.</p>
+<table>
+<thead>
+<tr>
+<th>Evidence category</th>
+<th>Meaning</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fact</td>
+<td>Directly observed or reliably recorded information</td>
+<td>The PLC input changed to OFF during the fault</td>
+</tr>
+<tr>
+<td>Assumption</td>
+<td>A belief not yet demonstrated</td>
+<td>The sensor is defective</td>
+</tr>
+<tr>
+<td>Hypothesis</td>
+<td>A proposed explanation that can be tested</td>
+<td>Cable movement intermittently interrupts the sensor signal</td>
+</tr>
+<tr>
+<td>Test result</td>
+<td>Evidence obtained by checking a hypothesis</td>
+<td>Signal interruption is reproduced when the damaged cable moves under the approved test procedure</td>
+</tr>
+<tr>
+<td>Verified cause</td>
+<td>Explanation supported by sufficient evidence</td>
+<td>The cable conductor is fractured and loses continuity during movement</td>
+</tr>
+</tbody>
+</table>
+<p>A useful RCA maintains a record of hypotheses, supporting evidence, contradicting evidence, tests, and conclusions.</p>
+<p>If a cause cannot be confirmed, document it as unresolved or probable rather than presenting uncertainty as fact.</p>
+<h2 id="11-step-4-build-a-timeline-of-events">11. Step 4: Build a Timeline of Events</h2>
+<p>A timeline reconstructs the failure sequence.</p>
+<p>Useful sources include PLC timestamps, alarm history, controller diagnostic buffers, SCADA records, operator observations, and maintenance logs.</p>
+<h3 id="example">Example</h3>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Event</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10:22:14.100</td>
+<td>Remote I/O connection becomes unavailable</td>
+<td>Possible initiating event</td>
+</tr>
+<tr>
+<td>10:22:14.180</td>
+<td>Sensor feedback becomes unavailable</td>
+<td>Possible consequence</td>
+</tr>
+<tr>
+<td>10:22:14.420</td>
+<td>Sequence timeout occurs</td>
+<td>Consequential alarm</td>
+</tr>
+<tr>
+<td>10:22:14.600</td>
+<td>Machine cycle stops</td>
+<td>Operational impact</td>
+</tr>
+<tr>
+<td>10:27:00</td>
+<td>Technician resets the system</td>
+<td>Recovery action</td>
+</tr>
+</tbody>
+</table>
+<p>This timeline suggests a possible relationship, but it does not prove that the network fault caused the sensor feedback loss. The investigation must verify the dependency and rule out alternative explanations.</p>
+<p>When combining records from multiple controllers, account for clock synchronization, event buffering, and differences between event time and server receipt time.</p>
+<h2 id="12-step-5-generate-possible-causes">12. Step 5: Generate Possible Causes</h2>
+<p>Generate plausible causes before committing to one explanation.</p>
+<p>For a machine stopping during an automatic cycle, possible causes may include:</p>
+<ul>
+<li>Electrical supply instability.</li>
+<li>Sensor or actuator failure.</li>
+<li>Loose or damaged wiring.</li>
+<li>PLC logic or configuration problems.</li>
+<li>Remote I/O communication failure.</li>
+<li>VFD or servo protective trip.</li>
+<li>Mechanical binding.</li>
+<li>Loss of pneumatic or hydraulic pressure.</li>
+<li>Safety interlock activation.</li>
+<li>Incorrect process sequence or operating conditions.</li>
+<li>Recent maintenance or configuration changes.</li>
+<li>Environmental conditions such as heat, vibration, or contamination.</li>
+</ul>
+<p>Use evidence to prioritize hypotheses, not personal preference or familiarity with a particular component.</p>
+<h2 id="13-fishbone-diagram-and-the-6m-method">13. Fishbone Diagram and the 6M Method</h2>
+<p>A fishbone diagram, also called an Ishikawa diagram, organizes possible causes into categories.</p>
+<p>The 6M method is commonly used in manufacturing investigations.</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Investigation focus</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Man / People</td>
+<td>Competence, communication, task execution</td>
+<td>Incorrect maintenance procedure followed</td>
+</tr>
+<tr>
+<td>Machine</td>
+<td>Equipment design, wear, component condition</td>
+<td>Worn bearing causes excessive load</td>
+</tr>
+<tr>
+<td>Method</td>
+<td>Procedures, sequence, standards</td>
+<td>PM procedure omits a critical inspection</td>
+</tr>
+<tr>
+<td>Material</td>
+<td>Components, consumables, quality</td>
+<td>Incorrect replacement cable specification</td>
+</tr>
+<tr>
+<td>Measurement</td>
+<td>Sensors, instruments, calibration, data quality</td>
+<td>Pressure transmitter provides incorrect feedback</td>
+</tr>
+<tr>
+<td>Mother Nature / Environment</td>
+<td>Temperature, moisture, contamination, vibration</td>
+<td>Moisture causes connector corrosion</td>
+</tr>
+</tbody>
+</table>
+<p>Some organizations use modified categories such as management, maintenance, or information systems. Use the organization's established method where one exists.</p>
+<p>The fishbone diagram generates and organizes hypotheses. It does not prove that any listed cause is responsible.</p>
+<h2 id="14-the-5-whys-method">14. The 5 Whys Method</h2>
+<p>The 5 Whys method repeatedly asks why a failure occurred, following the evidence from the observed problem toward an underlying cause.</p>
+<p>Five is a guide, not a mandatory stopping point. A technically complex failure may require fewer or more questions, multiple branches, or another RCA method.</p>
+<h3 id="example-repeated-sensor-cable-failure">Example: Repeated sensor cable failure</h3>
+<p>Problem: A machine repeatedly stops with a sensor timeout.</p>
+<ol>
+<li>Why did the machine stop? The PLC did not receive the expected sensor signal.</li>
+<li>Why was the sensor signal missing? The signal conductor intermittently lost continuity.</li>
+<li>Why did continuity become intermittent? The conductor was damaged by repeated cable movement.</li>
+<li>Why was the conductor damaged? The cable was routed through a movement path that caused excessive bending and contact.</li>
+<li>Why did the routing permit this condition? The installation design and inspection criteria did not adequately address the full motion envelope.</li>
+</ol>
+<p>The proposed systemic cause is a design and inspection weakness. It should be verified by inspecting the cable path, checking the conductor, and comparing the installation with the applicable requirements.</p>
+<p>Potential actions may include correcting the routing, providing appropriate mechanical protection, inspecting equivalent machines, and updating the relevant installation or PM standards.</p>
+<h3 id="limitations-of-5-whys">Limitations of 5 Whys</h3>
+<ul>
+<li>It can oversimplify failures with several interacting causes.</li>
+<li>It may lead investigators toward a predetermined answer.</li>
+<li>It can mistake a human action for the underlying system weakness.</li>
+<li>It can omit evidence that contradicts the chosen explanation.</li>
+<li>It does not automatically prove that the final answer is the root cause.</li>
+</ul>
+<p>Use it as an investigation aid, not as a substitute for technical testing.</p>
+<h2 id="15-fault-tree-analysis-fta">15. Fault Tree Analysis (FTA)</h2>
+<p>Fault Tree Analysis works backward from an undesired top event and organizes possible causes using logical relationships.</p>
+<p>It is particularly useful for complex systems, safety-related investigations, and failures involving multiple conditions.</p>
+<p>Example:</p>
+<pre><code>TOP EVENT: Conveyor fails to start
+        ↓
+Possible enabling conditions
+        ↓
+OR: Drive unavailable
+OR: Start permissive absent
+OR: Control supply unavailable
+        ↓
+Drive unavailable
+        ↓
+OR: Drive trip active
+OR: Drive power absent
+OR: Drive enable missing
+        ↓
+Investigate each branch using evidence
+</code></pre>
+<p>In formal fault-tree analysis, AND and OR gates represent defined logical relationships. The simple hierarchy above is illustrative and does not establish the actual logic of a specific conveyor.</p>
+<h3 id="and-and-or-logic">AND and OR logic</h3>
+<ul>
+<li>OR gate: Any one of the defined input events can produce the output event.</li>
+<li>AND gate: All required input events must occur for the output event to occur.</li>
+</ul>
+<p>FTA can be qualitative or quantitative. Quantitative analysis requires defensible component failure probabilities, dependency assumptions, and system logic.</p>
+<h2 id="16-failure-mode-and-effects-analysis-fmea">16. Failure Mode and Effects Analysis (FMEA)</h2>
+<p>FMEA examines how components or processes could fail, what effects those failures may produce, and what controls are needed.</p>
+<p>It can support RCA by identifying plausible failure modes and highlighting gaps in detection or prevention.</p>
+<table>
+<thead>
+<tr>
+<th>Element</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Item</td>
+<td>Proximity sensor</td>
+</tr>
+<tr>
+<td>Failure mode</td>
+<td>Output becomes intermittent</td>
+</tr>
+<tr>
+<td>Local effect</td>
+<td>PLC input changes unexpectedly</td>
+</tr>
+<tr>
+<td>System effect</td>
+<td>Machine sequence times out</td>
+</tr>
+<tr>
+<td>Possible cause</td>
+<td>Cable fatigue or sensor damage</td>
+</tr>
+<tr>
+<td>Existing controls</td>
+<td>Input diagnostics and visual inspection</td>
+</tr>
+<tr>
+<td>Improvement</td>
+<td>Better cable protection and appropriate inspection criteria</td>
+</tr>
+</tbody>
+</table>
+<p>FMEA is usually proactive or risk-oriented, while RCA investigates a particular event. FMEA can also be updated using verified findings from completed RCA investigations.</p>
+<h2 id="17-pareto-analysis">17. Pareto Analysis</h2>
+<p>Pareto analysis helps prioritize investigation effort by identifying the categories responsible for a large share of recorded failures, downtime, or cost.</p>
+<p>For example, a maintenance department may classify six months of breakdowns by failure category and discover that a small number of categories account for most recorded downtime.</p>
+<pre><code>Failure categories
+        ↓
+Classify consistent historical records
+        ↓
+Choose a metric: count, downtime, cost, or risk
+        ↓
+Rank categories from largest to smallest
+        ↓
+Calculate cumulative contribution
+        ↓
+Prioritize high-impact investigations
+</code></pre>
+<p>The familiar 80/20 pattern is a heuristic, not a guaranteed law. Use the actual data distribution.</p>
+<p>Do not rank solely by failure count if the objective is to reduce major downtime. A rare failure may have much greater consequences than a frequent minor fault.</p>
+<h2 id="18-step-6-verify-the-root-cause">18. Step 6: Verify the Root Cause</h2>
+<p>A proposed root cause should explain the observed evidence and withstand reasonable testing.</p>
+<p>Ask the following questions:</p>
+<ul>
+<li>Does the cause explain the observed failure mode?</li>
+<li>Is there physical, electrical, electronic, software, or process evidence supporting it?</li>
+<li>Can the suspected mechanism be demonstrated or tested safely?</li>
+<li>Does the explanation fit the event timeline?</li>
+<li>Are there credible alternative explanations?</li>
+<li>Has contradictory evidence been considered?</li>
+<li>Does the cause explain recurrence, if the problem is recurring?</li>
+<li>Does it explain why existing controls did not prevent or detect the failure?</li>
+<li>Will the proposed corrective action directly address the verified cause?</li>
+</ul>
+<h3 id="example-vfd-overcurrent-trip">Example: VFD overcurrent trip</h3>
+<p>Possible causes include excessive mechanical load, a motor-circuit defect, incorrect configuration, or a drive problem.</p>
+<p>The alarm code alone does not distinguish these possibilities.</p>
+<p>The investigation should examine drive diagnostics, current behavior, mechanical resistance, motor-circuit condition, and applicable configuration. The actual cause must be established from the combined evidence.</p>
+<h2 id="19-direct-cause-vs-systemic-cause">19. Direct Cause vs Systemic Cause</h2>
+<p>A strong investigation may identify several connected causes.</p>
+<p>Consider a sensor failure:</p>
+<ul>
+<li>Direct cause: Sensor output is lost.</li>
+<li>Physical mechanism: Cable conductor fractures under repeated movement.</li>
+<li>Contributing condition: Cable routing produces excessive bending.</li>
+<li>Systemic weakness: The design review and inspection standard did not control the cable's motion envelope.</li>
+</ul>
+<p>The direct cause explains why the machine stopped. The systemic weakness explains why the damaging condition was allowed to exist or persist.</p>
+<p>A complete investigation should not force every incident into a single cause if multiple independent or interacting causes are supported by evidence.</p>
+<h2 id="20-human-factors-and-maintenance-errors">20. Human Factors and Maintenance Errors</h2>
+<p>RCA should investigate human actions without automatically treating the individual as the sole root cause.</p>
+<p>When an error occurs, investigate:</p>
+<ul>
+<li>Whether the procedure was correct and available.</li>
+<li>Whether the equipment was clearly identified.</li>
+<li>Whether training and authorization were appropriate.</li>
+<li>Whether time pressure or workload affected the task.</li>
+<li>Whether the interface encouraged a mistake.</li>
+<li>Whether tools and test equipment were suitable.</li>
+<li>Whether supervision and verification controls were adequate.</li>
+<li>Whether the work environment supported safe execution.</li>
+<li>Whether the action was reasonable given the information available at the time.</li>
+</ul>
+<p>For example, if a technician repeatedly installs an incorrect replacement component, investigate the part-identification process, drawing accuracy, stock labeling, and verification controls as well as individual competence.</p>
+<p>The goal is to prevent recurrence, not to replace an investigation with blame.</p>
+<h2 id="21-rca-in-electrical-maintenance">21. RCA in Electrical Maintenance</h2>
+<p>Electrical failures may involve:</p>
+<ul>
+<li>Loose or deteriorated connections.</li>
+<li>Incorrect conductor sizing.</li>
+<li>Overload or short-circuit conditions.</li>
+<li>Grounding or bonding defects.</li>
+<li>Poor shielding or cable routing.</li>
+<li>Contamination or moisture ingress.</li>
+<li>Thermal stress.</li>
+<li>Contact wear.</li>
+<li>Inadequate protection coordination.</li>
+<li>Supply voltage disturbances.</li>
+<li>Incorrect installation or maintenance practices.</li>
+</ul>
+<h3 id="investigation-method">Investigation method</h3>
+<ol>
+<li>Record the observed symptom and relevant protection-device indications.</li>
+<li>Preserve event records and equipment state where safe.</li>
+<li>Follow the approved isolation and electrical safety procedure.</li>
+<li>Inspect the affected circuit and associated components.</li>
+<li>Perform suitable measurements using correctly rated equipment.</li>
+<li>Compare findings with drawings, specifications, and equipment limits.</li>
+<li>Test competing hypotheses where safe and practical.</li>
+<li>Record the verified failure mechanism and contributing conditions.</li>
+<li>Define and verify corrective actions.</li>
+</ol>
+<p>Do not perform energized measurements or intrusive tests without the required authorization, competence, risk controls, and suitable equipment.</p>
+<h2 id="22-rca-in-plc-and-automation-systems">22. RCA in PLC and Automation Systems</h2>
+<p>PLC-related failures may originate in hardware, software, communication, power, configuration, or process conditions.</p>
+<h3 id="common-investigation-areas">Common investigation areas</h3>
+<ul>
+<li>Controller diagnostics and operating mode.</li>
+<li>Power supply and grounding.</li>
+<li>Input and output module status.</li>
+<li>Sensor and actuator behavior.</li>
+<li>Remote I/O network health.</li>
+<li>PLC program sequence and interlocks.</li>
+<li>Firmware and configuration compatibility.</li>
+<li>Recent logic changes.</li>
+<li>HMI or SCADA communication status.</li>
+<li>Network topology and device diagnostics.</li>
+<li>Data quality and timestamp integrity.</li>
+</ul>
+<h3 id="example_1">Example</h3>
+<p>Symptom: Machine sequence timeout.</p>
+<p>Possible hypotheses:</p>
+<ul>
+<li>Sensor failed.</li>
+<li>Actuator did not complete its movement.</li>
+<li>PLC output was not commanded.</li>
+<li>Remote I/O communication was interrupted.</li>
+<li>The process condition prevented movement.</li>
+<li>The sequence timeout was configured incorrectly.</li>
+</ul>
+<p>The investigation should establish which condition occurred and why. Increasing the timer without understanding the missing feedback may conceal the fault rather than solve it.</p>
+<p>Any program or configuration modification must follow the approved change-management, backup, testing, and authorization procedures.</p>
+<h2 id="23-rca-in-vfd-and-servo-systems">23. RCA in VFD and Servo Systems</h2>
+<h3 id="vfd-investigation">VFD investigation</h3>
+<p>Check the exact trip code, event history, supply conditions, motor current, load, cooling, motor circuit, parameter configuration, and mechanical condition.</p>
+<h3 id="servo-investigation">Servo investigation</h3>
+<p>Check the affected axis, feedback diagnostics, position deviation, drive state, cable condition, power supply, motion profile, mechanical load, and relevant controller alarms.</p>
+<p>In both cases:</p>
+<ul>
+<li>Preserve the original diagnostic evidence.</li>
+<li>Identify the operating conditions under which the failure occurred.</li>
+<li>Avoid repeated resets that destroy context or create additional risk.</li>
+<li>Test hypotheses using approved methods.</li>
+<li>Confirm the cause before replacing parts or changing parameters.</li>
+<li>Verify the repaired function under the required operating conditions.</li>
+</ul>
+<h2 id="24-rca-in-cnc-and-robot-systems">24. RCA in CNC and Robot Systems</h2>
+<p>CNC and robot failures often involve several interacting subsystems.</p>
+<h3 id="cnc-examples">CNC examples</h3>
+<ul>
+<li>Axis feedback faults.</li>
+<li>Spindle drive trips.</li>
+<li>Tool changer sequence failures.</li>
+<li>Lubrication or hydraulic faults.</li>
+<li>Machine-builder PLC interlocks.</li>
+<li>Network or peripheral communication errors.</li>
+</ul>
+<h3 id="robot-examples">Robot examples</h3>
+<ul>
+<li>Servo or encoder faults.</li>
+<li>Communication loss.</li>
+<li>Cable and dress-pack damage.</li>
+<li>Motion or position errors.</li>
+<li>Safety circuit faults.</li>
+<li>Tool or peripheral interlocks.</li>
+</ul>
+<p>Use the controller's event history alongside machine-builder PLC diagnostics, electrical drawings, maintenance history, and physical inspection.</p>
+<p>Do not assume that a program error is the root cause if a preceding servo or communication fault interrupted the program. Establish the actual sequence and dependency.</p>
+<h2 id="25-rca-for-network-and-communication-failures">25. RCA for Network and Communication Failures</h2>
+<p>Industrial communication failures can involve:</p>
+<ul>
+<li>Device power loss.</li>
+<li>Damaged cables or connectors.</li>
+<li>Switch port faults.</li>
+<li>Network configuration errors.</li>
+<li>Duplicate IP addresses.</li>
+<li>Excessive network loading.</li>
+<li>Firmware incompatibility.</li>
+<li>Device resource limitations.</li>
+<li>Grounding or electromagnetic interference.</li>
+<li>Configuration changes.</li>
+<li>Clock synchronization problems.</li>
+</ul>
+<h3 id="example_2">Example</h3>
+<p>Symptom: Several remote I/O devices disconnect at approximately the same time.</p>
+<p>This pattern may suggest a shared dependency, such as a switch, power supply, uplink, or network configuration. It does not prove which dependency failed.</p>
+<p>Correlate event timestamps, switch diagnostics, device power, and topology. Investigate common dependencies before treating each disconnected device as an independent hardware failure.</p>
+<h2 id="26-rca-for-repeated-or-intermittent-failures">26. RCA for Repeated or Intermittent Failures</h2>
+<p>Intermittent failures are difficult because the fault may disappear before investigation begins.</p>
+<p>Capture as much context as possible:</p>
+<ul>
+<li>Exact time and duration.</li>
+<li>Operating mode and sequence step.</li>
+<li>Load, speed, temperature, or axis position.</li>
+<li>Alarm history before and after the event.</li>
+<li>Relevant input and output states.</li>
+<li>Device power and communication status.</li>
+<li>Recent maintenance or configuration changes.</li>
+<li>Environmental conditions.</li>
+<li>Frequency of occurrence and operating exposure.</li>
+</ul>
+<p>Use trends, diagnostic buffers, event logs, and approved monitoring methods to improve the chance of capturing the fault.</p>
+<p>Do not claim that a fault is eliminated merely because the machine completes a few successful cycles. The verification period must reflect the failure mechanism and expected recurrence conditions.</p>
+<h2 id="27-corrective-action-selection-after-rca">27. Corrective Action Selection After RCA</h2>
+<p>RCA identifies and verifies causes. The next step is to choose actions that address those causes.</p>
+<table>
+<thead>
+<tr>
+<th>Verified cause</th>
+<th>Appropriate action example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cable damage caused by repeated motion</td>
+<td>Correct routing, bend radius, and mechanical protection</td>
+</tr>
+<tr>
+<td>Unstable control supply</td>
+<td>Correct the confirmed supply or connection defect and verify under load</td>
+</tr>
+<tr>
+<td>Incorrect PLC configuration</td>
+<td>Apply a controlled configuration correction and validate the sequence</td>
+</tr>
+<tr>
+<td>Mechanical binding</td>
+<td>Repair the mechanical defect and verify load and movement</td>
+</tr>
+<tr>
+<td>Repeated contamination damage</td>
+<td>Improve sealing, enclosure protection, or contamination control</td>
+</tr>
+<tr>
+<td>PM inspection gap</td>
+<td>Add a technically justified inspection task with clear acceptance criteria</td>
+</tr>
+<tr>
+<td>Obsolete component with recurring availability risk</td>
+<td>Evaluate a compatible migration or replacement plan</td>
+</tr>
+<tr>
+<td>Poor alarm visibility</td>
+<td>Improve diagnostic coverage and approved alarm presentation</td>
+</tr>
+</tbody>
+</table>
+<p>A corrective action must be proportionate to the evidence and risk. Avoid expensive redesigns without justification, but do not rely on repeated component replacement when a systemic design weakness has been demonstrated.</p>
+<h2 id="28-rca-documentation-template">28. RCA Documentation Template</h2>
+<p>A practical RCA report can use the following structure.</p>
+<h3 id="a-identification">A. Identification</h3>
+<ul>
+<li>RCA ID:</li>
+<li>Equipment ID:</li>
+<li>Equipment location:</li>
+<li>Department:</li>
+<li>Date and time:</li>
+<li>Investigation owner:</li>
+<li>Linked breakdown or work order:</li>
+</ul>
+<h3 id="b-problem-definition">B. Problem definition</h3>
+<ul>
+<li>What happened?</li>
+<li>When did it happen?</li>
+<li>Under what operating conditions?</li>
+<li>How frequently did it occur?</li>
+<li>What was the impact?</li>
+<li>What was expected to happen?</li>
+</ul>
+<h3 id="c-evidence-collected">C. Evidence collected</h3>
+<ul>
+<li>Alarm and fault history.</li>
+<li>Electrical or mechanical measurements.</li>
+<li>Controller diagnostics.</li>
+<li>Photographs or inspection results.</li>
+<li>Previous maintenance records.</li>
+<li>Relevant drawings, programs, and configuration revisions.</li>
+<li>Operator observations.</li>
+</ul>
+<h3 id="d-event-timeline">D. Event timeline</h3>
+<ul>
+<li>First known abnormal event.</li>
+<li>Subsequent alarms and state changes.</li>
+<li>Equipment stop or process impact.</li>
+<li>Recovery and restoration actions.</li>
+</ul>
+<h3 id="e-cause-analysis">E. Cause analysis</h3>
+<ul>
+<li>Suspected causes.</li>
+<li>Tests performed.</li>
+<li>Evidence supporting each hypothesis.</li>
+<li>Evidence contradicting each hypothesis.</li>
+<li>Verified direct cause.</li>
+<li>Contributing factors.</li>
+<li>Systemic cause or control weakness, where established.</li>
+</ul>
+<h3 id="f-corrective-actions">F. Corrective actions</h3>
+<ul>
+<li>Action description.</li>
+<li>Responsible owner.</li>
+<li>Due date.</li>
+<li>Required resources and approvals.</li>
+<li>Acceptance criteria.</li>
+<li>Implementation evidence.</li>
+</ul>
+<h3 id="g-verification-and-closure">G. Verification and closure</h3>
+<ul>
+<li>Functional test results.</li>
+<li>Effectiveness criteria.</li>
+<li>Monitoring period or operating exposure.</li>
+<li>Recurrence status.</li>
+<li>Updated PM, SOP, drawings, or training.</li>
+<li>Final review and approval.</li>
+</ul>
+<h2 id="29-linking-rca-to-breakdown-failure-downtime-car-and-capa">29. Linking RCA to Breakdown, Failure, Downtime, CAR, and CAPA</h2>
+<p>Each record serves a different purpose.</p>
+<table>
+<thead>
+<tr>
+<th>Record</th>
+<th>Main purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Breakdown report</td>
+<td>Documents the breakdown event and response</td>
+</tr>
+<tr>
+<td>Failure report</td>
+<td>Records the failure mode, failed item, and technical findings</td>
+</tr>
+<tr>
+<td>Downtime record</td>
+<td>Quantifies production or equipment unavailability</td>
+</tr>
+<tr>
+<td>Fault/alarm history</td>
+<td>Preserves diagnostic events and their sequence</td>
+</tr>
+<tr>
+<td>RCA report</td>
+<td>Investigates and verifies the underlying causes</td>
+</tr>
+<tr>
+<td>Corrective Action Report</td>
+<td>Assigns and tracks actions addressing the identified causes</td>
+</tr>
+<tr>
+<td>CAPA</td>
+<td>Manages corrective and preventive or risk-reduction actions according to the organization's process</td>
+</tr>
+</tbody>
+</table>
+<p>A conceptual record relationship is:</p>
+<pre><code>Breakdown event
+        ↓
+Failure details and alarm evidence
+        ↓
+Downtime and operational impact
+        ↓
+Root Cause Analysis
+        ↓
+Corrective Action Report
+        ↓
+CAPA, where required
+        ↓
+Implementation and effectiveness verification
+        ↓
+Updated maintenance and engineering standards
+</code></pre>
+<p>Not every breakdown requires a formal RCA or CAPA. Apply the organization's escalation rules and maintain traceability between related records.</p>
+<h2 id="30-rca-metrics-and-reliability-analysis">30. RCA Metrics and Reliability Analysis</h2>
+<p>RCA performance should be measured by investigation quality and failure reduction, not merely by the number of reports completed.</p>
+<p>Useful measures include:</p>
+<ul>
+<li>Number of recurring failures by equipment.</li>
+<li>Downtime associated with verified failure modes.</li>
+<li>Percentage of investigations with evidence-supported causes.</li>
+<li>Corrective action implementation rate.</li>
+<li>Corrective action effectiveness rate.</li>
+<li>Recurrence after corrective action.</li>
+<li>Average time to complete an investigation.</li>
+<li>Overdue investigation actions.</li>
+<li>Failures associated with unresolved or obsolete equipment risks.</li>
+<li>Reduction in the selected failure mode's rate over a defined operating exposure.</li>
+</ul>
+<h3 id="failure-recurrence-rate">Failure recurrence rate</h3>
+<div class="math-display">\[ \text{Failure rate}= \frac{\text{Qualifying failures}}{\text{Operating exposure}} \]</div>
+<p>The exposure could be operating hours, cycles, units produced, or another measure appropriate to the equipment.</p>
+<p>Use consistent failure definitions and comparable operating conditions. A reduction in recorded alarms may result from a change in logging rather than a real improvement in reliability.</p>
+<h2 id="31-common-rca-mistakes">31. Common RCA Mistakes</h2>
+<ul>
+<li>Treating the alarm message as the root cause.</li>
+<li>Replacing a component without investigating repeated failure.</li>
+<li>Selecting a cause before collecting evidence.</li>
+<li>Assuming that temporal sequence alone proves causation.</li>
+<li>Ignoring clock synchronization and missing diagnostic records.</li>
+<li>Using 5 Whys as a checklist rather than testing each explanation.</li>
+<li>Stopping at "operator error" without investigating the system.</li>
+<li>Treating a fishbone diagram as proof.</li>
+<li>Ignoring contributing factors and shared dependencies.</li>
+<li>Changing PLC logic or drive parameters without evidence.</li>
+<li>Increasing timers to hide a missing feedback condition.</li>
+<li>Failing to inspect equivalent machines for common risks.</li>
+<li>Closing an RCA without a corrective action plan when one is required.</li>
+<li>Declaring success after a short test that does not represent normal operation.</li>
+<li>Failing to revise the investigation when the original hypothesis is disproved.</li>
+</ul>
+<h2 id="32-practical-rca-checklist">32. Practical RCA Checklist</h2>
+<ul>
+<li>The problem is defined using observable facts.</li>
+<li>Equipment and personnel safety are addressed.</li>
+<li>Relevant fault evidence is preserved.</li>
+<li>Alarm history and the event timeline are reviewed.</li>
+<li>Previous breakdowns and maintenance actions are examined.</li>
+<li>Plausible causes are identified before selecting a conclusion.</li>
+<li>Hypotheses are tested against supporting and contradictory evidence.</li>
+<li>The failure mechanism is established to the required level of confidence.</li>
+<li>Direct causes, contributing factors, and systemic weaknesses are distinguished.</li>
+<li>Human factors are investigated without defaulting to blame.</li>
+<li>Corrective actions address the verified causes.</li>
+<li>Equivalent equipment and shared risks are assessed where appropriate.</li>
+<li>Functional acceptance criteria are defined.</li>
+<li>Effectiveness monitoring is appropriate to the failure mode.</li>
+<li>CAR or CAPA records are linked where required.</li>
+<li>Findings are used to improve maintenance, design, or operating standards.</li>
+</ul>
+<h2 id="33-interview-questions-and-answers">33. Interview Questions and Answers</h2>
+<p>Q1. What is Root Cause Analysis?</p>
+<p>RCA is a structured investigation that identifies and verifies the underlying causes of a failure so effective actions can be taken to prevent recurrence.</p>
+<p>Q2. What is the difference between a symptom and a root cause?</p>
+<p>A symptom is the observable indication of a problem. A root cause is an evidence-supported underlying condition that explains why the failure occurred and requires action.</p>
+<p>Q3. Why is replacing a failed component not always sufficient?</p>
+<p>The component may have failed because of an external condition, such as excessive vibration, incorrect supply, contamination, or poor installation. Replacing it without addressing that condition may lead to recurrence.</p>
+<p>Q4. What is the 5 Whys method?</p>
+<p>It is a technique that repeatedly asks why a failure occurred to develop a chain of explanations. Each explanation must be supported by evidence.</p>
+<p>Q5. What is a fishbone diagram?</p>
+<p>It is a structured method for organizing possible causes into categories such as machine, method, material, people, measurement, and environment.</p>
+<p>Q6. What is Fault Tree Analysis?</p>
+<p>FTA is a method that works backward from an undesired event and models possible causes through logical relationships such as AND and OR gates.</p>
+<p>Q7. What is the difference between RCA and FMEA?</p>
+<p>RCA investigates a particular failure that has occurred. FMEA systematically examines potential failure modes, their effects, and associated controls, often before failures occur.</p>
+<p>Q8. How do you investigate a recurring PLC fault?</p>
+<p>Review the diagnostic buffer, event timeline, relevant I/O states, supply conditions, network diagnostics, program changes, and previous repairs. Test possible causes and confirm the failure mechanism before selecting corrective actions.</p>
+<p>Q9. How do you know whether the root cause is correct?</p>
+<p>The explanation must fit the observed evidence, account for the failure mechanism, withstand reasonable alternative hypotheses, and lead to corrective actions that can be verified.</p>
+<p>Q10. What is the difference between RCA and CAPA?</p>
+<p>RCA investigates and establishes causes. CAPA is a broader process for managing corrective and, where applicable, preventive or risk-reduction actions, including implementation and effectiveness verification.</p>
+<p>Q11. Why should similar machines be inspected?</p>
+<p>They may share the same design, installation practice, component batch, maintenance method, or operating condition. Inspecting them can identify a broader risk before another failure occurs.</p>
+<p>Q12. What makes an RCA successful?</p>
+<p>A successful RCA is supported by reliable evidence, identifies the relevant causes, leads to appropriate corrective actions, and demonstrates through verification that the risk of recurrence has been reduced.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\22_Maint_Logs\07_CAPA - CAPA</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

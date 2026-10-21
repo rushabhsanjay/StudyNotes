@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Breakdown Maintenance: Fix After Failure</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Breakdown Maintenance: Fix After Failure</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a><ul>
+<li><a href="#example">Example</a></li>
+</ul>
+</li>
+<li><a href="#2-purpose-and-operating-principle">2. Purpose and Operating Principle</a></li>
+<li><a href="#3-important-terminology">3. Important Terminology</a></li>
+<li><a href="#4-breakdown-maintenance-versus-other-maintenance-strategies">4. Breakdown Maintenance Versus Other Maintenance Strategies</a></li>
+<li><a href="#5-types-of-breakdown">5. Types of Breakdown</a><ul>
+<li><a href="#51-complete-breakdown">5.1 Complete breakdown</a></li>
+<li><a href="#52-partial-breakdown">5.2 Partial breakdown</a></li>
+<li><a href="#53-intermittent-breakdown">5.3 Intermittent breakdown</a></li>
+<li><a href="#54-catastrophic-breakdown">5.4 Catastrophic breakdown</a></li>
+<li><a href="#55-progressive-and-sudden-failure">5.5 Progressive and sudden failure</a></li>
+</ul>
+</li>
+<li><a href="#6-when-breakdown-maintenance-is-appropriate">6. When Breakdown Maintenance Is Appropriate</a></li>
+<li><a href="#7-when-breakdown-maintenance-is-unsuitable">7. When Breakdown Maintenance Is Unsuitable</a></li>
+<li><a href="#8-breakdown-maintenance-in-industrial-automation">8. Breakdown Maintenance in Industrial Automation</a><ul>
+<li><a href="#81-mechanical-systems">8.1 Mechanical systems</a></li>
+<li><a href="#82-electrical-systems">8.2 Electrical systems</a></li>
+<li><a href="#83-plc-and-control-systems">8.3 PLC and control systems</a></li>
+<li><a href="#84-hmi-scada-and-industrial-pcs">8.4 HMI, SCADA, and industrial PCs</a></li>
+<li><a href="#85-drives-and-motion-systems">8.5 Drives and motion systems</a></li>
+<li><a href="#86-sensors-and-instrumentation">8.6 Sensors and instrumentation</a></li>
+</ul>
+</li>
+<li><a href="#9-breakdown-response-procedure">9. Breakdown Response Procedure</a><ul>
+<li><a href="#91-step-1-detect-and-report-the-failure">9.1 Step 1: Detect and report the failure</a></li>
+<li><a href="#92-step-2-make-the-equipment-safe">9.2 Step 2: Make the equipment safe</a></li>
+<li><a href="#93-step-3-assess-operational-impact">9.3 Step 3: Assess operational impact</a></li>
+<li><a href="#94-step-4-diagnose-systematically">9.4 Step 4: Diagnose systematically</a></li>
+<li><a href="#95-step-5-repair-or-replace">9.5 Step 5: Repair or replace</a></li>
+<li><a href="#96-step-6-verify-the-repair">9.6 Step 6: Verify the repair</a></li>
+<li><a href="#97-step-7-release-equipment">9.7 Step 7: Release equipment</a></li>
+<li><a href="#98-step-8-record-and-review">9.8 Step 8: Record and review</a></li>
+</ul>
+</li>
+<li><a href="#10-fault-diagnosis-techniques">10. Fault Diagnosis Techniques</a><ul>
+<li><a href="#101-visual-inspection">10.1 Visual inspection</a></li>
+<li><a href="#102-measurement-based-diagnosis">10.2 Measurement-based diagnosis</a></li>
+<li><a href="#103-signal-path-diagnosis">10.3 Signal-path diagnosis</a></li>
+<li><a href="#104-fault-isolation">10.4 Fault isolation</a></li>
+</ul>
+</li>
+<li><a href="#11-breakdown-maintenance-in-plc-controlled-systems">11. Breakdown Maintenance in PLC-Controlled Systems</a><ul>
+<li><a href="#111-common-symptoms-and-possible-causes">11.1 Common symptoms and possible causes</a></li>
+<li><a href="#112-important-plc-checks">11.2 Important PLC checks</a></li>
+</ul>
+</li>
+<li><a href="#12-breakdown-maintenance-and-spare-parts">12. Breakdown Maintenance and Spare Parts</a><ul>
+<li><a href="#121-critical-spare-parts-planning">12.1 Critical spare-parts planning</a></li>
+<li><a href="#122-repair-versus-replacement">12.2 Repair versus replacement</a></li>
+<li><a href="#123-obsolete-components">12.3 Obsolete components</a></li>
+</ul>
+</li>
+<li><a href="#13-breakdown-maintenance-records-and-sap">13. Breakdown Maintenance Records and SAP</a><ul>
+<li><a href="#131-typical-information-recorded">13.1 Typical information recorded</a></li>
+<li><a href="#132-typical-workflow">13.2 Typical workflow</a></li>
+<li><a href="#133-why-coding-quality-matters">13.3 Why coding quality matters</a></li>
+</ul>
+</li>
+<li><a href="#14-cost-of-breakdown-maintenance">14. Cost of Breakdown Maintenance</a><ul>
+<li><a href="#141-example-calculation">14.1 Example calculation</a></li>
+<li><a href="#142-hidden-costs">14.2 Hidden costs</a></li>
+</ul>
+</li>
+<li><a href="#15-breakdown-maintenance-performance-metrics">15. Breakdown Maintenance Performance Metrics</a><ul>
+<li><a href="#151-mean-time-to-repair-mttr">15.1 Mean Time to Repair (MTTR)</a></li>
+<li><a href="#152-mean-time-between-failures-mtbf">15.2 Mean Time Between Failures (MTBF)</a></li>
+<li><a href="#153-availability">15.3 Availability</a></li>
+<li><a href="#154-other-useful-kpis">15.4 Other useful KPIs</a></li>
+</ul>
+</li>
+<li><a href="#16-failure-analysis-and-recurrence-prevention">16. Failure Analysis and Recurrence Prevention</a><ul>
+<li><a href="#161-when-to-investigate">16.1 When to investigate</a></li>
+<li><a href="#162-failure-mode-mechanism-and-cause">16.2 Failure mode, mechanism, and cause</a></li>
+<li><a href="#163-corrective-and-preventive-improvements">16.3 Corrective and preventive improvements</a></li>
+</ul>
+</li>
+<li><a href="#17-transition-from-breakdown-maintenance-to-a-better-strategy">17. Transition from Breakdown Maintenance to a Better Strategy</a><ul>
+<li><a href="#example-cabinet-cooling-fan">Example: Cabinet cooling fan</a></li>
+</ul>
+</li>
+<li><a href="#18-practical-industrial-example-vfd-driven-conveyor-breakdown">18. Practical Industrial Example: VFD-Driven Conveyor Breakdown</a><ul>
+<li><a href="#181-initial-response">18.1 Initial response</a></li>
+<li><a href="#182-diagnosis">18.2 Diagnosis</a></li>
+<li><a href="#183-repair">18.3 Repair</a></li>
+<li><a href="#184-verification">18.4 Verification</a></li>
+<li><a href="#185-follow-up">18.5 Follow-up</a></li>
+</ul>
+</li>
+<li><a href="#19-common-mistakes-in-breakdown-maintenance">19. Common Mistakes in Breakdown Maintenance</a></li>
+<li><a href="#20-standards-and-technical-references">20. Standards and Technical References</a></li>
+<li><a href="#21-breakdown-maintenance-checklist">21. Breakdown Maintenance Checklist</a><ul>
+<li><a href="#before-repair">Before repair</a></li>
+<li><a href="#during-repair">During repair</a></li>
+<li><a href="#after-repair">After repair</a></li>
+</ul>
+</li>
+<li><a href="#22-final-principles">22. Final Principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>Breakdown maintenance is a maintenance approach in which equipment is repaired after it has failed or lost its required function.</p>
+<p>The failure may cause complete equipment stoppage, partial loss of function, degraded performance, repeated alarms, or an inability to meet process requirements.</p>
+<p>The basic principle is to allow equipment to operate until a failure occurs, then restore its function through repair or replacement.</p>
+<p>This approach is often called run-to-failure maintenance when the decision to operate until failure is deliberate and based on an assessment that the consequences are acceptable.</p>
+<p>However, not every breakdown is planned. An unexpected failure during normal operation is simply an unplanned breakdown, regardless of the maintenance strategy.</p>
+<h3 id="example">Example</h3>
+<p>A cooling fan in an industrial control cabinet operates normally for several years. Its bearings eventually seize, the fan stops, and the cabinet temperature rises. Maintenance replaces the fan, checks for overheating damage, and returns the cabinet to service.</p>
+<p>The repair performed after the failure is breakdown maintenance.</p>
+<h2 id="2-purpose-and-operating-principle">2. Purpose and Operating Principle</h2>
+<p>Breakdown maintenance focuses on restoring equipment after its required function has been lost.</p>
+<p>Its main objectives are:</p>
+<ul>
+<li>Restore equipment operation as quickly and safely as possible.</li>
+<li>Minimize production downtime.</li>
+<li>Repair or replace failed components.</li>
+<li>Protect personnel, equipment, and product quality during recovery.</li>
+<li>Record the failure and repair details.</li>
+<li>Identify repeat failures and determine whether a different maintenance strategy is needed.</li>
+</ul>
+<p>The central maintenance sequence is:</p>
+<pre><code>Equipment Operating Normally
+        ↓
+Failure Occurs
+        ↓
+Failure Detected and Reported
+        ↓
+Equipment Made Safe
+        ↓
+Fault Diagnosed
+        ↓
+Failed Component Repaired or Replaced
+        ↓
+Functional Verification
+        ↓
+Equipment Released for Operation
+        ↓
+Failure and Repair Records Updated
+</code></pre>
+<p>Breakdown maintenance does not necessarily mean repairing equipment without preparation. A plant can deliberately use run-to-failure for selected noncritical assets while keeping spare parts, replacement procedures, and repair resources ready.</p>
+<h2 id="3-important-terminology">3. Important Terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Failure</td>
+<td>Loss of the ability to perform a required function</td>
+</tr>
+<tr>
+<td>Breakdown</td>
+<td>A failure that interrupts or seriously impairs equipment operation</td>
+</tr>
+<tr>
+<td>Fault</td>
+<td>An abnormal condition that may cause or indicate a failure</td>
+</tr>
+<tr>
+<td>Symptom</td>
+<td>An observable indication of a problem, such as noise, overheating, or an alarm</td>
+</tr>
+<tr>
+<td>Defect</td>
+<td>A condition in which a component or system does not meet a requirement</td>
+</tr>
+<tr>
+<td>Repair</td>
+<td>Action taken to restore an item to an acceptable condition</td>
+</tr>
+<tr>
+<td>Replacement</td>
+<td>Removal of a failed component and installation of another component</td>
+</tr>
+<tr>
+<td>Restoration</td>
+<td>Returning equipment to the required operating condition</td>
+</tr>
+<tr>
+<td>Downtime</td>
+<td>Time during which equipment is unavailable for its required function</td>
+</tr>
+<tr>
+<td>Failure mode</td>
+<td>The specific way in which an item fails</td>
+</tr>
+<tr>
+<td>Failure cause</td>
+<td>The underlying reason the failure occurred</td>
+</tr>
+<tr>
+<td>Secondary damage</td>
+<td>Additional damage resulting from the original failure</td>
+</tr>
+<tr>
+<td>Repeat failure</td>
+<td>Recurrence of the same or a closely related failure</td>
+</tr>
+<tr>
+<td>Run-to-failure</td>
+<td>A deliberate strategy of operating selected equipment until failure, then repairing or replacing it</td>
+</tr>
+</tbody>
+</table>
+<p>A fault can exist before a breakdown. For example, a motor bearing may become noisy and develop increasing vibration while the motor is still running. If the condition is not addressed and the bearing subsequently seizes, the equipment has experienced a breakdown.</p>
+<h2 id="4-breakdown-maintenance-versus-other-maintenance-strategies">4. Breakdown Maintenance Versus Other Maintenance Strategies</h2>
+<p>Breakdown maintenance is one approach within a wider maintenance system. It should not be confused with corrective, preventive, predictive, or condition-based maintenance.</p>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Basis for action</th>
+<th>Typical example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Breakdown maintenance</td>
+<td>Equipment has failed</td>
+<td>Replace a failed contactor after the machine stops</td>
+</tr>
+<tr>
+<td>Corrective maintenance</td>
+<td>A detected fault or deficiency requires correction</td>
+<td>Repair a loose terminal discovered during inspection</td>
+</tr>
+<tr>
+<td>Preventive maintenance</td>
+<td>A predefined time, usage, or cycle interval</td>
+<td>Replace a filter every specified number of operating hours</td>
+</tr>
+<tr>
+<td>Condition-based maintenance</td>
+<td>Measured condition indicates maintenance is needed</td>
+<td>Replace a bearing when vibration exceeds an assessed limit</td>
+</tr>
+<tr>
+<td>Predictive maintenance</td>
+<td>Data and analysis estimate deterioration or failure risk</td>
+<td>Estimate bearing remaining life using vibration trends</td>
+</tr>
+<tr>
+<td>Reliability-centered maintenance</td>
+<td>Maintenance strategy selected according to functions, failure modes, and consequences</td>
+<td>Use condition monitoring for a critical motor and run-to-failure for a noncritical indicator lamp</td>
+</tr>
+</tbody>
+</table>
+<p>Key distinction: Corrective maintenance is a broader category of work intended to correct a fault. Breakdown maintenance is associated with failure having already occurred. A breakdown repair is therefore generally corrective work, but corrective maintenance can occur before a complete breakdown.</p>
+<p>Preventive maintenance may also be used after a breakdown if the investigation reveals that scheduled inspections or component replacement could reduce recurrence.</p>
+<h2 id="5-types-of-breakdown">5. Types of Breakdown</h2>
+<h3 id="51-complete-breakdown">5.1 Complete breakdown</h3>
+<p>The equipment cannot perform its required function.</p>
+<p>Examples:</p>
+<ul>
+<li>A motor fails to start.</li>
+<li>A PLC power supply fails and the control system shuts down.</li>
+<li>A CNC machine loses the ability to execute its production cycle.</li>
+<li>A hydraulic pump stops supplying pressure.</li>
+</ul>
+<h3 id="52-partial-breakdown">5.2 Partial breakdown</h3>
+<p>Some functions remain available, but the equipment cannot perform its full required duty.</p>
+<p>Examples:</p>
+<ul>
+<li>One station in an automated line is unavailable.</li>
+<li>A machine can operate manually but not automatically.</li>
+<li>A test bench can run an engine but cannot record a required measurement.</li>
+<li>A conveyor runs at reduced speed because one drive is unavailable.</li>
+</ul>
+<h3 id="53-intermittent-breakdown">5.3 Intermittent breakdown</h3>
+<p>The failure appears and disappears, making diagnosis difficult.</p>
+<p>Examples:</p>
+<ul>
+<li>An encoder signal drops out intermittently.</li>
+<li>A PLC communication connection repeatedly disconnects.</li>
+<li>A sensor works when cold but fails after warming up.</li>
+<li>An industrial PC freezes only during high data-processing loads.</li>
+</ul>
+<p>Intermittent faults should not be dismissed merely because the machine operates normally when maintenance arrives.</p>
+<h3 id="54-catastrophic-breakdown">5.4 Catastrophic breakdown</h3>
+<p>A major failure causes severe equipment damage, substantial operational disruption, or potentially dangerous consequences.</p>
+<p>Examples include a motor winding failure with associated damage, a mechanical shaft fracture, or a major hydraulic-system failure.</p>
+<p>Catastrophic failures require appropriate emergency response, investigation, and escalation. They are not suitable candidates for casual run-to-failure planning.</p>
+<h3 id="55-progressive-and-sudden-failure">5.5 Progressive and sudden failure</h3>
+<ul>
+<li>Progressive failure: Deterioration develops over time, such as increasing bearing vibration or insulation degradation.</li>
+<li>Sudden failure: Function is lost rapidly, such as a fuse rupturing or a semiconductor device failing abruptly.</li>
+</ul>
+<p>A sudden failure may still have detectable precursors, and a progressive failure may remain undetected until the equipment stops. The distinction describes the failure's development, not whether it can be predicted with certainty.</p>
+<h2 id="6-when-breakdown-maintenance-is-appropriate">6. When Breakdown Maintenance Is Appropriate</h2>
+<p>Run-to-failure can be reasonable when the consequences of failure are low and recovery is straightforward.</p>
+<p>Typical candidates include:</p>
+<ul>
+<li>Noncritical indicator lamps.</li>
+<li>Inexpensive auxiliary fans with no unacceptable thermal consequence.</li>
+<li>Simple devices with readily available replacements.</li>
+<li>Redundant components where loss of one unit does not compromise required performance.</li>
+<li>Equipment whose preventive maintenance cost exceeds the justified risk and lifecycle cost of occasional failure.</li>
+</ul>
+<p>Before selecting this approach, assess:</p>
+<ul>
+<li>Safety and environmental consequences.</li>
+<li>Production and quality impact.</li>
+<li>Secondary damage that could occur after failure.</li>
+<li>Repair time and accessibility.</li>
+<li>Availability of spare parts.</li>
+<li>Repair skills and tools.</li>
+<li>Effects on upstream and downstream equipment.</li>
+<li>Whether failure can be detected promptly.</li>
+<li>Applicable legal, contractual, and manufacturer requirements.</li>
+</ul>
+<p>An inexpensive component is not automatically suitable for run-to-failure. A low-cost sensor may be responsible for detecting a hazardous condition, making its failure consequential despite its purchase price.</p>
+<h2 id="7-when-breakdown-maintenance-is-unsuitable">7. When Breakdown Maintenance Is Unsuitable</h2>
+<p>Avoid relying solely on breakdown maintenance when failure could result in:</p>
+<ul>
+<li>Injury or loss of life.</li>
+<li>Fire, electrical shock, or uncontrolled movement.</li>
+<li>Environmental release.</li>
+<li>Damage to expensive equipment.</li>
+<li>Loss of critical production.</li>
+<li>Product defects or invalid test results.</li>
+<li>Loss or corruption of important process data.</li>
+<li>Long recovery times because parts are obsolete or unavailable.</li>
+<li>Failure of a legally or contractually required protective function.</li>
+</ul>
+<p>Examples include safety interlocks, emergency-stop circuits, critical protection relays, essential cooling systems, and components whose failure can cause major secondary damage.</p>
+<p>Such equipment needs a maintenance strategy based on risk, design requirements, applicable regulations, and manufacturer guidance. Depending on the asset, this may include inspection, functional testing, condition monitoring, preventive replacement, redundancy, or other controls.</p>
+<h2 id="8-breakdown-maintenance-in-industrial-automation">8. Breakdown Maintenance in Industrial Automation</h2>
+<p>Modern industrial equipment combines mechanical, electrical, electronic, software, and communication systems. A breakdown can originate in any of these layers, and the visible symptom may occur somewhere else.</p>
+<h3 id="81-mechanical-systems">8.1 Mechanical systems</h3>
+<p>Typical failures include:</p>
+<ul>
+<li>Bearing seizure or excessive wear.</li>
+<li>Coupling damage.</li>
+<li>Belt or chain breakage.</li>
+<li>Shaft misalignment.</li>
+<li>Lubrication failure.</li>
+<li>Gearbox damage.</li>
+<li>Jammed mechanisms.</li>
+<li>Excessive backlash or mechanical looseness.</li>
+</ul>
+<p>Diagnosis may require visual inspection, temperature measurement, vibration analysis, alignment checks, lubrication inspection, or dimensional measurement.</p>
+<h3 id="82-electrical-systems">8.2 Electrical systems</h3>
+<p>Typical failures include:</p>
+<ul>
+<li>Blown fuses.</li>
+<li>Tripped circuit breakers.</li>
+<li>Contactor coil failure.</li>
+<li>Overloaded motors.</li>
+<li>Loose terminals.</li>
+<li>Cable damage.</li>
+<li>Insulation breakdown.</li>
+<li>Failed power supplies.</li>
+<li>Incorrect phase sequence or phase loss.</li>
+</ul>
+<p>Diagnosis requires appropriate electrical test instruments, circuit diagrams, isolation procedures, and knowledge of the relevant circuit.</p>
+<h3 id="83-plc-and-control-systems">8.3 PLC and control systems</h3>
+<p>Typical failures include:</p>
+<ul>
+<li>PLC power supply failure.</li>
+<li>CPU or I/O module faults.</li>
+<li>Communication loss.</li>
+<li>Failed input or output channels.</li>
+<li>Damaged field wiring.</li>
+<li>Incorrect controller configuration.</li>
+<li>Program faults.</li>
+<li>Failed or corrupted storage media.</li>
+</ul>
+<p>A PLC fault indication does not automatically prove that the PLC itself is defective. The root cause may be field power, wiring, an external device, a network issue, or a process condition.</p>
+<h3 id="84-hmi-scada-and-industrial-pcs">8.4 HMI, SCADA, and industrial PCs</h3>
+<p>Typical failures include:</p>
+<ul>
+<li>HMI application crash.</li>
+<li>Industrial PC failure.</li>
+<li>Database service interruption.</li>
+<li>Incorrect network configuration.</li>
+<li>Storage failure.</li>
+<li>Missing runtime dependencies.</li>
+<li>Communication driver failure.</li>
+<li>Corrupted application configuration.</li>
+</ul>
+<p>The recovery plan should preserve application versions, configuration files, licenses, backups, and relevant data. Replacing the computer without recovering the correct configuration may not restore the system.</p>
+<h3 id="85-drives-and-motion-systems">8.5 Drives and motion systems</h3>
+<p>Typical failures include:</p>
+<ul>
+<li>VFD overcurrent or overtemperature trips.</li>
+<li>DC bus undervoltage or overvoltage.</li>
+<li>Servo following error.</li>
+<li>Encoder failure.</li>
+<li>Motor insulation fault.</li>
+<li>Brake failure.</li>
+<li>Incorrect drive parameters.</li>
+<li>Mechanical binding.</li>
+</ul>
+<p>Fault codes provide diagnostic evidence, but they must be interpreted alongside operating conditions, electrical measurements, mechanical checks, and manufacturer documentation.</p>
+<h3 id="86-sensors-and-instrumentation">8.6 Sensors and instrumentation</h3>
+<p>Typical failures include:</p>
+<ul>
+<li>Proximity sensor failure.</li>
+<li>Photoelectric sensor contamination.</li>
+<li>Broken sensor cable.</li>
+<li>Incorrect transmitter output.</li>
+<li>Pressure-switch failure.</li>
+<li>Encoder signal loss.</li>
+<li>Instrument drift or calibration failure.</li>
+</ul>
+<p>A sensor's indicator LED may illuminate even when the PLC does not receive the expected signal. The complete signal path must be checked, including sensor power, output type, wiring, terminal connections, I/O status, and control logic.</p>
+<h2 id="9-breakdown-response-procedure">9. Breakdown Response Procedure</h2>
+<p>A disciplined breakdown response minimizes recovery time without compromising safety or creating additional damage.</p>
+<h3 id="91-step-1-detect-and-report-the-failure">9.1 Step 1: Detect and report the failure</h3>
+<p>The operator or monitoring system identifies abnormal operation and reports the problem.</p>
+<p>Capture the following information where available:</p>
+<ul>
+<li>Equipment ID and exact location.</li>
+<li>Date and time of failure.</li>
+<li>Operating mode and production condition.</li>
+<li>Alarm codes and fault history.</li>
+<li>Symptoms immediately before failure.</li>
+<li>Whether the failure is continuous or intermittent.</li>
+<li>Any unusual noise, smell, vibration, temperature, or visible damage.</li>
+<li>Impact on production, quality, and adjacent equipment.</li>
+</ul>
+<p>Avoid repeatedly resetting a tripped device without understanding why it tripped. A protective trip is evidence, not an inconvenience invented by a particularly unfriendly circuit breaker.</p>
+<h3 id="92-step-2-make-the-equipment-safe">9.2 Step 2: Make the equipment safe</h3>
+<p>Before troubleshooting, assess the hazards and follow the approved safe-work procedure.</p>
+<p>Depending on the equipment, this may require:</p>
+<ul>
+<li>Stopping the machine using the appropriate procedure.</li>
+<li>Isolating electrical, pneumatic, hydraulic, mechanical, thermal, and other hazardous energy sources.</li>
+<li>Applying lockout/tagout where required.</li>
+<li>Verifying the absence of hazardous energy.</li>
+<li>Discharging stored electrical energy and accounting for rotating or gravity-loaded mechanisms.</li>
+<li>Preventing unexpected startup or remote operation.</li>
+<li>Using appropriate PPE and test instruments.</li>
+</ul>
+<p>An emergency stop is not necessarily an energy-isolation device. Likewise, a PLC command to stop a motor does not prove that the motor is electrically isolated.</p>
+<p>Troubleshooting energized equipment is permitted only where justified, authorized, and controlled under applicable procedures. Safety must not be sacrificed to reduce downtime.</p>
+<h3 id="93-step-3-assess-operational-impact">9.3 Step 3: Assess operational impact</h3>
+<p>Determine whether the failure affects one machine, an entire line, or supporting infrastructure.</p>
+<p>Consider:</p>
+<ul>
+<li>Production loss per minute or hour.</li>
+<li>Work-in-progress and product quality.</li>
+<li>Upstream and downstream bottlenecks.</li>
+<li>Safety and environmental implications.</li>
+<li>Available redundant equipment.</li>
+<li>Expected repair duration.</li>
+<li>Availability of qualified personnel and spare parts.</li>
+</ul>
+<p>The objective is to establish the correct response priority, not simply to repair whichever machine is making the most noise.</p>
+<h3 id="94-step-4-diagnose-systematically">9.4 Step 4: Diagnose systematically</h3>
+<p>Use a structured sequence:</p>
+<ol>
+<li>Confirm the reported symptom.</li>
+<li>Review alarms, event logs, drawings, and recent maintenance history.</li>
+<li>Inspect the equipment for obvious defects.</li>
+<li>Check utilities and incoming supplies.</li>
+<li>Verify relevant inputs, outputs, interlocks, and communications.</li>
+<li>Test suspected components using appropriate methods.</li>
+<li>Identify the failed component or causal mechanism.</li>
+<li>Confirm the diagnosis before replacing parts where practical.</li>
+</ol>
+<p>Use measurements and observations to narrow the fault. Random component replacement may restore operation temporarily, but it increases cost and can introduce new faults.</p>
+<h3 id="95-step-5-repair-or-replace">9.5 Step 5: Repair or replace</h3>
+<p>Choose the appropriate repair based on technical condition, safety, reliability, cost, and availability.</p>
+<p>Typical actions include:</p>
+<ul>
+<li>Replacing a failed component.</li>
+<li>Repairing wiring or connectors.</li>
+<li>Correcting alignment or mechanical binding.</li>
+<li>Cleaning a contaminated sensor.</li>
+<li>Restoring a verified software configuration.</li>
+<li>Correcting a drive parameter under change control.</li>
+<li>Repairing a power supply or communication interface.</li>
+<li>Calling the OEM when specialist procedures or proprietary configuration are required.</li>
+</ul>
+<p>Before fitting a replacement, verify compatibility. Similar-looking components may differ in voltage, current rating, pinout, output type, firmware, communication protocol, safety rating, or configuration requirements.</p>
+<h3 id="96-step-6-verify-the-repair">9.6 Step 6: Verify the repair</h3>
+<p>Confirm that the equipment meets its required operating condition.</p>
+<p>Verification may include:</p>
+<ul>
+<li>Visual and mechanical inspection.</li>
+<li>Electrical measurements.</li>
+<li>I/O and communication checks.</li>
+<li>Functional and sequence testing.</li>
+<li>Testing relevant alarms and interlocks.</li>
+<li>Confirmation that protective functions remain effective.</li>
+<li>Checks for abnormal noise, temperature, vibration, or current.</li>
+<li>Production or quality verification where required.</li>
+</ul>
+<p>Test under representative operating conditions when safe and appropriate. A motor running without load does not necessarily prove that it will operate correctly under production load.</p>
+<h3 id="97-step-7-release-equipment">9.7 Step 7: Release equipment</h3>
+<p>Return equipment to production only after the required checks have passed and the designated authority has approved release.</p>
+<p>Confirm that:</p>
+<ul>
+<li>Tools, temporary connections, and removed components are accounted for.</li>
+<li>Guards and protective devices are restored.</li>
+<li>Isolation is removed under the authorized procedure.</li>
+<li>Personnel are clear of hazardous areas.</li>
+<li>The equipment operates as intended.</li>
+<li>Operators understand any approved restrictions.</li>
+<li>Relevant production and maintenance records are updated.</li>
+</ul>
+<h3 id="98-step-8-record-and-review">9.8 Step 8: Record and review</h3>
+<p>Document the failure and repair in the approved maintenance system.</p>
+<p>Record the symptom, cause if known, corrective work, parts consumed, labor, downtime, test results, software or parameter changes, and any follow-up action.</p>
+<p>If the cause remains uncertain, record it as undetermined rather than inventing a convenient explanation. Schedule further investigation if the risk or recurrence potential justifies it.</p>
+<h2 id="10-fault-diagnosis-techniques">10. Fault Diagnosis Techniques</h2>
+<h3 id="101-visual-inspection">10.1 Visual inspection</h3>
+<p>Check for:</p>
+<ul>
+<li>Burn marks or discoloration.</li>
+<li>Loose or damaged wiring.</li>
+<li>Broken connectors.</li>
+<li>Fluid leakage.</li>
+<li>Contamination.</li>
+<li>Mechanical interference.</li>
+<li>Damaged insulation.</li>
+<li>Unusual wear.</li>
+<li>Blocked cooling paths.</li>
+<li>Abnormal indicator states.</li>
+</ul>
+<p>Visual inspection is useful but cannot establish that an electrical circuit is safe or that an electronic component is functioning correctly.</p>
+<h3 id="102-measurement-based-diagnosis">10.2 Measurement-based diagnosis</h3>
+<p>Select instruments according to the fault and the hazards involved.</p>
+<table>
+<thead>
+<tr>
+<th>Instrument</th>
+<th>Typical application</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Digital multimeter</td>
+<td>Voltage, resistance, continuity, and suitable current measurements</td>
+</tr>
+<tr>
+<td>Clamp meter</td>
+<td>Current measurement without disconnecting the conductor, within instrument ratings</td>
+</tr>
+<tr>
+<td>Insulation resistance tester</td>
+<td>Insulation assessment where permitted by equipment and manufacturer procedures</td>
+</tr>
+<tr>
+<td>Oscilloscope</td>
+<td>Signal waveform, timing, noise, and transient analysis</td>
+</tr>
+<tr>
+<td>Loop calibrator</td>
+<td>Testing suitable industrial analog loops and instrumentation</td>
+</tr>
+<tr>
+<td>Portable vibration analyzer</td>
+<td>Rotating-equipment vibration diagnosis</td>
+</tr>
+<tr>
+<td>Thermal camera</td>
+<td>Detecting temperature patterns and possible hot spots</td>
+</tr>
+<tr>
+<td>Network diagnostic tools</td>
+<td>Communication, addressing, packet, and connection analysis</td>
+</tr>
+<tr>
+<td>Manufacturer programming software</td>
+<td>Controller diagnostics, drive fault history, and approved configuration checks</td>
+</tr>
+</tbody>
+</table>
+<p>An insulation resistance tester must not be connected indiscriminately to PLC inputs, electronic drives, sensors, or other sensitive electronics. Isolate or disconnect equipment as specified by the manufacturer before testing.</p>
+<h3 id="103-signal-path-diagnosis">10.3 Signal-path diagnosis</h3>
+<p>For a sensor connected to a PLC, check the complete path rather than only the sensor.</p>
+<pre><code>Physical Condition
+      ↓
+Sensor Detection
+      ↓
+Sensor Supply and Output
+      ↓
+Field Wiring and Terminals
+      ↓
+PLC Input Channel
+      ↓
+PLC Logic and Interlocks
+      ↓
+PLC Output or Network Command
+      ↓
+Actuator or Drive Response
+      ↓
+Actual Machine Behavior
+</code></pre>
+<p>The observed failure may originate at any point in this chain.</p>
+<p>For example, if a cylinder does not extend, possible causes include a missing PLC command, an output-channel fault, a wiring issue, a failed solenoid, insufficient pneumatic pressure, a jammed valve, or a mechanically blocked cylinder. Replacing the solenoid before checking the rest of the chain may accomplish very little.</p>
+<h3 id="104-fault-isolation">10.4 Fault isolation</h3>
+<p>Fault isolation means narrowing the problem to a subsystem or component through controlled tests.</p>
+<p>Useful methods include:</p>
+<ul>
+<li>Comparing a failed channel with an equivalent healthy channel.</li>
+<li>Checking power supplies and common references.</li>
+<li>Verifying signals at successive points.</li>
+<li>Reviewing diagnostic codes and event timestamps.</li>
+<li>Substituting a known-good component when safe, compatible, and justified.</li>
+<li>Checking whether the fault follows a component or remains with the circuit.</li>
+<li>Reproducing the fault under controlled conditions.</li>
+</ul>
+<p>Never swap components blindly where the swap could damage equipment, compromise safety, or change calibration.</p>
+<h2 id="11-breakdown-maintenance-in-plc-controlled-systems">11. Breakdown Maintenance in PLC-Controlled Systems</h2>
+<p>PLC-controlled equipment needs special care because software, hardware, field devices, and process conditions interact.</p>
+<h3 id="111-common-symptoms-and-possible-causes">11.1 Common symptoms and possible causes</h3>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible causes</th>
+<th>Initial diagnostic direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC CPU is not running</td>
+<td>Power supply fault, hardware fault, CPU fault, startup issue</td>
+<td>Check controller status, power, diagnostics, and hardware configuration</td>
+</tr>
+<tr>
+<td>Input remains OFF</td>
+<td>Sensor failure, missing supply, broken wire, incorrect input type, failed channel</td>
+<td>Check the sensor and signal at the input terminal and PLC diagnostics</td>
+</tr>
+<tr>
+<td>Output command is ON but actuator does not move</td>
+<td>Output fault, interlock, wiring issue, actuator failure, missing utility</td>
+<td>Check the commanded state, actual output, field circuit, and actuator</td>
+</tr>
+<tr>
+<td>PLC loses communication with remote I/O</td>
+<td>Network fault, power loss, cable damage, device configuration issue</td>
+<td>Check module status, network diagnostics, supply, addressing, and cabling</td>
+</tr>
+<tr>
+<td>Machine stops intermittently</td>
+<td>Loose connection, thermal issue, noise, intermittent sensor, communication loss</td>
+<td>Correlate timestamps, fault logs, and physical measurements</td>
+</tr>
+<tr>
+<td>VFD trips during acceleration</td>
+<td>Excessive load, short acceleration time, motor or cable issue, drive sizing or configuration issue</td>
+<td>Check fault history, load, motor data, current, and manufacturer guidance</td>
+</tr>
+<tr>
+<td>HMI shows stale data</td>
+<td>Communication failure, tag mapping error, runtime issue, stale-data handling</td>
+<td>Compare PLC value, communication status, HMI tag configuration, and timestamps</td>
+</tr>
+<tr>
+<td>Machine runs but produces incorrect results</td>
+<td>Calibration issue, incorrect sequence, process variation, sensor drift, data mapping error</td>
+<td>Verify measurement chain, process conditions, program logic, and quality records</td>
+</tr>
+</tbody>
+</table>
+<p>These are diagnostic starting points, not definitive diagnoses.</p>
+<h3 id="112-important-plc-checks">11.2 Important PLC checks</h3>
+<p>Before making program changes, establish:</p>
+<ul>
+<li>Correct controller identity and firmware.</li>
+<li>Current operating mode and fault state.</li>
+<li>Whether the online program matches the approved project.</li>
+<li>Whether the issue is caused by an input, output, interlock, or sequence condition.</li>
+<li>Whether retentive data, recipes, or configuration parameters are relevant.</li>
+<li>Whether the change requires a backup and approval.</li>
+<li>Whether the proposed test could cause unexpected motion.</li>
+</ul>
+<p>Never force PLC inputs or outputs casually to make a machine move. Forcing can bypass normal logic assumptions and create hazardous conditions. Use only approved diagnostic procedures with appropriate safeguards and remove all forces before release.</p>
+<h2 id="12-breakdown-maintenance-and-spare-parts">12. Breakdown Maintenance and Spare Parts</h2>
+<p>The speed of recovery depends heavily on whether the correct spare part is available.</p>
+<h3 id="121-critical-spare-parts-planning">12.1 Critical spare-parts planning</h3>
+<p>Maintain a record of:</p>
+<ul>
+<li>Equipment and component identification.</li>
+<li>Manufacturer and exact part number.</li>
+<li>Installed quantity and location.</li>
+<li>Recommended spare quantity.</li>
+<li>Stock on hand and reorder point.</li>
+<li>Lead time and supplier.</li>
+<li>Obsolescence status.</li>
+<li>Compatible successors and migration requirements.</li>
+<li>Storage conditions and shelf life where applicable.</li>
+<li>Criticality and consequences of stockout.</li>
+</ul>
+<p>Criticality should reflect failure consequences and recovery requirements, not merely purchase price.</p>
+<h3 id="122-repair-versus-replacement">12.2 Repair versus replacement</h3>
+<table>
+<thead>
+<tr>
+<th>Factor</th>
+<th>Repair</th>
+<th>Replacement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Recovery time</td>
+<td>May be short if the fault is simple and parts are available</td>
+<td>May be short if the correct spare is stocked</td>
+</tr>
+<tr>
+<td>Technical risk</td>
+<td>Depends on repair quality and the extent of damage</td>
+<td>Depends on compatibility and installation quality</td>
+</tr>
+<tr>
+<td>Cost</td>
+<td>May be lower, but diagnosis and labor can be substantial</td>
+<td>Includes purchase, installation, and configuration costs</td>
+</tr>
+<tr>
+<td>Reliability</td>
+<td>Depends on condition and quality of repair</td>
+<td>Depends on replacement quality and correct commissioning</td>
+</tr>
+<tr>
+<td>Configuration</td>
+<td>May preserve the existing configuration</td>
+<td>May require parameters, firmware, calibration, or software restoration</td>
+</tr>
+<tr>
+<td>Suitability</td>
+<td>Appropriate when the item is safely repairable and approved</td>
+<td>Preferred when repair is impractical, unsafe, uneconomic, or unsupported</td>
+</tr>
+</tbody>
+</table>
+<p>For programmable devices, replacement is not complete until required configuration and functional verification are finished.</p>
+<h3 id="123-obsolete-components">12.3 Obsolete components</h3>
+<p>If a failed component is obsolete, investigate the complete replacement chain:</p>
+<ol>
+<li>Confirm the exact installed model and application.</li>
+<li>Identify manufacturer-supported successors.</li>
+<li>Check electrical, mechanical, software, and communication compatibility.</li>
+<li>Determine whether wiring, panel layout, firmware, or software changes are needed.</li>
+<li>Assess cybersecurity and safety implications.</li>
+<li>Plan migration and validation.</li>
+<li>Update drawings, spare lists, and maintenance instructions.</li>
+</ol>
+<p>A successor part number is not proof of a drop-in replacement. Industrial equipment has a long tradition of making simple-looking substitutions surprisingly expensive.</p>
+<h2 id="13-breakdown-maintenance-records-and-sap">13. Breakdown Maintenance Records and SAP</h2>
+<p>A maintenance record provides the history needed to understand equipment reliability and plan future work.</p>
+<p>In an SAP Plant Maintenance environment, the exact workflow depends on the configured system, notification types, order types, and site procedures.</p>
+<h3 id="131-typical-information-recorded">13.1 Typical information recorded</h3>
+<ul>
+<li>Functional location or equipment number.</li>
+<li>Failure start and end timestamps.</li>
+<li>Notification or work-order reference.</li>
+<li>Breakdown indicator where configured.</li>
+<li>Symptom and damage codes.</li>
+<li>Cause and activity codes where available.</li>
+<li>Maintenance work performed.</li>
+<li>Labor and component consumption.</li>
+<li>Downtime and production impact.</li>
+<li>Technical completion and release status.</li>
+<li>Follow-up recommendations.</li>
+</ul>
+<h3 id="132-typical-workflow">13.2 Typical workflow</h3>
+<pre><code>Breakdown Reported
+      ↓
+Maintenance Notification Created
+      ↓
+Failure and Equipment Details Recorded
+      ↓
+Work Order Created or Assigned
+      ↓
+Diagnosis and Repair Performed
+      ↓
+Parts, Labor, and Downtime Recorded
+      ↓
+Functional Test and Equipment Release
+      ↓
+Technical Completion and Record Review
+      ↓
+Follow-Up Actions Created Where Required
+</code></pre>
+<p>This is a generic workflow, not a claim that every SAP installation uses identical transactions or mandatory steps.</p>
+<h3 id="133-why-coding-quality-matters">13.3 Why coding quality matters</h3>
+<p>If every failure is recorded as "electrical fault," the plant cannot reliably determine whether failures are caused by power supplies, sensors, drives, wiring, or PLC hardware.</p>
+<p>Use consistent failure codes and meaningful descriptions. Correct coding improves repeat-failure analysis, spare-parts planning, maintenance budgeting, and decisions about whether to change the maintenance strategy.</p>
+<h2 id="14-cost-of-breakdown-maintenance">14. Cost of Breakdown Maintenance</h2>
+<p>The cost of a breakdown is usually much greater than the cost of the replacement component.</p>
+<p>A practical total-cost model is:</p>
+<div class="math-display">\[ C\_{\text{breakdown}} = C\_{\text{repair}} + C\_{\text{labor}} + C\_{\text{downtime}} + C\_{\text{secondary damage}} + C\_{\text{quality}} + C\_{\text{recovery}} \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(C\_{\text{repair}}\)</span> includes parts and repair services.</li>
+<li><span class="math-inline">\(C\_{\text{labor}}\)</span> includes diagnosis, repair, testing, and coordination.</li>
+<li><span class="math-inline">\(C\_{\text{downtime}}\)</span> represents production or service loss.</li>
+<li><span class="math-inline">\(C\_{\text{secondary damage}}\)</span> covers damage beyond the initial failure.</li>
+<li><span class="math-inline">\(C\_{\text{quality}}\)</span> includes scrap, rework, retesting, and affected product.</li>
+<li><span class="math-inline">\(C\_{\text{recovery}}\)</span> includes restart, recalibration, restoration, and other recovery activities.</li>
+</ul>
+<p>Avoid double-counting labor or production losses when estimating costs.</p>
+<h3 id="141-example-calculation">14.1 Example calculation</h3>
+<p>Suppose a machine experiences a four-hour breakdown.</p>
+<ul>
+<li>Lost contribution margin: ₹12,000 per hour.</li>
+<li>Repair parts: ₹8,000.</li>
+<li>External service: ₹5,000.</li>
+<li>Additional scrap and retesting: ₹10,000.</li>
+</ul>
+<p>The estimated cost is:</p>
+<div class="math-display">\[ C = (4 \times ₹12{,}000) + ₹8{,}000 + ₹5{,}000 + ₹10{,}000 \]</div>
+<div class="math-display">\[ C = ₹71{,}000 \]</div>
+<p>This is an illustrative calculation. The ₹12,000 per hour should represent the appropriate measure of lost economic contribution, not automatically the machine's gross sales value.</p>
+<h3 id="142-hidden-costs">14.2 Hidden costs</h3>
+<p>Other effects may include:</p>
+<ul>
+<li>Delayed deliveries.</li>
+<li>Overtime and shift disruption.</li>
+<li>Emergency procurement.</li>
+<li>Damage to upstream or downstream equipment.</li>
+<li>Increased operator workload.</li>
+<li>Loss of customer confidence.</li>
+<li>Repeated engineering investigations.</li>
+<li>Reduced equipment life.</li>
+<li>Delayed preventive maintenance on other assets.</li>
+</ul>
+<p>These costs explain why run-to-failure is appropriate for some low-consequence assets but unsuitable for critical production equipment.</p>
+<h2 id="15-breakdown-maintenance-performance-metrics">15. Breakdown Maintenance Performance Metrics</h2>
+<p>Maintenance performance should be measured using consistent definitions and reliable records.</p>
+<h3 id="151-mean-time-to-repair-mttr">15.1 Mean Time to Repair (MTTR)</h3>
+<p>MTTR commonly means Mean Time to Repair, although some organizations use it to mean mean time to restore or recover. The local definition must be explicit.</p>
+<p>A simple repair-time calculation is:</p>
+<div class="math-display">\[ MTTR = \frac{\text{Total Repair Time}}{\text{Number of Repairs}} \]</div>
+<p>For example, if five repairs require a combined 10 hours of repair time:</p>
+<div class="math-display">\[ MTTR = \frac{10}{5} = 2 \text{ hours} \]</div>
+<p>This measures average repair time only if the recorded intervals are consistently defined. It may exclude waiting for spare parts, authorization, or specialist support.</p>
+<p>For operational performance, it is useful to track both hands-on repair time and total elapsed time until the asset is restored.</p>
+<h3 id="152-mean-time-between-failures-mtbf">15.2 Mean Time Between Failures (MTBF)</h3>
+<p>For a repairable asset operating over a defined observation period:</p>
+<div class="math-display">\[ MTBF = \frac{\text{Total Operating Time}}{\text{Number of Failures}} \]</div>
+<p>If a motor operates for 1,200 hours and experiences four relevant failures:</p>
+<div class="math-display">\[ MTBF = \frac{1200}{4} = 300 \text{ operating hours} \]</div>
+<p>MTBF is a statistical indicator, not a guarantee that the next failure will occur exactly 300 hours later. The result depends on failure definitions, operating conditions, and data quality.</p>
+<h3 id="153-availability">15.3 Availability</h3>
+<p>For a simplified steady-state model using MTBF and MTTR:</p>
+<div class="math-display">\[ A = \frac{MTBF}{MTBF + MTTR} \]</div>
+<p>If MTBF is 300 operating hours and MTTR is 2 hours:</p>
+<div class="math-display">\[ A = \frac{300}{302} \times 100\\% \approx 99.34\\% \]</div>
+<p>This formula assumes a simplified repairable-system model. Actual operational availability may be lower when logistics delays, waiting time, testing, planned downtime, and other losses are included.</p>
+<h3 id="154-other-useful-kpis">15.4 Other useful KPIs</h3>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>What it indicates</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Breakdown frequency</td>
+<td>How often relevant breakdowns occur</td>
+</tr>
+<tr>
+<td>Unplanned downtime</td>
+<td>Time lost due to unplanned equipment unavailability</td>
+</tr>
+<tr>
+<td>Repeat breakdown rate</td>
+<td>Whether failures recur after repair</td>
+</tr>
+<tr>
+<td>Emergency work percentage</td>
+<td>Dependence on reactive maintenance</td>
+</tr>
+<tr>
+<td>Maintenance cost per operating hour</td>
+<td>Cost relative to equipment utilization</td>
+</tr>
+<tr>
+<td>First-time repair success</td>
+<td>Whether repairs restore the function without immediate rework</td>
+</tr>
+<tr>
+<td>Spare availability</td>
+<td>Whether required parts are available when needed</td>
+</tr>
+<tr>
+<td>Mean time to detect</td>
+<td>Delay between failure onset and detection</td>
+</tr>
+<tr>
+<td>Mean time to respond</td>
+<td>Delay before maintenance begins the response</td>
+</tr>
+<tr>
+<td>Mean time to restore</td>
+<td>Total time until required function is restored</td>
+</tr>
+</tbody>
+</table>
+<p>Metrics should be interpreted together. A low MTTR can coexist with frequent failures, while a high MTBF can conceal one extremely costly breakdown.</p>
+<h2 id="16-failure-analysis-and-recurrence-prevention">16. Failure Analysis and Recurrence Prevention</h2>
+<p>A breakdown should trigger further investigation when its consequences, frequency, or cost justify it.</p>
+<p>Not every failed fuse requires a major engineering project. Repeated fuse failures, however, deserve investigation because replacing fuses without identifying the cause is a strategy for purchasing more fuses.</p>
+<h3 id="161-when-to-investigate">16.1 When to investigate</h3>
+<p>Consider formal root-cause analysis when:</p>
+<ul>
+<li>The same asset fails repeatedly.</li>
+<li>Failure causes substantial production loss.</li>
+<li>Safety or environmental consequences are possible.</li>
+<li>The same failure appears on several similar machines.</li>
+<li>The failure produces significant secondary damage.</li>
+<li>The cause remains uncertain after the initial repair.</li>
+<li>Replacement parts fail prematurely.</li>
+<li>The fault appears related to design, installation, or operating conditions.</li>
+</ul>
+<h3 id="162-failure-mode-mechanism-and-cause">16.2 Failure mode, mechanism, and cause</h3>
+<p>These terms help keep investigations precise.</p>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Failure mode</td>
+<td>Motor does not rotate</td>
+</tr>
+<tr>
+<td>Failure mechanism</td>
+<td>Bearing seizure</td>
+</tr>
+<tr>
+<td>Failure cause</td>
+<td>Lubrication breakdown associated with an unsuitable lubrication interval</td>
+</tr>
+<tr>
+<td>Contributing factor</td>
+<td>High operating temperature</td>
+</tr>
+<tr>
+<td>Detection method</td>
+<td>Increased vibration and temperature, followed by motor stoppage</td>
+</tr>
+<tr>
+<td>Corrective action</td>
+<td>Replace damaged bearing and correct the lubrication arrangement</td>
+</tr>
+<tr>
+<td>Recurrence-prevention action</td>
+<td>Review lubrication specifications and inspect equivalent motors</td>
+</tr>
+</tbody>
+</table>
+<p>The failure mode describes what happened. The mechanism describes how the physical failure developed. The cause explains why it developed under the actual operating conditions.</p>
+<h3 id="163-corrective-and-preventive-improvements">16.3 Corrective and preventive improvements</h3>
+<p>After the equipment is restored, consider whether further action is justified:</p>
+<ul>
+<li>Improve cooling or ventilation.</li>
+<li>Correct cable routing or shielding.</li>
+<li>Change a component specification.</li>
+<li>Improve lubrication or alignment.</li>
+<li>Update inspection intervals.</li>
+<li>Add condition monitoring.</li>
+<li>Improve alarm diagnostics.</li>
+<li>Modify the design to eliminate a recurring weak point.</li>
+<li>Improve spare-parts availability.</li>
+<li>Update operator or maintenance procedures.</li>
+</ul>
+<p>Any change must be assessed, approved, tested, and documented as required.</p>
+<h2 id="17-transition-from-breakdown-maintenance-to-a-better-strategy">17. Transition from Breakdown Maintenance to a Better Strategy</h2>
+<p>A plant should periodically review whether an asset remains suitable for run-to-failure.</p>
+<p>The following questions help guide the decision:</p>
+<ol>
+<li>How often does the equipment fail?</li>
+<li>What is the total cost of each failure?</li>
+<li>Could failure create an unacceptable safety, environmental, or quality consequence?</li>
+<li>Can deterioration be detected before function is lost?</li>
+<li>Is there an effective preventive task?</li>
+<li>Would condition monitoring provide actionable warning?</li>
+<li>Are spare parts and repair resources readily available?</li>
+<li>Would redesign or redundancy reduce the risk?</li>
+<li>Does the current approach comply with manufacturer and site requirements?</li>
+<li>Is the proposed alternative economically and technically justified?</li>
+</ol>
+<h3 id="example-cabinet-cooling-fan">Example: Cabinet cooling fan</h3>
+<p>Initially, a noncritical fan may be managed through run-to-failure because it is inexpensive, easily replaced, and failure consequences are low.</p>
+<p>The strategy should change if assessment shows that fan failure causes repeated overheating of PLC or drive hardware.</p>
+<p>Possible improvements include:</p>
+<ul>
+<li>Adding a cabinet temperature alarm.</li>
+<li>Inspecting the fan during preventive maintenance.</li>
+<li>Keeping an approved spare on site.</li>
+<li>Monitoring fan operation or temperature.</li>
+<li>Improving cabinet ventilation.</li>
+<li>Using redundant cooling where justified.</li>
+</ul>
+<p>The best strategy is the one that controls the asset's risk and lifecycle cost, not the one with the most sophisticated name.</p>
+<h2 id="18-practical-industrial-example-vfd-driven-conveyor-breakdown">18. Practical Industrial Example: VFD-Driven Conveyor Breakdown</h2>
+<p>Consider a conveyor that suddenly stops, and its VFD displays an overcurrent fault.</p>
+<h3 id="181-initial-response">18.1 Initial response</h3>
+<ul>
+<li>Stop the affected process safely and inform production.</li>
+<li>Check whether the conveyor is mechanically jammed.</li>
+<li>Review the VFD fault history and operating conditions.</li>
+<li>Apply required energy isolation before mechanical inspection.</li>
+<li>Assess whether product, adjacent equipment, or personnel are at risk.</li>
+</ul>
+<h3 id="182-diagnosis">18.2 Diagnosis</h3>
+<p>Possible causes include:</p>
+<ul>
+<li>A jammed conveyor.</li>
+<li>Damaged bearings.</li>
+<li>Incorrect acceleration settings.</li>
+<li>Motor or cable faults.</li>
+<li>Incorrect motor parameters.</li>
+<li>A defective drive.</li>
+<li>An excessive or sudden mechanical load.</li>
+</ul>
+<p>The fault code identifies a detected condition. It does not necessarily identify the root cause.</p>
+<h3 id="183-repair">18.3 Repair</h3>
+<p>Suppose inspection reveals that a damaged conveyor roller has caused mechanical binding.</p>
+<p>The maintenance team:</p>
+<ol>
+<li>Isolates the conveyor and verifies safe conditions.</li>
+<li>Removes the damaged roller using the approved procedure.</li>
+<li>Installs the correct replacement.</li>
+<li>Checks alignment, free movement, guards, and associated components.</li>
+<li>Removes tools and restores the equipment according to the authorized procedure.</li>
+</ol>
+<h3 id="184-verification">18.4 Verification</h3>
+<p>Under controlled conditions, the team verifies:</p>
+<ul>
+<li>The conveyor runs without abnormal resistance.</li>
+<li>The VFD does not trip under the specified test conditions.</li>
+<li>Motor current is within the expected range.</li>
+<li>Direction and speed are correct.</li>
+<li>Guards and interlocks function properly.</li>
+<li>The conveyor performs its required duty.</li>
+<li>The production process and downstream interfaces operate correctly.</li>
+</ul>
+<h3 id="185-follow-up">18.5 Follow-up</h3>
+<p>The work order records the original fault, the damaged roller, the cause, the repair, the test results, and the parts used.</p>
+<p>If similar rollers are failing prematurely, a further investigation may be required into loading, alignment, lubrication, material quality, or maintenance practices.</p>
+<p>This example illustrates the distinction between restoring the equipment and preventing the failure from recurring. The first is necessary after the breakdown; the second depends on evidence and an appropriate engineering decision.</p>
+<h2 id="19-common-mistakes-in-breakdown-maintenance">19. Common Mistakes in Breakdown Maintenance</h2>
+<table>
+<thead>
+<tr>
+<th>Mistake</th>
+<th>Consequence</th>
+<th>Better practice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Resetting a trip repeatedly</td>
+<td>Can worsen damage or conceal a dangerous condition</td>
+<td>Identify and assess the trip cause</td>
+</tr>
+<tr>
+<td>Replacing parts without diagnosis</td>
+<td>Unnecessary cost and unresolved root cause</td>
+<td>Confirm the failure with evidence</td>
+</tr>
+<tr>
+<td>Ignoring safety isolation</td>
+<td>Risk of injury or unexpected movement</td>
+<td>Follow approved isolation and verification procedures</td>
+</tr>
+<tr>
+<td>Using an incompatible spare</td>
+<td>Equipment damage or incorrect operation</td>
+<td>Verify model, ratings, compatibility, and configuration</td>
+</tr>
+<tr>
+<td>Skipping post-repair testing</td>
+<td>Defect may remain or a new fault may be introduced</td>
+<td>Perform appropriate functional verification</td>
+</tr>
+<tr>
+<td>Leaving temporary bypasses in place</td>
+<td>Protective functions may be compromised</td>
+<td>Remove unauthorized temporary changes and verify required protections</td>
+</tr>
+<tr>
+<td>Recording only "machine repaired"</td>
+<td>Weak failure history and poor analysis</td>
+<td>Record symptom, cause, action, parts, and results</td>
+</tr>
+<tr>
+<td>Failing to record downtime accurately</td>
+<td>Misleading reliability KPIs</td>
+<td>Define and consistently capture downtime boundaries</td>
+</tr>
+<tr>
+<td>Ignoring repeat failures</td>
+<td>Repeated costs and possible secondary damage</td>
+<td>Conduct risk-based recurrence analysis</td>
+</tr>
+<tr>
+<td>Treating all assets the same</td>
+<td>Resources are misallocated</td>
+<td>Select strategies according to asset criticality and risk</td>
+</tr>
+<tr>
+<td>Returning equipment without authorization</td>
+<td>Uncontrolled operational risk</td>
+<td>Follow the required release procedure</td>
+</tr>
+<tr>
+<td>Failing to update software or configuration records</td>
+<td>Future maintenance and recovery become unreliable</td>
+<td>Maintain traceable configuration and backup records</td>
+</tr>
+</tbody>
+</table>
+<h2 id="20-standards-and-technical-references">20. Standards and Technical References</h2>
+<p>Relevant requirements depend on the asset, industry, jurisdiction, and plant procedures.</p>
+<table>
+<thead>
+<tr>
+<th>Standard or framework</th>
+<th>Relevance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ISO 55000 series</td>
+<td>Asset management principles and management systems</td>
+</tr>
+<tr>
+<td>ISO 9001</td>
+<td>Control of nonconformities, corrective action, and documented information</td>
+</tr>
+<tr>
+<td>ISO 14224</td>
+<td>Reliability and maintenance data collection for applicable equipment industries</td>
+</tr>
+<tr>
+<td>IEC 60300 series</td>
+<td>Dependability management guidance</td>
+</tr>
+<tr>
+<td>IEC 60204-1</td>
+<td>Electrical equipment of machinery</td>
+</tr>
+<tr>
+<td>ISO 12100</td>
+<td>Machinery risk assessment and risk reduction</td>
+</tr>
+<tr>
+<td>ISO 13849 series</td>
+<td>Safety-related parts of control systems</td>
+</tr>
+<tr>
+<td>IEC 62061</td>
+<td>Functional safety of machinery control systems</td>
+</tr>
+<tr>
+<td>IEC 62443 series</td>
+<td>Industrial automation and control-system cybersecurity</td>
+</tr>
+</tbody>
+</table>
+<p>Standards are not interchangeable, and applicability must be checked against the actual equipment and requirements. Manufacturer manuals, approved electrical drawings, maintenance procedures, risk assessments, and site safety rules remain essential operational references.</p>
+<h2 id="21-breakdown-maintenance-checklist">21. Breakdown Maintenance Checklist</h2>
+<h3 id="before-repair">Before repair</h3>
+<ul>
+<li>Equipment and failure are correctly identified.</li>
+<li>Symptoms, alarms, and operating conditions are recorded.</li>
+<li>Production and safety impacts are assessed.</li>
+<li>Required isolation and other safety controls are applied.</li>
+<li>Relevant drawings, manuals, and fault history are available.</li>
+<li>A systematic diagnostic plan is established.</li>
+</ul>
+<h3 id="during-repair">During repair</h3>
+<ul>
+<li>The suspected cause is supported by evidence.</li>
+<li>Replacement parts are compatible and approved.</li>
+<li>Repair procedures and safety requirements are followed.</li>
+<li>Software and parameter changes are controlled.</li>
+<li>Secondary damage and related components are inspected.</li>
+<li>Findings and work performed are documented.</li>
+</ul>
+<h3 id="after-repair">After repair</h3>
+<ul>
+<li>The equipment passes the required functional tests.</li>
+<li>Relevant alarms, interlocks, and protective functions are verified.</li>
+<li>Guards and safety devices are restored.</li>
+<li>Tools and temporary connections are accounted for.</li>
+<li>The authorized person releases the equipment.</li>
+<li>Downtime, labor, parts, and repair details are recorded.</li>
+<li>Repeat-failure or improvement actions are created where justified.</li>
+<li>Relevant configuration and backup records are updated.</li>
+</ul>
+<h2 id="22-final-principles">22. Final Principles</h2>
+<ul>
+<li>Breakdown maintenance restores equipment after its required function has failed.</li>
+<li>It can be a valid planned strategy for selected low-consequence assets, but it is not appropriate for every machine or component.</li>
+<li>Safety, environmental, quality, and operational consequences must guide the maintenance strategy.</li>
+<li>Effective breakdown response combines safe isolation, systematic diagnosis, suitable repair, and functional verification.</li>
+<li>The visible symptom and the root cause are not necessarily the same.</li>
+<li>Reliable maintenance records enable meaningful analysis of failure frequency, downtime, repair time, cost, and recurrence.</li>
+<li>Repeated or high-consequence failures should trigger a review of the maintenance strategy.</li>
+<li>Restoring a machine to service is not the same as proving that the underlying failure mechanism has been eliminated.</li>
+</ul>
+<p>The central principle: Breakdown maintenance is the response after failure. A reliable maintenance system also uses the evidence from that failure to decide whether the same event should be allowed to happen again.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\17_Maint_Eng\01_Maint_Philosophy\02_Corrective - Corrective: Repair to restore function</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

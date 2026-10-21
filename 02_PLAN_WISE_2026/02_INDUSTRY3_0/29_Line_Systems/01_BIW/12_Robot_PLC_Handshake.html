@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robot-PLC Handshake in BIW Automation</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Robot-PLC Handshake in BIW Automation</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-of-a-robot-plc-handshake">1. Purpose of a Robot-PLC Handshake</a></li>
+<li><a href="#2-robot-plc-control-architecture">2. Robot-PLC Control Architecture</a></li>
+<li><a href="#3-interface-types">3. Interface Types</a></li>
+<li><a href="#4-standard-handshake-signals">4. Standard Handshake Signals</a><ul>
+<li><a href="#41-ready-is-not-the-same-as-safe">4.1 Ready is not the same as safe</a></li>
+<li><a href="#42-cycle-complete-is-not-always-quality-ok">4.2 Cycle complete is not always quality OK</a></li>
+</ul>
+</li>
+<li><a href="#5-signal-logic-and-handshake-design">5. Signal Logic and Handshake Design</a><ul>
+<li><a href="#51-maintained-signals">5.1 Maintained signals</a></li>
+<li><a href="#52-pulse-signals">5.2 Pulse signals</a></li>
+<li><a href="#53-rising-edge-detection">5.3 Rising-edge detection</a></li>
+<li><a href="#54-acknowledgement-and-re-arming">5.4 Acknowledgement and re-arming</a></li>
+</ul>
+</li>
+<li><a href="#6-typical-biw-robot-plc-sequence">6. Typical BIW Robot-PLC Sequence</a><ul>
+<li><a href="#61-preconditions">6.1 Preconditions</a></li>
+<li><a href="#62-sequence-overview">6.2 Sequence overview</a></li>
+</ul>
+</li>
+<li><a href="#7-program-selection-and-variant-management">7. Program Selection and Variant Management</a></li>
+<li><a href="#8-state-machine-design">8. State Machine Design</a><ul>
+<li><a href="#81-preventing-stale-completion-signals">8.1 Preventing stale completion signals</a></li>
+</ul>
+</li>
+<li><a href="#9-timeouts-watchdogs-and-heartbeats">9. Timeouts, Watchdogs, and Heartbeats</a></li>
+<li><a href="#10-robot-operating-states-and-permissives">10. Robot Operating States and Permissives</a></li>
+<li><a href="#11-safety-separate-safety-functions-from-standard-handshake">11. Safety: Separate Safety Functions from Standard Handshake</a></li>
+<li><a href="#12-plc-and-robot-io-mapping">12. PLC and Robot I/O Mapping</a><ul>
+<li><a href="#121-mapping-checks">12.1 Mapping checks</a></li>
+<li><a href="#122-example-signal-map">12.2 Example signal map</a></li>
+</ul>
+</li>
+<li><a href="#13-industrial-network-diagnostics">13. Industrial Network Diagnostics</a></li>
+<li><a href="#14-troubleshooting-common-robot-plc-handshake-faults">14. Troubleshooting Common Robot-PLC Handshake Faults</a><ul>
+<li><a href="#141-recommended-diagnostic-order">14.1 Recommended diagnostic order</a></li>
+</ul>
+</li>
+<li><a href="#15-recovery-after-a-fault-or-interrupted-cycle">15. Recovery After a Fault or Interrupted Cycle</a></li>
+<li><a href="#16-maintenance-and-documentation-requirements">16. Maintenance and Documentation Requirements</a></li>
+<li><a href="#17-performance-monitoring">17. Performance Monitoring</a></li>
+<li><a href="#18-practical-exercises">18. Practical Exercises</a><ul>
+<li><a href="#exercise-1-robot-does-not-start">Exercise 1: Robot does not start</a></li>
+<li><a href="#exercise-2-completion-remains-on">Exercise 2: Completion remains ON</a></li>
+<li><a href="#exercise-3-wrong-variant">Exercise 3: Wrong variant</a></li>
+<li><a href="#exercise-4-network-connected-io-stale">Exercise 4: Network connected, I/O stale</a></li>
+<li><a href="#exercise-5-robot-complete-process-failed">Exercise 5: Robot complete, process failed</a></li>
+</ul>
+</li>
+<li><a href="#19-competency-checklist">19. Competency Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\29_Line_Systems\01_BIW\12_Robot_PLC_Handshake</code></p>
+<h2 id="1-purpose-of-a-robot-plc-handshake">1. Purpose of a Robot-PLC Handshake</h2>
+<p>A robot-PLC handshake is a defined exchange of signals between a robot controller and a PLC that coordinates their actions during an automated production cycle.</p>
+<p>In a Body-in-White (BIW) line, the PLC typically coordinates the station sequence, conveyors, fixtures, clamps, sensors, part tracking, and neighboring equipment. The robot controller manages robot motion, robot programs, motion-related status, and robot-specific faults.</p>
+<p>The handshake makes sure that each controller knows when the other is ready, when a task has been requested, whether the task is running, and whether the task has finished successfully.</p>
+<p>For example, a BIW welding station may require the PLC to confirm that the correct body component is present, the fixture is clamped, the area is clear, and the selected robot program matches the vehicle variant before requesting the robot to execute its weld sequence.</p>
+<p>Without a correctly designed handshake, the PLC may release a part too early, a robot may receive a duplicate start command, or the station may wait indefinitely for a completion signal.</p>
+<p>Core principle: A command is not proof of execution, and execution is not proof of successful process completion.</p>
+<h2 id="2-robot-plc-control-architecture">2. Robot-PLC Control Architecture</h2>
+<p>A typical BIW automation architecture contains the following components:</p>
+<pre><code>                    MES / Production Tracking
+                              ↕
+                         HMI / SCADA
+                              ↕
+                    Station PLC / Sequence
+                      ↙       ↓       ↘
+               Remote I/O   Network   Other PLCs
+                   ↕           ↕
+             Field Devices   Robot Controller
+             Sensors,        ↙      ↓      ↘
+             Clamps,      Robot   Status   Tooling
+             Conveyors     Axes   Signals   Interface
+
+              Safety PLC / Safety Controller
+                       ↕              ↕
+               Safety Devices    Robot Safety Interface
+</code></pre>
+<p>This is a logical overview, not a wiring diagram. Actual architecture depends on the machine builder, robot manufacturer, network design, and safety risk assessment.</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Main responsibility</th>
+<th>Handshake relevance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Station PLC</td>
+<td>Coordinates station sequence</td>
+<td>Issues requests and evaluates robot status</td>
+</tr>
+<tr>
+<td>Robot controller</td>
+<td>Executes robot programs</td>
+<td>Reports readiness, running state, completion, and faults</td>
+</tr>
+<tr>
+<td>Remote I/O</td>
+<td>Connects distributed field signals</td>
+<td>Carries physical or networked input/output signals</td>
+</tr>
+<tr>
+<td>Industrial network</td>
+<td>Exchanges cyclic data</td>
+<td>Transports mapped control and status bits</td>
+</tr>
+<tr>
+<td>HMI</td>
+<td>Displays states and faults</td>
+<td>Helps operators and maintenance personnel diagnose the sequence</td>
+</tr>
+<tr>
+<td>Safety controller</td>
+<td>Manages safety functions</td>
+<td>Prevents or stops hazardous motion according to the safety design</td>
+</tr>
+<tr>
+<td>MES or traceability system</td>
+<td>Tracks production and results</td>
+<td>May supply variant or work-order information and record cycle results</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-interface-types">3. Interface Types</h2>
+<p>The handshake signals may be transferred through hardwired digital I/O or an industrial communication network.</p>
+<table>
+<thead>
+<tr>
+<th>Interface</th>
+<th>Typical application</th>
+<th>Maintenance considerations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hardwired digital I/O</td>
+<td>Individual request, ready, running, and done signals</td>
+<td>Check voltage, common reference, wiring, polarity, and terminal status</td>
+</tr>
+<tr>
+<td>PROFINET</td>
+<td>Cyclic PLC-to-robot I/O on supported systems</td>
+<td>Verify device name, IP configuration, I/O mapping, connection state, and diagnostics</td>
+</tr>
+<tr>
+<td>EtherNet/IP</td>
+<td>Cyclic I/O between compatible PLC and robot systems</td>
+<td>Verify connection ownership, assemblies, configuration, and connection health</td>
+</tr>
+<tr>
+<td>EtherCAT</td>
+<td>Real-time control where both systems and architecture support it</td>
+<td>Verify device compatibility, topology, and operational state</td>
+</tr>
+<tr>
+<td>Vendor-specific fieldbus</td>
+<td>Legacy or manufacturer-specific installations</td>
+<td>Confirm supported hardware, interface modules, configuration, and signal definitions</td>
+</tr>
+</tbody>
+</table>
+<p>Not every robot supports every protocol. A physical Ethernet connection does not automatically mean the correct industrial I/O connection is configured.</p>
+<p>A successful ping only establishes a limited level of IP connectivity. It does not prove that cyclic I/O data is mapped correctly, updating, or being interpreted correctly by the application.</p>
+<h2 id="4-standard-handshake-signals">4. Standard Handshake Signals</h2>
+<p>Signal names differ by manufacturer and machine builder. The important point is the documented meaning, direction, active state, and sequence of each signal.</p>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Typical direction</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC Ready</td>
+<td>PLC → Robot</td>
+<td>Station conditions permit the next operation</td>
+</tr>
+<tr>
+<td>Robot Ready</td>
+<td>Robot → PLC</td>
+<td>Robot controller is available for the defined operation</td>
+</tr>
+<tr>
+<td>Program Number / Program Select</td>
+<td>PLC → Robot</td>
+<td>Requests a particular robot job or program</td>
+</tr>
+<tr>
+<td>Program Accepted</td>
+<td>Robot → PLC</td>
+<td>Confirms that the requested program selection has been accepted</td>
+</tr>
+<tr>
+<td>Start Request</td>
+<td>PLC → Robot</td>
+<td>Requests execution of the selected operation</td>
+</tr>
+<tr>
+<td>Robot Busy / Running</td>
+<td>Robot → PLC</td>
+<td>Robot is executing or processing the requested cycle</td>
+</tr>
+<tr>
+<td>Cycle Complete</td>
+<td>Robot → PLC</td>
+<td>Robot program has reached its defined completion point</td>
+</tr>
+<tr>
+<td>Operation Result OK</td>
+<td>Robot or process controller → PLC</td>
+<td>Process result meets the configured success criteria</td>
+</tr>
+<tr>
+<td>Robot Fault</td>
+<td>Robot → PLC</td>
+<td>A robot fault or defined abnormal condition exists</td>
+</tr>
+<tr>
+<td>Reset Request</td>
+<td>PLC → Robot</td>
+<td>Requests a permitted reset action</td>
+</tr>
+<tr>
+<td>Reset Acknowledged</td>
+<td>Robot → PLC</td>
+<td>Indicates that the reset request was handled according to the interface design</td>
+</tr>
+<tr>
+<td>Home / Park Position</td>
+<td>Robot → PLC</td>
+<td>Robot reports a defined position or zone condition</td>
+</tr>
+<tr>
+<td>Part Present</td>
+<td>PLC or sensor system → Sequence</td>
+<td>Required workpiece is detected</td>
+</tr>
+<tr>
+<td>Fixture Clamped</td>
+<td>PLC or field device → Sequence</td>
+<td>Clamp feedback confirms the defined clamp state</td>
+</tr>
+<tr>
+<td>Heartbeat</td>
+<td>Either direction</td>
+<td>Indicates that a changing signal or counter is being updated</td>
+</tr>
+</tbody>
+</table>
+<h3 id="41-ready-is-not-the-same-as-safe">4.1 Ready is not the same as safe</h3>
+<p>A <code>Robot Ready</code> bit usually means the robot meets certain operational conditions defined by the integrator. It must not be assumed to prove that every safety condition is satisfied.</p>
+<p>Likewise, a robot at <code>Home</code> or <code>Park</code> may still be inside a hazardous area or may not be at the exact position required for fixture release.</p>
+<p>Safety permissions must be handled through the designed safety system and risk-assessed interlocks. Ordinary PLC bits and standard network I/O are not substitutes for safety-rated functions.</p>
+<h3 id="42-cycle-complete-is-not-always-quality-ok">4.2 Cycle complete is not always quality OK</h3>
+<p>A robot can complete a programmed path while a weld controller reports a failed weld, a nutrunner reports an incorrect torque result, or a vision system reports a missing feature.</p>
+<p>Separate these concepts:</p>
+<ul>
+<li>Motion complete: The robot program or defined motion sequence finished.</li>
+<li>Process complete: The required operation finished.</li>
+<li>Process OK: The required process criteria passed.</li>
+<li>Station complete: All conditions required to advance the station sequence are satisfied.</li>
+</ul>
+<p>The PLC should only release the workpiece when the documented station logic allows it.</p>
+<h2 id="5-signal-logic-and-handshake-design">5. Signal Logic and Handshake Design</h2>
+<h3 id="51-maintained-signals">5.1 Maintained signals</h3>
+<p>A maintained signal remains active until a defined condition causes it to turn off.</p>
+<p>Example:</p>
+<ul>
+<li>The PLC asserts <code>Start_Request</code>.</li>
+<li>The robot detects the request and starts the operation.</li>
+<li>The PLC maintains the request until the interface's documented acknowledgement or state transition occurs.</li>
+<li>The request is removed according to the handshake specification.</li>
+</ul>
+<p>Maintained requests are useful when the receiving controller must reliably detect a command even if its scan or communication update does not coincide with the exact instant of assertion.</p>
+<p>However, if a maintained start request remains active after completion, it may cause an unwanted retrigger in an incorrectly designed interface.</p>
+<h3 id="52-pulse-signals">5.2 Pulse signals</h3>
+<p>A pulse is active for a limited duration. Pulse-based interfaces require careful attention to signal width, update timing, and detection logic.</p>
+<p>A short PLC pulse can be missed if the receiving system does not sample it while it is active. For networked I/O, the behavior depends on update intervals, controller scan times, and the communication architecture.</p>
+<p>Use pulse signals only when both sides' interface specifications define how the pulse is detected and acknowledged.</p>
+<h3 id="53-rising-edge-detection">5.3 Rising-edge detection</h3>
+<p>A rising edge occurs when a signal changes from false to true.</p>
+<pre><code>Start_Request:  ____|‾‾‾‾‾‾‾|____
+                      ↑
+                  Rising edge
+</code></pre>
+<p>Edge detection can prevent a continuously true request from being interpreted as a new command every scan. It does not, by itself, guarantee that a command is accepted only once across communication interruptions or controller restarts.</p>
+<h3 id="54-acknowledgement-and-re-arming">5.4 Acknowledgement and re-arming</h3>
+<p>A robust handshake defines:</p>
+<ol>
+<li>Who initiates a request.</li>
+<li>Which conditions permit the request.</li>
+<li>What acknowledgement confirms acceptance.</li>
+<li>Which state indicates execution.</li>
+<li>What proves completion.</li>
+<li>When the request must be removed.</li>
+<li>When the interface is ready for another cycle.</li>
+<li>How faults, interruptions, and restarts are handled.</li>
+</ol>
+<p>The handshake must return to a defined idle or ready state before a new cycle is accepted. A stuck completion signal or stale acknowledgement must not be mistaken for the result of a new cycle.</p>
+<h2 id="6-typical-biw-robot-plc-sequence">6. Typical BIW Robot-PLC Sequence</h2>
+<p>Consider a robot that performs spot welding on a body-in-white component.</p>
+<h3 id="61-preconditions">6.1 Preconditions</h3>
+<p>Before starting the robot operation, the station sequence may need to verify:</p>
+<ul>
+<li>Correct workpiece or carrier is present.</li>
+<li>Required locating pins and clamps are in the expected state.</li>
+<li>Required process equipment is ready.</li>
+<li>The robot is in the required operating mode.</li>
+<li>The correct robot program is selected and accepted.</li>
+<li>Required safety permissions are established through the designed safety system.</li>
+<li>No blocking fault or active recovery condition exists.</li>
+<li>The workpiece variant matches the intended operation.</li>
+</ul>
+<p>These conditions are station-specific. A generic example must not be copied into a real machine without checking the approved control design.</p>
+<h3 id="62-sequence-overview">6.2 Sequence overview</h3>
+<pre><code>1. PLC confirms station preconditions
+          ↓
+2. PLC selects the required robot program
+          ↓
+3. Robot confirms program acceptance
+          ↓
+4. PLC issues Start Request
+          ↓
+5. Robot accepts request and reports Busy / Running
+          ↓
+6. Robot executes the operation
+          ↓
+7. Robot reports Cycle Complete
+          ↓
+8. PLC validates completion and process result
+          ↓
+9. PLC removes request and completes acknowledgement
+          ↓
+10. Station sequence permits the next operation
+</code></pre>
+<p>A process may require additional steps, including weld controller confirmation, nutrunner result validation, vision inspection, or traceability recording.</p>
+<h2 id="7-program-selection-and-variant-management">7. Program Selection and Variant Management</h2>
+<p>BIW stations often process multiple body styles, part variants, or product configurations. Selecting the correct robot program is therefore a production-quality requirement, not just a convenience.</p>
+<p>The PLC may send a program number, recipe identifier, or variant code to the robot controller. The robot interface should return a defined acknowledgement and, where supported, the selected or active program identity.</p>
+<table>
+<thead>
+<tr>
+<th>Condition</th>
+<th>Required design consideration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Valid program requested</td>
+<td>Robot confirms acceptance before start</td>
+</tr>
+<tr>
+<td>Unsupported program number</td>
+<td>Reject the request and report a fault</td>
+</tr>
+<tr>
+<td>Program selection still in progress</td>
+<td>Prevent premature start</td>
+</tr>
+<tr>
+<td>Requested and active program differ</td>
+<td>Inhibit operation until resolved</td>
+</tr>
+<tr>
+<td>Variant data unavailable</td>
+<td>Hold the sequence according to the approved recovery design</td>
+</tr>
+<tr>
+<td>Program changed during a cycle</td>
+<td>Handle only through a defined safe and controlled procedure</td>
+</tr>
+<tr>
+<td>PLC and robot backups have different revisions</td>
+<td>Verify compatibility before returning equipment to production</td>
+</tr>
+</tbody>
+</table>
+<p>Important: Never assume that a numeric program value means the same thing across different robots or projects. Program numbers and meanings must be verified against the approved mapping.</p>
+<h2 id="8-state-machine-design">8. State Machine Design</h2>
+<p>A state machine defines which operations are permitted at each stage of the cycle and which transitions are valid.</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Meaning</th>
+<th>Example transition condition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Idle</td>
+<td>No active cycle request</td>
+<td>Required station conditions become valid</td>
+</tr>
+<tr>
+<td>Ready</td>
+<td>Interface and station are ready</td>
+<td>A valid program request is issued</td>
+</tr>
+<tr>
+<td>Program Selection</td>
+<td>Robot program is being selected</td>
+<td>Program acceptance is confirmed</td>
+</tr>
+<tr>
+<td>Start Pending</td>
+<td>Start request has been issued</td>
+<td>Robot acknowledges or reports running</td>
+</tr>
+<tr>
+<td>Running</td>
+<td>Robot operation is underway</td>
+<td>Defined completion condition is reached</td>
+</tr>
+<tr>
+<td>Complete</td>
+<td>Required cycle completion is confirmed</td>
+<td>Completion acknowledgement and re-arm conditions are met</td>
+</tr>
+<tr>
+<td>Fault</td>
+<td>An abnormal condition blocks normal sequence</td>
+<td>Fault is diagnosed and approved recovery conditions are satisfied</td>
+</tr>
+<tr>
+<td>Recovery</td>
+<td>Controlled return to a valid state</td>
+<td>Recovery checks and required confirmations pass</td>
+</tr>
+</tbody>
+</table>
+<p>A fault should not automatically transition directly to <code>Running</code> simply because a fault bit clears. The system must re-establish the correct sequence state and confirm that the workpiece and equipment are in a valid condition.</p>
+<h3 id="81-preventing-stale-completion-signals">8.1 Preventing stale completion signals</h3>
+<p>Suppose <code>Cycle_Complete</code> remains true after the previous cycle. The PLC issues another start request and then sees <code>Cycle_Complete</code> already true. If the sequence does not verify a new completion transition, it could falsely declare the new cycle finished.</p>
+<p>Common design protections include:</p>
+<ul>
+<li>Requiring completion to be false before a new cycle starts.</li>
+<li>Tracking whether the new start was accepted.</li>
+<li>Requiring a valid <code>Busy</code> or <code>Running</code> transition where supported.</li>
+<li>Requiring completion to occur after the current start.</li>
+<li>Clearing or acknowledging completion according to the documented protocol.</li>
+<li>Using cycle identifiers or sequence counters where both sides support them.</li>
+<li>Rejecting impossible state combinations and reporting a diagnostic.</li>
+</ul>
+<p>A sequence counter can help associate status with the current cycle, but only if both controllers implement its meaning consistently.</p>
+<h2 id="9-timeouts-watchdogs-and-heartbeats">9. Timeouts, Watchdogs, and Heartbeats</h2>
+<p>A timeout detects that an expected event did not occur within a defined period. It does not prove the reason for the delay.</p>
+<table>
+<thead>
+<tr>
+<th>Timeout</th>
+<th>Expected event</th>
+<th>Typical diagnostic direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Program selection timeout</td>
+<td>Program acceptance</td>
+<td>Check requested number, robot mode, program availability, and interface mapping</td>
+</tr>
+<tr>
+<td>Start acknowledgement timeout</td>
+<td>Robot accepts start</td>
+<td>Check readiness, start edge, permissives, and controller status</td>
+</tr>
+<tr>
+<td>Running timeout</td>
+<td>Robot reports execution</td>
+<td>Check program state, controller fault, hold condition, and I/O</td>
+</tr>
+<tr>
+<td>Cycle timeout</td>
+<td>Operation completes</td>
+<td>Check robot program, tooling, process equipment, and obstruction or wait conditions</td>
+</tr>
+<tr>
+<td>Communication timeout</td>
+<td>Valid network updates continue</td>
+<td>Check device connection, network diagnostics, and I/O update status</td>
+</tr>
+<tr>
+<td>Reset acknowledgement timeout</td>
+<td>Reset request is handled</td>
+<td>Check fault cause, reset permissives, and controller-specific reset rules</td>
+</tr>
+</tbody>
+</table>
+<p>Timeout values must be based on machine design, normal cycle time, controller behavior, and validated production conditions. They should not be copied blindly from another station.</p>
+<p>When a timeout occurs, the control system should move to a defined fault or hold state and retain useful diagnostic information. It must not silently assume that the missing acknowledgement means the operation succeeded.</p>
+<p>A heartbeat may use a toggling bit or changing counter. If it stops changing, communication or application execution may be impaired. A heartbeat is useful only when its expected update behavior and timeout handling are explicitly designed.</p>
+<h2 id="10-robot-operating-states-and-permissives">10. Robot Operating States and Permissives</h2>
+<p>Robot terminology varies by manufacturer, controller generation, and configuration. Maintenance personnel must distinguish operating mode, motion state, fault state, and safety state.</p>
+<table>
+<thead>
+<tr>
+<th>State or indication</th>
+<th>General meaning</th>
+<th>What to verify</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Servo Ready</td>
+<td>Servo system is available under defined conditions</td>
+<td>Servo alarms, drive status, and required enabling conditions</td>
+</tr>
+<tr>
+<td>Motors On</td>
+<td>Robot drives are enabled according to controller logic</td>
+<td>Controller mode, drive status, and safety permissions</td>
+</tr>
+<tr>
+<td>Auto / Remote</td>
+<td>Controller is configured for automatic or remote operation</td>
+<td>Correct mode and external-start configuration</td>
+</tr>
+<tr>
+<td>Teach Mode</td>
+<td>Robot is configured for manual teaching</td>
+<td>Teach pendant and mode-dependent restrictions</td>
+</tr>
+<tr>
+<td>Running</td>
+<td>A program or motion operation is executing</td>
+<td>Program state and expected sequence</td>
+</tr>
+<tr>
+<td>Hold / Paused</td>
+<td>Execution is suspended or held</td>
+<td>Hold source and conditions required to resume</td>
+</tr>
+<tr>
+<td>Fault</td>
+<td>A controller or application fault exists</td>
+<td>Alarm number, description, and root cause</td>
+</tr>
+<tr>
+<td>E-stop Active</td>
+<td>Emergency-stop condition is active</td>
+<td>Correct emergency-stop circuit and device status</td>
+</tr>
+<tr>
+<td>Safety Stop</td>
+<td>A configured safety function has stopped or inhibited motion</td>
+<td>Safety diagnostics and the designed reset procedure</td>
+</tr>
+<tr>
+<td>Home / Park</td>
+<td>A configured position or zone condition is satisfied</td>
+<td>Actual position signal definition and permitted zone</td>
+</tr>
+</tbody>
+</table>
+<p>Do not treat all these states as interchangeable. For example, a robot may be powered but not permitted to move, or may be free of ordinary program faults while a safety stop remains active.</p>
+<h2 id="11-safety-separate-safety-functions-from-standard-handshake">11. Safety: Separate Safety Functions from Standard Handshake</h2>
+<p>Robot-PLC handshake design must maintain a clear boundary between ordinary process coordination and safety-rated control.</p>
+<p>Standard handshake signals such as <code>Robot_Ready</code>, <code>Start_Request</code>, and <code>Cycle_Complete</code> generally coordinate the production sequence. They must not be assumed to provide safety-rated protection.</p>
+<p>Depending on the risk assessment and machine design, safety functions may include:</p>
+<ul>
+<li>Emergency-stop circuits.</li>
+<li>Guard-door and access interlocks.</li>
+<li>Safety-rated monitored stops.</li>
+<li>Enabling devices for manual operation.</li>
+<li>Safe speed or position monitoring where required.</li>
+<li>Safe Torque Off (STO) or other validated drive safety functions.</li>
+<li>Safety-rated communication and safety controller diagnostics.</li>
+</ul>
+<p>The exact safety architecture must follow the applicable risk assessment, machine design, manufacturer instructions, and relevant standards.</p>
+<p>Critical maintenance rule: Never bypass an interlock, force a safety input, or bridge a safety circuit to make a handshake work. Diagnose the actual cause and restore the approved safety configuration. Clearing a standard PLC fault is not proof that the machine is safe to restart.</p>
+<h2 id="12-plc-and-robot-io-mapping">12. PLC and Robot I/O Mapping</h2>
+<p>A handshake can fail even when both controllers are healthy if the signal mapping is incorrect.</p>
+<p>The PLC may call a signal <code>Robot_Ready</code>, while the robot interface assigns the corresponding data to a different bit or byte. A mismatch in byte order, bit position, polarity, data type, or interface direction can produce misleading status indications.</p>
+<h3 id="121-mapping-checks">12.1 Mapping checks</h3>
+<p>Verify the following during commissioning and troubleshooting:</p>
+<ol>
+<li>The PLC output address matches the intended robot input.</li>
+<li>The robot output address matches the intended PLC input.</li>
+<li>Input and output directions are correct from each controller's perspective.</li>
+<li>The bit and byte offsets match the approved configuration.</li>
+<li>The data type and bit numbering match the interface specification.</li>
+<li>The active state and signal polarity are correct.</li>
+<li>The mapped data is updating at the expected rate.</li>
+<li>The PLC program uses the intended tags and not obsolete addresses.</li>
+<li>The robot program or interface logic actually uses the mapped signals.</li>
+<li>Online edits and hardware configuration changes are approved and documented.</li>
+</ol>
+<h3 id="122-example-signal-map">12.2 Example signal map</h3>
+<p>The following is an illustrative logical map, not a real PLC address assignment.</p>
+<table>
+<thead>
+<tr>
+<th>Logical signal</th>
+<th>Owner / source</th>
+<th>Consumer</th>
+<th>Expected behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PLC_Station_Ready</code></td>
+<td>PLC sequence</td>
+<td>Robot interface</td>
+<td>Active when defined start conditions are satisfied</td>
+</tr>
+<tr>
+<td><code>PLC_Program_Number</code></td>
+<td>PLC sequence</td>
+<td>Robot interface</td>
+<td>Contains the requested program identifier</td>
+</tr>
+<tr>
+<td><code>PLC_Start_Request</code></td>
+<td>PLC sequence</td>
+<td>Robot interface</td>
+<td>Requests the current operation</td>
+</tr>
+<tr>
+<td><code>Robot_Ready</code></td>
+<td>Robot interface</td>
+<td>PLC sequence</td>
+<td>Reports defined robot availability</td>
+</tr>
+<tr>
+<td><code>Robot_Program_Accepted</code></td>
+<td>Robot interface</td>
+<td>PLC sequence</td>
+<td>Confirms program selection</td>
+</tr>
+<tr>
+<td><code>Robot_Busy</code></td>
+<td>Robot interface</td>
+<td>PLC sequence</td>
+<td>Reports active execution</td>
+</tr>
+<tr>
+<td><code>Robot_Cycle_Complete</code></td>
+<td>Robot interface</td>
+<td>PLC sequence</td>
+<td>Reports completion of the defined cycle</td>
+</tr>
+<tr>
+<td><code>Robot_Fault</code></td>
+<td>Robot interface</td>
+<td>PLC sequence</td>
+<td>Reports a blocking robot fault condition</td>
+</tr>
+</tbody>
+</table>
+<p>Keep the signal map synchronized with the actual PLC project, robot configuration, and electrical drawings. A spreadsheet that describes yesterday's I/O mapping is documentation in the same sense that an old train timetable is a transport system: technically recognizable, operationally questionable.</p>
+<h2 id="13-industrial-network-diagnostics">13. Industrial Network Diagnostics</h2>
+<p>When handshake signals are transferred over an industrial network, check both the communication layer and the application layer.</p>
+<table>
+<thead>
+<tr>
+<th>Diagnostic layer</th>
+<th>Checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Physical</td>
+<td>Power, connectors, cable condition, port LEDs, switches, and link status</td>
+</tr>
+<tr>
+<td>Ethernet / IP</td>
+<td>IP addresses, subnet, duplicate addresses, routing where applicable, and device reachability</td>
+</tr>
+<tr>
+<td>Industrial protocol</td>
+<td>Device name, controller connection state, connection ownership, assembly or I/O configuration, and watchdog status</td>
+</tr>
+<tr>
+<td>Cyclic data</td>
+<td>I/O update rate, stale data, input/output offsets, and communication error counters</td>
+</tr>
+<tr>
+<td>PLC application</td>
+<td>Correct tag mapping, sequence state, permissive logic, and timer status</td>
+</tr>
+<tr>
+<td>Robot application</td>
+<td>Program selection, remote-start configuration, active program state, and interface logic</td>
+</tr>
+</tbody>
+</table>
+<p>Do not change IP addresses, connection parameters, or I/O assembly settings without confirming the approved network design and recording the original configuration.</p>
+<p>If a robot responds to ping but the PLC's robot inputs remain unchanged, investigate the industrial I/O connection and data mapping. Repeatedly restarting controllers without evidence may temporarily hide the symptom while destroying useful diagnostic information.</p>
+<h2 id="14-troubleshooting-common-robot-plc-handshake-faults">14. Troubleshooting Common Robot-PLC Handshake Faults</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible causes</th>
+<th>Checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Robot Ready remains OFF</td>
+<td>Robot fault, wrong mode, drives unavailable, or incorrect mapping</td>
+<td>Check controller status, active alarms, interface signals, and readiness definition</td>
+</tr>
+<tr>
+<td>Start request is ignored</td>
+<td>Request edge missed, program not accepted, missing permissive, or remote start disabled</td>
+<td>Check sequence state, start transition, program acknowledgement, and controller configuration</td>
+</tr>
+<tr>
+<td>Wrong robot program runs</td>
+<td>Incorrect variant code, mapping error, or stale selection</td>
+<td>Compare requested program, accepted program, active program, and product identity</td>
+</tr>
+<tr>
+<td>PLC waits indefinitely</td>
+<td>Missing acknowledgement, incorrect state transition, or network data not updating</td>
+<td>Identify the exact awaited condition and inspect both controllers</td>
+</tr>
+<tr>
+<td>Robot moves but PLC never sees completion</td>
+<td>Completion mapping error, wrong completion definition, or robot program does not set the signal</td>
+<td>Check the robot program end logic and the corresponding PLC input</td>
+</tr>
+<tr>
+<td>Cycle Complete remains ON</td>
+<td>Signal not reset, incorrect latching, or acknowledgement sequence incomplete</td>
+<td>Inspect the interface's completion-clearing and re-arm rules</td>
+</tr>
+<tr>
+<td>Intermittent handshake failures</td>
+<td>Unstable communication, short pulses, race conditions, or timing assumptions</td>
+<td>Review I/O update behavior, signal trends, and event timing</td>
+</tr>
+<tr>
+<td>Reset request has no effect</td>
+<td>Active fault cause, invalid reset state, or incorrect reset mapping</td>
+<td>Read the robot alarm and verify the permitted reset sequence</td>
+</tr>
+<tr>
+<td>Fixture releases too early</td>
+<td>PLC advances on motion completion rather than the required process result</td>
+<td>Verify completion conditions and release permissives</td>
+</tr>
+<tr>
+<td>Robot is healthy but station is blocked</td>
+<td>PLC sequence fault, missing station input, or another equipment interlock</td>
+<td>Identify the first unsatisfied sequence condition</td>
+</tr>
+<tr>
+<td>Robot repeatedly restarts</td>
+<td>Start request remains active or re-trigger logic is incorrect</td>
+<td>Check request removal, edge detection, and re-arm conditions</td>
+</tr>
+<tr>
+<td>Network status is healthy but data is wrong</td>
+<td>Incorrect I/O mapping, stale application tags, or mismatched configuration</td>
+<td>Compare live raw I/O data with logical tags on both controllers</td>
+</tr>
+</tbody>
+</table>
+<h3 id="141-recommended-diagnostic-order">14.1 Recommended diagnostic order</h3>
+<p>Use a consistent sequence instead of changing random parameters until the machine appears cooperative.</p>
+<ol>
+<li>Record the exact alarm, timestamp, station, robot, product variant, and cycle stage.</li>
+<li>Identify the PLC sequence state and the robot controller's current state.</li>
+<li>Determine the first expected signal that did not change.</li>
+<li>Compare the PLC's logical tag with its mapped input/output data.</li>
+<li>Compare the same signal with the robot's corresponding mapped data.</li>
+<li>Check program selection and acceptance before investigating the start request.</li>
+<li>Verify the defined operating mode, permissives, and safety status through approved diagnostics.</li>
+<li>Inspect timers, watchdogs, and sequence-transition conditions.</li>
+<li>Investigate network errors if the mapped data is missing, stale, or inconsistent.</li>
+<li>After the root cause is corrected, validate the entire sequence under the approved restart procedure.</li>
+</ol>
+<p>The first missing or incorrect transition is often more useful than the final timeout alarm, which may simply be the consequence of the original problem.</p>
+<h2 id="15-recovery-after-a-fault-or-interrupted-cycle">15. Recovery After a Fault or Interrupted Cycle</h2>
+<p>A reset is not a recovery strategy. It is only one possible operation within a controlled recovery process.</p>
+<p>After a communication interruption, controller restart, emergency stop, or interrupted robot cycle, the PLC and robot may disagree about the current state. For example, the robot may retain an internal completion flag while the PLC has restarted and returned its sequence state to idle.</p>
+<p>Before resuming production:</p>
+<ul>
+<li>Determine whether the robot is stopped and in a known state.</li>
+<li>Confirm the actual workpiece position and whether the operation was completed.</li>
+<li>Check whether the fixture, clamps, tools, and process equipment are in the expected state.</li>
+<li>Review the active robot program and relevant fault history.</li>
+<li>Confirm the handshake signals agree with the documented sequence.</li>
+<li>Establish the approved recovery state and required acknowledgements.</li>
+<li>Verify that a new start cannot be triggered unintentionally.</li>
+<li>Perform any required inspection or quality disposition for a potentially incomplete operation.</li>
+</ul>
+<p>Do not blindly restart a welding sequence or repeat a process operation. The workpiece may already contain partial welds, completed fasteners, or other irreversible process results. The recovery procedure must account for the physical process, not just the software state.</p>
+<h2 id="16-maintenance-and-documentation-requirements">16. Maintenance and Documentation Requirements</h2>
+<p>A reliable handshake should be documented as part of the station's machine knowledge base.</p>
+<table>
+<thead>
+<tr>
+<th>Document or record</th>
+<th>Required content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Handshake signal list</td>
+<td>Signal name, direction, description, polarity, and owning controller</td>
+</tr>
+<tr>
+<td>Sequence chart</td>
+<td>State transitions, acknowledgements, timeouts, and recovery behavior</td>
+</tr>
+<tr>
+<td>PLC I/O map</td>
+<td>Hardware addresses, network mappings, tag names, and data types</td>
+</tr>
+<tr>
+<td>Robot interface configuration</td>
+<td>Network settings, mapped I/O, remote-start setup, and program-selection method</td>
+</tr>
+<tr>
+<td>Robot program register</td>
+<td>Program number, purpose, variant, revision, and approved backup</td>
+</tr>
+<tr>
+<td>Network topology</td>
+<td>Device names, IP addresses, switches, and relevant network connections</td>
+</tr>
+<tr>
+<td>Alarm and fault history</td>
+<td>Alarm codes, timestamps, operating state, and corrective action</td>
+</tr>
+<tr>
+<td>Change log</td>
+<td>Approved modifications to PLC logic, robot programs, and interface mappings</td>
+</tr>
+<tr>
+<td>Recovery SOP</td>
+<td>Controlled fault recovery, restart conditions, and quality checks</td>
+</tr>
+<tr>
+<td>Validation record</td>
+<td>Tests performed after modifications and the results obtained</td>
+</tr>
+</tbody>
+</table>
+<p>Back up the PLC program, robot programs, interface configuration, and related network settings before approved modifications. Verify that the backups are usable and identify the versions that belong together.</p>
+<p>Any change to start logic, program selection, timeout behavior, or completion criteria should be reviewed for its effects on safety, quality, cycle time, and traceability.</p>
+<h2 id="17-performance-monitoring">17. Performance Monitoring</h2>
+<p>Handshake performance can be monitored to detect developing faults before they cause major production interruptions.</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Definition or use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Robot handshake timeout count</td>
+<td>Number of handshake timeout events in a defined period</td>
+</tr>
+<tr>
+<td>Robot cycle time</td>
+<td>Time between agreed cycle start and completion events</td>
+</tr>
+<tr>
+<td>Ready-to-start delay</td>
+<td>Time spent waiting after the station becomes eligible to start</td>
+</tr>
+<tr>
+<td>Program selection delay</td>
+<td>Time between program request and program acceptance</td>
+</tr>
+<tr>
+<td>Start-to-running delay</td>
+<td>Time between start request and the defined running acknowledgement</td>
+</tr>
+<tr>
+<td>Completion acknowledgement delay</td>
+<td>Time between cycle completion and PLC acknowledgement</td>
+</tr>
+<tr>
+<td>Communication fault count</td>
+<td>Number of recorded network or I/O communication failures</td>
+</tr>
+<tr>
+<td>Recovery duration</td>
+<td>Time required to restore the approved operating state after a fault</td>
+</tr>
+<tr>
+<td>Repeat-fault frequency</td>
+<td>Frequency with which the same failure recurs</td>
+</tr>
+</tbody>
+</table>
+<p>Use consistent event definitions and timestamps. A cycle-time calculation is meaningless if one station records the start request while another records the first robot motion, then someone compares the numbers as though they were identical.</p>
+<p>Where PLC events are sent to SCADA, SQL, or a production dashboard, preserve the distinction between a requested operation, an acknowledged start, actual execution, and confirmed completion.</p>
+<h2 id="18-practical-exercises">18. Practical Exercises</h2>
+<h3 id="exercise-1-robot-does-not-start">Exercise 1: Robot does not start</h3>
+<p>The PLC indicates <code>Station_Ready = TRUE</code>, but the robot remains idle.</p>
+<p>Investigate:</p>
+<ul>
+<li>Whether the selected program was accepted.</li>
+<li>Whether <code>Start_Request</code> actually reached the robot interface.</li>
+<li>Whether the start request follows the required pulse or maintained-signal convention.</li>
+<li>Whether the robot is configured for the expected operating mode.</li>
+<li>Whether any permissive or fault prevents execution.</li>
+<li>Whether the PLC is waiting for an acknowledgement that never arrives.</li>
+</ul>
+<p>Expected outcome: Identify the first failed transition instead of concluding that the robot itself is defective.</p>
+<h3 id="exercise-2-completion-remains-on">Exercise 2: Completion remains ON</h3>
+<p>The robot completed the previous cycle, but <code>Cycle_Complete</code> remains true. A new start request is issued.</p>
+<p>Explain how the PLC could falsely declare the new cycle complete and specify the state or acknowledgement conditions needed to prevent this.</p>
+<p>Expected outcome: A design that associates completion with the current cycle and prevents stale completion from satisfying a new request.</p>
+<h3 id="exercise-3-wrong-variant">Exercise 3: Wrong variant</h3>
+<p>The PLC requests program 24, but the robot reports that program 23 is active.</p>
+<p>Define the checks that should prevent the cycle from starting. Include program acceptance, active-program verification where available, product identity, fault handling, and restart conditions.</p>
+<p>Expected outcome: The station holds rather than executing a potentially incorrect operation.</p>
+<h3 id="exercise-4-network-connected-io-stale">Exercise 4: Network connected, I/O stale</h3>
+<p>The robot responds to ping, but the PLC sees no change in the robot's mapped status bits.</p>
+<p>Develop a diagnostic sequence covering the industrial I/O connection, device configuration, data mapping, update status, and controller application logic.</p>
+<p>Expected outcome: Separate basic IP reachability from correct cyclic data exchange.</p>
+<h3 id="exercise-5-robot-complete-process-failed">Exercise 5: Robot complete, process failed</h3>
+<p>The robot reports that its motion program completed, but the weld controller reports a failed weld.</p>
+<p>Determine which result the PLC must evaluate before allowing the part to advance.</p>
+<p>Expected outcome: Station release depends on the defined process-completion and quality requirements, not merely the robot's motion status.</p>
+<h2 id="19-competency-checklist">19. Competency Checklist</h2>
+<ul>
+<li>Explain the roles of the PLC, robot controller, and industrial network.</li>
+<li>Identify handshake signal direction and meaning.</li>
+<li>Distinguish maintained requests, pulses, and rising-edge detection.</li>
+<li>Explain program selection, acknowledgement, start, running, and completion.</li>
+<li>Identify stale signals and explain why they can cause false completion.</li>
+<li>Diagnose an incorrect or missing I/O mapping.</li>
+<li>Distinguish IP connectivity from working cyclic industrial I/O.</li>
+<li>Explain the purpose of timeouts and watchdogs.</li>
+<li>Separate standard process handshake signals from safety-rated functions.</li>
+<li>Diagnose a robot that is ready but does not accept a start request.</li>
+<li>Explain why motion completion does not necessarily mean process quality is acceptable.</li>
+<li>Follow an approved recovery procedure after an interrupted cycle.</li>
+<li>Maintain the signal map, sequence documentation, backups, and change records.</li>
+</ul>
+<p>The key maintenance skill is to follow the handshake as a sequence of verifiable state transitions. When a station stops, identify what should have happened, what actually happened, and the first point where those two diverged.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\29_Line_Systems\02_Paint_Shop\01_Conveyors - Conveyors</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

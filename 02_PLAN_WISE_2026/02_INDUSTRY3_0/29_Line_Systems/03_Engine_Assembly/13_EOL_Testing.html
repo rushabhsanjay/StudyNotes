@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>End-of-Line (EOL) Testing in Engine Assembly</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">End-of-Line (EOL) Testing in Engine Assembly</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-of-eol-testing">1. Purpose of EOL Testing</a></li>
+<li><a href="#2-position-of-eol-testing-in-the-manufacturing-process">2. Position of EOL Testing in the Manufacturing Process</a></li>
+<li><a href="#3-main-eol-testing-categories">3. Main EOL Testing Categories</a></li>
+<li><a href="#4-eol-test-system-architecture">4. EOL Test System Architecture</a><ul>
+<li><a href="#41-main-subsystems">4.1 Main subsystems</a></li>
+</ul>
+</li>
+<li><a href="#5-engine-identification-and-recipe-selection">5. Engine Identification and Recipe Selection</a><ul>
+<li><a href="#51-recipe-selection">5.1 Recipe selection</a></li>
+<li><a href="#52-incorrect-recipe-example">5.2 Incorrect recipe example</a></li>
+</ul>
+</li>
+<li><a href="#6-leak-testing">6. Leak Testing</a><ul>
+<li><a href="#61-pressure-decay-testing">6.1 Pressure-decay testing</a></li>
+<li><a href="#62-leak-test-sequence">6.2 Leak-test sequence</a></li>
+<li><a href="#63-common-leak-test-faults">6.3 Common leak-test faults</a></li>
+</ul>
+</li>
+<li><a href="#7-cold-testing-and-motoring-tests">7. Cold Testing and Motoring Tests</a><ul>
+<li><a href="#71-why-cold-testing-is-useful">7.1 Why cold testing is useful</a></li>
+</ul>
+</li>
+<li><a href="#8-fired-engine-testing">8. Fired-Engine Testing</a><ul>
+<li><a href="#81-safety-considerations">8.1 Safety considerations</a></li>
+</ul>
+</li>
+<li><a href="#9-sensor-and-actuator-verification">9. Sensor and Actuator Verification</a><ul>
+<li><a href="#91-electrical-checks-versus-functional-checks">9.1 Electrical checks versus functional checks</a></li>
+<li><a href="#92-diagnostic-trouble-codes">9.2 Diagnostic trouble codes</a></li>
+</ul>
+</li>
+<li><a href="#10-measurement-instruments-and-data-acquisition">10. Measurement Instruments and Data Acquisition</a><ul>
+<li><a href="#101-measurement-chain">10.1 Measurement chain</a></li>
+<li><a href="#102-scaling-and-engineering-units">10.2 Scaling and engineering units</a></li>
+</ul>
+</li>
+<li><a href="#11-pass-fail-invalid-and-incomplete-results">11. Pass, Fail, Invalid, and Incomplete Results</a></li>
+<li><a href="#12-plc-and-test-sequence-control">12. PLC and Test-Sequence Control</a><ul>
+<li><a href="#121-state-machine-approach">12.1 State-machine approach</a></li>
+<li><a href="#122-timeout-handling">12.2 Timeout handling</a></li>
+<li><a href="#123-handshake-signals">12.3 Handshake signals</a></li>
+</ul>
+</li>
+<li><a href="#13-traceability-and-test-data-management">13. Traceability and Test Data Management</a><ul>
+<li><a href="#131-data-association">13.1 Data association</a></li>
+<li><a href="#132-database-and-communication-faults">13.2 Database and communication faults</a></li>
+</ul>
+</li>
+<li><a href="#14-calibration-and-measurement-system-validation">14. Calibration and Measurement-System Validation</a><ul>
+<li><a href="#141-calibration-versus-verification">14.1 Calibration versus verification</a></li>
+</ul>
+</li>
+<li><a href="#15-common-eol-faults-and-troubleshooting">15. Common EOL Faults and Troubleshooting</a></li>
+<li><a href="#16-troubleshooting-method-for-maintenance-engineers">16. Troubleshooting Method for Maintenance Engineers</a></li>
+<li><a href="#17-preventive-maintenance-plan-for-eol-stations">17. Preventive Maintenance Plan for EOL Stations</a></li>
+<li><a href="#18-change-control-and-configuration-management">18. Change Control and Configuration Management</a></li>
+<li><a href="#19-eol-kpis-and-quality-monitoring">19. EOL KPIs and Quality Monitoring</a></li>
+<li><a href="#20-rcacapa-example-engine-passes-eol-but-fails-downstream">20. RCA/CAPA Example: Engine Passes EOL but Fails Downstream</a><ul>
+<li><a href="#problem-statement">Problem statement</a></li>
+<li><a href="#possible-causes">Possible causes</a></li>
+<li><a href="#investigation-steps">Investigation steps</a></li>
+<li><a href="#corrective-and-preventive-actions">Corrective and preventive actions</a></li>
+</ul>
+</li>
+<li><a href="#21-eol-station-audit-checklist">21. EOL Station Audit Checklist</a></li>
+<li><a href="#22-practical-learning-exercises">22. Practical Learning Exercises</a></li>
+<li><a href="#23-competency-checklist">23. Competency Checklist</a></li>
+<li><a href="#24-final-technical-summary">24. Final Technical Summary</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-of-eol-testing">1. Purpose of EOL Testing</h2>
+<p>End-of-Line (EOL) testing is the final defined set of manufacturing tests performed on an assembled product or system before it is released to the next production stage, dispatch, or another controlled process.</p>
+<p>In engine assembly, EOL testing verifies that the engine meets specified functional, performance, leakage, electrical, and diagnostic acceptance criteria. The exact tests depend on engine design, fuel type, emissions requirements, product variant, and the manufacturer's validation plan.</p>
+<p>EOL testing is not simply a final inspection. It is a controlled process that applies defined test conditions, measures actual responses, compares results against approved limits, records the outcome, and prevents an engine from being released when required tests have failed or remain incomplete.</p>
+<p>Typical objectives include:</p>
+<ul>
+<li>Verify that the assembled engine functions according to its specification.</li>
+<li>Detect assembly defects that were not identified by individual stations.</li>
+<li>Confirm required leakage, pressure, electrical, and performance results.</li>
+<li>Check selected sensors, actuators, and control-system functions.</li>
+<li>Detect abnormal noise, vibration, or other defined operating symptoms.</li>
+<li>Confirm that the correct test recipe is used for the engine variant.</li>
+<li>Link test results to the correct engine serial number.</li>
+<li>Prevent failed or incomplete tests from being treated as passes.</li>
+<li>Provide evidence for quality release, traceability, and root-cause analysis.</li>
+</ul>
+<p>Important distinction: Not every engine assembly line runs an engine under firing conditions. Some lines use cold tests, motoring tests, leak tests, electrical checks, or a combination. A hot test or fired-engine test is used only where the product and manufacturing process require it.</p>
+<h2 id="2-position-of-eol-testing-in-the-manufacturing-process">2. Position of EOL Testing in the Manufacturing Process</h2>
+<pre><code>Component Preparation
+          ↓
+Engine Assembly
+          ↓
+Torque / Angle Verification
+          ↓
+Fluid Filling and Other Required Operations
+          ↓
+In-Process Inspection and Poka-Yoke
+          ↓
+EOL Test Station
+          ↓
+Test Data Evaluation
+          ↓
+PASS ───────────────→ Approved Release
+  ↑
+  │
+FAIL / INCOMPLETE
+  ↓
+Hold / Diagnosis / Authorized Rework
+          ↓
+Retest as Required
+          ↓
+Controlled Final Disposition
+</code></pre>
+<p>The actual process sequence varies by plant. Some checks are performed before EOL, while others are integrated into the EOL station or downstream stations.</p>
+<p>A failed engine should be held and handled according to the approved nonconformance process. Retesting must not erase the original failure or allow an engine to pass without completing the required test sequence.</p>
+<h2 id="3-main-eol-testing-categories">3. Main EOL Testing Categories</h2>
+<table>
+<thead>
+<tr>
+<th>Test category</th>
+<th>Main purpose</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Leak testing</td>
+<td>Verify sealing integrity</td>
+<td>Oil, coolant, fuel, or air leakage checks as applicable</td>
+</tr>
+<tr>
+<td>Mechanical checks</td>
+<td>Detect selected mechanical assembly problems</td>
+<td>Rotation resistance or abnormal mechanical behavior</td>
+</tr>
+<tr>
+<td>Cold test or motoring test</td>
+<td>Evaluate selected engine functions without combustion</td>
+<td>Cranking speed, pressure response, or rotational behavior</td>
+</tr>
+<tr>
+<td>Fired-engine test</td>
+<td>Evaluate operation under combustion where required</td>
+<td>Running stability, performance, or defined operating parameters</td>
+</tr>
+<tr>
+<td>Electrical testing</td>
+<td>Verify electrical interfaces and circuits</td>
+<td>Harness continuity, sensor supply, or actuator circuit checks</td>
+</tr>
+<tr>
+<td>Sensor and actuator testing</td>
+<td>Confirm selected input/output functions</td>
+<td>Sensor plausibility or commanded actuator response</td>
+</tr>
+<tr>
+<td>Performance testing</td>
+<td>Compare measured behavior with specifications</td>
+<td>Speed, torque, power, or pressure where included</td>
+</tr>
+<tr>
+<td>Diagnostic testing</td>
+<td>Identify defined electronic control faults</td>
+<td>Diagnostic trouble codes and ECU communication</td>
+</tr>
+<tr>
+<td>Noise and vibration testing</td>
+<td>Detect specified abnormal behavior</td>
+<td>Vibration or noise measurements under defined conditions</td>
+</tr>
+<tr>
+<td>Fluid-system testing</td>
+<td>Verify required system behavior</td>
+<td>Oil pressure or coolant circuit checks where applicable</td>
+</tr>
+<tr>
+<td>Identification and configuration checks</td>
+<td>Ensure correct product and test program</td>
+<td>Serial number, engine variant, and recipe verification</td>
+</tr>
+</tbody>
+</table>
+<p>The list is a set of possible categories, not a universal test specification. The approved product-specific test plan defines which tests are mandatory, their conditions, their limits, and their sequence.</p>
+<h2 id="4-eol-test-system-architecture">4. EOL Test System Architecture</h2>
+<p>An automated EOL station typically integrates the product, test equipment, measurement instruments, industrial control, data acquisition, and manufacturing traceability.</p>
+<pre><code>Engine and Product Identification
+              ↓
+     Test Recipe Selection
+              ↓
+    Test Sequence Controller
+              ↓
+  Sensors / Instruments / Test Tools
+              ↓
+     Data Acquisition System
+              ↓
+ Validation and Limit Comparison
+              ↓
+     PASS / FAIL / INVALID
+              ↓
+     PLC and Station Interlocks
+              ↓
+     MES / Database / Traceability
+              ↓
+    Release or Controlled Hold
+</code></pre>
+<h3 id="41-main-subsystems">4.1 Main subsystems</h3>
+<ul>
+<li>Mechanical test fixture: Locates and secures the engine and provides the required test interfaces.</li>
+<li>Test equipment: Applies the required test conditions, such as pressure, rotation, electrical stimulus, or operating load.</li>
+<li>Sensors and instruments: Measure pressure, temperature, speed, torque, flow, vibration, electrical signals, or other specified parameters.</li>
+<li>PLC or test controller: Executes the sequence, manages permissives, monitors equipment states, and controls station transitions.</li>
+<li>Industrial PC or test computer: Runs test applications, handles detailed data acquisition, calculates results, and manages test recipes where applicable.</li>
+<li>HMI: Displays operating status, test progress, measured values, faults, and recovery instructions.</li>
+<li>Database or manufacturing execution system: Stores test results and links them to product identity.</li>
+<li>Safety system: Controls safety-related functions according to the machine's risk assessment and safety design.</li>
+</ul>
+<p>The PLC and test computer may share responsibilities. Their interface must clearly define which system owns each state, result, recipe, and acceptance decision.</p>
+<h2 id="5-engine-identification-and-recipe-selection">5. Engine Identification and Recipe Selection</h2>
+<p>Before testing begins, the station must establish which engine is being tested and which approved test configuration applies.</p>
+<p>Identification may use:</p>
+<ul>
+<li>Barcode or Data Matrix.</li>
+<li>Engine serial number.</li>
+<li>RFID tag.</li>
+<li>Manufacturing order or production sequence.</li>
+<li>Engine model and variant.</li>
+<li>ECU identification or configuration data, where applicable.</li>
+</ul>
+<h3 id="51-recipe-selection">5.1 Recipe selection</h3>
+<p>A test recipe defines the required test sequence, setpoints, limits, timing, measurement conditions, and acceptance rules for a particular product or configuration.</p>
+<p>The station should verify:</p>
+<ol>
+<li>The engine identity is valid and readable.</li>
+<li>The identity matches the expected production item.</li>
+<li>The correct engine variant has been identified.</li>
+<li>The approved recipe exists and is compatible with the engine.</li>
+<li>The recipe version is authorized for production.</li>
+<li>Required equipment and instruments are ready.</li>
+<li>The engine has not already been incorrectly released or processed under an invalid sequence.</li>
+</ol>
+<p>A recipe must not be selected solely because it was used for the previous engine. That is how production systems turn one wrong selection into a whole batch of confidently tested wrong products.</p>
+<h3 id="52-incorrect-recipe-example">5.2 Incorrect recipe example</h3>
+<p>Suppose two engine variants use different pressure acceptance limits. If the station runs Variant A using Variant B's recipe, the recorded test may be technically complete but invalid for the actual engine.</p>
+<p>Prevent this through validated identity-to-recipe mapping, recipe-version control, and independent verification of critical configuration data.</p>
+<h2 id="6-leak-testing">6. Leak Testing</h2>
+<p>Leak testing is a common EOL or pre-EOL activity. The specific test depends on the fluid system and design requirements.</p>
+<p>Potential test areas include:</p>
+<ul>
+<li>Engine oil passages and related joints.</li>
+<li>Coolant passages and connections.</li>
+<li>Fuel-system interfaces.</li>
+<li>Intake or charge-air circuits.</li>
+<li>Exhaust-related circuits where the specified test requires it.</li>
+<li>Seals, plugs, covers, and selected joints.</li>
+</ul>
+<p>Not every system is tested using the same medium or method. The approved procedure determines whether air, inert gas, liquid, vacuum, pressure decay, flow measurement, or another method is suitable.</p>
+<h3 id="61-pressure-decay-testing">6.1 Pressure-decay testing</h3>
+<p>In a pressure-decay test, the system is pressurized to a defined condition, allowed to stabilize, and monitored over a specified interval.</p>
+<p>The measured pressure change is evaluated against the approved acceptance criteria.</p>
+<p>A simplified pressure change is:</p>
+<div class="math-display">\[ \Delta P = P\_{\text{start}} - P\_{\text{end}} \]</div>
+<p>A pressure drop does not necessarily prove leakage because temperature change, stabilization, fixture leakage, and measurement uncertainty can affect the result.</p>
+<p>The test must therefore use validated conditions, including appropriate stabilization, test duration, pressure limits, and compensation where required.</p>
+<h3 id="62-leak-test-sequence">6.2 Leak-test sequence</h3>
+<pre><code>Correct Engine and Recipe
+          ↓
+Fixture and Test Connections Verified
+          ↓
+Test Circuit Isolated as Required
+          ↓
+Pressure or Vacuum Applied
+          ↓
+Stabilization Period
+          ↓
+Measurement Period
+          ↓
+Result Compared with Approved Limits
+          ↓
+PASS / FAIL / INVALID
+          ↓
+Result Recorded Against Engine Identity
+</code></pre>
+<h3 id="63-common-leak-test-faults">6.3 Common leak-test faults</h3>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Repeated pressure loss</td>
+<td>Product leak, fixture leak, or connection leak</td>
+<td>Inspect test interfaces and verify the test circuit</td>
+</tr>
+<tr>
+<td>Unstable pressure</td>
+<td>Poor stabilization, temperature variation, or regulator problem</td>
+<td>Review test timing and pressure control</td>
+</tr>
+<tr>
+<td>False pass</td>
+<td>Incorrect limit, failed sensor, or invalid test logic</td>
+<td>Verify calibration, limits, and challenge-test behavior</td>
+</tr>
+<tr>
+<td>False fail</td>
+<td>Fixture leakage, incorrect sealing, or unsuitable test conditions</td>
+<td>Check fixture condition and the approved method</td>
+</tr>
+<tr>
+<td>No pressure build-up</td>
+<td>Supply issue, open valve, major leak, or connection fault</td>
+<td>Inspect supply, valve state, and connections</td>
+</tr>
+<tr>
+<td>Result not recorded</td>
+<td>Interface or database fault</td>
+<td>Check transaction status and product association</td>
+</tr>
+</tbody>
+</table>
+<p>A leak-test result is valid only when the required test conditions were achieved and the measurement system was operating within its defined requirements.</p>
+<h2 id="7-cold-testing-and-motoring-tests">7. Cold Testing and Motoring Tests</h2>
+<p>A cold test typically evaluates selected engine functions without normal combustion. Depending on the engine and test system, the engine may be externally motored while measurements are taken.</p>
+<p>Potential measurements include:</p>
+<ul>
+<li>Cranking or motoring speed.</li>
+<li>Rotational resistance or torque.</li>
+<li>Oil pressure response where the test design supports it.</li>
+<li>Compression-related measurements using the approved method.</li>
+<li>Selected mechanical signatures.</li>
+<li>Sensor or electrical responses.</li>
+<li>Timing or synchronization signals where applicable.</li>
+</ul>
+<p>The exact parameters depend on the engine architecture and test equipment.</p>
+<h3 id="71-why-cold-testing-is-useful">7.1 Why cold testing is useful</h3>
+<p>Cold testing can identify certain mechanical assembly problems before the engine enters a fired test or other downstream process.</p>
+<p>Potential findings include:</p>
+<ul>
+<li>Abnormal rotational resistance.</li>
+<li>Incorrect timing or synchronization.</li>
+<li>Selected mechanical interference.</li>
+<li>Missing or incorrect components affecting the measured signature.</li>
+<li>Certain sealing or pressure-related problems, depending on the test arrangement.</li>
+</ul>
+<p>A cold test does not prove that every engine function will work under combustion, load, or long-duration operation. It only validates the characteristics that the approved test actually measures.</p>
+<h2 id="8-fired-engine-testing">8. Fired-Engine Testing</h2>
+<p>A fired-engine test operates the engine using combustion under defined test conditions. It may be used when the manufacturing validation plan requires direct verification of running behavior or performance.</p>
+<p>Possible checks include:</p>
+<ul>
+<li>Starting behavior.</li>
+<li>Idle stability.</li>
+<li>Engine speed response.</li>
+<li>Oil pressure.</li>
+<li>Coolant temperature and behavior.</li>
+<li>Selected fuel-system parameters.</li>
+<li>Noise and vibration.</li>
+<li>Exhaust-related measurements.</li>
+<li>Performance parameters under defined conditions.</li>
+<li>Diagnostic faults and selected control-system functions.</li>
+</ul>
+<p>Not all fired-test stations measure all these parameters. The test plan must define the required operating points, limits, duration, and acceptance criteria.</p>
+<h3 id="81-safety-considerations">8.1 Safety considerations</h3>
+<p>Fired-engine testing involves moving machinery, hot surfaces, fuel or other energy sources, exhaust gases, rotating components, and potentially high noise levels.</p>
+<p>Controls may include:</p>
+<ul>
+<li>Approved engine mounting and restraint.</li>
+<li>Guarding and restricted access.</li>
+<li>Exhaust extraction and ventilation.</li>
+<li>Fuel-system integrity checks.</li>
+<li>Emergency-stop and safety-system validation.</li>
+<li>Monitoring of critical operating conditions.</li>
+<li>Fire protection where required.</li>
+<li>Controlled shutdown and energy isolation for maintenance.</li>
+<li>Approved procedures for abnormal temperature, pressure, speed, or vibration.</li>
+</ul>
+<p>A normal process PLC permissive should not be assumed to provide the required safety function. Safety-related protection must follow the approved machine design and applicable standards.</p>
+<h2 id="9-sensor-and-actuator-verification">9. Sensor and Actuator Verification</h2>
+<p>Modern engines use electronic control units and many sensors and actuators. EOL testing may verify selected electrical and functional characteristics.</p>
+<p>Examples include:</p>
+<ul>
+<li>Sensor supply and signal plausibility.</li>
+<li>Temperature and pressure sensor readings.</li>
+<li>Crankshaft and camshaft position signals.</li>
+<li>Selected actuator responses.</li>
+<li>Harness connections and pin assignments.</li>
+<li>ECU communication.</li>
+<li>Selected control commands and feedback signals.</li>
+</ul>
+<h3 id="91-electrical-checks-versus-functional-checks">9.1 Electrical checks versus functional checks</h3>
+<p>An electrical continuity test can establish that a circuit is connected under the test conditions. It does not necessarily prove that the sensor reports accurate measurements or that the actuator operates correctly under actual conditions.</p>
+<p>Similarly, a successful communication response does not prove that every ECU function is configured correctly.</p>
+<p>The test strategy should distinguish:</p>
+<ul>
+<li>Electrical integrity.</li>
+<li>Signal plausibility.</li>
+<li>Functional operation.</li>
+<li>Calibration or accuracy requirements.</li>
+<li>ECU configuration and software identity.</li>
+</ul>
+<h3 id="92-diagnostic-trouble-codes">9.2 Diagnostic trouble codes</h3>
+<p>Diagnostic trouble codes (DTCs) may be read from the engine control unit during EOL testing.</p>
+<p>The acceptance rules must distinguish expected, permitted, and unacceptable diagnostic states. A station should not automatically pass an engine simply because it can communicate with the ECU.</p>
+<p>A diagnostic result also needs context. Some codes may be expected during particular manufacturing stages or tests, while others indicate genuine defects. Use the approved test specification rather than clearing every code and declaring victory.</p>
+<h2 id="10-measurement-instruments-and-data-acquisition">10. Measurement Instruments and Data Acquisition</h2>
+<p>EOL test results are only as trustworthy as the measurement chain and the method used to interpret them.</p>
+<p>Common instruments include:</p>
+<ul>
+<li>Pressure transducers.</li>
+<li>Temperature sensors.</li>
+<li>Flow meters.</li>
+<li>Torque and force transducers.</li>
+<li>Speed sensors and encoders.</li>
+<li>Electrical measurement devices.</li>
+<li>Accelerometers and vibration sensors.</li>
+<li>Noise measurement instruments.</li>
+<li>Data acquisition modules.</li>
+</ul>
+<h3 id="101-measurement-chain">10.1 Measurement chain</h3>
+<pre><code>Physical Parameter
+        ↓
+Sensor or Transducer
+        ↓
+Signal Conditioning
+        ↓
+PLC / DAQ / Test Computer
+        ↓
+Engineering-Unit Scaling
+        ↓
+Validation and Acceptance Logic
+        ↓
+Displayed and Stored Result
+</code></pre>
+<p>Errors can occur at every stage. A correctly functioning sensor can still produce an incorrect displayed result if scaling, units, channel mapping, filtering, or software calculations are wrong.</p>
+<h3 id="102-scaling-and-engineering-units">10.2 Scaling and engineering units</h3>
+<p>Suppose a pressure transducer outputs a linear signal over a defined range. The controller converts the raw signal into engineering units using the approved scaling parameters.</p>
+<p>For a linear mapping:</p>
+<div class="math-display">\[ Y = Y\_{\min} + \frac{X-X\_{\min}}{X\_{\max}-X\_{\min}}(Y\_{\max}-Y\_{\min}) \]</div>
+<p>Here, <span class="math-inline">\(X\)</span> is the measured input, <span class="math-inline">\(X\_{\min}\)</span> and <span class="math-inline">\(X\_{\max}\)</span> are the configured input limits, and <span class="math-inline">\(Y\_{\min}\)</span> and <span class="math-inline">\(Y\_{\max}\)</span> are the corresponding engineering-unit limits.</p>
+<p>The formula is only appropriate when the device's specified transfer function is linear over the configured range.</p>
+<p>Always verify units, range, zero, span, channel assignment, and signal type against the approved instrument documentation.</p>
+<h2 id="11-pass-fail-invalid-and-incomplete-results">11. Pass, Fail, Invalid, and Incomplete Results</h2>
+<p>A reliable EOL station must distinguish a successful test from a failed test and from a test that did not produce a valid conclusion.</p>
+<table>
+<thead>
+<tr>
+<th>Result state</th>
+<th>Meaning</th>
+<th>Typical response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PASS</td>
+<td>All required acceptance conditions for the test are satisfied</td>
+<td>Continue according to the approved sequence</td>
+</tr>
+<tr>
+<td>FAIL</td>
+<td>A valid test result violates an acceptance criterion</td>
+<td>Hold the engine and follow the nonconformance process</td>
+</tr>
+<tr>
+<td>INVALID</td>
+<td>Test data or test conditions cannot support a valid decision</td>
+<td>Diagnose the test system or condition and repeat only as authorized</td>
+</tr>
+<tr>
+<td>INCOMPLETE</td>
+<td>One or more required steps have not been completed</td>
+<td>Prevent release until required steps are completed</td>
+</tr>
+<tr>
+<td>ABORTED</td>
+<td>The test sequence was interrupted</td>
+<td>Determine whether the test must restart or follow a defined recovery</td>
+</tr>
+<tr>
+<td>EQUIPMENT FAULT</td>
+<td>The test system cannot reliably execute or evaluate the test</td>
+<td>Hold the process and restore validated equipment operation</td>
+</tr>
+</tbody>
+</table>
+<p>A failed test and an invalid test are not the same. A valid failure is evidence about the product. An invalid test is evidence that the result cannot be trusted.</p>
+<p>The station should never convert missing data, communication loss, or an uncompleted test into a pass by default.</p>
+<h2 id="12-plc-and-test-sequence-control">12. PLC and Test-Sequence Control</h2>
+<p>The PLC or test controller manages station readiness, permissives, sequence transitions, equipment coordination, and the response to faults.</p>
+<p>Typical sequence conditions include:</p>
+<ul>
+<li>Engine identified and validated.</li>
+<li>Correct test recipe loaded.</li>
+<li>Fixture in the required position.</li>
+<li>Required connections confirmed.</li>
+<li>Test equipment ready.</li>
+<li>Instrument values within permitted preconditions.</li>
+<li>Test cycle started under the approved conditions.</li>
+<li>All mandatory steps completed.</li>
+<li>Results valid and evaluated.</li>
+<li>Required data successfully associated with the engine.</li>
+<li>Station release permitted.</li>
+</ul>
+<h3 id="121-state-machine-approach">12.1 State-machine approach</h3>
+<p>A state machine defines the station's allowed operating states and the conditions for transitioning between them.</p>
+<pre><code>IDLE
+  ↓
+IDENTIFICATION
+  ↓
+RECIPE VALIDATION
+  ↓
+PRE-TEST CHECKS
+  ↓
+TEST EXECUTION
+  ↓
+RESULT VALIDATION
+  ↓
+DATA RECORDING
+  ↓
+PASS / HOLD / FAULT
+</code></pre>
+<p>The actual implementation may contain additional states for stabilization, separate tests, unloading, recovery, and retesting.</p>
+<h3 id="122-timeout-handling">12.2 Timeout handling</h3>
+<p>Every operation that depends on a response should have a defined timeout where appropriate.</p>
+<p>Examples include:</p>
+<ul>
+<li>Waiting for a barcode read.</li>
+<li>Waiting for a test instrument to become ready.</li>
+<li>Waiting for a pressure setpoint to be reached.</li>
+<li>Waiting for a test result.</li>
+<li>Waiting for a database acknowledgment.</li>
+</ul>
+<p>A timeout should produce a defined fault or invalid state, not an automatic pass.</p>
+<h3 id="123-handshake-signals">12.3 Handshake signals</h3>
+<p>Where the PLC communicates with a test computer or external instrument, the interface should define the meaning and timing of signals such as:</p>
+<ul>
+<li>Ready.</li>
+<li>Start request.</li>
+<li>Busy.</li>
+<li>Complete.</li>
+<li>Result valid.</li>
+<li>Pass.</li>
+<li>Fail.</li>
+<li>Fault.</li>
+<li>Acknowledgment.</li>
+</ul>
+<p>The design must prevent the same result from being applied to multiple engines or test cycles. A sequence counter, unique transaction identifier, request/response protocol, or another validated mechanism may be used.</p>
+<h2 id="13-traceability-and-test-data-management">13. Traceability and Test Data Management</h2>
+<p>EOL testing generates manufacturing evidence that links the engine to the test conditions and measured results.</p>
+<p>A useful test record may include:</p>
+<ul>
+<li>Engine serial number.</li>
+<li>Product variant.</li>
+<li>Manufacturing order or production reference.</li>
+<li>Station ID.</li>
+<li>Test date and time.</li>
+<li>Recipe ID and version.</li>
+<li>Test software version where required.</li>
+<li>Instrument or equipment identifiers where required.</li>
+<li>Measured parameters and engineering units.</li>
+<li>Acceptance limits and result status.</li>
+<li>Individual test-step results.</li>
+<li>Operator or authorized user identity where required.</li>
+<li>Faults, retests, and authorized overrides.</li>
+<li>Final disposition.</li>
+</ul>
+<h3 id="131-data-association">13.1 Data association</h3>
+<p>The most important traceability question is not simply whether data was stored. It is whether the data belongs to the correct engine and the correct test cycle.</p>
+<p>For example, a valid pressure measurement stored against the wrong serial number creates a traceability defect even if the measurement itself is accurate.</p>
+<p>The system should validate product identity and test transaction status before final acceptance.</p>
+<h3 id="132-database-and-communication-faults">13.2 Database and communication faults</h3>
+<p>Potential problems include:</p>
+<ul>
+<li>Database unavailable.</li>
+<li>Duplicate transaction.</li>
+<li>Missing result fields.</li>
+<li>Incorrect serial-number mapping.</li>
+<li>Delayed or repeated messages.</li>
+<li>Test complete but record not committed.</li>
+<li>Stored data inconsistent with the HMI result.</li>
+<li>Communication loss during the test.</li>
+</ul>
+<p>The approved process must define whether testing can continue, whether the engine must be held, and how the record is recovered. If traceability is mandatory for release, a missing required record must not be silently ignored.</p>
+<h2 id="14-calibration-and-measurement-system-validation">14. Calibration and Measurement-System Validation</h2>
+<p>Calibration establishes the relationship between an instrument's indication and a suitable measurement reference under defined conditions. Calibration alone does not guarantee that the entire EOL system produces valid results.</p>
+<p>The complete measurement process may also require verification of:</p>
+<ul>
+<li>Sensor installation and mounting.</li>
+<li>Wiring and channel mapping.</li>
+<li>Signal conditioning.</li>
+<li>Engineering-unit scaling.</li>
+<li>Software calculations.</li>
+<li>Acceptance limits.</li>
+<li>Repeatability and reproducibility.</li>
+<li>Measurement uncertainty.</li>
+<li>Test fixture integrity.</li>
+<li>Reference standards and their status.</li>
+</ul>
+<h3 id="141-calibration-versus-verification">14.1 Calibration versus verification</h3>
+<table>
+<thead>
+<tr>
+<th>Activity</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Calibration</td>
+<td>Establishes measurement relationship against a reference</td>
+</tr>
+<tr>
+<td>Verification</td>
+<td>Confirms that defined requirements are met</td>
+</tr>
+<tr>
+<td>Adjustment</td>
+<td>Changes instrument behavior to improve agreement with requirements</td>
+</tr>
+<tr>
+<td>Measurement-system analysis</td>
+<td>Evaluates variation and suitability for the intended measurement</td>
+</tr>
+<tr>
+<td>Functional challenge test</td>
+<td>Confirms that the system responds correctly to defined test conditions</td>
+</tr>
+</tbody>
+</table>
+<p>Calibration intervals and acceptance criteria should follow the applicable quality system, instrument requirements, risk, and measurement criticality.</p>
+<p>If an instrument is found out of tolerance, evaluate whether earlier engine results may have been affected. The assessment should follow the plant's nonconformance and product-risk procedures.</p>
+<h2 id="15-common-eol-faults-and-troubleshooting">15. Common EOL Faults and Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Potential causes</th>
+<th>Practical investigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Test will not start</td>
+<td>Missing permissive, incorrect recipe, fixture not ready</td>
+<td>Check station state, interlocks, and required preconditions</td>
+</tr>
+<tr>
+<td>Wrong test limits appear</td>
+<td>Incorrect variant mapping or recipe version</td>
+<td>Verify engine identity and approved recipe configuration</td>
+</tr>
+<tr>
+<td>Pressure does not reach target</td>
+<td>Supply problem, valve fault, major leak, or connection issue</td>
+<td>Check supply, valves, fixture, and test circuit</td>
+</tr>
+<tr>
+<td>Test result fluctuates</td>
+<td>Sensor instability, poor connections, vibration, or process variation</td>
+<td>Inspect signal quality, mounting, and measurement conditions</td>
+</tr>
+<tr>
+<td>All engines suddenly fail</td>
+<td>Common instrument fault, configuration change, or shared process issue</td>
+<td>Check common equipment, recent changes, and reference measurements</td>
+</tr>
+<tr>
+<td>Test passes but downstream inspection fails</td>
+<td>Inadequate test coverage, incorrect limits, or false acceptance</td>
+<td>Compare the actual defect with the test's detection capability</td>
+</tr>
+<tr>
+<td>Test complete but no database record</td>
+<td>Network, application, or transaction failure</td>
+<td>Check interface status, logs, and transaction acknowledgment</td>
+</tr>
+<tr>
+<td>Wrong engine data is recorded</td>
+<td>Identity handling or cycle-association error</td>
+<td>Review scanner results, sequence logic, and transaction keys</td>
+</tr>
+<tr>
+<td>Test remains busy</td>
+<td>Controller handshake issue or incomplete reset</td>
+<td>Inspect state transitions and acknowledgment handling</td>
+</tr>
+<tr>
+<td>Repeated invalid results</td>
+<td>Equipment fault, timeout, unstable conditions, or software issue</td>
+<td>Identify which validity condition is failing</td>
+</tr>
+<tr>
+<td>Intermittent communication loss</td>
+<td>Network, connector, power, or device fault</td>
+<td>Review diagnostics and verify the physical and logical communication path</td>
+</tr>
+<tr>
+<td>Retest passes after initial failure</td>
+<td>Intermittent product defect, test variation, or setup issue</td>
+<td>Preserve the first result and investigate the difference</td>
+</tr>
+</tbody>
+</table>
+<h2 id="16-troubleshooting-method-for-maintenance-engineers">16. Troubleshooting Method for Maintenance Engineers</h2>
+<p>Use a structured approach rather than changing parameters until the alarm disappears.</p>
+<ol>
+<li>Confirm the symptom. Record the engine identity, station, fault message, test step, and time.</li>
+<li>Check the current state. Determine whether the station is waiting, executing, faulted, or holding for a result.</li>
+<li>Separate product faults from equipment faults. Review the actual measured values and whether the test conditions were valid.</li>
+<li>Inspect the measurement chain. Check instrument health, connections, power, scaling, units, and signal mapping.</li>
+<li>Check sequence and recipe. Verify that the correct product variant, test parameters, and software configuration are active.</li>
+<li>Review communication. Inspect PLC-to-test-computer interfaces, device status, and data acknowledgments.</li>
+<li>Use approved reference checks. Apply known-good references or approved challenge tests where appropriate.</li>
+<li>Correct the identified cause. Avoid altering acceptance limits to suppress recurring failures without engineering approval.</li>
+<li>Validate recovery. Confirm the fault is resolved and the test system again produces valid results.</li>
+<li>Document the outcome. Record the fault, cause, corrective action, affected products if applicable, and validation evidence.</li>
+</ol>
+<p>For a suspected measurement fault, do not use a single passing engine as proof that the test system is healthy.</p>
+<h2 id="17-preventive-maintenance-plan-for-eol-stations">17. Preventive Maintenance Plan for EOL Stations</h2>
+<table>
+<thead>
+<tr>
+<th>Frequency</th>
+<th>Maintenance activity</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Each shift or defined production interval</td>
+<td>Check station readiness, alarms, fixture condition, and basic test status</td>
+<td>Shift checklist</td>
+</tr>
+<tr>
+<td>Daily or scheduled interval</td>
+<td>Inspect connections, hoses, sensors, and obvious leakage or damage</td>
+<td>Maintenance log</td>
+</tr>
+<tr>
+<td>Weekly or risk-based interval</td>
+<td>Review recurring faults, false rejects, and abnormal test trends</td>
+<td>Fault-trend report</td>
+</tr>
+<tr>
+<td>Scheduled calibration interval</td>
+<td>Calibrate designated instruments and verify due dates</td>
+<td>Calibration records</td>
+</tr>
+<tr>
+<td>After repairs</td>
+<td>Verify affected inputs, outputs, instruments, and sequence functions</td>
+<td>Repair and validation record</td>
+</tr>
+<tr>
+<td>After software or recipe changes</td>
+<td>Verify approved configuration and affected acceptance logic</td>
+<td>Change-control record</td>
+</tr>
+<tr>
+<td>After a major breakdown</td>
+<td>Validate test execution, results, data association, and release logic</td>
+<td>Commissioning or recovery report</td>
+</tr>
+<tr>
+<td>Periodic quality audit</td>
+<td>Review traceability, recipe control, overrides, and test effectiveness</td>
+<td>Audit record</td>
+</tr>
+</tbody>
+</table>
+<p>The interval must be selected from the actual equipment requirements and plant maintenance strategy. The table is a planning template, not a universal mandatory schedule.</p>
+<h2 id="18-change-control-and-configuration-management">18. Change Control and Configuration Management</h2>
+<p>Changes to an EOL station can affect product acceptance even when the equipment still appears to run normally.</p>
+<p>Controlled changes may include:</p>
+<ul>
+<li>PLC program modifications.</li>
+<li>Test-computer software updates.</li>
+<li>Recipe or acceptance-limit changes.</li>
+<li>Instrument replacement.</li>
+<li>Sensor scaling changes.</li>
+<li>Vision or diagnostic configuration updates.</li>
+<li>Database schema or communication changes.</li>
+<li>Product variant additions.</li>
+<li>Test sequence modifications.</li>
+</ul>
+<p>Before implementation, identify affected functions, risks, and required approvals. After implementation, perform documented verification and validation proportional to the change.</p>
+<p>Maintain approved backups of PLC programs, test applications, recipes, configuration files, and relevant instrument settings. Record version identifiers and confirm that the restored configuration is correct before releasing production.</p>
+<h2 id="19-eol-kpis-and-quality-monitoring">19. EOL KPIs and Quality Monitoring</h2>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Meaning</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>First-pass yield</td>
+<td>Percentage of tested engines passing the defined first attempt</td>
+<td>Measures initial process performance</td>
+</tr>
+<tr>
+<td>Final pass rate</td>
+<td>Percentage of engines reaching final acceptance under the defined reporting rules</td>
+<td>Measures final disposition outcomes</td>
+</tr>
+<tr>
+<td>Test cycle time</td>
+<td>Time required to complete the defined test cycle</td>
+<td>Supports throughput analysis</td>
+</tr>
+<tr>
+<td>Retest rate</td>
+<td>Percentage of engines requiring an additional test attempt</td>
+<td>Identifies recurring product or test-system issues</td>
+</tr>
+<tr>
+<td>Invalid-test rate</td>
+<td>Percentage of attempts that do not produce a valid conclusion</td>
+<td>Highlights equipment, sequence, or data-quality issues</td>
+</tr>
+<tr>
+<td>False-reject rate</td>
+<td>Rate of acceptable products incorrectly rejected by the test system</td>
+<td>Helps evaluate test-system reliability</td>
+</tr>
+<tr>
+<td>Defect escape rate</td>
+<td>Rate of defective products not detected at the intended point</td>
+<td>Indicates limitations in test coverage or control</td>
+</tr>
+<tr>
+<td>Equipment availability</td>
+<td>Availability of the EOL equipment for required production</td>
+<td>Supports maintenance planning</td>
+</tr>
+<tr>
+<td>Repeat-fault rate</td>
+<td>Recurrence of the same identified failure</td>
+<td>Measures corrective-action effectiveness</td>
+</tr>
+<tr>
+<td>Traceability completeness</td>
+<td>Proportion of required records complete and correctly associated</td>
+<td>Measures manufacturing-data integrity</td>
+</tr>
+</tbody>
+</table>
+<p>The first-pass yield can be calculated as:</p>
+<div class="math-display">\[ \text{First-pass yield} = \frac{\text{Engines passing the first valid attempt}} {\text{Engines tested on the first attempt}} \times 100\\% \]</div>
+<p>The denominator and exclusions must be defined consistently. For example, a test aborted due to an equipment fault should not automatically be classified as a product failure.</p>
+<p>A high final pass rate may hide repeated failures and retests. First-pass yield, retest rate, invalid-test rate, and downstream defects should therefore be considered together.</p>
+<h2 id="20-rcacapa-example-engine-passes-eol-but-fails-downstream">20. RCA/CAPA Example: Engine Passes EOL but Fails Downstream</h2>
+<h3 id="problem-statement">Problem statement</h3>
+<p>An engine receives a passing EOL result but later fails a downstream inspection due to a condition that the EOL station was expected to detect.</p>
+<h3 id="possible-causes">Possible causes</h3>
+<ul>
+<li>The relevant defect was outside the defined test coverage.</li>
+<li>The acceptance limits were incorrect or not approved for the engine variant.</li>
+<li>A sensor was faulty or incorrectly scaled.</li>
+<li>The test sequence did not reach the required operating condition.</li>
+<li>The result was associated with the wrong engine.</li>
+<li>A previous passing result was reused.</li>
+<li>The test application reported completion before all required checks were validated.</li>
+<li>The defect was intermittent and did not appear during the original test.</li>
+</ul>
+<h3 id="investigation-steps">Investigation steps</h3>
+<ol>
+<li>Confirm the downstream defect and whether it should have been detectable by EOL.</li>
+<li>Retrieve the complete EOL record, including individual test-step values.</li>
+<li>Verify engine identity, recipe version, limits, and test sequence.</li>
+<li>Review instrument calibration and measurement-system status.</li>
+<li>Check PLC and test-computer logs for timeouts, overrides, or invalid transitions.</li>
+<li>Determine whether the test conditions were representative of the required failure mode.</li>
+<li>Reproduce the condition using an approved test method.</li>
+<li>Identify the verified root cause and assess potentially affected engines.</li>
+</ol>
+<h3 id="corrective-and-preventive-actions">Corrective and preventive actions</h3>
+<ul>
+<li>Correct the confirmed equipment, software, measurement, or process issue.</li>
+<li>Improve test coverage where the risk assessment demonstrates a gap.</li>
+<li>Correct variant-to-recipe mapping or acceptance logic where required.</li>
+<li>Improve cycle-specific result validation and traceability.</li>
+<li>Validate the intended detection function with approved challenge cases.</li>
+<li>Assess the impact on previously released products.</li>
+<li>Update FMEA, control plans, work instructions, and maintenance records as applicable.</li>
+<li>Monitor subsequent results to verify that the failure does not recur.</li>
+</ul>
+<p>Adding another alarm is not sufficient if the actual problem is that the test never measured the relevant condition.</p>
+<h2 id="21-eol-station-audit-checklist">21. EOL Station Audit Checklist</h2>
+<ul>
+<li>Engine identification matches the physical product.</li>
+<li>The correct approved test recipe and version are active.</li>
+<li>Required instruments are within their calibration or verification status.</li>
+<li>Test fixtures, connectors, and interfaces are in acceptable condition.</li>
+<li>Required preconditions are checked before test execution.</li>
+<li>Test limits match the approved specification.</li>
+<li>Invalid or incomplete results cannot be interpreted as a pass.</li>
+<li>Failed tests trigger the required hold or rejection response.</li>
+<li>Test results are associated with the correct engine and cycle.</li>
+<li>Database or MES failures are handled according to the release rules.</li>
+<li>Bypasses and overrides are authorized, visible, and recorded.</li>
+<li>Retests preserve the original failure history.</li>
+<li>Approved software and recipe versions are controlled.</li>
+<li>Post-maintenance verification is documented.</li>
+<li>Safety functions and abnormal-condition responses are verified according to the approved procedure.</li>
+<li>Recurring faults and quality trends are reviewed.</li>
+<li>RCA/CAPA actions are checked for effectiveness.</li>
+</ul>
+<h2 id="22-practical-learning-exercises">22. Practical Learning Exercises</h2>
+<ul>
+<li>Draw the architecture of an EOL station, including PLC, test computer, instruments, HMI, and database.</li>
+<li>Select one pressure or leak test and document its sequence, parameters, limits, and failure response.</li>
+<li>Trace one measured value from the physical sensor to the stored database record.</li>
+<li>Explain how the station prevents the wrong recipe from being used.</li>
+<li>Identify the handshake signals between a PLC and a test application.</li>
+<li>Explain how the station distinguishes PASS, FAIL, INVALID, and INCOMPLETE.</li>
+<li>Review an example of a failed test followed by a successful retest, ensuring both attempts remain traceable.</li>
+<li>Create a troubleshooting checklist for a test that fails to reach its pressure setpoint.</li>
+<li>Develop an RCA for an engine that passes EOL but fails downstream.</li>
+<li>Prepare a post-maintenance validation checklist for an instrument replacement.</li>
+<li>Calculate first-pass yield using a defined sample of test records.</li>
+<li>Identify one possible defect that the existing EOL test cannot reliably detect and explain the evidence needed to assess the gap.</li>
+</ul>
+<h2 id="23-competency-checklist">23. Competency Checklist</h2>
+<p>A maintenance or automation engineer working with EOL testing should be able to:</p>
+<ul>
+<li>Explain the purpose and limitations of EOL testing.</li>
+<li>Identify the test station's major hardware and software components.</li>
+<li>Understand the difference between cold, motoring, leak, electrical, and fired-engine testing.</li>
+<li>Verify product identity and recipe selection.</li>
+<li>Interpret measured parameters, units, and acceptance limits.</li>
+<li>Troubleshoot sensors, signal scaling, test instruments, and communication interfaces.</li>
+<li>Understand PLC sequence logic, permissives, timeouts, and result handshakes.</li>
+<li>Diagnose invalid results without treating them as product passes.</li>
+<li>Trace test data to the correct engine identity.</li>
+<li>Preserve initial failures and retest history.</li>
+<li>Follow approved calibration, maintenance, and validation procedures.</li>
+<li>Apply structured RCA/CAPA methods to recurring failures.</li>
+<li>Understand the relationship between test coverage, defect escape, and first-pass yield.</li>
+<li>Maintain configuration control and evidence of changes.</li>
+<li>Follow approved safety and energy-isolation procedures during maintenance.</li>
+</ul>
+<h2 id="24-final-technical-summary">24. Final Technical Summary</h2>
+<p>EOL testing is the controlled verification stage that evaluates whether an assembled engine meets its specified manufacturing acceptance requirements.</p>
+<p>Its effectiveness depends on the entire system: correct product identification, correct recipe selection, valid test conditions, reliable measurement instruments, appropriate PLC sequencing, correct result evaluation, and accurate traceability.</p>
+<p>The essential principles are:</p>
+<ul>
+<li>Test only under defined and valid conditions.</li>
+<li>Use approved, product-specific acceptance criteria.</li>
+<li>Distinguish product failure from test-system failure.</li>
+<li>Never treat missing, stale, or invalid data as a passing result.</li>
+<li>Associate every result with the correct engine and test cycle.</li>
+<li>Preserve the complete history of failures, retests, and overrides.</li>
+<li>Validate the system after relevant maintenance or configuration changes.</li>
+<li>Use trend analysis and RCA/CAPA to improve both product quality and test-system reliability.</li>
+</ul>
+<p>A passing result is meaningful only when the correct engine has undergone the required test under valid conditions and the evidence supports the acceptance decision.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\29_Line_Systems\04_Chassis\01_Conveyors - Conveyors</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

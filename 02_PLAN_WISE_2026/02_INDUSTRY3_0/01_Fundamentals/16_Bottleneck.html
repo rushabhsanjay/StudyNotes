@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>16. Bottleneck</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">16. Bottleneck</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a><ul>
+<li><a href="#example">Example</a></li>
+</ul>
+</li>
+<li><a href="#2-why-bottlenecks-matter">2. Why Bottlenecks Matter</a></li>
+<li><a href="#3-types-of-bottlenecks">3. Types of Bottlenecks</a><ul>
+<li><a href="#31-cycle-time-bottleneck">3.1 Cycle-time bottleneck</a></li>
+<li><a href="#32-availability-bottleneck">3.2 Availability bottleneck</a></li>
+<li><a href="#33-quality-bottleneck">3.3 Quality bottleneck</a></li>
+<li><a href="#34-material-flow-bottleneck">3.4 Material-flow bottleneck</a></li>
+<li><a href="#35-shared-resource-bottleneck">3.5 Shared-resource bottleneck</a></li>
+<li><a href="#36-capacity-or-design-bottleneck">3.6 Capacity or design bottleneck</a></li>
+</ul>
+</li>
+<li><a href="#4-bottleneck-vs-slowest-machine-vs-highest-downtime">4. Bottleneck vs Slowest Machine vs Highest Downtime</a></li>
+<li><a href="#5-how-to-identify-a-bottleneck">5. How to Identify a Bottleneck</a><ul>
+<li><a href="#step-1-define-the-system-boundary">Step 1: Define the system boundary</a></li>
+<li><a href="#step-2-measure-station-cycle-times">Step 2: Measure station cycle times</a></li>
+<li><a href="#step-3-compare-capacity-with-required-output">Step 3: Compare capacity with required output</a></li>
+<li><a href="#step-4-examine-downtime-and-production-losses">Step 4: Examine downtime and production losses</a></li>
+<li><a href="#step-5-observe-the-line">Step 5: Observe the line</a></li>
+<li><a href="#step-6-verify-the-constraint">Step 6: Verify the constraint</a></li>
+</ul>
+</li>
+<li><a href="#6-a-worked-automotive-production-example">6. A Worked Automotive Production Example</a></li>
+<li><a href="#7-bottleneck-and-takt-time">7. Bottleneck and Takt Time</a></li>
+<li><a href="#8-bottleneck-and-throughput">8. Bottleneck and Throughput</a></li>
+<li><a href="#9-bottleneck-migration">9. Bottleneck Migration</a></li>
+<li><a href="#10-practical-bottleneck-analysis-for-maintenance">10. Practical Bottleneck Analysis for Maintenance</a><ul>
+<li><a href="#101-plc-and-sequence-analysis">10.1 PLC and sequence analysis</a></li>
+<li><a href="#102-sensor-and-actuator-checks">10.2 Sensor and actuator checks</a></li>
+<li><a href="#103-robot-and-motion-analysis">10.3 Robot and motion analysis</a></li>
+<li><a href="#104-production-data-analysis">10.4 Production-data analysis</a></li>
+</ul>
+</li>
+<li><a href="#11-bottleneck-improvement-strategy">11. Bottleneck Improvement Strategy</a></li>
+<li><a href="#12-common-mistakes">12. Common Mistakes</a></li>
+<li><a href="#13-interview-questions-and-answers">13. Interview Questions and Answers</a></li>
+<li><a href="#14-final-mental-model">14. Final Mental Model</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>A bottleneck is a resource, operation, machine, workstation, or process constraint that limits the throughput of a production system.</p>
+<p>In manufacturing, a bottleneck prevents the complete system from producing more output, even when other machines have spare capacity.</p>
+<p>A bottleneck may be caused by:</p>
+<ul>
+<li>Excessive cycle time.</li>
+<li>Frequent machine breakdowns.</li>
+<li>Long changeover times.</li>
+<li>Quality problems and rework.</li>
+<li>Material shortages.</li>
+<li>Slow manual operations.</li>
+<li>Limited fixture or tooling capacity.</li>
+<li>Process restrictions or safety requirements.</li>
+<li>Insufficient capacity at a shared resource.</li>
+</ul>
+<p>The bottleneck is not necessarily the oldest, slowest-looking, or most unreliable machine. It is the constraint that actually limits the output of the defined system under the operating conditions being examined.</p>
+<h3 id="example">Example</h3>
+<p>Consider an automotive production line with three stations:</p>
+<table>
+<thead>
+<tr>
+<th>Station</th>
+<th>Cycle time</th>
+<th>Theoretical capacity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>40 seconds</td>
+<td>90 parts/hour</td>
+</tr>
+<tr>
+<td>B</td>
+<td>60 seconds</td>
+<td>60 parts/hour</td>
+</tr>
+<tr>
+<td>C</td>
+<td>45 seconds</td>
+<td>80 parts/hour</td>
+</tr>
+</tbody>
+</table>
+<p>Assuming one part per cycle, serial processing, and no parallel capacity, Station B has the lowest theoretical capacity.</p>
+<p>Its capacity is:</p>
+<div class="math-display">\[ \frac{3600}{60}=60\text{ parts/hour} \]</div>
+<p>Stations A and C can process parts faster, but the complete line cannot sustainably deliver more than 60 parts per hour under these simplified assumptions.</p>
+<p>Station B is the theoretical bottleneck.</p>
+<p>Actual line throughput may be lower because of downtime, quality losses, blocking, starvation, and other operating conditions.</p>
+<h2 id="2-why-bottlenecks-matter">2. Why Bottlenecks Matter</h2>
+<p>Production systems are interconnected. Improving one machine does not necessarily improve the output of the entire line.</p>
+<p>Suppose Station A is improved from 40 seconds to 30 seconds per cycle. Its theoretical capacity increases from 90 to 120 parts per hour.</p>
+<p>However, Station B still has a 60-second cycle and a capacity of 60 parts per hour.</p>
+<p>The line's theoretical limiting capacity remains 60 parts per hour.</p>
+<p>This demonstrates a fundamental manufacturing principle:</p>
+<p>Improving a resource that is not constraining system output may produce little or no increase in total throughput.</p>
+<p>Bottleneck identification helps engineering and maintenance teams decide where improvements will have the greatest effect.</p>
+<h2 id="3-types-of-bottlenecks">3. Types of Bottlenecks</h2>
+<h3 id="31-cycle-time-bottleneck">3.1 Cycle-time bottleneck</h3>
+<p>A station takes longer per unit than the other stations and cannot sustain the required production pace.</p>
+<p>Example: A robotic welding station requires 85 seconds per assembly while downstream stations require only 55 seconds.</p>
+<p>Possible causes include excessive robot travel, unnecessary sequence steps, slow clamping, or long processing time.</p>
+<h3 id="32-availability-bottleneck">3.2 Availability bottleneck</h3>
+<p>A machine has sufficient theoretical capacity but loses substantial production time because of breakdowns or repeated stops.</p>
+<p>Example: A CNC machine has a 45-second cycle but frequently stops because of tool-change faults.</p>
+<p>Its theoretical cycle rate may be high, but its actual output is restricted by downtime.</p>
+<h3 id="33-quality-bottleneck">3.3 Quality bottleneck</h3>
+<p>A process produces unacceptable parts, requires repeated inspection, or generates significant rework.</p>
+<p>Example: A welding station frequently produces defective welds, requiring repair and additional inspection before assemblies can proceed.</p>
+<p>The process consumes capacity without delivering the expected quantity of good output.</p>
+<h3 id="34-material-flow-bottleneck">3.4 Material-flow bottleneck</h3>
+<p>A station is unable to work because parts, pallets, fixtures, or other required resources are unavailable.</p>
+<p>Example: A robot is ready to weld, but the incoming conveyor does not deliver the next body assembly.</p>
+<p>The robot's cycle time may be satisfactory, yet material flow restricts production.</p>
+<h3 id="35-shared-resource-bottleneck">3.5 Shared-resource bottleneck</h3>
+<p>Multiple operations depend on the same limited resource.</p>
+<p>Examples include:</p>
+<ul>
+<li>One inspection station serving several production lines.</li>
+<li>One maintenance technician supporting several critical machines.</li>
+<li>A shared material-handling system.</li>
+<li>One fixture or tool required by multiple operations.</li>
+</ul>
+<p>The constraint may exist outside the individual machine's immediate process.</p>
+<h3 id="36-capacity-or-design-bottleneck">3.6 Capacity or design bottleneck</h3>
+<p>The process was designed with insufficient capacity for the required demand.</p>
+<p>Example: A machining operation has a maximum theoretical output of 45 parts per hour, but the required production rate is 60 parts per hour.</p>
+<p>Even perfect reliability cannot solve this capacity gap by itself. The process needs a valid capacity improvement, parallel processing, or a change in production design.</p>
+<h2 id="4-bottleneck-vs-slowest-machine-vs-highest-downtime">4. Bottleneck vs Slowest Machine vs Highest Downtime</h2>
+<p>These concepts overlap, but they are not identical.</p>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bottleneck</td>
+<td>The constraint limiting system output</td>
+</tr>
+<tr>
+<td>Slowest machine</td>
+<td>A machine with the longest defined processing or cycle time</td>
+</tr>
+<tr>
+<td>Highest-downtime machine</td>
+<td>A machine with the greatest downtime under the selected measurement method</td>
+</tr>
+<tr>
+<td>Critical machine</td>
+<td>A machine whose failure has significant consequences for production, safety, quality, or other business objectives</td>
+</tr>
+<tr>
+<td>Constraint</td>
+<td>A limiting factor affecting the performance of the system</td>
+</tr>
+</tbody>
+</table>
+<p>The slowest machine may be the bottleneck, but not always.</p>
+<p>For example, a machine with a 70-second cycle may have a parallel machine processing the same work. A different station with a 55-second cycle and frequent breakdowns may constrain the complete line instead.</p>
+<p>Likewise, the machine with the highest downtime may not be the bottleneck if buffers, redundant equipment, or spare capacity absorb its losses.</p>
+<p>Identify the constraint using actual production flow and output data, not a single machine metric.</p>
+<h2 id="5-how-to-identify-a-bottleneck">5. How to Identify a Bottleneck</h2>
+<p>A practical investigation combines production data, cycle measurements, and direct observation.</p>
+<h3 id="step-1-define-the-system-boundary">Step 1: Define the system boundary</h3>
+<p>Determine whether the investigation covers:</p>
+<ul>
+<li>One machine.</li>
+<li>A workstation.</li>
+<li>A production line.</li>
+<li>A complete manufacturing area.</li>
+<li>A process shared across multiple lines.</li>
+</ul>
+<p>A bottleneck can change depending on the boundary being studied.</p>
+<h3 id="step-2-measure-station-cycle-times">Step 2: Measure station cycle times</h3>
+<p>Record the complete, consistently defined cycle time for each station.</p>
+<p>Do not measure only the robot's motion time if the production cycle also includes fixture operations, transfer, or other required activities.</p>
+<h3 id="step-3-compare-capacity-with-required-output">Step 3: Compare capacity with required output</h3>
+<p>For a simple operation that produces one unit per cycle:</p>
+<div class="math-display">\[ R\_{\text{theoretical}}=\frac{3600}{T\_{\text{cycle}}} \]</div>
+<p>where cycle time is in seconds and the theoretical rate is in units per hour.</p>
+<p>Compare this rate with the demand-based rate and the capacity of connected stations.</p>
+<h3 id="step-4-examine-downtime-and-production-losses">Step 4: Examine downtime and production losses</h3>
+<p>Review:</p>
+<ul>
+<li>Breakdown frequency and duration.</li>
+<li>Minor stops.</li>
+<li>Changeover time.</li>
+<li>Quality rejects and rework.</li>
+<li>Material starvation.</li>
+<li>Downstream blocking.</li>
+<li>Speed losses.</li>
+</ul>
+<p>A station may appear fast when running but still constrain production because it spends too much time stopped.</p>
+<h3 id="step-5-observe-the-line">Step 5: Observe the line</h3>
+<p>Look for recurring patterns:</p>
+<ul>
+<li>Work accumulating before a station.</li>
+<li>Downstream equipment waiting for parts.</li>
+<li>Upstream equipment being blocked.</li>
+<li>A station consistently running at full utilization.</li>
+<li>Repeated stops that delay the next completed unit.</li>
+</ul>
+<p>These are clues, not automatic proof. Buffers and production scheduling can make the visible queue misleading.</p>
+<h3 id="step-6-verify-the-constraint">Step 6: Verify the constraint</h3>
+<p>Determine whether improving the suspected resource would increase the output of the complete system.</p>
+<p>If the output cannot improve because another constraint dominates, the suspected bottleneck may not be the current limiting factor.</p>
+<h2 id="6-a-worked-automotive-production-example">6. A Worked Automotive Production Example</h2>
+<p>Consider a simplified automotive body assembly line.</p>
+<table>
+<thead>
+<tr>
+<th>Station</th>
+<th>Cycle time</th>
+<th>Theoretical capacity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Loading and locating</td>
+<td>40 seconds</td>
+<td>90 assemblies/hour</td>
+</tr>
+<tr>
+<td>Robotic welding</td>
+<td>65 seconds</td>
+<td>55.4 assemblies/hour</td>
+</tr>
+<tr>
+<td>Inspection</td>
+<td>50 seconds</td>
+<td>72 assemblies/hour</td>
+</tr>
+<tr>
+<td>Unloading and transfer</td>
+<td>35 seconds</td>
+<td>102.9 assemblies/hour</td>
+</tr>
+</tbody>
+</table>
+<p>Assume one serial processing path, one assembly per cycle, no parallel capacity, and no additional restrictions.</p>
+<p>The robotic welding station has the lowest theoretical capacity.</p>
+<p>Its rate is:</p>
+<div class="math-display">\[ \frac{3600}{65}\approx55.4\text{ assemblies/hour} \]</div>
+<p>The other stations have higher theoretical capacities, so the welding station is the theoretical cycle-time bottleneck.</p>
+<p>Now suppose welding also experiences recurring robot faults and fixture-sensor failures. Its actual good-part throughput may fall below 55.4 assemblies per hour.</p>
+<p>The engineering investigation should distinguish two issues:</p>
+<ol>
+<li>Nominal capacity constraint: The 65-second cycle.</li>
+<li>Operational losses: Faults, downtime, rejects, or waiting that further reduce delivered output.</li>
+</ol>
+<p>The correct improvement plan may need to address both.</p>
+<h2 id="7-bottleneck-and-takt-time">7. Bottleneck and Takt Time</h2>
+<p>Takt time defines the production pace required by customer demand. A bottleneck may prevent the line from meeting that pace.</p>
+<p>Suppose:</p>
+<ul>
+<li>Net available production time: 420 minutes per shift.</li>
+<li>Required demand: 420 assemblies per shift.</li>
+</ul>
+<p>Takt time is:</p>
+<div class="math-display">\[ \frac{420}{420}=1\text{ minute/assembly} \]</div>
+<p>Therefore, the line must deliver an average of one assembly per 60 seconds.</p>
+<p>Suppose the bottleneck station requires 70 seconds per assembly and has no parallel capacity.</p>
+<p>Its theoretical capacity is:</p>
+<div class="math-display">\[ \frac{3600}{70}\approx51.4\text{ assemblies/hour} \]</div>
+<p>The required rate is 60 assemblies per hour.</p>
+<p>The station's theoretical capacity is insufficient to meet demand under these assumptions.</p>
+<p>Possible engineering responses include:</p>
+<ul>
+<li>Reducing the cycle time through validated process improvement.</li>
+<li>Redistributing work to other stations.</li>
+<li>Introducing parallel processing capacity.</li>
+<li>Redesigning tooling or the process sequence.</li>
+<li>Removing avoidable waiting or transfer delays.</li>
+</ul>
+<p>A machine must not be forced to run beyond safe or validated operating limits just to match takt time.</p>
+<h2 id="8-bottleneck-and-throughput">8. Bottleneck and Throughput</h2>
+<p>Throughput is the actual output rate. A bottleneck limits the throughput that the complete system can sustain.</p>
+<p>For a simple serial line with one unit processed at a time per station, the lowest station capacity establishes the theoretical upper limit, provided there are no alternative paths or other capacity arrangements.</p>
+<p>However, actual throughput can be lower than this limit.</p>
+<p>For example:</p>
+<ul>
+<li>Theoretical bottleneck capacity: 60 parts/hour.</li>
+<li>Actual good-part throughput: 48 parts/hour.</li>
+</ul>
+<p>The gap is:</p>
+<div class="math-display">\[ 60-48=12\text{ parts/hour} \]</div>
+<p>This difference may result from downtime, quality losses, blocking, starvation, or other inefficiencies.</p>
+<p>It is not sufficient to know that a station is the bottleneck. The team must also determine which losses are reducing its effective output.</p>
+<h2 id="9-bottleneck-migration">9. Bottleneck Migration</h2>
+<p>Bottleneck migration occurs when improving one constraint causes another resource to become the new limiting factor.</p>
+<p>Consider a line with these theoretical capacities:</p>
+<table>
+<thead>
+<tr>
+<th>Station</th>
+<th>Initial capacity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>90 parts/hour</td>
+</tr>
+<tr>
+<td>B</td>
+<td>60 parts/hour</td>
+</tr>
+<tr>
+<td>C</td>
+<td>75 parts/hour</td>
+</tr>
+</tbody>
+</table>
+<p>Station B is the initial theoretical bottleneck.</p>
+<p>After engineering improvements, Station B's capacity increases to 85 parts per hour.</p>
+<p>The revised capacities are:</p>
+<table>
+<thead>
+<tr>
+<th>Station</th>
+<th>Revised capacity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>90 parts/hour</td>
+</tr>
+<tr>
+<td>B</td>
+<td>85 parts/hour</td>
+</tr>
+<tr>
+<td>C</td>
+<td>75 parts/hour</td>
+</tr>
+</tbody>
+</table>
+<p>Station C now has the lowest theoretical capacity.</p>
+<p>The bottleneck has migrated from Station B to Station C.</p>
+<p>This is a normal feature of constrained production systems. Improvement does not eliminate all constraints permanently; it can expose the next one.</p>
+<p>Therefore, after a major improvement, reassess the entire system rather than assuming the old bottleneck remains the only priority.</p>
+<h2 id="10-practical-bottleneck-analysis-for-maintenance">10. Practical Bottleneck Analysis for Maintenance</h2>
+<p>In industrial automation, bottleneck analysis should connect machine faults to production impact.</p>
+<p>Consider a robotic station with:</p>
+<ul>
+<li>PLC-controlled sequence.</li>
+<li>Robot controller.</li>
+<li>Fixture sensors.</li>
+<li>Pneumatic clamping.</li>
+<li>Conveyor transfer.</li>
+<li>Safety interlocks.</li>
+</ul>
+<p>The station is suspected of restricting line output.</p>
+<p>A useful investigation includes the following.</p>
+<h3 id="101-plc-and-sequence-analysis">10.1 PLC and sequence analysis</h3>
+<p>Check whether the sequence spends excessive time waiting for conditions such as:</p>
+<ul>
+<li>Fixture-clamped confirmation.</li>
+<li>Robot-cycle-complete signals.</li>
+<li>Conveyor-ready signals.</li>
+<li>Downstream station availability.</li>
+<li>Part-present detection.</li>
+</ul>
+<p>A long wait does not automatically mean the PLC program is inefficient. The missing condition may reflect a genuine mechanical or process problem.</p>
+<h3 id="102-sensor-and-actuator-checks">10.2 Sensor and actuator checks</h3>
+<p>Inspect relevant components for:</p>
+<ul>
+<li>Intermittent sensor signals.</li>
+<li>Damaged cables or connectors.</li>
+<li>Slow pneumatic cylinders.</li>
+<li>Valve or pressure problems.</li>
+<li>Mechanical misalignment.</li>
+<li>Inconsistent fixture positioning.</li>
+</ul>
+<h3 id="103-robot-and-motion-analysis">10.3 Robot and motion analysis</h3>
+<p>Check:</p>
+<ul>
+<li>Robot alarms and recovery time.</li>
+<li>Excessive travel or unnecessary motion.</li>
+<li>Tool or weld-process delays.</li>
+<li>Wait instructions and handshake conditions.</li>
+<li>Safe, validated opportunities for motion optimization.</li>
+</ul>
+<h3 id="104-production-data-analysis">10.4 Production-data analysis</h3>
+<p>Compare:</p>
+<ul>
+<li>Cycle time while running.</li>
+<li>Total downtime.</li>
+<li>Fault frequency.</li>
+<li>Mean time to repair.</li>
+<li>Good-part throughput.</li>
+<li>Reject and rework rates.</li>
+<li>Blocking and starvation duration.</li>
+</ul>
+<p>The goal is to identify which condition actually limits the line's output and which corrective action will improve it.</p>
+<h2 id="11-bottleneck-improvement-strategy">11. Bottleneck Improvement Strategy</h2>
+<p>A useful general sequence is:</p>
+<ol>
+<li>Identify the current constraint using reliable data.</li>
+<li>Measure its cycle time, availability, quality losses, and effective output.</li>
+<li>Exploit the existing resource by reducing avoidable losses without unnecessary capital expenditure.</li>
+<li>Align upstream and downstream operations with the constraint.</li>
+<li>Improve the process through validated engineering changes.</li>
+<li>Reassess the line after the improvement because the constraint may have moved.</li>
+</ol>
+<p>This resembles the core logic of the Theory of Constraints: system performance depends heavily on how the limiting resource is managed and improved.</p>
+<p>The sequence does not mean every bottleneck can be solved through maintenance alone. Some constraints require new equipment, parallel capacity, process redesign, or a change in production requirements.</p>
+<h2 id="12-common-mistakes">12. Common Mistakes</h2>
+<ol>
+<li>Assuming the slowest machine is always the bottleneck. Parallel capacity and operating losses can change the result.</li>
+<li>Using cycle time alone. Availability, quality, blocking, and starvation also affect actual output.</li>
+<li>Optimizing a non-bottleneck first. This may improve local performance without increasing line throughput.</li>
+<li>Ignoring the system boundary. The constraint for a machine cell may differ from the constraint for the complete line.</li>
+<li>Confusing downtime with bottleneck status. High downtime matters when it limits the defined system's output.</li>
+<li>Ignoring bottleneck migration. A successful improvement may expose a different constraint.</li>
+<li>Assuming the bottleneck is permanent. Demand, product mix, equipment condition, and production arrangements can change it.</li>
+<li>Increasing speed without process validation. Safety, product quality, equipment limits, and process capability must remain intact.</li>
+<li>Treating a queue as conclusive evidence. Material can accumulate for reasons other than a true capacity bottleneck.</li>
+</ol>
+<h2 id="13-interview-questions-and-answers">13. Interview Questions and Answers</h2>
+<p>Q1. What is a bottleneck in manufacturing?</p>
+<p>A bottleneck is a resource or process constraint that limits the throughput of a defined production system.</p>
+<p>Q2. How do you identify a bottleneck in an automated production line?</p>
+<p>Measure station cycle times and capacities, analyze downtime and quality losses, observe material flow, and verify which constraint limits the line's actual output.</p>
+<p>Q3. Is the slowest machine always the bottleneck?</p>
+<p>No. Parallel equipment, buffers, downtime, process dependencies, and other constraints can change which resource limits the complete system.</p>
+<p>Q4. What is the relationship between bottleneck and throughput?</p>
+<p>The bottleneck limits the throughput the system can sustain. Improving the current constraint may increase output if another constraint does not prevent the gain.</p>
+<p>Q5. What is the difference between a cycle-time bottleneck and an availability bottleneck?</p>
+<p>A cycle-time bottleneck has insufficient nominal processing capacity. An availability bottleneck loses enough production time through stops or breakdowns to restrict output.</p>
+<p>Q6. What is bottleneck migration?</p>
+<p>It occurs when improvement of one constraint causes another resource to become the new limiting factor.</p>
+<p>Q7. How does takt time help identify a bottleneck?</p>
+<p>Takt time establishes the required production pace. Comparing station capacity and effective cycle times against that pace helps identify operations that may prevent demand from being met.</p>
+<p>Q8. Why might reducing a robot's cycle time fail to increase line output?</p>
+<p>Another station may be the actual constraint, or the robot's improvement may not reduce the complete station cycle time because fixture, transfer, or waiting time remains unchanged.</p>
+<p>Q9. What is the role of maintenance in bottleneck improvement?</p>
+<p>Maintenance reduces breakdowns, recurring faults, recovery time, and other losses affecting the constraint. It also provides data to verify whether corrective actions improve output.</p>
+<p>Q10. What is the Theory of Constraints?</p>
+<p>It is a management approach that focuses improvement efforts on the constraints that limit a system's performance.</p>
+<h2 id="14-final-mental-model">14. Final Mental Model</h2>
+<pre><code>Customer demand
+       |
+       v
+Required production pace
+       |
+       v
+Production system with multiple operations
+       |
+       v
+Identify the limiting resource
+       |
+       v
+BOTTLENECK
+       |
+       v
+Analyze capacity and production losses
+       |
+       v
+Improve the constraint
+       |
+       v
+Measure throughput again
+       |
+       v
+Check whether the bottleneck has moved
+</code></pre>
+<p>Remember the relationship between the previous topics:</p>
+<ul>
+<li>Takt time: How frequently production must deliver a unit to meet demand.</li>
+<li>Throughput: How much output the system actually delivers per unit of time.</li>
+<li>Bottleneck: The constraint limiting the system's output.</li>
+<li>Cycle time: How long a defined production operation takes.</li>
+<li>Capacity: How much output a resource can produce under specified conditions.</li>
+</ul>
+<p>The central principle is that the best production improvement is not necessarily the one that makes an individual machine faster. It is the one that improves the performance of the complete system.</p>
+<p>Next topic in sequence: <code>17_Production_Capacity | Production Capacity</code>.</p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

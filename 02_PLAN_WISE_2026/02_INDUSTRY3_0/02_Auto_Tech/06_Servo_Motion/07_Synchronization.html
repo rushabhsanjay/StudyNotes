@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>07_Synchronization - Synchronization</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">07_Synchronization - Synchronization</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-what-is-synchronization">1. What is synchronization?</a></li>
+<li><a href="#2-basic-synchronization-architecture">2. Basic synchronization architecture</a></li>
+<li><a href="#3-three-basic-forms-of-synchronization">3. Three basic forms of synchronization</a><ul>
+<li><a href="#31-position-synchronization">3.1 Position synchronization</a></li>
+<li><a href="#32-velocity-synchronization">3.2 Velocity synchronization</a></li>
+<li><a href="#33-time-synchronization">3.3 Time synchronization</a></li>
+</ul>
+</li>
+<li><a href="#4-master-follower-control">4. Master-follower control</a><ul>
+<li><a href="#41-physical-master">4.1 Physical master</a></li>
+<li><a href="#42-virtual-master">4.2 Virtual master</a></li>
+<li><a href="#43-why-actual-master-feedback-matters">4.3 Why actual master feedback matters</a></li>
+</ul>
+</li>
+<li><a href="#5-electronic-gearing">5. Electronic gearing</a><ul>
+<li><a href="#example-feeder-and-main-conveyor">Example: feeder and main conveyor</a></li>
+<li><a href="#electronic-gearing-versus-mechanical-gearing">Electronic gearing versus mechanical gearing</a></li>
+</ul>
+</li>
+<li><a href="#6-electronic-camming">6. Electronic camming</a><ul>
+<li><a href="#example-flying-cutoff">Example: flying cutoff</a></li>
+</ul>
+</li>
+<li><a href="#7-phase-synchronization">7. Phase synchronization</a></li>
+<li><a href="#8-synchronization-during-acceleration-and-deceleration">8. Synchronization during acceleration and deceleration</a></li>
+<li><a href="#9-coordinating-two-motors-on-one-mechanical-axis">9. Coordinating two motors on one mechanical axis</a><ul>
+<li><a href="#important-engineering-requirements">Important engineering requirements</a></li>
+</ul>
+</li>
+<li><a href="#10-synchronization-error-and-following-error">10. Synchronization error and following error</a></li>
+<li><a href="#11-synchronization-hardware-and-signals">11. Synchronization hardware and signals</a><ul>
+<li><a href="#encoder-scaling">Encoder scaling</a></li>
+</ul>
+</li>
+<li><a href="#12-plc-and-motion-controller-implementation">12. PLC and motion-controller implementation</a><ul>
+<li><a href="#implementation-rules">Implementation rules</a></li>
+</ul>
+</li>
+<li><a href="#13-common-synchronization-faults-and-troubleshooting">13. Common synchronization faults and troubleshooting</a><ul>
+<li><a href="#recommended-diagnostic-order">Recommended diagnostic order</a></li>
+</ul>
+</li>
+<li><a href="#14-practical-industrial-examples">14. Practical industrial examples</a><ul>
+<li><a href="#example-a-two-conveyors">Example A: Two conveyors</a></li>
+<li><a href="#example-b-gantry-alignment">Example B: Gantry alignment</a></li>
+<li><a href="#example-c-flying-cutoff">Example C: Flying cutoff</a></li>
+<li><a href="#example-d-robot-picking-from-a-moving-conveyor">Example D: Robot picking from a moving conveyor</a></li>
+</ul>
+</li>
+<li><a href="#15-safety-considerations">15. Safety considerations</a></li>
+<li><a href="#16-interview-questions-and-answers">16. Interview questions and answers</a></li>
+<li><a href="#17-practical-exercises">17. Practical exercises</a><ul>
+<li><a href="#exercise-1-calculate-an-electronic-gear-ratio">Exercise 1: Calculate an electronic gear ratio</a></li>
+<li><a href="#exercise-2-diagnose-a-growing-position-error">Exercise 2: Diagnose a growing position error</a></li>
+<li><a href="#exercise-3-diagnose-a-phase-problem">Exercise 3: Diagnose a phase problem</a></li>
+<li><a href="#exercise-4-diagnose-a-gantry-fault">Exercise 4: Diagnose a gantry fault</a></li>
+<li><a href="#exercise-5-prepare-a-synchronization-specification">Exercise 5: Prepare a synchronization specification</a></li>
+</ul>
+</li>
+<li><a href="#18-final-mental-model">18. Final mental model</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\02_Auto_Tech\06_Servo_Motion\07_Synchronization</code></p>
+<h2 id="1-what-is-synchronization">1. What is synchronization?</h2>
+<p>Synchronization is the coordinated operation of two or more axes, motors, conveyors or machine mechanisms so that their movements maintain a required timing or positional relationship.</p>
+<p>In industrial automation, synchronization ensures that one movement occurs at the correct time and in the correct relationship to another movement.</p>
+<p>Examples include:</p>
+<ul>
+<li>A conveyor and a feeder moving at coordinated speeds.</li>
+<li>Two servo motors driving opposite sides of a gantry.</li>
+<li>A robot picking a component from a moving conveyor.</li>
+<li>A flying cutoff system cutting material while the material continues moving.</li>
+<li>A press feeder delivering a sheet at the correct point in the press cycle.</li>
+<li>A master conveyor controlling the speed of a follower conveyor.</li>
+</ul>
+<p>Synchronization is more than starting two motors at the same time. Two motors can start simultaneously and still drift apart because of differences in speed, acceleration, loading or feedback.</p>
+<p>The required relationship must be maintained throughout the relevant operation.</p>
+<h2 id="2-basic-synchronization-architecture">2. Basic synchronization architecture</h2>
+<p>A typical coordinated motion system contains a master reference, a follower controller and feedback from the participating axes.</p>
+<pre><code>           Master Axis / Reference
+                    |
+                    v
+          Master Position / Velocity
+                    |
+                    v
+          Synchronization Controller
+                    |
+             +------+------+
+             |             |
+             v             v
+       Follower Axis 1  Follower Axis 2
+             |             |
+             v             v
+          Servo Drive   Servo Drive
+             |             |
+             v             v
+          Motor 1       Motor 2
+             |             |
+             v             v
+         Feedback 1    Feedback 2
+             |             |
+             +------+------+
+                    |
+                    v
+          Position / Speed Comparison
+</code></pre>
+<p>The exact implementation varies. Some systems use a dedicated motion controller, while others use PLC motion functions, drive-integrated synchronization or mechanical coupling.</p>
+<p>The master can be a physical axis, a virtual axis, a conveyor encoder, a line-speed reference or a calculated process value.</p>
+<p>Important distinction: Synchronization defines the relationship between motions. The servo control loops still need to regulate each axis accurately.</p>
+<h2 id="3-three-basic-forms-of-synchronization">3. Three basic forms of synchronization</h2>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>What must match?</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Position synchronization</td>
+<td>Position relationship</td>
+<td>Two gantry motors maintain alignment</td>
+</tr>
+<tr>
+<td>Velocity synchronization</td>
+<td>Speed relationship</td>
+<td>Two conveyors run at a defined speed ratio</td>
+</tr>
+<tr>
+<td>Time synchronization</td>
+<td>Movement timing</td>
+<td>A clamp closes at a defined point in the machine cycle</td>
+</tr>
+</tbody>
+</table>
+<p>A system can require more than one form simultaneously. For example, two axes may need to maintain a fixed position offset while moving at the same velocity.</p>
+<h3 id="31-position-synchronization">3.1 Position synchronization</h3>
+<p>Position synchronization means that the axes maintain a required relationship between their positions.</p>
+<p>For example, a dual-drive gantry may have two servo motors driving opposite sides of a common carriage. If one side moves farther than the other, the gantry can skew, bind or damage its mechanical structure.</p>
+<p>The controller can compare the positions of both axes and correct the difference.</p>
+<p>A simple position error is:</p>
+<div class="math-display">\[ e=x_1-x_2 \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(x_1\)</span> is the position of axis 1.</li>
+<li><span class="math-inline">\(x_2\)</span> is the position of axis 2.</li>
+<li><span class="math-inline">\(e\)</span> is their position difference.</li>
+</ul>
+<p>If both axes should have identical coordinates, the desired difference is zero.</p>
+<p>However, the allowable difference depends on the mechanical arrangement, calibration and control strategy. A nonzero offset may be intentional.</p>
+<h3 id="32-velocity-synchronization">3.2 Velocity synchronization</h3>
+<p>Velocity synchronization means that two axes maintain a defined speed relationship.</p>
+<p>For equal-speed synchronization:</p>
+<div class="math-display">\[ v_2=v_1 \]</div>
+<p>For ratio-based synchronization:</p>
+<div class="math-display">\[ v_2=k v_1 \]</div>
+<p>Where <span class="math-inline">\(k\)</span> is the required speed ratio.</p>
+<p>For example, if a follower conveyor must run at 0.8 times the master conveyor's speed:</p>
+<div class="math-display">\[ v_2=0.8v_1 \]</div>
+<p>If the master runs at 500 mm/s, the follower's target velocity is 400 mm/s.</p>
+<p>This relationship can be useful for feeders, conveyors, unwinders, winders and other continuous production equipment.</p>
+<h3 id="33-time-synchronization">3.3 Time synchronization</h3>
+<p>Time synchronization coordinates events against a common timeline or machine-cycle reference.</p>
+<p>Examples include:</p>
+<ul>
+<li>Closing a gripper after a robot reaches a pickup position.</li>
+<li>Triggering an inspection camera when a component reaches a known position.</li>
+<li>Starting a feeder at a specified point in a press cycle.</li>
+<li>Activating a cutting mechanism at the correct material location.</li>
+</ul>
+<p>A fixed delay can be sufficient when movement is predictable and the timing requirement is genuinely time-based. When the event must occur at a particular machine position, position-based triggering is usually more robust than a timer alone.</p>
+<h2 id="4-master-follower-control">4. Master-follower control</h2>
+<p>Master-follower is one of the most common synchronization arrangements.</p>
+<p>The master provides the reference. The follower adjusts its movement to maintain the required relationship with that reference.</p>
+<pre><code>Master position:  0 -&gt; 100 -&gt; 200 -&gt; 300 mm
+                       |
+                       v
+Follower reference: 0 -&gt; 100 -&gt; 200 -&gt; 300 mm
+</code></pre>
+<p>This illustrates a 1:1 position relationship with zero offset. Real systems also account for scaling, gearing, phase offset, coordinate systems and startup conditions.</p>
+<h3 id="41-physical-master">4.1 Physical master</h3>
+<p>A physical master is a real axis or mechanism whose motion determines the reference for other axes.</p>
+<p>Examples:</p>
+<ul>
+<li>A conveyor encoder.</li>
+<li>A press crank encoder.</li>
+<li>A main drive motor's position feedback.</li>
+<li>A rotary table.</li>
+</ul>
+<p>The follower tracks the actual reference movement, not merely an independent speed command.</p>
+<h3 id="42-virtual-master">4.2 Virtual master</h3>
+<p>A virtual master is a position or motion reference generated in software. It may represent a simulated line shaft or a coordinated machine cycle.</p>
+<p>Advantages include:</p>
+<ul>
+<li>Multiple axes can reference a common motion source.</li>
+<li>The machine sequence can be coordinated without one physical motor serving as the reference.</li>
+<li>The reference profile can be designed centrally.</li>
+</ul>
+<p>A virtual master must still be managed correctly during startup, stopping, recovery and mode changes. Its position and velocity are software-generated values, not direct measurements of a physical mechanism.</p>
+<h3 id="43-why-actual-master-feedback-matters">4.3 Why actual master feedback matters</h3>
+<p>Suppose a master conveyor is commanded to run at 500 mm/s but slows to 430 mm/s because of a load change.</p>
+<p>A follower tracking only the commanded speed may continue at 500 mm/s and lose the required relationship.</p>
+<p>A follower tracking the appropriate actual master reference can adapt to the slowdown, subject to the controller architecture and configured limits.</p>
+<p>This is one reason electronic synchronization can outperform two independent speed commands.</p>
+<h2 id="5-electronic-gearing">5. Electronic gearing</h2>
+<p>Electronic gearing makes a follower axis follow the position or velocity of a master axis according to a configured ratio.</p>
+<p>The relationship can be expressed as:</p>
+<div class="math-display">\[ x_f=kx_m+b \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(x_f\)</span> is the follower position.</li>
+<li><span class="math-inline">\(x_m\)</span> is the master position.</li>
+<li><span class="math-inline">\(k\)</span> is the electronic gear ratio.</li>
+<li><span class="math-inline">\(b\)</span> is a configured position offset.</li>
+</ul>
+<p>For a simple 1:1 relationship with no offset:</p>
+<div class="math-display">\[ x_f=x_m \]</div>
+<p>For a ratio of 2:1:</p>
+<div class="math-display">\[ x_f=2x_m \]</div>
+<p>This means that, in the chosen coordinate units, the follower travels twice the master displacement. Whether the configuration is called 2:1 or 1:2 depends on the platform's ratio convention, so verify the actual definition in the motion controller.</p>
+<h3 id="example-feeder-and-main-conveyor">Example: feeder and main conveyor</h3>
+<p>Suppose a feeder must travel 120 mm for every 200 mm of master movement.</p>
+<div class="math-display">\[ k=\frac{120}{200}=0.6 \]</div>
+<p>If the master moves 500 mm, the ideal follower displacement is:</p>
+<div class="math-display">\[ x_f=0.6(500)=300\text{ mm} \]</div>
+<p>This is a displacement relationship, not necessarily a guarantee that the follower can physically achieve the requested movement under every load or speed condition.</p>
+<h3 id="electronic-gearing-versus-mechanical-gearing">Electronic gearing versus mechanical gearing</h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Electronic gearing</th>
+<th>Mechanical gearing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ratio adjustment</td>
+<td>Usually configurable in software</td>
+<td>Depends on physical gear arrangement</td>
+</tr>
+<tr>
+<td>Mechanical connection</td>
+<td>Axes may be mechanically independent</td>
+<td>Axes are linked through gears or transmission</td>
+</tr>
+<tr>
+<td>Flexibility</td>
+<td>High</td>
+<td>Limited by installed hardware</td>
+</tr>
+<tr>
+<td>Feedback dependency</td>
+<td>Depends on reference and control design</td>
+<td>Mechanical ratio establishes the relationship, but backlash and compliance remain</td>
+</tr>
+<tr>
+<td>Fault considerations</td>
+<td>Encoder, communication, control and drive faults</td>
+<td>Wear, backlash, lubrication, alignment and mechanical damage</td>
+</tr>
+</tbody>
+</table>
+<p>Electronic gearing does not eliminate mechanical limitations. Belts, gearboxes, couplings and shafts still introduce compliance, backlash, wear and load-dependent behaviour.</p>
+<h2 id="6-electronic-camming">6. Electronic camming</h2>
+<p>Electronic camming coordinates a follower according to a programmed relationship between master position and follower position.</p>
+<p>Unlike a fixed gear ratio, the relationship can vary throughout the master cycle.</p>
+<p>A cam table defines how the follower should move at different master positions.</p>
+<pre><code>Master position
+      |
+      v
+Cam table / interpolation
+      |
+      v
+Follower position reference
+      |
+      v
+Follower motion control
+</code></pre>
+<h3 id="example-flying-cutoff">Example: flying cutoff</h3>
+<p>In a flying cutoff system, material continuously moves along a production line. A cutting mechanism must accelerate to match the material speed, cut the material, and then return to its starting region.</p>
+<p>A simplified cycle is:</p>
+<ol>
+<li>Wait for the correct master position.</li>
+<li>Accelerate the cutting axis.</li>
+<li>Synchronize its speed with the moving material.</li>
+<li>Execute the cutting operation during the permitted position window.</li>
+<li>Decouple from the master reference.</li>
+<li>Return the cutting axis for the next cycle.</li>
+</ol>
+<p>If the cutter is not synchronized during cutting, the material may be pulled, distorted or cut at the wrong location.</p>
+<p>Electronic camming is also used in packaging machines, printing, rotary cutters, filling systems and assembly equipment.</p>
+<h2 id="7-phase-synchronization">7. Phase synchronization</h2>
+<p>Phase describes the relative position or timing offset between coordinated axes.</p>
+<p>Two axes can have the same velocity but still be out of phase.</p>
+<p>For example, two rotating mechanisms may rotate at identical RPM while one is angularly ahead of the other.</p>
+<p>For a rotary system, phase difference can be expressed as:</p>
+<div class="math-display">\[ \Delta\theta=\theta_1-\theta_2 \]</div>
+<p>For a system requiring a fixed phase offset:</p>
+<div class="math-display">\[ \theta_2=\theta_1+\theta\_{\text{offset}} \]</div>
+<p>The offset may be intentional. For example, a feeder might need to deliver material 30° ahead of a press's reference position.</p>
+<p>In linear systems, a similar offset can be expressed in millimetres.</p>
+<p>Key point: Equal velocity does not guarantee correct phase. Position or phase feedback is needed when the relative position matters.</p>
+<h2 id="8-synchronization-during-acceleration-and-deceleration">8. Synchronization during acceleration and deceleration</h2>
+<p>A follower must often match the master's movement during changing speed, not just during steady-state operation.</p>
+<p>Suppose a master conveyor accelerates from 0 to 500 mm/s. Its follower must maintain a 0.8 speed ratio.</p>
+<p>The follower's ideal velocity reference is:</p>
+<div class="math-display">\[ v_f=0.8v_m \]</div>
+<p>If the master reaches 500 mm/s, the follower target becomes 400 mm/s.</p>
+<p>If the master accelerates, the follower must respond to the changing reference while respecting its own acceleration, jerk, torque and speed limits.</p>
+<p>If the follower cannot keep up, a synchronization error may develop.</p>
+<p>Common causes include:</p>
+<ul>
+<li>Follower acceleration limits being too low.</li>
+<li>Incorrect gear ratio or scaling.</li>
+<li>Excessive load or mechanical binding.</li>
+<li>Incorrect master feedback selection.</li>
+<li>Poor servo tuning.</li>
+<li>Encoder or communication faults.</li>
+<li>Incorrect engagement timing.</li>
+</ul>
+<p>The correct response is not automatically to increase acceleration. First determine whether the limitation is caused by the profile, drive, mechanics, feedback or control configuration.</p>
+<h2 id="9-coordinating-two-motors-on-one-mechanical-axis">9. Coordinating two motors on one mechanical axis</h2>
+<p>A gantry or wide transfer unit may use two servo motors to drive opposite sides of the same structure.</p>
+<p>Both motors must move together to avoid skewing.</p>
+<p>A simple conceptual control structure is:</p>
+<pre><code>             Common Position Reference
+                       |
+               +-------+-------+
+               |               |
+               v               v
+          Axis 1 target    Axis 2 target
+               |               |
+               v               v
+          Servo drive 1    Servo drive 2
+               |               |
+               v               v
+          Motor 1          Motor 2
+               |               |
+               v               v
+          Encoder 1        Encoder 2
+               |               |
+               +-------+-------+
+                       |
+                       v
+                Skew / mismatch
+                  monitoring
+</code></pre>
+<p>In practice, the controller may use cross-coupled correction, gantry-specific control functions or another coordinated-axis strategy.</p>
+<h3 id="important-engineering-requirements">Important engineering requirements</h3>
+<ul>
+<li>Both axes need correctly configured feedback and coordinate scaling.</li>
+<li>Homing and coordinate references must be consistent.</li>
+<li>The mechanical structure must be aligned.</li>
+<li>Position mismatch limits must reflect the actual machine design.</li>
+<li>Startup, fault recovery and re-engagement must be handled safely.</li>
+<li>A failed drive or encoder must not cause the remaining axis to force the structure into a skewed condition.</li>
+</ul>
+<p>Two motors driving one structure are not automatically a synchronized gantry just because they receive identical commands.</p>
+<h2 id="10-synchronization-error-and-following-error">10. Synchronization error and following error</h2>
+<p>These terms describe different problems.</p>
+<p>Following error is the difference between a commanded axis position and its actual measured position.</p>
+<div class="math-display">\[ e_f=x\_{\text{command}}-x\_{\text{actual}} \]</div>
+<p>Synchronization error is the difference between the actual relationship of multiple axes and the relationship that the machine requires.</p>
+<p>For two axes expected to have identical positions:</p>
+<div class="math-display">\[ e_s=x_1-x_2 \]</div>
+<p>For axes with a defined ratio and offset:</p>
+<div class="math-display">\[ e_s=x_f-(kx_m+b) \]</div>
+<p>A system can have small individual following errors but still have a synchronization problem if the relationship between the axes is incorrect. Conversely, both axes can track the same incorrect reference well and still produce a process-position error.</p>
+<p>The controller's definitions and sign conventions must be checked before interpreting diagnostic values.</p>
+<h2 id="11-synchronization-hardware-and-signals">11. Synchronization hardware and signals</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Purpose</th>
+<th>Typical failure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Encoder</td>
+<td>Measures position or speed</td>
+<td>Missing pulses, noise, incorrect scaling</td>
+</tr>
+<tr>
+<td>Motion controller</td>
+<td>Calculates coordinated references</td>
+<td>Configuration or execution fault</td>
+</tr>
+<tr>
+<td>Servo drive</td>
+<td>Controls motor response</td>
+<td>Following error, current or voltage fault</td>
+</tr>
+<tr>
+<td>Network or fieldbus</td>
+<td>Exchanges commands and feedback</td>
+<td>Delayed or lost communication</td>
+</tr>
+<tr>
+<td>Master reference</td>
+<td>Provides the motion source</td>
+<td>Incorrect signal, lost reference, invalid scaling</td>
+</tr>
+<tr>
+<td>Mechanical transmission</td>
+<td>Transfers movement</td>
+<td>Backlash, slip, wear, misalignment</td>
+</tr>
+<tr>
+<td>Home/reference sensor</td>
+<td>Establishes a coordinate reference</td>
+<td>Incorrect switching point or wiring fault</td>
+</tr>
+<tr>
+<td>Safety system</td>
+<td>Enforces safety functions</td>
+<td>Safety fault prevents permitted movement</td>
+</tr>
+</tbody>
+</table>
+<p>Not every architecture depends on every component. A mechanically synchronized system may use a common shaft, while an electronic system may depend on encoders, network timing and motion-controller functionality.</p>
+<h3 id="encoder-scaling">Encoder scaling</h3>
+<p>Incorrect scaling can produce a persistent synchronization error even when the hardware is functioning correctly.</p>
+<p>For example, if one axis reports 1,000 counts/mm and the other is configured for 950 counts/mm, the calculated positions will diverge as the axes travel, even if the physical movement is mechanically correct.</p>
+<p>Check:</p>
+<ul>
+<li>Encoder resolution.</li>
+<li>Gear ratio.</li>
+<li>Travel per motor revolution.</li>
+<li>Engineering-unit conversion.</li>
+<li>Direction and sign convention.</li>
+<li>Master and follower coordinate definitions.</li>
+</ul>
+<h2 id="12-plc-and-motion-controller-implementation">12. PLC and motion-controller implementation</h2>
+<p>A generic synchronization sequence is:</p>
+<pre><code>Validate master and follower axes
+              |
+              v
+Check homing / reference status
+              |
+              v
+Check safety and process permissives
+              |
+              v
+Configure ratio, offset or cam table
+              |
+              v
+Enable synchronization
+              |
+              v
+Monitor active / synchronized status
+              |
+              v
+Monitor position and velocity errors
+              |
+              v
+Continue operation or execute fault response
+</code></pre>
+<p>Depending on the platform, motion libraries may provide functions for electronic gearing, camming, synchronized motion and disengagement. Exact instruction names and parameter behaviour vary between Siemens, Rockwell, Mitsubishi and other systems.</p>
+<h3 id="implementation-rules">Implementation rules</h3>
+<ol>
+<li>Confirm the master and follower coordinate systems before engagement.</li>
+<li>Ensure both axes have valid references where the application requires them.</li>
+<li>Verify gear ratios, offsets and cam-table units.</li>
+<li>Confirm the follower can meet the master's expected speed and acceleration.</li>
+<li>Monitor actual synchronization status rather than assuming engagement succeeded.</li>
+<li>Apply defined tolerances and timeout handling.</li>
+<li>Handle communication loss, drive faults and interrupted motion deliberately.</li>
+<li>Validate startup and recovery, not just normal production operation.</li>
+</ol>
+<p>A synchronization command being accepted does not necessarily mean that the axes are already synchronized. Some controllers need time to acquire the reference or execute a catch-up movement.</p>
+<h2 id="13-common-synchronization-faults-and-troubleshooting">13. Common synchronization faults and troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Initial checks</th>
+<th>Likely causes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Follower drifts from master</td>
+<td>Master and follower actual positions</td>
+<td>Incorrect ratio, scaling or reference</td>
+</tr>
+<tr>
+<td>Speed matches but position does not</td>
+<td>Phase/offset error</td>
+<td>Incorrect engagement position or offset</td>
+</tr>
+<tr>
+<td>Follower cannot synchronize during ramp</td>
+<td>Acceleration and velocity trends</td>
+<td>Follower limits, load, tuning</td>
+</tr>
+<tr>
+<td>Gantry skews</td>
+<td>Difference between axis feedback values</td>
+<td>Encoder scaling, drive fault, mechanical binding</td>
+</tr>
+<tr>
+<td>Synchronization drops intermittently</td>
+<td>Controller status and communication diagnostics</td>
+<td>Network interruption, invalid master reference</td>
+</tr>
+<tr>
+<td>Motion is reversed</td>
+<td>Direction and sign conventions</td>
+<td>Incorrect polarity or coordinate mapping</td>
+</tr>
+<tr>
+<td>Cam cycle is incorrect</td>
+<td>Master position versus cam-table output</td>
+<td>Wrong table, interpolation or cycle scaling</td>
+</tr>
+<tr>
+<td>Position mismatch grows with travel</td>
+<td>Error trend against distance</td>
+<td>Incorrect units, gear ratio or encoder scaling</td>
+</tr>
+<tr>
+<td>Axes synchronize but process timing is wrong</td>
+<td>Reference event and phase offset</td>
+<td>Incorrect trigger position or process sequence</td>
+</tr>
+<tr>
+<td>Follower moves unexpectedly on engagement</td>
+<td>Current position, engagement mode and reference</td>
+<td>Incorrect catch-up strategy or coordinate mismatch</td>
+</tr>
+</tbody>
+</table>
+<h3 id="recommended-diagnostic-order">Recommended diagnostic order</h3>
+<ol>
+<li>Record the exact PLC, motion-controller and drive alarms.</li>
+<li>Confirm the master reference is valid and moving as expected.</li>
+<li>Compare master and follower commanded and actual positions.</li>
+<li>Check velocity ratio, position offset and coordinate scaling.</li>
+<li>Review engagement status and the synchronization error trend.</li>
+<li>Inspect encoders, communication, mechanical transmission and load.</li>
+<li>Verify the configured fault response and recovery procedure.</li>
+<li>Test one approved change at a time under controlled conditions.</li>
+</ol>
+<p>A useful diagnostic question is whether the error is constant, increasing with distance, or increasing during acceleration:</p>
+<ul>
+<li>A constant error often suggests a phase or offset issue.</li>
+<li>An error that grows with distance often suggests a ratio or scaling issue.</li>
+<li>An error that grows during acceleration may indicate a dynamic limitation, load problem or tuning issue.</li>
+</ul>
+<p>These patterns are diagnostic clues, not definitive proof.</p>
+<h2 id="14-practical-industrial-examples">14. Practical industrial examples</h2>
+<h3 id="example-a-two-conveyors">Example A: Two conveyors</h3>
+<p>A main conveyor moves at 600 mm/s. A feeder conveyor must move at 0.75 times the master speed.</p>
+<div class="math-display">\[ v_f=0.75(600)=450\text{ mm/s} \]</div>
+<p>The feeder target is 450 mm/s. The control system must also accommodate changes in master speed and verify that the follower can respond within its limits.</p>
+<h3 id="example-b-gantry-alignment">Example B: Gantry alignment</h3>
+<p>Two motors drive opposite sides of a gantry. The controller expects both measured positions to match within an approved tolerance.</p>
+<p>If the position mismatch increases during movement, check feedback scaling, drive status, mechanical alignment and the controller's coordinated-axis strategy. Do not keep running the gantry if the mismatch creates a risk of binding or structural damage.</p>
+<h3 id="example-c-flying-cutoff">Example C: Flying cutoff</h3>
+<p>Material moves continuously. The cutter must match material speed during the cut window.</p>
+<p>The synchronization controller coordinates cutter velocity and position against the material reference. Incorrect phase can produce a misplaced cut; insufficient speed matching can distort the material or produce poor cut quality.</p>
+<h3 id="example-d-robot-picking-from-a-moving-conveyor">Example D: Robot picking from a moving conveyor</h3>
+<p>The robot must estimate or receive the component's position from the conveyor tracking system and coordinate its movement with the conveyor reference.</p>
+<p>Accurate tracking depends on encoder data, coordinate calibration, communication, timing and the robot's motion limits. A stationary-coordinate pick command alone cannot account for the component continuing to move.</p>
+<h2 id="15-safety-considerations">15. Safety considerations</h2>
+<p>Synchronization faults can create mechanical hazards. A follower may move unexpectedly when it engages a master reference, or one axis may continue moving after another axis faults.</p>
+<ul>
+<li>Follow the machine's risk assessment and approved commissioning procedure.</li>
+<li>Do not bypass guards, interlocks or safety functions to test synchronization.</li>
+<li>Verify permitted motion during startup, homing, engagement and recovery.</li>
+<li>Check the behaviour of the complete mechanism if one drive or encoder fails.</li>
+<li>Validate gantry skew limits and stopping behaviour.</li>
+<li>Confirm that safety-rated functions are implemented by the approved safety architecture.</li>
+<li>Treat normal PLC synchronization logic as operational control, not as a substitute for safety-rated protection.</li>
+</ul>
+<h2 id="16-interview-questions-and-answers">16. Interview questions and answers</h2>
+<p>1. What is synchronization in motion control?</p>
+<p>It is the coordinated movement of multiple axes so that they maintain a required position, velocity, phase or timing relationship.</p>
+<p>2. Is starting two motors simultaneously sufficient for synchronization?</p>
+<p>No. They can drift apart due to speed differences, load variation, acceleration limits, feedback errors or mechanical differences.</p>
+<p>3. What is a master-follower arrangement?</p>
+<p>The master supplies a motion reference, and the follower adjusts its motion to maintain the configured relationship.</p>
+<p>4. What is electronic gearing?</p>
+<p>A control function that maintains a defined position or velocity ratio between a follower and a master.</p>
+<p>5. What is electronic camming?</p>
+<p>A function that defines a potentially nonlinear relationship between master position and follower position over a motion cycle.</p>
+<p>6. What is phase offset?</p>
+<p>A defined positional or angular difference between coordinated axes.</p>
+<p>7. Can two axes have the same speed but be out of synchronization?</p>
+<p>Yes. They may have the same velocity but an incorrect relative position or phase.</p>
+<p>8. What is the difference between following error and synchronization error?</p>
+<p>Following error compares a single axis's command with its actual position. Synchronization error compares the actual relationship between axes with the required relationship.</p>
+<p>9. Why does a follower lose synchronization during acceleration?</p>
+<p>Possible causes include insufficient acceleration capability, torque limits, excessive load, incorrect scaling, tuning problems or an invalid master reference.</p>
+<p>10. Why is a virtual master used?</p>
+<p>It provides a software-generated common motion reference for coordinating multiple axes without requiring one physical axis to serve as the master.</p>
+<p>11. Why might synchronization error increase with travel distance?</p>
+<p>An incorrect gear ratio, encoder scaling or engineering-unit conversion can cause the position mismatch to accumulate.</p>
+<p>12. What is a typical application of electronic camming?</p>
+<p>Flying cutoff, packaging, printing, rotary indexing and other machines that require a follower to follow a programmed position relationship with a master.</p>
+<p>13. Why is a common position reference useful for a gantry?</p>
+<p>It coordinates both drives and helps maintain alignment of the shared mechanical structure.</p>
+<p>14. What should be checked when a follower moves unexpectedly during engagement?</p>
+<p>Check the initial positions, reference validity, phase offset, engagement mode, catch-up behaviour and configured motion limits.</p>
+<p>15. Why should synchronization status be monitored?</p>
+<p>The command may be accepted before the axes have acquired the required relationship. Status and error monitoring confirm whether the expected state has actually been achieved.</p>
+<h2 id="17-practical-exercises">17. Practical exercises</h2>
+<h3 id="exercise-1-calculate-an-electronic-gear-ratio">Exercise 1: Calculate an electronic gear ratio</h3>
+<p>A master axis moves 250 mm while the follower must move 175 mm.</p>
+<div class="math-display">\[ k=\frac{175}{250}=0.7 \]</div>
+<p>The follower ratio is 0.7 in the chosen coordinate convention.</p>
+<p>If the master then moves 400 mm, the ideal follower displacement is:</p>
+<div class="math-display">\[ x_f=0.7(400)=280\text{ mm} \]</div>
+<p>Assume zero offset and consistent coordinate units.</p>
+<h3 id="exercise-2-diagnose-a-growing-position-error">Exercise 2: Diagnose a growing position error</h3>
+<p>A follower starts correctly aligned with its master, but the mismatch grows as the line runs.</p>
+<p>Investigate encoder scaling, engineering-unit conversion, gear ratio, direction conventions and whether the controller is using the intended master position.</p>
+<h3 id="exercise-3-diagnose-a-phase-problem">Exercise 3: Diagnose a phase problem</h3>
+<p>Two rotary axes run at identical speeds, but a component arrives at the station too early.</p>
+<p>Compare actual master and follower positions, inspect phase offset and confirm the event trigger is tied to the intended reference. Matching RPM alone does not guarantee the correct process position.</p>
+<h3 id="exercise-4-diagnose-a-gantry-fault">Exercise 4: Diagnose a gantry fault</h3>
+<p>One side of a gantry moves less than the other during acceleration.</p>
+<p>Compare both axes' command and feedback trends. Check drive status, encoder scaling, acceleration limits, mechanical binding and the coordinated-axis configuration. Follow the machine's approved response if the skew threatens the mechanism.</p>
+<h3 id="exercise-5-prepare-a-synchronization-specification">Exercise 5: Prepare a synchronization specification</h3>
+<p>For an actual machine, record:</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Required information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Master reference</td>
+<td>Physical axis, encoder or virtual master</td>
+</tr>
+<tr>
+<td>Follower axes</td>
+<td>All axes participating in synchronization</td>
+</tr>
+<tr>
+<td>Relationship</td>
+<td>Position ratio, velocity ratio, phase offset or cam table</td>
+</tr>
+<tr>
+<td>Coordinate system</td>
+<td>Units, direction, reference and scaling</td>
+</tr>
+<tr>
+<td>Motion limits</td>
+<td>Velocity, acceleration, deceleration and jerk</td>
+</tr>
+<tr>
+<td>Engagement</td>
+<td>Conditions and permitted initial position</td>
+</tr>
+<tr>
+<td>Tolerances</td>
+<td>Following error and synchronization error limits</td>
+</tr>
+<tr>
+<td>Fault response</td>
+<td>Behaviour after drive, encoder or communication faults</td>
+</tr>
+<tr>
+<td>Recovery</td>
+<td>Re-reference, re-engagement and restart requirements</td>
+</tr>
+<tr>
+<td>Validation</td>
+<td>Trends, cycle tests, fault tests and safety checks</td>
+</tr>
+</tbody>
+</table>
+<h2 id="18-final-mental-model">18. Final mental model</h2>
+<p>Remember these principles:</p>
+<ol>
+<li>Synchronization coordinates relationships between movements, not merely start times.</li>
+<li>Master-follower control uses a common reference to maintain a defined relationship.</li>
+<li>Electronic gearing establishes a ratio; electronic camming establishes a programmed relationship that can vary throughout the cycle.</li>
+<li>Equal speed does not guarantee equal position or correct phase.</li>
+<li>Feedback, scaling, acceleration capability, communication and mechanical condition determine whether synchronization can be maintained.</li>
+<li>Synchronization logic must include status monitoring, error handling, safe stopping behaviour and controlled recovery.</li>
+</ol>
+<p>The practical goal is to ensure that every axis moves in the correct relationship to the others, under normal conditions and during faults.</p>
+<p>Next topic: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\02_Auto_Tech\06_Servo_Motion\08_Servo_Tuning\01_Gain</code></p>
+<p>01_Gain - Gain: Position and speed loop gain</p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

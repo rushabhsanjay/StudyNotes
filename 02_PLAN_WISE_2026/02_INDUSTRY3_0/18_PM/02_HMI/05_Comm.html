@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HMI Communication</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">HMI Communication</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-purpose-of-hmi-communication">2. Purpose of HMI communication</a></li>
+<li><a href="#3-hmi-communication-architecture">3. HMI communication architecture</a></li>
+<li><a href="#4-communication-types">4. Communication types</a><ul>
+<li><a href="#41-physical-communication-media">4.1 Physical communication media</a></li>
+<li><a href="#42-communication-protocols">4.2 Communication protocols</a></li>
+</ul>
+</li>
+<li><a href="#5-clientserver-and-communication-patterns">5. Client/server and communication patterns</a></li>
+<li><a href="#6-hmi-communication-configuration">6. HMI communication configuration</a></li>
+<li><a href="#7-ip-addressing-and-subnet-configuration">7. IP addressing and subnet configuration</a><ul>
+<li><a href="#common-addressing-faults">Common addressing faults</a></li>
+</ul>
+</li>
+<li><a href="#8-plc-tag-addressing-and-data-types">8. PLC tag addressing and data types</a><ul>
+<li><a href="#common-tag-mapping-problems">Common tag-mapping problems</a></li>
+</ul>
+</li>
+<li><a href="#9-read-and-write-communication">9. Read and write communication</a><ul>
+<li><a href="#read-communication">Read communication</a></li>
+<li><a href="#write-communication">Write communication</a></li>
+</ul>
+</li>
+<li><a href="#10-communication-update-rate-and-polling">10. Communication update rate and polling</a><ul>
+<li><a href="#communication-loading">Communication loading</a></li>
+</ul>
+</li>
+<li><a href="#11-timeout-retry-and-reconnect-behavior">11. Timeout, retry, and reconnect behavior</a></li>
+<li><a href="#12-communication-diagnostics">12. Communication diagnostics</a><ul>
+<li><a href="#useful-diagnostic-information">Useful diagnostic information</a></li>
+<li><a href="#diagnostic-tools">Diagnostic tools</a></li>
+</ul>
+</li>
+<li><a href="#13-troubleshooting-hmi-communication-faults">13. Troubleshooting HMI communication faults</a><ul>
+<li><a href="#step-1-identify-the-scope">Step 1: Identify the scope</a></li>
+<li><a href="#step-2-verify-the-physical-connection">Step 2: Verify the physical connection</a></li>
+<li><a href="#step-3-verify-addressing-and-routing">Step 3: Verify addressing and routing</a></li>
+<li><a href="#step-4-verify-protocol-and-driver-configuration">Step 4: Verify protocol and driver configuration</a></li>
+<li><a href="#step-5-check-controller-side-diagnostics">Step 5: Check controller-side diagnostics</a></li>
+<li><a href="#step-6-check-tag-mappings-and-permissions">Step 6: Check tag mappings and permissions</a></li>
+<li><a href="#step-7-evaluate-communication-performance">Step 7: Evaluate communication performance</a></li>
+<li><a href="#step-8-verify-recovery">Step 8: Verify recovery</a></li>
+</ul>
+</li>
+<li><a href="#14-common-symptoms-and-likely-causes">14. Common symptoms and likely causes</a></li>
+<li><a href="#15-practical-industrial-example-allen-bradley-plc-and-hmi">15. Practical industrial example: Allen-Bradley PLC and HMI</a></li>
+<li><a href="#16-practical-industrial-example-modbus-tcp-drive-communication">16. Practical industrial example: Modbus TCP drive communication</a></li>
+<li><a href="#17-industrial-network-reliability-and-cybersecurity">17. Industrial network reliability and cybersecurity</a></li>
+<li><a href="#18-preventive-maintenance-checklist">18. Preventive maintenance checklist</a><ul>
+<li><a href="#routine-checks">Routine checks</a></li>
+<li><a href="#periodic-engineering-checks">Periodic engineering checks</a></li>
+</ul>
+</li>
+<li><a href="#19-maintenance-records-and-performance-indicators">19. Maintenance records and performance indicators</a></li>
+<li><a href="#20-common-mistakes-to-avoid">20. Common mistakes to avoid</a></li>
+<li><a href="#21-key-principles">21. Key principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>HMI communication is the exchange of data between a Human-Machine Interface (HMI) and connected systems such as PLCs, remote I/O, drives, CNC controllers, SCADA servers, databases, and other industrial devices.</p>
+<p>Communication allows the HMI to display live process values, show equipment status, receive alarms, and transmit operator commands to the control system.</p>
+<p>For example, in an automotive production line, an HMI may communicate with a Siemens S7-1500 PLC over PROFINET or an Allen-Bradley ControlLogix PLC over EtherNet/IP. The HMI reads motor status, conveyor speed, interlock conditions, and fault codes, then sends authorized operator requests to the PLC.</p>
+<p>The central maintenance principle is that HMI communication must be evaluated in terms of connectivity, data validity, update performance, and command behavior. A connected device does not automatically mean that all its tags are updating correctly.</p>
+<h2 id="2-purpose-of-hmi-communication">2. Purpose of HMI communication</h2>
+<p>HMI communication supports the following functions:</p>
+<ul>
+<li>Reading PLC tags and process variables.</li>
+<li>Displaying machine modes, sequence states, and equipment feedback.</li>
+<li>Sending operator requests such as Start, Stop, Reset, and mode selection.</li>
+<li>Displaying alarms, diagnostics, and fault codes.</li>
+<li>Reading and writing recipes and setpoints.</li>
+<li>Exchanging data with SCADA, historians, databases, or production systems.</li>
+<li>Supporting maintenance diagnostics and machine troubleshooting.</li>
+<li>Synchronizing relevant data across connected industrial systems.</li>
+</ul>
+<p>Communication design must also preserve machine safety. Safety functions must be implemented through the required safety-rated hardware and logic, not assumed to be protected simply because an HMI communicates with a PLC.</p>
+<h2 id="3-hmi-communication-architecture">3. HMI communication architecture</h2>
+<p>A common industrial architecture is:</p>
+<pre><code>Operator
+   ↓
+HMI Application
+   ↓
+HMI Communication Driver
+   ↓
+Industrial Ethernet or Serial Network
+   ↓
+PLC / CNC / VFD / Remote I/O
+   ↓
+Sensors, Actuators and Machines
+</code></pre>
+<p>A larger system may include additional layers:</p>
+<pre><code>Local HMI
+   ↓
+PLC Network
+   ↓
+SCADA Server
+   ↓
+Historian / SQL Database
+   ↓
+Production Reporting / Analytics
+</code></pre>
+<p>Each connection is a potential failure point. For example, a local HMI may communicate correctly with its PLC while the SCADA server fails to receive data because of a separate network or server issue.</p>
+<p>Troubleshooting must identify which connection and data path are actually affected.</p>
+<h2 id="4-communication-types">4. Communication types</h2>
+<p>HMI communication can be classified by physical medium, protocol, and communication pattern.</p>
+<h3 id="41-physical-communication-media">4.1 Physical communication media</h3>
+<table>
+<thead>
+<tr>
+<th>Medium</th>
+<th>Common application</th>
+<th>Main considerations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Industrial Ethernet</td>
+<td>HMI-to-PLC and HMI-to-SCADA communication</td>
+<td>Network configuration, switches, cabling, addressing, latency</td>
+</tr>
+<tr>
+<td>Serial RS-232</td>
+<td>Point-to-point legacy equipment connections</td>
+<td>Limited distance, baud rate, wiring and grounding</td>
+</tr>
+<tr>
+<td>Serial RS-485</td>
+<td>Multidrop connections to compatible industrial devices</td>
+<td>Termination, biasing, topology, device addressing</td>
+</tr>
+<tr>
+<td>USB</td>
+<td>Engineering, transfer, or supported peripheral connections</td>
+<td>Compatibility, access control, connector condition</td>
+</tr>
+<tr>
+<td>Fiber optic Ethernet</td>
+<td>Long-distance or electrically noisy industrial networks</td>
+<td>Optical transceivers, fiber condition, link status</td>
+</tr>
+<tr>
+<td>Wireless Ethernet</td>
+<td>Mobile terminals and selected industrial applications</td>
+<td>Coverage, interference, roaming, security, reliability</td>
+</tr>
+</tbody>
+</table>
+<p>The medium and the protocol are different concepts. Ethernet describes the network technology and physical/data-link behavior, while protocols such as EtherNet/IP and Modbus TCP define how devices exchange application data.</p>
+<h3 id="42-communication-protocols">4.2 Communication protocols</h3>
+<table>
+<thead>
+<tr>
+<th>Protocol</th>
+<th>Typical use</th>
+<th>Important characteristic</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PROFINET</td>
+<td>Siemens and other compatible industrial automation devices</td>
+<td>Industrial Ethernet communication with different performance and real-time capabilities</td>
+</tr>
+<tr>
+<td>EtherNet/IP</td>
+<td>Allen-Bradley/Rockwell Automation and compatible devices</td>
+<td>Uses the Common Industrial Protocol over Ethernet and IP</td>
+</tr>
+<tr>
+<td>Modbus TCP</td>
+<td>PLCs, meters, drives, and industrial instruments</td>
+<td>Uses client/server communication and register-based data access</td>
+</tr>
+<tr>
+<td>Modbus RTU</td>
+<td>Serial-connected industrial devices</td>
+<td>Uses serial framing, device addresses, and register-based data access</td>
+</tr>
+<tr>
+<td>OPC UA</td>
+<td>Industrial data exchange between supported systems</td>
+<td>Structured information models and configurable security mechanisms</td>
+</tr>
+<tr>
+<td>OPC DA</td>
+<td>Legacy Windows-based data exchange</td>
+<td>COM/DCOM-based technology</td>
+</tr>
+<tr>
+<td>Mitsubishi MC Protocol</td>
+<td>Mitsubishi PLC communication in supported configurations</td>
+<td>Device access depends on PLC model and communication settings</td>
+</tr>
+<tr>
+<td>Siemens S7 communication</td>
+<td>Siemens PLC communication using supported drivers and configurations</td>
+<td>Supported access depends on CPU, firmware, configuration, and driver</td>
+</tr>
+<tr>
+<td>Vendor-specific protocols</td>
+<td>OEM machines and specialized equipment</td>
+<td>May require a dedicated driver, gateway, or engineering package</td>
+</tr>
+</tbody>
+</table>
+<p>Protocol support varies by HMI model, PLC family, firmware, driver license, and configuration. Never assume that two Ethernet-equipped devices can communicate directly merely because they share the same connector.</p>
+<h2 id="5-clientserver-and-communication-patterns">5. Client/server and communication patterns</h2>
+<p>An HMI usually initiates or maintains communication according to its configured driver and protocol.</p>
+<p>Common patterns include:</p>
+<ul>
+<li>Client/server: One system requests data or services from another. Modbus TCP and many HMI driver connections follow this general pattern.</li>
+<li>Cyclic or periodic exchange: Data is updated according to a configured interval or communication cycle.</li>
+<li>Subscription-based exchange: A client subscribes to data changes or monitored values, as supported by protocols such as OPC UA.</li>
+<li>Producer/consumer exchange: Data is produced by one device and consumed by one or more subscribers. EtherNet/IP supports this model for appropriate connection types.</li>
+<li>Request/response: A request is sent and a corresponding response is returned.</li>
+</ul>
+<p>A particular protocol can support more than one communication pattern. The correct behavior depends on the protocol service, device implementation, and configuration.</p>
+<h2 id="6-hmi-communication-configuration">6. HMI communication configuration</h2>
+<p>A communication connection typically requires several parameters to match the actual system.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Purpose</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Device address</td>
+<td>Identifies the target device on the network</td>
+<td><code>192.168.10.20</code></td>
+</tr>
+<tr>
+<td>Protocol or driver</td>
+<td>Defines how data is exchanged</td>
+<td>Modbus TCP</td>
+</tr>
+<tr>
+<td>Port or endpoint</td>
+<td>Identifies the required network service</td>
+<td>TCP port 502 for Modbus TCP</td>
+</tr>
+<tr>
+<td>PLC model or family</td>
+<td>Selects compatible driver behavior</td>
+<td>ControlLogix</td>
+</tr>
+<tr>
+<td>Rack and slot</td>
+<td>Identifies the controller location where applicable</td>
+<td>Rack 0, slot 0</td>
+</tr>
+<tr>
+<td>Device address or station number</td>
+<td>Identifies a serial or multidrop device</td>
+<td>Modbus address 3</td>
+</tr>
+<tr>
+<td>Tag address</td>
+<td>Identifies the required data point</td>
+<td>PLC symbolic tag or register</td>
+</tr>
+<tr>
+<td>Data type</td>
+<td>Defines how raw data is interpreted</td>
+<td>BOOL, INT, DINT, REAL</td>
+</tr>
+<tr>
+<td>Polling or update rate</td>
+<td>Determines how frequently values are requested or updated</td>
+<td>250 ms</td>
+</tr>
+<tr>
+<td>Timeout</td>
+<td>Defines how long the system waits before declaring a request unsuccessful</td>
+<td>2 s</td>
+</tr>
+<tr>
+<td>Retry behavior</td>
+<td>Determines how failed requests are handled</td>
+<td>Configured retry count or reconnect policy</td>
+</tr>
+</tbody>
+</table>
+<p>The values shown are illustrative, not universal settings. Use the approved device configuration and vendor documentation for the actual installation.</p>
+<h2 id="7-ip-addressing-and-subnet-configuration">7. IP addressing and subnet configuration</h2>
+<p>For Ethernet communication, the HMI and PLC must have compatible network configurations and a valid path between them.</p>
+<p>For example:</p>
+<table>
+<thead>
+<tr>
+<th>Device</th>
+<th>IP address</th>
+<th>Subnet mask</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HMI</td>
+<td><code>192.168.10.10</code></td>
+<td><code>255.255.255.0</code></td>
+</tr>
+<tr>
+<td>PLC</td>
+<td><code>192.168.10.20</code></td>
+<td><code>255.255.255.0</code></td>
+</tr>
+<tr>
+<td>Engineering PC</td>
+<td><code>192.168.10.30</code></td>
+<td><code>255.255.255.0</code></td>
+</tr>
+</tbody>
+</table>
+<p>These devices are in the same IPv4 subnet, assuming the mask is configured correctly and the network is connected.</p>
+<h3 id="common-addressing-faults">Common addressing faults</h3>
+<ul>
+<li>Duplicate IP addresses.</li>
+<li>Incorrect subnet mask.</li>
+<li>Incorrect gateway where routing is required.</li>
+<li>Wrong destination IP in the HMI project.</li>
+<li>Incorrect VLAN assignment.</li>
+<li>Disabled switch port.</li>
+<li>Incorrect physical network connection.</li>
+<li>Firewall rules blocking required traffic.</li>
+<li>Device replacement without updating the approved address record.</li>
+</ul>
+<p>A successful ping can establish basic IP reachability, but it does not prove that the application protocol, PLC driver, tag mapping, or write operations are functioning.</p>
+<h2 id="8-plc-tag-addressing-and-data-types">8. PLC tag addressing and data types</h2>
+<p>HMI tags must reference the intended PLC data points and interpret their values correctly.</p>
+<p>For example, an HMI might display the following PLC information:</p>
+<table>
+<thead>
+<tr>
+<th>HMI tag</th>
+<th>PLC source</th>
+<th>Data type</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Conveyor_Run_FB</code></td>
+<td>PLC running feedback</td>
+<td>BOOL</td>
+<td>Displays running state</td>
+</tr>
+<tr>
+<td><code>Conveyor_Speed</code></td>
+<td>PLC speed value</td>
+<td>REAL</td>
+<td>Displays speed</td>
+</tr>
+<tr>
+<td><code>Drive_Fault_Code</code></td>
+<td>PLC diagnostic value</td>
+<td>INT</td>
+<td>Displays fault information</td>
+</tr>
+<tr>
+<td><code>Conveyor_Start_Req</code></td>
+<td>PLC command interface</td>
+<td>BOOL or structured command</td>
+<td>Requests a start operation</td>
+</tr>
+</tbody>
+</table>
+<p>The exact PLC address or symbolic tag depends on the controller platform and program design.</p>
+<h3 id="common-tag-mapping-problems">Common tag-mapping problems</h3>
+<ul>
+<li>HMI tag points to the wrong PLC variable.</li>
+<li>PLC variable name or data structure changed.</li>
+<li>Incorrect array index or structure member.</li>
+<li>Wrong data type.</li>
+<li>Incorrect signed or unsigned interpretation.</li>
+<li>Incorrect byte order or word order for mapped data.</li>
+<li>Incorrect scaling or units.</li>
+<li>Read access works, but write access is restricted.</li>
+<li>PLC optimization or access settings prevent the configured driver from reading a tag.</li>
+</ul>
+<p>A tag must be verified at both ends: the intended PLC value and the HMI's interpretation of that value.</p>
+<h2 id="9-read-and-write-communication">9. Read and write communication</h2>
+<h3 id="read-communication">Read communication</h3>
+<p>The HMI obtains data from the PLC or another source and displays it.</p>
+<p>Examples include:</p>
+<ul>
+<li>Motor running feedback.</li>
+<li>Pressure and temperature.</li>
+<li>Machine cycle status.</li>
+<li>VFD frequency feedback.</li>
+<li>Alarm codes.</li>
+<li>Production counts.</li>
+</ul>
+<h3 id="write-communication">Write communication</h3>
+<p>The HMI sends a value or request to a connected device.</p>
+<p>Examples include:</p>
+<ul>
+<li>Operator setpoint entry.</li>
+<li>Recipe selection.</li>
+<li>Manual-mode request.</li>
+<li>Reset request.</li>
+<li>Start or stop request.</li>
+</ul>
+<p>Read and write permissions may be configured differently. An HMI can successfully display PLC data while failing to write commands because of access restrictions, incorrect tag configuration, unsupported services, or PLC logic.</p>
+<p>A successful write does not necessarily mean that the machine has performed the requested action. The PLC may reject the request, an interlock may remain active, or the physical device may fail to respond.</p>
+<p>A robust design uses separate command, acceptance, status, and fault information where appropriate.</p>
+<h2 id="10-communication-update-rate-and-polling">10. Communication update rate and polling</h2>
+<p>The update rate determines how frequently data is refreshed, requested, or reported.</p>
+<p>For example, an HMI may read a motor status more frequently than a slow-changing maintenance counter. The appropriate rate depends on the process, protocol, number of tags, PLC capacity, and network load.</p>
+<h3 id="communication-loading">Communication loading</h3>
+<p>Increasing polling frequency can improve responsiveness, but it also increases communication workload.</p>
+<p>The impact depends on factors such as:</p>
+<ul>
+<li>Number of subscribed or polled tags.</li>
+<li>Number of connected HMIs.</li>
+<li>Size of each data request.</li>
+<li>Protocol overhead.</li>
+<li>PLC communication capacity.</li>
+<li>Network traffic.</li>
+<li>Driver scheduling and batching behavior.</li>
+<li>Runtime processing and screen updates.</li>
+</ul>
+<p>For a simplified periodic polling model, the number of requests per second can be estimated as:</p>
+<div class="math-display">\[ R = \frac{N}{T} \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(R\)</span> = requests per second.</li>
+<li><span class="math-inline">\(N\)</span> = number of independent requests.</li>
+<li><span class="math-inline">\(T\)</span> = polling interval in seconds.</li>
+</ul>
+<p>If 20 independent requests are each sent every 0.5 seconds:</p>
+<div class="math-display">\[ R = \frac{20}{0.5} = 40 \]</div>
+<p>This simplified estimate assumes one request per configured item per interval. Real drivers may combine multiple tags into one request, use subscriptions, or employ other scheduling methods, so the actual network load may differ substantially.</p>
+<p>Do not reduce all polling intervals indiscriminately to fix slow screens. First identify whether the bottleneck is the network, PLC, driver, runtime, or application design.</p>
+<h2 id="11-timeout-retry-and-reconnect-behavior">11. Timeout, retry, and reconnect behavior</h2>
+<p>Communication timeouts and retries determine how the HMI responds when a device fails to reply.</p>
+<ul>
+<li>Timeout: Maximum permitted wait for a response.</li>
+<li>Retry: An additional attempt after an unsuccessful request.</li>
+<li>Reconnect: Attempt to re-establish a failed communication session.</li>
+<li>Communication-loss indication: A visible or recorded indication that communication is unavailable.</li>
+<li>Recovery validation: Confirmation that valid data is flowing again after reconnection.</li>
+</ul>
+<p>A timeout that is too short may produce nuisance communication alarms during temporary delays. A timeout that is too long may delay fault detection.</p>
+<p>Excessive retries can increase network load during a fault. Reconnect behavior should therefore be configured according to vendor recommendations and operational requirements.</p>
+<p>When communication recovers, the HMI should refresh values and restore valid status indications without incorrectly presenting old data as current.</p>
+<h2 id="12-communication-diagnostics">12. Communication diagnostics</h2>
+<p>Communication diagnostics help distinguish between physical network faults, protocol failures, configuration errors, and tag-level problems.</p>
+<h3 id="useful-diagnostic-information">Useful diagnostic information</h3>
+<ul>
+<li>Device connection state.</li>
+<li>Driver status and error codes.</li>
+<li>Request timeout count.</li>
+<li>Failed transaction count.</li>
+<li>Last successful communication time, where available.</li>
+<li>Tag quality and validity.</li>
+<li>PLC connection diagnostics.</li>
+<li>Network link status.</li>
+<li>Switch-port errors and packet statistics.</li>
+<li>Serial communication errors.</li>
+<li>OPC UA session and subscription status, where applicable.</li>
+</ul>
+<h3 id="diagnostic-tools">Diagnostic tools</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Main purpose</th>
+<th>Limitation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ping</td>
+<td>Checks basic IP reachability</td>
+<td>Does not verify application data exchange</td>
+</tr>
+<tr>
+<td>Engineering software</td>
+<td>Checks PLC state and controller-side diagnostics</td>
+<td>May require authorized access and can affect live systems if used carelessly</td>
+</tr>
+<tr>
+<td>HMI diagnostics</td>
+<td>Shows driver and application communication faults</td>
+<td>Detail varies by vendor</td>
+</tr>
+<tr>
+<td>Switch diagnostics</td>
+<td>Shows link, port, and traffic conditions</td>
+<td>Does not establish that PLC tags are correct</td>
+</tr>
+<tr>
+<td>Packet capture</td>
+<td>Examines network traffic and protocol exchanges</td>
+<td>Requires expertise, authorization, and correct capture location</td>
+</tr>
+<tr>
+<td>Protocol test client</td>
+<td>Checks supported protocol services and responses</td>
+<td>Can introduce risk if it performs writes or unsupported requests</td>
+</tr>
+<tr>
+<td>Serial diagnostic tool</td>
+<td>Checks serial settings and communication behavior</td>
+<td>Must use compatible electrical interfaces and safe connection practices</td>
+</tr>
+</tbody>
+</table>
+<p>Diagnostic testing should follow site cybersecurity and operational procedures. Avoid unauthorized scans, disruptive traffic generation, or writes to production equipment.</p>
+<h2 id="13-troubleshooting-hmi-communication-faults">13. Troubleshooting HMI communication faults</h2>
+<h3 id="step-1-identify-the-scope">Step 1: Identify the scope</h3>
+<p>Determine whether the issue affects:</p>
+<ul>
+<li>One tag.</li>
+<li>One screen.</li>
+<li>One HMI.</li>
+<li>One PLC.</li>
+<li>Multiple devices on the same network.</li>
+<li>The entire HMI-to-PLC connection.</li>
+</ul>
+<p>The scope often narrows the likely fault domain.</p>
+<h3 id="step-2-verify-the-physical-connection">Step 2: Verify the physical connection</h3>
+<p>Check the relevant Ethernet link indicators, cables, connectors, switch ports, power supplies, and serial wiring where applicable.</p>
+<p>Do not disconnect live industrial network connections without following the approved procedure.</p>
+<h3 id="step-3-verify-addressing-and-routing">Step 3: Verify addressing and routing</h3>
+<p>Check the configured device address, subnet mask, gateway, VLAN, and routing path as applicable.</p>
+<p>Confirm that the HMI is targeting the intended PLC, particularly after equipment replacement or panel migration.</p>
+<h3 id="step-4-verify-protocol-and-driver-configuration">Step 4: Verify protocol and driver configuration</h3>
+<p>Confirm that the selected protocol, PLC family, endpoint, port, rack/slot, serial parameters, and required driver components match the installed devices.</p>
+<h3 id="step-5-check-controller-side-diagnostics">Step 5: Check controller-side diagnostics</h3>
+<p>Use approved engineering tools to confirm that the PLC is running as expected, the relevant communication interface is healthy, and the required data is accessible.</p>
+<h3 id="step-6-check-tag-mappings-and-permissions">Step 6: Check tag mappings and permissions</h3>
+<p>Compare HMI tags against the approved PLC program and data definitions. Verify data types, addresses, scaling, and read/write access.</p>
+<h3 id="step-7-evaluate-communication-performance">Step 7: Evaluate communication performance</h3>
+<p>Review timeouts, failed requests, latency, connection limits, network errors, and polling load.</p>
+<h3 id="step-8-verify-recovery">Step 8: Verify recovery</h3>
+<p>After correcting the cause, confirm that data updates correctly, alarms behave as intended, operator commands receive the expected responses, and the fault does not recur.</p>
+<p>Record the root cause and corrective action in the approved maintenance record.</p>
+<h2 id="14-common-symptoms-and-likely-causes">14. Common symptoms and likely causes</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible causes</th>
+<th>First checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Entire PLC connection is lost</td>
+<td>Cable, switch, power, IP configuration, PLC interface, driver fault</td>
+<td>Link status, addressing, PLC diagnostics</td>
+</tr>
+<tr>
+<td>One tag shows an incorrect value</td>
+<td>Wrong address, data type, scaling, or mapping</td>
+<td>Compare PLC value and HMI tag configuration</td>
+</tr>
+<tr>
+<td>Values freeze but connection appears active</td>
+<td>Stale cache, partial communication fault, tag subscription issue, application fault</td>
+<td>Tag quality, update timestamp, driver diagnostics</td>
+</tr>
+<tr>
+<td>Read works but write fails</td>
+<td>Access restrictions, incorrect write mapping, PLC logic, protocol limitation</td>
+<td>Permissions, target tag, PLC command handling</td>
+</tr>
+<tr>
+<td>Communication is intermittent</td>
+<td>Loose connection, network errors, duplicate IP, resource load, unstable device</td>
+<td>Switch counters, cabling, device logs</td>
+</tr>
+<tr>
+<td>HMI updates slowly</td>
+<td>Excessive polling, network load, slow PLC response, overloaded runtime</td>
+<td>Driver metrics, PLC workload, application resources</td>
+</tr>
+<tr>
+<td>Multiple HMIs lose the same PLC</td>
+<td>PLC-side fault, common switch, shared network path, PLC connection limit</td>
+<td>Common network components and PLC diagnostics</td>
+</tr>
+<tr>
+<td>One HMI loses several PLCs</td>
+<td>HMI network interface, local switch, configuration, runtime or driver issue</td>
+<td>HMI interface, local network, runtime diagnostics</td>
+</tr>
+<tr>
+<td>Values recover after restart but fail again</td>
+<td>Underlying resource, driver, network, or configuration problem</td>
+<td>Preserve logs and investigate recurrence</td>
+</tr>
+<tr>
+<td>Serial device fails to communicate</td>
+<td>Incorrect baud rate, parity, wiring, termination, addressing</td>
+<td>Verify serial settings and physical topology</td>
+</tr>
+</tbody>
+</table>
+<p>These are diagnostic starting points, not definitive fault identifications.</p>
+<h2 id="15-practical-industrial-example-allen-bradley-plc-and-hmi">15. Practical industrial example: Allen-Bradley PLC and HMI</h2>
+<p>Consider an HMI connected to a ControlLogix PLC through EtherNet/IP. The operator can see the machine status, but the Reset button does not clear the displayed fault.</p>
+<p>A disciplined diagnosis is:</p>
+<ol>
+<li>Confirm whether the displayed fault corresponds to the actual PLC fault state.</li>
+<li>Check whether the Reset button changes the intended HMI command tag.</li>
+<li>Check whether the PLC receives the reset request.</li>
+<li>Inspect the PLC logic to determine whether the request is accepted.</li>
+<li>Verify whether a required permissive or reset condition is missing.</li>
+<li>Check the actual device feedback and whether the fault-clearing condition is satisfied.</li>
+<li>Confirm that the HMI displays the updated status after the PLC processes the request.</li>
+</ol>
+<p>If the PLC receives the reset request but rejects it because a guard-door condition is not satisfied, the communication link may be completely healthy. The issue is in the control conditions, not necessarily the HMI or network.</p>
+<p>The operator must never be instructed to bypass a safety condition merely to clear an HMI indication.</p>
+<h2 id="16-practical-industrial-example-modbus-tcp-drive-communication">16. Practical industrial example: Modbus TCP drive communication</h2>
+<p>Suppose an HMI reads speed and fault information from a VFD over Modbus TCP.</p>
+<p>The speed value displays correctly, but the fault code is wrong.</p>
+<p>Check the following:</p>
+<ul>
+<li>Correct drive IP address and Modbus TCP endpoint.</li>
+<li>Correct register address and addressing convention.</li>
+<li>Correct register width and data type.</li>
+<li>Whether the register is read-only or requires a particular access method.</li>
+<li>Whether the value requires signed interpretation or scaling.</li>
+<li>Whether the drive manual defines a different register for the fault code.</li>
+<li>Whether the HMI is displaying the correct tag.</li>
+</ul>
+<p>Some manuals use zero-based register offsets while others display human-readable register numbers. An offset mismatch can cause a valid communication response containing the wrong data.</p>
+<p>The solution is to verify the manufacturer's register map and the HMI driver's addressing convention rather than assuming the network is faulty.</p>
+<h2 id="17-industrial-network-reliability-and-cybersecurity">17. Industrial network reliability and cybersecurity</h2>
+<p>HMI communication must be reliable without weakening the security of the operational technology network.</p>
+<p>Recommended practices include:</p>
+<ul>
+<li>Separate OT networks from enterprise networks according to the approved architecture.</li>
+<li>Use firewalls and controlled communication paths between network zones.</li>
+<li>Restrict access to required protocols and endpoints.</li>
+<li>Maintain accurate IP address, device, and switch-port records.</li>
+<li>Use managed switches and appropriate network diagnostics.</li>
+<li>Disable unused services and ports where supported and approved.</li>
+<li>Control engineering access and remote connections.</li>
+<li>Use approved firmware and communication-driver versions.</li>
+<li>Back up network and communication configurations.</li>
+<li>Monitor recurring errors and unexplained configuration changes.</li>
+</ul>
+<p>Industrial protocols may not provide encryption or authentication in every implementation. Security controls must therefore account for the capabilities and limitations of the specific protocol and device.</p>
+<p>Avoid making network changes on a live production line without authorization, impact assessment, and a recovery plan.</p>
+<h2 id="18-preventive-maintenance-checklist">18. Preventive maintenance checklist</h2>
+<h3 id="routine-checks">Routine checks</h3>
+<ul>
+<li>Verify communication status for critical PLCs and connected devices.</li>
+<li>Check whether critical HMI values update and remain valid.</li>
+<li>Review communication alarms and recurring timeouts.</li>
+<li>Inspect visible network link indicators and relevant connections.</li>
+<li>Confirm that operator commands receive the expected PLC responses.</li>
+<li>Review unresolved communication faults.</li>
+</ul>
+<h3 id="periodic-engineering-checks">Periodic engineering checks</h3>
+<ul>
+<li>Compare HMI communication settings against approved documentation.</li>
+<li>Verify IP addresses, protocol settings, device addresses, and tag mappings.</li>
+<li>Review switch-port errors and network utilization where available.</li>
+<li>Confirm driver and firmware compatibility.</li>
+<li>Check communication timeout and retry settings.</li>
+<li>Verify recovery behavior after an approved communication interruption test.</li>
+<li>Back up the HMI project and relevant configuration before approved changes.</li>
+<li>Record recurring faults, root causes, and corrective actions in SAP PM or the site's maintenance system.</li>
+</ul>
+<p>Communication interruption tests must be planned and authorized. Do not deliberately disconnect production-critical equipment without the required operational safeguards.</p>
+<h2 id="19-maintenance-records-and-performance-indicators">19. Maintenance records and performance indicators</h2>
+<p>For each significant communication fault, record:</p>
+<ul>
+<li>Equipment ID and HMI/PLC identification.</li>
+<li>Date, time, and affected production area.</li>
+<li>Protocol and affected connection.</li>
+<li>Symptoms and affected tags.</li>
+<li>Driver error codes and available logs.</li>
+<li>Network and controller diagnostic findings.</li>
+<li>Root cause.</li>
+<li>Corrective action.</li>
+<li>Functional verification results.</li>
+<li>Downtime and recurrence status.</li>
+</ul>
+<p>Useful performance indicators include:</p>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Communication availability</td>
+<td>Measures the time that required connections are operational</td>
+</tr>
+<tr>
+<td>Timeout rate</td>
+<td>Identifies failed or delayed requests</td>
+</tr>
+<tr>
+<td>Communication recovery time</td>
+<td>Measures time required to restore valid communication</td>
+</tr>
+<tr>
+<td>Stale-data duration</td>
+<td>Tracks periods when displayed data is not current</td>
+</tr>
+<tr>
+<td>Repeat fault frequency</td>
+<td>Identifies recurring network, driver, or configuration problems</td>
+</tr>
+<tr>
+<td>Command success rate</td>
+<td>Measures whether expected command processing succeeds, using a clearly defined success condition</td>
+</tr>
+</tbody>
+</table>
+<p>A KPI must have a consistent measurement method. For example, communication availability should distinguish planned maintenance from unplanned failures and should define which devices and operating periods are included.</p>
+<h2 id="20-common-mistakes-to-avoid">20. Common mistakes to avoid</h2>
+<ul>
+<li>Assuming a successful ping proves that PLC communication is healthy.</li>
+<li>Assuming an online status means every tag is current.</li>
+<li>Increasing polling frequency without measuring the impact.</li>
+<li>Changing IP addresses without updating documentation.</li>
+<li>Treating a rejected PLC command as a communication failure.</li>
+<li>Rebooting the HMI before preserving useful diagnostics.</li>
+<li>Testing writes using an unauthorized diagnostic client.</li>
+<li>Ignoring stale values after a communication interruption.</li>
+<li>Replacing healthy hardware before checking configuration and network conditions.</li>
+<li>Modifying live PLC or HMI communication settings without authorization and a rollback plan.</li>
+</ul>
+<h2 id="21-key-principles">21. Key principles</h2>
+<ul>
+<li>HMI communication depends on compatible devices, correct configuration, valid data mapping, and a functioning communication path.</li>
+<li>Physical connectivity, protocol connectivity, tag validity, and command execution are separate diagnostic layers.</li>
+<li>A connected HMI can still display stale or incorrect information.</li>
+<li>Read and write communication must be verified independently.</li>
+<li>Communication faults should be diagnosed systematically, beginning with scope and evidence rather than speculative component replacement.</li>
+<li>Reliable maintenance requires documented configurations, controlled changes, tested recovery procedures, and recorded root causes.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\18_PM\02_HMI\06_Backup - Backup</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

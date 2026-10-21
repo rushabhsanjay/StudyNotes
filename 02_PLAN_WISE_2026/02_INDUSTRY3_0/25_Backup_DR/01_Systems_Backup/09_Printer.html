@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Industrial Printer Backup and Disaster Recovery</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Industrial Printer Backup and Disaster Recovery</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and scope</a></li>
+<li><a href="#2-industrial-printer-architecture">2. Industrial printer architecture</a></li>
+<li><a href="#3-printer-technologies-and-backup-considerations">3. Printer technologies and backup considerations</a></li>
+<li><a href="#4-essential-terminology">4. Essential terminology</a></li>
+<li><a href="#5-what-must-be-backed-up">5. What must be backed up?</a></li>
+<li><a href="#6-printer-backup-types-and-methods">6. Printer backup types and methods</a><ul>
+<li><a href="#61-complete-device-configuration-backup">6.1 Complete device configuration backup</a></li>
+<li><a href="#62-print-message-and-template-backup">6.2 Print-message and template backup</a></li>
+<li><a href="#63-engineering-workstation-backup">6.3 Engineering workstation backup</a></li>
+<li><a href="#64-configuration-reports">6.4 Configuration reports</a></li>
+</ul>
+</li>
+<li><a href="#7-variable-data-counters-and-traceability">7. Variable data, counters, and traceability</a><ul>
+<li><a href="#71-fixed-and-variable-content">7.1 Fixed and variable content</a></li>
+<li><a href="#72-counter-and-serial-number-recovery">7.2 Counter and serial-number recovery</a></li>
+<li><a href="#73-date-and-time-configuration">7.3 Date and time configuration</a></li>
+</ul>
+</li>
+<li><a href="#8-print-quality-and-positioning-parameters">8. Print quality and positioning parameters</a><ul>
+<li><a href="#81-print-quality">8.1 Print quality</a></li>
+<li><a href="#82-print-positioning">8.2 Print positioning</a></li>
+<li><a href="#83-barcode-and-qr-code-verification">8.3 Barcode and QR code verification</a></li>
+</ul>
+</li>
+<li><a href="#9-communication-and-production-integration">9. Communication and production integration</a><ul>
+<li><a href="#91-typical-printer-to-plc-signals">9.1 Typical printer-to-PLC signals</a></li>
+<li><a href="#92-network-and-protocol-configuration">9.2 Network and protocol configuration</a></li>
+<li><a href="#93-data-handshake-verification">9.3 Data-handshake verification</a></li>
+</ul>
+</li>
+<li><a href="#10-printer-disaster-recovery-procedure">10. Printer disaster-recovery procedure</a><ul>
+<li><a href="#101-pre-restoration-checklist">10.1 Pre-restoration checklist</a></li>
+<li><a href="#102-restoration-sequence">10.2 Restoration sequence</a></li>
+<li><a href="#103-post-restoration-validation-checklist">10.3 Post-restoration validation checklist</a></li>
+</ul>
+</li>
+<li><a href="#11-common-printer-disaster-recovery-scenarios">11. Common printer disaster-recovery scenarios</a><ul>
+<li><a href="#111-printer-controller-failure">11.1 Printer controller failure</a></li>
+<li><a href="#112-incorrect-or-missing-print-message">11.2 Incorrect or missing print message</a></li>
+<li><a href="#113-duplicate-serial-numbers-after-restoration">11.3 Duplicate serial numbers after restoration</a></li>
+<li><a href="#114-incorrect-print-position">11.4 Incorrect print position</a></li>
+<li><a href="#115-poor-print-quality">11.5 Poor print quality</a></li>
+<li><a href="#116-barcode-or-qr-code-failure">11.6 Barcode or QR code failure</a></li>
+<li><a href="#117-plc-or-mes-communication-failure">11.7 PLC or MES communication failure</a></li>
+<li><a href="#118-printer-migration-or-obsolescence">11.8 Printer migration or obsolescence</a></li>
+</ul>
+</li>
+<li><a href="#12-printer-backup-troubleshooting">12. Printer backup troubleshooting</a></li>
+<li><a href="#13-practical-maintenance-implementation">13. Practical maintenance implementation</a><ul>
+<li><a href="#131-printer-backup-register">13.1 Printer backup register</a></li>
+<li><a href="#132-suggested-folder-structure">13.2 Suggested folder structure</a></li>
+<li><a href="#133-maintenance-work-order-integration">13.3 Maintenance work-order integration</a></li>
+</ul>
+</li>
+<li><a href="#14-recovery-drills-and-audit">14. Recovery drills and audit</a><ul>
+<li><a href="#141-recovery-drill">14.1 Recovery drill</a></li>
+<li><a href="#142-audit-checklist">14.2 Audit checklist</a></li>
+</ul>
+</li>
+<li><a href="#15-printer-backup-management-kpis">15. Printer backup management KPIs</a></li>
+<li><a href="#16-interview-questions-and-technical-answers">16. Interview questions and technical answers</a></li>
+<li><a href="#17-final-engineering-principles">17. Final engineering principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-and-scope">1. Purpose and scope</h2>
+<p>Industrial printers are used to print product labels, barcodes, QR codes, serial numbers, batch numbers, manufacturing dates, traceability information, and direct markings on components or packaging. In automotive manufacturing, printing may be required for part identification, assembly traceability, logistics, quality control, and regulatory or customer-specific marking requirements.</p>
+<p>Printer backup and disaster recovery preserve the configuration needed to restore correct printing after controller failure, accidental parameter changes, memory corruption, printhead replacement, software upgrades, communication faults, or equipment obsolescence.</p>
+<p>A printer can power up and produce readable text while still printing the wrong part number, incorrect date, invalid barcode, wrong recipe, or incorrect traceability data. Recovery must therefore include both equipment restoration and verification of the actual printed output.</p>
+<p>The main objectives are to:</p>
+<ul>
+<li>Preserve printer programs, formats, templates, and message definitions.</li>
+<li>Protect print parameters, coding rules, and product-specific recipes.</li>
+<li>Preserve barcode, QR code, OCR-readable text, and traceability formats.</li>
+<li>Restore PLC, HMI, MES, and production-network communication.</li>
+<li>Maintain correct date, time, counters, and variable-data sources.</li>
+<li>Preserve fonts, logos, graphics, and other print assets.</li>
+<li>Support printhead, controller, and printer replacement.</li>
+<li>Reduce downtime while preventing incorrect or untraceable products from being released.</li>
+</ul>
+<p>Core principle: A successful printer restoration must prove that the correct data is printed on the correct product, in the correct format, at the required quality.</p>
+<h2 id="2-industrial-printer-architecture">2. Industrial printer architecture</h2>
+<pre><code>PLC / HMI / MES / Production Database
+                  ↓
+          Print Trigger and Data
+                  ↓
+          Printer Controller
+                  ├── Print Programs / Messages
+                  ├── Templates and Layouts
+                  ├── Product Recipes
+                  ├── Fonts, Logos, and Graphics
+                  ├── Print Parameters
+                  ├── Counters and Date Codes
+                  └── Communication Configuration
+                            ↓
+              Printhead / Marking Mechanism
+                            ↓
+                 Product or Packaging
+                            ↓
+             Inspection / Code Verification
+
+Supporting systems:
+Engineering workstation, printer software,
+consumables, sensors, encoders, backup repository,
+maintenance records, and recovery procedures
+</code></pre>
+<p>Different printing technologies have different recovery requirements. The backup strategy must match the actual installed equipment and application.</p>
+<h2 id="3-printer-technologies-and-backup-considerations">3. Printer technologies and backup considerations</h2>
+<table>
+<thead>
+<tr>
+<th>Printer type</th>
+<th>Common application</th>
+<th>Important backup considerations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Continuous inkjet (CIJ)</td>
+<td>Printing dates and batch codes on moving products</td>
+<td>Messages, print parameters, character formats, product settings, and encoder or trigger configuration</td>
+</tr>
+<tr>
+<td>Thermal inkjet (TIJ)</td>
+<td>Printing codes and text on packaging</td>
+<td>Print layouts, cartridge settings, trigger configuration, and job data</td>
+</tr>
+<tr>
+<td>Thermal transfer printer (TTO)</td>
+<td>Printing flexible packaging and labels</td>
+<td>Label or ribbon layouts, print speed, darkness, offsets, and product formats</td>
+</tr>
+<tr>
+<td>Laser marking system</td>
+<td>Permanent marking on metal, plastic, or other materials</td>
+<td>Marking programs, laser parameters, geometry, field configuration, and safety-related configuration records</td>
+</tr>
+<tr>
+<td>Label printer</td>
+<td>Product labels, shipping labels, and identification tags</td>
+<td>Label templates, fonts, graphics, printer language, media settings, and network configuration</td>
+</tr>
+<tr>
+<td>Print-and-apply system</td>
+<td>Printing and automatically applying labels</td>
+<td>Print format, applicator parameters, sensor settings, PLC interface, and label-position configuration</td>
+</tr>
+<tr>
+<td>Large-character inkjet</td>
+<td>Printing packaging and large product markings</td>
+<td>Message content, printhead settings, trigger configuration, and product recipes</td>
+</tr>
+<tr>
+<td>Drop-on-demand industrial inkjet</td>
+<td>Printing graphics, text, and codes</td>
+<td>Job files, ink settings, printhead configuration, and data interfaces</td>
+</tr>
+<tr>
+<td>Dot-peen marking system</td>
+<td>Permanent identification on metal parts</td>
+<td>Marking programs, character definitions, marking depth or force settings, and part-position data</td>
+</tr>
+</tbody>
+</table>
+<p>A printer's model and software determine which data can be exported, restored, or transferred to a replacement unit.</p>
+<h2 id="4-essential-terminology">4. Essential terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+<th>Industrial example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Print message</td>
+<td>Stored content and settings used to produce a marking</td>
+<td>Manufacturing date and batch code</td>
+</tr>
+<tr>
+<td>Print template</td>
+<td>Layout defining the placement and format of printed elements</td>
+<td>Automotive part label</td>
+</tr>
+<tr>
+<td>Recipe</td>
+<td>Group of parameters associated with a product or marking application</td>
+<td>Different code format for each part number</td>
+</tr>
+<tr>
+<td>Printhead</td>
+<td>Component that deposits ink, transfers thermal material, or produces a mark</td>
+<td>CIJ printhead</td>
+</tr>
+<tr>
+<td>Trigger</td>
+<td>Signal that initiates printing</td>
+<td>Product sensor detecting a component</td>
+</tr>
+<tr>
+<td>Encoder</td>
+<td>Device measuring movement or distance</td>
+<td>Conveyor encoder for print position</td>
+</tr>
+<tr>
+<td>Variable data</td>
+<td>Data that changes from product to product</td>
+<td>Serial number</td>
+</tr>
+<tr>
+<td>Fixed data</td>
+<td>Data that remains constant across a product or batch</td>
+<td>Company logo</td>
+</tr>
+<tr>
+<td>Counter</td>
+<td>Automatically incremented or decremented value</td>
+<td>Sequential carton number</td>
+</tr>
+<tr>
+<td>Print offset</td>
+<td>Adjustment to the position of the print relative to the trigger or product</td>
+<td>Moving the date code away from an edge</td>
+</tr>
+<tr>
+<td>Print quality</td>
+<td>Degree to which the printed output meets requirements</td>
+<td>Readable and correctly formed barcode</td>
+</tr>
+<tr>
+<td>Raster or bitmap</td>
+<td>Representation of an image using pixels</td>
+<td>Logo or graphical marking</td>
+</tr>
+<tr>
+<td>Font</td>
+<td>Character design used for printed text</td>
+<td>Machine-readable production code font</td>
+</tr>
+<tr>
+<td>Job revision</td>
+<td>Controlled version of a print configuration</td>
+<td>Approved label layout revision</td>
+</tr>
+<tr>
+<td>Print verification</td>
+<td>Confirmation that the output meets defined requirements</td>
+<td>Barcode scanner verifies a printed QR code</td>
+</tr>
+<tr>
+<td>Traceability</td>
+<td>Ability to associate a product with its manufacturing data</td>
+<td>Serial number linked to a production record</td>
+</tr>
+<tr>
+<td>Firmware</td>
+<td>Software embedded in the printer or controller</td>
+<td>Printer operating firmware</td>
+</tr>
+<tr>
+<td>Print language</td>
+<td>Commands used to describe print content and formatting</td>
+<td>ZPL or another supported printer language</td>
+</tr>
+<tr>
+<td>Consumable</td>
+<td>Material used during printing</td>
+<td>Ink, solvent, ribbon, or label stock</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-what-must-be-backed-up">5. What must be backed up?</h2>
+<p>A complete backup plan must identify data stored in the printer, engineering software, PLC, HMI, MES, or external database.</p>
+<table>
+<thead>
+<tr>
+<th>Backup item</th>
+<th>Typical contents</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Print messages</td>
+<td>Stored text, codes, and marking content</td>
+<td>Preserves product identification</td>
+</tr>
+<tr>
+<td>Print templates</td>
+<td>Label or marking layouts</td>
+<td>Preserves positioning and formatting</td>
+</tr>
+<tr>
+<td>Product recipes</td>
+<td>Product-specific print settings</td>
+<td>Supports multiple product variants</td>
+</tr>
+<tr>
+<td>Fonts and graphics</td>
+<td>Fonts, logos, images, and symbols</td>
+<td>Prevents missing or altered content</td>
+</tr>
+<tr>
+<td>Print parameters</td>
+<td>Speed, darkness, density, offsets, and relevant timing</td>
+<td>Preserves print quality and positioning</td>
+</tr>
+<tr>
+<td>Trigger configuration</td>
+<td>Sensor inputs, trigger modes, and timing</td>
+<td>Ensures printing occurs at the correct moment</td>
+</tr>
+<tr>
+<td>Encoder settings</td>
+<td>Encoder scaling, direction, and movement parameters</td>
+<td>Supports correct positioning on moving products</td>
+</tr>
+<tr>
+<td>Barcode settings</td>
+<td>Symbology, data structure, size, and error correction where applicable</td>
+<td>Preserves code readability and compliance</td>
+</tr>
+<tr>
+<td>Variable-data configuration</td>
+<td>Data fields, source mappings, and formatting rules</td>
+<td>Prevents incorrect serial or batch data</td>
+</tr>
+<tr>
+<td>Counter settings</td>
+<td>Start values, increments, resets, and persistence requirements</td>
+<td>Maintains correct sequential numbering</td>
+</tr>
+<tr>
+<td>Date and time configuration</td>
+<td>Date format, time zone, and relevant clock settings</td>
+<td>Prevents incorrect timestamps</td>
+</tr>
+<tr>
+<td>Communication configuration</td>
+<td>Network addresses, protocol settings, and device mappings</td>
+<td>Restores production integration</td>
+</tr>
+<tr>
+<td>PLC interface</td>
+<td>Trigger, ready, busy, complete, fault, and data-handshake mapping</td>
+<td>Restores the machine sequence</td>
+</tr>
+<tr>
+<td>Software and firmware</td>
+<td>Supported software versions and required installation packages</td>
+<td>Supports compatible recovery</td>
+</tr>
+<tr>
+<td>Licenses and options</td>
+<td>Installed features and licensing information</td>
+<td>Restores required functionality</td>
+</tr>
+<tr>
+<td>Printer-specific calibration</td>
+<td>Supported positioning or marking calibration data</td>
+<td>Maintains output placement</td>
+</tr>
+<tr>
+<td>Maintenance settings</td>
+<td>Relevant service parameters and configuration records</td>
+<td>Supports maintenance continuity</td>
+</tr>
+<tr>
+<td>Diagnostics</td>
+<td>Fault logs and relevant operating history</td>
+<td>Supports failure analysis</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Wiring diagrams, manuals, setup sheets, and consumable specifications</td>
+<td>Supports physical recovery</td>
+</tr>
+<tr>
+<td>Verification records</td>
+<td>Sample print results and barcode verification records</td>
+<td>Establishes output acceptance</td>
+</tr>
+</tbody>
+</table>
+<p>Some settings may be device-specific and cannot be transferred safely between printer models. Preserve the source configuration and confirm compatibility before restoring to replacement hardware.</p>
+<h2 id="6-printer-backup-types-and-methods">6. Printer backup types and methods</h2>
+<h3 id="61-complete-device-configuration-backup">6.1 Complete device configuration backup</h3>
+<p>A complete supported configuration backup may contain messages, settings, communication parameters, and other device configuration data.</p>
+<p>The exact scope varies by manufacturer and printer family. It may not include all counters, licenses, firmware, service calibration, external database contents, or PLC logic.</p>
+<p>Recommended procedure:</p>
+<ol>
+<li>Record the printer manufacturer, model, serial number, and firmware version.</li>
+<li>Identify the supported backup utility or export method.</li>
+<li>Determine which settings and files are included.</li>
+<li>Export the configuration using the approved method.</li>
+<li>Save separately stored messages, templates, fonts, and graphics where required.</li>
+<li>Review any warnings about unsupported or excluded settings.</li>
+<li>Verify the exported files can be opened by the supported software.</li>
+<li>Store the backup with the asset identifier, revision, and date.</li>
+<li>Document the recovery procedure and dependencies.</li>
+</ol>
+<h3 id="62-print-message-and-template-backup">6.2 Print-message and template backup</h3>
+<p>Message and template backups preserve the content and layout of printed information.</p>
+<p>Examples include:</p>
+<ul>
+<li>Part numbers and model codes.</li>
+<li>Manufacturing dates and batch numbers.</li>
+<li>Serial-number layouts.</li>
+<li>Barcode and QR code definitions.</li>
+<li>Logos and graphical content.</li>
+<li>Label dimensions and field placement.</li>
+<li>Product-specific print templates.</li>
+</ul>
+<p>A template backup may not contain the printer's network configuration, physical printhead parameters, trigger settings, or current counter values. Keep these requirements separate in the recovery plan.</p>
+<h3 id="63-engineering-workstation-backup">6.3 Engineering workstation backup</h3>
+<p>PC-based printing systems may depend on proprietary software, printer drivers, communication libraries, label-design applications, databases, and licenses.</p>
+<p>Preserve:</p>
+<ul>
+<li>Project files and template libraries.</li>
+<li>Required software and runtime versions.</li>
+<li>Printer drivers and supported interfaces.</li>
+<li>Fonts and graphics.</li>
+<li>Configuration files.</li>
+<li>License activation and recovery information.</li>
+<li>Database connection settings.</li>
+<li>Approved installation packages.</li>
+<li>Operating-system or workstation recovery media where required.</li>
+</ul>
+<p>Do not assume that the printer can be recovered from its own memory if the engineering workstation contains the only copy of the original design files.</p>
+<h3 id="64-configuration-reports">6.4 Configuration reports</h3>
+<p>Where supported, export readable reports of the printer's important settings.</p>
+<p>Useful records include:</p>
+<ul>
+<li>Printer identification and firmware.</li>
+<li>Print speed and print-quality parameters.</li>
+<li>Trigger and encoder settings.</li>
+<li>Network and protocol configuration.</li>
+<li>Print message and recipe names.</li>
+<li>Barcode and variable-data definitions.</li>
+<li>Counter behavior.</li>
+<li>Relevant maintenance and calibration information.</li>
+</ul>
+<p>Readable reports are useful for comparison and audit but may not be importable into the printer. They supplement the actual configuration backup.</p>
+<h2 id="7-variable-data-counters-and-traceability">7. Variable data, counters, and traceability</h2>
+<h3 id="71-fixed-and-variable-content">7.1 Fixed and variable content</h3>
+<p>Fixed content remains constant for a defined product or template. Variable content changes based on production information or the individual item.</p>
+<p>Examples:</p>
+<table>
+<thead>
+<tr>
+<th>Data type</th>
+<th>Example</th>
+<th>Recovery concern</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fixed text</td>
+<td>Manufacturer name</td>
+<td>Incorrect template revision</td>
+</tr>
+<tr>
+<td>Product identifier</td>
+<td>Part number</td>
+<td>Wrong product recipe</td>
+</tr>
+<tr>
+<td>Date code</td>
+<td>Manufacturing date</td>
+<td>Wrong clock or date format</td>
+</tr>
+<tr>
+<td>Batch number</td>
+<td>Production lot</td>
+<td>Incorrect data source</td>
+</tr>
+<tr>
+<td>Serial number</td>
+<td>Unique component identifier</td>
+<td>Duplicate or skipped numbers</td>
+</tr>
+<tr>
+<td>Barcode or QR data</td>
+<td>Encoded product information</td>
+<td>Incorrect data mapping or symbology</td>
+</tr>
+<tr>
+<td>Shift or line code</td>
+<td>Production line identification</td>
+<td>Incorrect PLC or MES source</td>
+</tr>
+<tr>
+<td>Counter</td>
+<td>Sequential package number</td>
+<td>Lost or reset counter state</td>
+</tr>
+</tbody>
+</table>
+<p>A recovered template must be tested with actual production data. A preview using fixed sample values does not prove that the variable-data interface is correct.</p>
+<h3 id="72-counter-and-serial-number-recovery">7.2 Counter and serial-number recovery</h3>
+<p>Counters and serial numbers require special attention because restoring an old backup may roll the system back to an earlier value.</p>
+<p>Potential consequences include:</p>
+<ul>
+<li>Duplicate serial numbers.</li>
+<li>Missing sequence numbers.</li>
+<li>Incorrect batch counts.</li>
+<li>Mismatches between printed codes and MES records.</li>
+<li>Products being assigned to the wrong production order.</li>
+</ul>
+<p>Recommended procedure:</p>
+<ol>
+<li>Identify the authoritative source of serial numbers or counters.</li>
+<li>Determine whether the printer, PLC, or MES maintains the current value.</li>
+<li>Preserve the last confirmed production value before restoration where possible.</li>
+<li>Restore the correct configuration.</li>
+<li>Synchronize with the authoritative source using the approved procedure.</li>
+<li>Verify uniqueness and sequence behavior.</li>
+<li>Reconcile any products printed during the failure or recovery period.</li>
+</ol>
+<p>Do not automatically restore an old counter value without checking the production history.</p>
+<h3 id="73-date-and-time-configuration">7.3 Date and time configuration</h3>
+<p>Verify:</p>
+<ul>
+<li>Current date and time.</li>
+<li>Time zone.</li>
+<li>Date format.</li>
+<li>Time synchronization source.</li>
+<li>Day, month, and year ordering.</li>
+<li>Batch rollover behavior.</li>
+<li>Relevant date-code conventions.</li>
+<li>Handling of production spanning midnight.</li>
+</ul>
+<p>A correctly functioning printer can still produce incorrect traceability data if its clock or date format is wrong.</p>
+<h2 id="8-print-quality-and-positioning-parameters">8. Print quality and positioning parameters</h2>
+<h3 id="81-print-quality">8.1 Print quality</h3>
+<p>Depending on the printing technology, preserve relevant parameters such as:</p>
+<ul>
+<li>Print speed.</li>
+<li>Print resolution or density.</li>
+<li>Character height and width.</li>
+<li>Printhead-to-product distance.</li>
+<li>Ink or ribbon settings.</li>
+<li>Strobe or trigger timing.</li>
+<li>Marking power, frequency, or speed for applicable laser systems.</li>
+<li>Label stock and media configuration.</li>
+<li>Relevant printhead or nozzle settings.</li>
+</ul>
+<p>Parameters must be compatible with the actual printer, consumables, and product surface. Do not blindly copy values from another printer.</p>
+<h3 id="82-print-positioning">8.2 Print positioning</h3>
+<p>Positioning depends on the product sensor, conveyor movement, encoder, printhead mounting, and timing.</p>
+<p>After recovery, verify:</p>
+<ul>
+<li>Sensor position and trigger behavior.</li>
+<li>Trigger delay and print offset.</li>
+<li>Encoder direction and scaling.</li>
+<li>Conveyor speed and direction.</li>
+<li>Printhead or applicator mounting.</li>
+<li>Product spacing and orientation.</li>
+<li>Relevant label dimensions and offsets.</li>
+</ul>
+<p>A printer that prints every message correctly can still mark the wrong area of the product.</p>
+<h3 id="83-barcode-and-qr-code-verification">8.3 Barcode and QR code verification</h3>
+<p>A code may appear visually acceptable while being unreadable or encoding the wrong data.</p>
+<p>Check:</p>
+<ul>
+<li>Correct symbology.</li>
+<li>Correct encoded content.</li>
+<li>Required dimensions and quiet zones.</li>
+<li>Print contrast and edge quality.</li>
+<li>Appropriate error-correction settings where applicable.</li>
+<li>Required barcode verification grade or acceptance criterion.</li>
+<li>Consistency between printed data and the production record.</li>
+</ul>
+<p>Where the process requires formal barcode verification, use the approved verification equipment and grading criteria. A handheld scanner successfully reading one code is not necessarily equivalent to a complete barcode quality verification.</p>
+<h2 id="9-communication-and-production-integration">9. Communication and production integration</h2>
+<h3 id="91-typical-printer-to-plc-signals">9.1 Typical printer-to-PLC signals</h3>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Typical purpose</th>
+<th>Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Print trigger</td>
+<td>Requests printing</td>
+<td>Confirm trigger source and timing</td>
+</tr>
+<tr>
+<td>Ready</td>
+<td>Indicates readiness for a print request</td>
+<td>Verify initialization and status</td>
+</tr>
+<tr>
+<td>Busy</td>
+<td>Indicates active processing or printing</td>
+<td>Verify sequence behavior</td>
+</tr>
+<tr>
+<td>Complete</td>
+<td>Indicates completion of the print operation</td>
+<td>Verify timing and reset behavior</td>
+</tr>
+<tr>
+<td>Fault</td>
+<td>Indicates a printer error</td>
+<td>Verify fault detection and response</td>
+</tr>
+<tr>
+<td>Data valid</td>
+<td>Indicates that required print data is available</td>
+<td>Verify data timing and content</td>
+</tr>
+<tr>
+<td>Job select</td>
+<td>Selects the print message or recipe</td>
+<td>Verify product-to-job mapping</td>
+</tr>
+<tr>
+<td>Acknowledge</td>
+<td>Confirms receipt or handling of a command</td>
+<td>Verify handshake behavior</td>
+</tr>
+<tr>
+<td>Low consumable</td>
+<td>Indicates a consumable condition</td>
+<td>Verify alarm mapping where supported</td>
+</tr>
+</tbody>
+</table>
+<p>Actual signal names, protocols, and timing depend on the printer and PLC interface.</p>
+<h3 id="92-network-and-protocol-configuration">9.2 Network and protocol configuration</h3>
+<p>Preserve the settings used by the installed printer, such as:</p>
+<ul>
+<li>IP address and subnet.</li>
+<li>Device name and network identity.</li>
+<li>Supported industrial communication settings.</li>
+<li>Serial communication parameters where applicable.</li>
+<li>PLC data mapping.</li>
+<li>Print-command format.</li>
+<li>Message-selection protocol.</li>
+<li>Database or MES interface settings.</li>
+<li>Timeout and error-handling configuration.</li>
+</ul>
+<p>After restoration, verify both communication and data correctness. An established network connection does not prove that the printer is receiving the correct part number or serial number.</p>
+<h3 id="93-data-handshake-verification">9.3 Data-handshake verification</h3>
+<p>A typical print sequence may follow this pattern:</p>
+<pre><code>PLC verifies product and recipe
+          ↓
+PLC sends print data
+          ↓
+Printer confirms data accepted
+          ↓
+PLC issues print trigger
+          ↓
+Printer executes print operation
+          ↓
+Printer reports completion or fault
+          ↓
+PLC verifies status and continues sequence
+</code></pre>
+<p>The actual handshake must follow the machine's approved interface specification. Test timeouts, missing data, incorrect job selection, and fault handling as well as the normal cycle.</p>
+<h2 id="10-printer-disaster-recovery-procedure">10. Printer disaster-recovery procedure</h2>
+<h3 id="101-pre-restoration-checklist">10.1 Pre-restoration checklist</h3>
+<ul>
+<li>Identify printer model, serial number, and printing technology.</li>
+<li>Record firmware, software, and installed options.</li>
+<li>Retrieve the latest approved backup.</li>
+<li>Verify that messages, templates, and required assets are included.</li>
+<li>Identify the authoritative source for counters and serial numbers.</li>
+<li>Confirm date and time requirements.</li>
+<li>Identify PLC, HMI, MES, and network dependencies.</li>
+<li>Confirm hardware and software compatibility.</li>
+<li>Check printhead, sensors, encoder, and relevant consumable conditions.</li>
+<li>Preserve current diagnostics where practical.</li>
+<li>Define sample-print and acceptance tests.</li>
+<li>Prevent incorrect or unverified products from being released during recovery.</li>
+</ul>
+<h3 id="102-restoration-sequence">10.2 Restoration sequence</h3>
+<ol>
+<li>Diagnose the fault and define the required recovery scope.</li>
+<li>Secure the machine and prevent unintended printing or product release.</li>
+<li>Identify the target printer and replacement hardware.</li>
+<li>Confirm compatibility of software, firmware, and installed options.</li>
+<li>Restore the supported controller configuration if required.</li>
+<li>Restore print messages, templates, fonts, graphics, and recipes.</li>
+<li>Restore print parameters, trigger configuration, and encoder settings.</li>
+<li>Restore communication and PLC interface configuration.</li>
+<li>Re-establish the correct variable-data source.</li>
+<li>Verify date, time, counter, and serial-number behavior.</li>
+<li>Check printhead alignment, consumables, sensors, and physical setup.</li>
+<li>Print representative test samples.</li>
+<li>Verify content, positioning, readability, and barcode quality as applicable.</li>
+<li>Test normal production handshake and fault handling.</li>
+<li>Obtain required quality and engineering release approval.</li>
+<li>Save the verified final configuration and update recovery records.</li>
+</ol>
+<p>The correct sequence depends on the printer family and application. Manufacturer-specific service procedures take precedence over this general sequence.</p>
+<h3 id="103-post-restoration-validation-checklist">10.3 Post-restoration validation checklist</h3>
+<ul>
+<li>Correct message and product recipe are selected.</li>
+<li>Printed text and codes match the approved specification.</li>
+<li>Date and time are correct.</li>
+<li>Serial numbers and counters are consistent with the authoritative source.</li>
+<li>Barcode or QR code contains the correct data.</li>
+<li>Required readability or verification criteria are met.</li>
+<li>Print position and orientation are correct.</li>
+<li>Trigger and encoder behavior are correct.</li>
+<li>PLC communication and handshake operate correctly.</li>
+<li>MES or traceability data is recorded correctly.</li>
+<li>Faults and missing-data conditions are handled correctly.</li>
+<li>Sample products are identified and dispositioned according to plant procedure.</li>
+<li>Final configuration is archived with the approved revision.</li>
+</ul>
+<h2 id="11-common-printer-disaster-recovery-scenarios">11. Common printer disaster-recovery scenarios</h2>
+<h3 id="111-printer-controller-failure">11.1 Printer controller failure</h3>
+<p>Situation: The printer controller fails or its configuration becomes inaccessible.</p>
+<ul>
+<li>Identify the exact printer model and controller generation.</li>
+<li>Retrieve the approved configuration and template backup.</li>
+<li>Confirm replacement hardware and software compatibility.</li>
+<li>Restore messages, parameters, and supported configuration.</li>
+<li>Re-establish PLC and network communication.</li>
+<li>Verify variable-data sources and counter behavior.</li>
+<li>Produce and inspect approved test samples.</li>
+<li>Release the system only after required acceptance checks.</li>
+</ul>
+<h3 id="112-incorrect-or-missing-print-message">11.2 Incorrect or missing print message</h3>
+<p>Situation: The printer displays the wrong message or a required template is missing.</p>
+<ul>
+<li>Retrieve the last approved message revision.</li>
+<li>Confirm the product identifier and recipe mapping.</li>
+<li>Verify fonts, graphics, and required assets.</li>
+<li>Check variable fields and data-source mappings.</li>
+<li>Compare the restored template with the approved specification.</li>
+<li>Print samples and verify the actual output.</li>
+</ul>
+<h3 id="113-duplicate-serial-numbers-after-restoration">11.3 Duplicate serial numbers after restoration</h3>
+<p>Situation: The printer or connected system reuses an earlier serial number.</p>
+<p>Potential causes include a stale counter backup, lost volatile state, incorrect PLC/MES synchronization, or restoration of the wrong production recipe.</p>
+<p>Corrective action:</p>
+<ol>
+<li>Stop or contain the affected production according to plant procedure.</li>
+<li>Identify the authoritative serial-number source.</li>
+<li>Determine the potentially affected production window.</li>
+<li>Reconcile printed codes against production records.</li>
+<li>Restore the correct sequence state using the approved process.</li>
+<li>Verify uniqueness before restarting.</li>
+<li>Document the recovery and affected-product disposition.</li>
+</ol>
+<h3 id="114-incorrect-print-position">11.4 Incorrect print position</h3>
+<p>Situation: Text or codes are printed too early, too late, or in the wrong area.</p>
+<p>Investigate:</p>
+<ul>
+<li>Sensor position and trigger delay.</li>
+<li>Encoder scaling and direction.</li>
+<li>Conveyor speed.</li>
+<li>Print offset settings.</li>
+<li>Printhead or applicator mounting.</li>
+<li>Product orientation and spacing.</li>
+<li>Incorrect recipe or template revision.</li>
+</ul>
+<p>Correct the identified cause and verify multiple consecutive samples under representative production conditions.</p>
+<h3 id="115-poor-print-quality">11.5 Poor print quality</h3>
+<p>Situation: Text is blurred, incomplete, faint, smeared, or unreadable.</p>
+<p>Possible causes include:</p>
+<ul>
+<li>Incorrect print speed or density.</li>
+<li>Dirty or damaged printhead.</li>
+<li>Incorrect ink, solvent, ribbon, or label stock.</li>
+<li>Wrong printhead distance.</li>
+<li>Incorrect exposure or marking settings for the technology.</li>
+<li>Changed product surface or environmental conditions.</li>
+<li>Incorrect firmware or device configuration.</li>
+</ul>
+<p>Compare the restored configuration with the approved baseline, inspect consumables and physical setup, and validate the result using the required print-quality criteria.</p>
+<h3 id="116-barcode-or-qr-code-failure">11.6 Barcode or QR code failure</h3>
+<p>Situation: A code looks correct but fails verification or is decoded incorrectly.</p>
+<ul>
+<li>Confirm the expected encoded data.</li>
+<li>Verify the symbology and format.</li>
+<li>Check dimensions, quiet zones, and contrast.</li>
+<li>Verify print density and positioning.</li>
+<li>Confirm that the selected template matches the product.</li>
+<li>Test using the approved scanning or verification method.</li>
+<li>Investigate any mismatch between the printed value and MES records.</li>
+</ul>
+<h3 id="117-plc-or-mes-communication-failure">11.7 PLC or MES communication failure</h3>
+<p>Situation: The printer works locally but production data is missing or printing does not start.</p>
+<p>Check:</p>
+<ul>
+<li>Network connection and device identity.</li>
+<li>PLC mapping and data types.</li>
+<li>Trigger and acknowledgement sequence.</li>
+<li>Product-to-message selection.</li>
+<li>Data format and delimiter conventions.</li>
+<li>Timeouts and fault responses.</li>
+<li>Database or MES availability.</li>
+<li>Permissions and connection configuration.</li>
+</ul>
+<p>Verify the complete data path from the production system to the printed output.</p>
+<h3 id="118-printer-migration-or-obsolescence">11.8 Printer migration or obsolescence</h3>
+<p>Situation: An obsolete printer is replaced with a different model or platform.</p>
+<ol>
+<li>Preserve the source configuration, messages, and templates.</li>
+<li>Record printer hardware, firmware, software, and communication details.</li>
+<li>Identify unsupported print languages, fonts, graphics, and functions.</li>
+<li>Convert or recreate templates using the supported method.</li>
+<li>Verify barcode symbology and encoded data.</li>
+<li>Re-establish trigger, encoder, and PLC interfaces.</li>
+<li>Verify counter and serial-number integration.</li>
+<li>Test print quality and positioning on actual products.</li>
+<li>Confirm traceability and quality acceptance requirements.</li>
+<li>Archive the approved target configuration separately from the original.</li>
+</ol>
+<p>A converted template is not automatically equivalent to the original. Differences in fonts, scaling, command interpretation, and printer resolution may change the output.</p>
+<h2 id="12-printer-backup-troubleshooting">12. Printer backup troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Corrective action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backup export fails</td>
+<td>Storage, access, or unsupported export method</td>
+<td>Verify permissions and the approved backup procedure</td>
+</tr>
+<tr>
+<td>Template will not open</td>
+<td>Software or file-format incompatibility</td>
+<td>Use the supported software version</td>
+</tr>
+<tr>
+<td>Correct template prints wrong data</td>
+<td>Variable-data mapping or recipe selection error</td>
+<td>Verify the source and field mapping</td>
+</tr>
+<tr>
+<td>Duplicate serial numbers</td>
+<td>Counter rollback or synchronization failure</td>
+<td>Reconcile with the authoritative sequence source</td>
+</tr>
+<tr>
+<td>Wrong date is printed</td>
+<td>Clock, time zone, or date-format error</td>
+<td>Verify clock and formatting configuration</td>
+</tr>
+<tr>
+<td>Print position is incorrect</td>
+<td>Trigger, encoder, offset, or mounting change</td>
+<td>Check timing and physical setup</td>
+</tr>
+<tr>
+<td>Print quality deteriorates</td>
+<td>Consumable, printhead, speed, or density issue</td>
+<td>Inspect the physical printing system and parameters</td>
+</tr>
+<tr>
+<td>Barcode is unreadable</td>
+<td>Incorrect symbology, size, contrast, or content</td>
+<td>Verify code configuration and print quality</td>
+</tr>
+<tr>
+<td>Printer is online but will not print</td>
+<td>Missing trigger, invalid data, or handshake problem</td>
+<td>Check ready state, trigger, and required data</td>
+</tr>
+<tr>
+<td>PLC cannot select a job</td>
+<td>Communication or message-selection mapping error</td>
+<td>Verify interface configuration and job identifiers</td>
+</tr>
+<tr>
+<td>Replacement printer lacks fonts or logos</td>
+<td>Assets were not included in the backup</td>
+<td>Restore the required supported assets</td>
+</tr>
+<tr>
+<td>Recovery works locally but not in production</td>
+<td>PLC, MES, network, or data-source dependency is missing</td>
+<td>Verify the complete integration path</td>
+</tr>
+<tr>
+<td>Printed codes do not match MES records</td>
+<td>Wrong data source or incorrect variable mapping</td>
+<td>Reconcile the source data and output</td>
+</tr>
+<tr>
+<td>Printer enters a restricted or evaluation mode</td>
+<td>Missing license or unsupported configuration</td>
+<td>Restore licensing through the approved procedure</td>
+</tr>
+</tbody>
+</table>
+<h2 id="13-practical-maintenance-implementation">13. Practical maintenance implementation</h2>
+<h3 id="131-printer-backup-register">13.1 Printer backup register</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Asset ID</td>
+<td>Plant-approved printer identifier</td>
+</tr>
+<tr>
+<td>Application</td>
+<td>Product marking, packaging, labelling, or traceability</td>
+</tr>
+<tr>
+<td>Manufacturer and model</td>
+<td>Exact printer identification</td>
+</tr>
+<tr>
+<td>Serial number</td>
+<td>Device-specific identification</td>
+</tr>
+<tr>
+<td>Firmware version</td>
+<td>Installed printer firmware</td>
+</tr>
+<tr>
+<td>Engineering software</td>
+<td>Software and version used to configure the printer</td>
+</tr>
+<tr>
+<td>Message revision</td>
+<td>Approved print-message revision</td>
+</tr>
+<tr>
+<td>Template revision</td>
+<td>Approved layout revision</td>
+</tr>
+<tr>
+<td>Recipe revision</td>
+<td>Approved product-specific configuration</td>
+</tr>
+<tr>
+<td>Data source</td>
+<td>PLC, MES, database, or other authoritative source</td>
+</tr>
+<tr>
+<td>Counter strategy</td>
+<td>Location and recovery method for counters or serial numbers</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>Network, protocol, and interface details</td>
+</tr>
+<tr>
+<td>Backup scope</td>
+<td>Device configuration, messages, templates, and dependencies</td>
+</tr>
+<tr>
+<td>Backup date</td>
+<td>Actual backup completion date</td>
+</tr>
+<tr>
+<td>Storage location</td>
+<td>Controlled repository path</td>
+</tr>
+<tr>
+<td>Restore-test date</td>
+<td>Date of the last recovery test</td>
+</tr>
+<tr>
+<td>Validation result</td>
+<td>Print quality and traceability acceptance status</td>
+</tr>
+<tr>
+<td>Responsible owner</td>
+<td>Assigned maintenance or engineering role</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Current, overdue, failed, or under review</td>
+</tr>
+</tbody>
+</table>
+<h3 id="132-suggested-folder-structure">13.2 Suggested folder structure</h3>
+<pre><code>PRINTER_BACKUP_SYSTEM/
+    01_ASSET_REGISTER/
+    02_APPROVED_BACKUPS/
+        PRINTER_1059/
+            DEVICE_CONFIGURATION/
+            PRINT_MESSAGES/
+            LABEL_TEMPLATES/
+            FONTS_AND_GRAPHICS/
+            PRODUCT_RECIPES/
+            PRINT_PARAMETERS/
+            TRIGGER_AND_ENCODER/
+            PLC_AND_NETWORK_CONFIGURATION/
+            VARIABLE_DATA_MAPPING/
+            SOFTWARE_AND_LICENSES/
+            COUNTER_AND_SERIAL_NUMBER_RECORDS/
+            SAMPLE_PRINTS/
+            QUALITY_VERIFICATION/
+            DIAGNOSTICS/
+            CHANGE_HISTORY/
+            RECOVERY_PROCEDURE/
+    03_INDEPENDENT_RECOVERY_COPIES/
+    04_RESTORE_TEST_RECORDS/
+    05_MIGRATION_RECORDS/
+</code></pre>
+<p>The folder names are illustrative. Follow the plant's naming conventions, access-control policy, and approved storage rules. Protect traceability configurations and production-critical print templates from unauthorized modification.</p>
+<h3 id="133-maintenance-work-order-integration">13.3 Maintenance work-order integration</h3>
+<p>For printer breakdowns or configuration changes:</p>
+<ol>
+<li>Record the printer ID, fault, affected product, and production impact.</li>
+<li>Preserve relevant diagnostics and sample prints where possible.</li>
+<li>Retrieve the approved backup package.</li>
+<li>Confirm printer and software compatibility.</li>
+<li>Restore the required configuration and production interfaces.</li>
+<li>Verify serial-number and counter integrity.</li>
+<li>Test print content, positioning, and readability.</li>
+<li>Verify PLC and traceability-system integration.</li>
+<li>Obtain the required quality and engineering release.</li>
+<li>Archive the verified final configuration and update the work order.</li>
+</ol>
+<h2 id="14-recovery-drills-and-audit">14. Recovery drills and audit</h2>
+<h3 id="141-recovery-drill">14.1 Recovery drill</h3>
+<p>A recovery drill verifies that the saved printer configuration and documented procedure can restore the required functionality.</p>
+<ol>
+<li>Select an approved test printer or controlled recovery exercise.</li>
+<li>Retrieve the released backup package.</li>
+<li>Verify file integrity, revision, and scope.</li>
+<li>Confirm software, firmware, drivers, and licenses.</li>
+<li>Restore the supported configuration, messages, and templates.</li>
+<li>Verify communication and variable-data mapping.</li>
+<li>Check counters and serial-number recovery requirements.</li>
+<li>Print representative test samples.</li>
+<li>Verify print quality, code content, and positioning.</li>
+<li>Record recovery time, missing dependencies, and corrective actions.</li>
+</ol>
+<p>A successful file restore does not prove that serial numbers are unique or that printed products meet quality requirements. These need separate verification.</p>
+<h3 id="142-audit-checklist">14.2 Audit checklist</h3>
+<ul>
+<li>Critical printers are listed in the asset register.</li>
+<li>Approved messages, templates, and recipes are backed up.</li>
+<li>Fonts, graphics, and other required assets are preserved.</li>
+<li>Print parameters and trigger settings are documented.</li>
+<li>PLC and MES interfaces are recorded.</li>
+<li>Variable-data mappings are documented.</li>
+<li>Counter and serial-number recovery procedures exist.</li>
+<li>Software, firmware, and license dependencies are known.</li>
+<li>Independent recovery copies are maintained.</li>
+<li>Backup currency and integrity are checked.</li>
+<li>Restore tests are completed at the defined interval.</li>
+<li>Print quality and barcode verification are documented.</li>
+<li>Traceability and product-disposition procedures are defined.</li>
+<li>Obsolete printers have migration plans.</li>
+<li>Configuration changes trigger required backup updates.</li>
+</ul>
+<h2 id="15-printer-backup-management-kpis">15. Printer backup management KPIs</h2>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Calculation</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backup coverage</td>
+<td>Printers with required backups divided by printers requiring backups, multiplied by 100%</td>
+<td>Measures backup availability</td>
+</tr>
+<tr>
+<td>Backup currency</td>
+<td>Printers with current approved backups divided by printers requiring backups, multiplied by 100%</td>
+<td>Measures revision accuracy</td>
+</tr>
+<tr>
+<td>Restore-test success</td>
+<td>Successful restoration tests divided by completed restoration tests, multiplied by 100%</td>
+<td>Measures demonstrated recoverability</td>
+</tr>
+<tr>
+<td>Recovery time</td>
+<td>Elapsed time from recovery start to approved functional restoration</td>
+<td>Measures recovery performance</td>
+</tr>
+<tr>
+<td>Print verification pass rate</td>
+<td>Samples passing defined print criteria divided by samples tested, multiplied by 100%</td>
+<td>Measures output acceptance</td>
+</tr>
+<tr>
+<td>Traceability reconciliation rate</td>
+<td>Reconciled records divided by records requiring reconciliation, multiplied by 100%</td>
+<td>Measures record consistency</td>
+</tr>
+<tr>
+<td>Duplicate serial-number rate</td>
+<td>Duplicate serial numbers detected divided by serial numbers inspected, multiplied by 100%</td>
+<td>Measures sequence integrity</td>
+</tr>
+<tr>
+<td>Missing-dependency rate</td>
+<td>Recovery packages missing required dependencies divided by packages audited, multiplied by 100%</td>
+<td>Identifies incomplete recovery packages</td>
+</tr>
+</tbody>
+</table>
+<p>For example, if 27 of 30 critical printers have current approved backups:</p>
+<div class="math-display">\[ \text{Backup currency}=\frac{27}{30}\times100=90\\% \]</div>
+<p>This indicates that 10% of the critical printer population lacks a current approved backup. It does not prove that the remaining backups have been successfully restored or that production traceability is protected.</p>
+<h2 id="16-interview-questions-and-technical-answers">16. Interview questions and technical answers</h2>
+<p>1. Why is printer backup more than template backup?</p>
+<p>The system may also depend on device settings, print parameters, fonts, graphics, counters, variable-data mappings, PLC interfaces, software, and licenses.</p>
+<p>2. Why is serial-number recovery critical?</p>
+<p>Restoring an old counter can generate duplicate or missing serial numbers, creating traceability problems and potentially affecting product release.</p>
+<p>3. Why can a printer print readable text but still be incorrect?</p>
+<p>The content, product recipe, date, barcode data, or serial number may be wrong even when the characters are legible.</p>
+<p>4. What should be checked after replacing a printer?</p>
+<p>Verify configuration compatibility, print templates, consumables, trigger and encoder settings, data mapping, print quality, and traceability.</p>
+<p>5. Why is a successful barcode scan not always sufficient?</p>
+<p>A scan proves that the reader decoded that code under those conditions. It does not necessarily establish compliance with the required barcode quality grade or verify every required code attribute.</p>
+<p>6. Why must PLC communication be tested after recovery?</p>
+<p>The printer may operate locally while receiving incorrect production data, missing triggers, or incorrect job-selection commands from the PLC.</p>
+<p>7. What is the difference between fixed and variable print data?</p>
+<p>Fixed data remains constant for a defined application, while variable data changes between products, batches, or production events.</p>
+<p>8. Why should printer backup be version-controlled?</p>
+<p>Version control identifies the approved configuration, supports rollback, and helps investigate changes that affect print quality or traceability.</p>
+<p>9. What should be done if duplicate serial numbers appear after recovery?</p>
+<p>Contain affected production, reconcile against the authoritative sequence source, restore the correct sequence state, verify uniqueness, and follow the plant's product-disposition process.</p>
+<p>10. What proves that a printer recovery is complete?</p>
+<p>The approved configuration is restored, production communication works, sample prints meet acceptance criteria, and counter and traceability behavior is verified.</p>
+<h2 id="17-final-engineering-principles">17. Final engineering principles</h2>
+<ul>
+<li>Preserve printer configuration, messages, templates, recipes, and required assets.</li>
+<li>Treat variable data, counters, and serial numbers as critical recovery dependencies.</li>
+<li>Verify printed content and positioning, not merely printer status.</li>
+<li>Preserve trigger, encoder, network, and PLC configuration.</li>
+<li>Validate barcode or QR code quality according to the applicable requirements.</li>
+<li>Check the physical printhead, consumables, and product interface after restoration.</li>
+<li>Maintain independent, revision-controlled backups.</li>
+<li>Test recovery procedures and document the results.</li>
+<li>Reconcile traceability records when counter integrity may have been affected.</li>
+<li>Archive the final verified configuration after every approved recovery or major change.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\25_Backup_DR\01_Systems_Backup\10_IPC - IPC</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

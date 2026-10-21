@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Read Alarms: HMI, PLC and Drive Messages</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Read Alarms: HMI, PLC and Drive Messages</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-understand-the-different-message-types">2. Understand the Different Message Types</a><ul>
+<li><a href="#21-alarm-fault-and-root-cause">2.1 Alarm, fault, and root cause</a></li>
+</ul>
+</li>
+<li><a href="#3-the-correct-alarm-reading-workflow">3. The Correct Alarm-Reading Workflow</a></li>
+<li><a href="#4-what-to-record-from-an-alarm">4. What to Record from an Alarm</a></li>
+<li><a href="#5-reading-hmi-alarms">5. Reading HMI Alarms</a><ul>
+<li><a href="#51-examine-the-complete-alarm-record">5.1 Examine the complete alarm record</a></li>
+<li><a href="#52-active-acknowledged-cleared-and-reset">5.2 Active, acknowledged, cleared, and reset</a></li>
+<li><a href="#53-alarm-priority">5.3 Alarm priority</a></li>
+<li><a href="#54-alarm-history-and-first-out-analysis">5.4 Alarm history and first-out analysis</a></li>
+</ul>
+</li>
+<li><a href="#6-reading-plc-diagnostics">6. Reading PLC Diagnostics</a><ul>
+<li><a href="#61-common-plc-diagnostic-categories">6.1 Common PLC diagnostic categories</a></li>
+<li><a href="#62-distinguish-a-plc-diagnostic-fault-from-a-process-timeout">6.2 Distinguish a PLC diagnostic fault from a process timeout</a></li>
+<li><a href="#63-check-plc-status-and-logic-in-a-controlled-way">6.3 Check PLC status and logic in a controlled way</a></li>
+</ul>
+</li>
+<li><a href="#7-reading-vfd-alarm-and-fault-messages">7. Reading VFD Alarm and Fault Messages</a><ul>
+<li><a href="#71-common-vfd-fault-categories">7.1 Common VFD fault categories</a></li>
+<li><a href="#72-overcurrent-versus-overload">7.2 Overcurrent versus overload</a></li>
+<li><a href="#73-read-drive-history-not-just-the-current-display">7.3 Read drive history, not just the current display</a></li>
+</ul>
+</li>
+<li><a href="#8-reading-servo-drive-messages">8. Reading Servo Drive Messages</a></li>
+<li><a href="#9-alarm-codes-and-manufacturer-documentation">9. Alarm Codes and Manufacturer Documentation</a></li>
+<li><a href="#10-correlating-alarms-across-devices">10. Correlating Alarms Across Devices</a><ul>
+<li><a href="#101-example-robot-not-ready">10.1 Example: robot not ready</a></li>
+<li><a href="#102-example-plc-communication-loss">10.2 Example: PLC communication loss</a></li>
+<li><a href="#103-example-safety-circuit-indication">10.3 Example: safety circuit indication</a></li>
+<li><a href="#104-timestamp-accuracy">10.4 Timestamp accuracy</a></li>
+</ul>
+</li>
+<li><a href="#11-a-practical-alarm-investigation-method">11. A Practical Alarm Investigation Method</a><ul>
+<li><a href="#step-1-classify-the-alarm">Step 1: Classify the alarm</a></li>
+<li><a href="#step-2-preserve-the-evidence">Step 2: Preserve the evidence</a></li>
+<li><a href="#step-3-establish-the-machine-state">Step 3: Establish the machine state</a></li>
+<li><a href="#step-4-find-the-earliest-credible-event">Step 4: Find the earliest credible event</a></li>
+<li><a href="#step-5-trace-dependencies">Step 5: Trace dependencies</a></li>
+<li><a href="#step-6-form-a-testable-hypothesis">Step 6: Form a testable hypothesis</a></li>
+<li><a href="#step-7-verify-safely">Step 7: Verify safely</a></li>
+<li><a href="#step-8-correct-and-validate">Step 8: Correct and validate</a></li>
+<li><a href="#step-9-record-the-outcome">Step 9: Record the outcome</a></li>
+</ul>
+</li>
+<li><a href="#12-practical-industrial-examples">12. Practical Industrial Examples</a><ul>
+<li><a href="#121-vfd-trips-during-conveyor-acceleration">12.1 VFD trips during conveyor acceleration</a></li>
+<li><a href="#122-clamp-does-not-confirm-closed-position">12.2 Clamp does not confirm closed position</a></li>
+<li><a href="#123-servo-following-error-on-a-cnc-axis">12.3 Servo following error on a CNC axis</a></li>
+<li><a href="#124-several-sensors-fail-at-the-same-time">12.4 Several sensors fail at the same time</a></li>
+<li><a href="#125-drive-safety-indication-after-an-emergency-stop">12.5 Drive safety indication after an emergency stop</a></li>
+</ul>
+</li>
+<li><a href="#13-alarm-management-and-recurring-faults">13. Alarm Management and Recurring Faults</a></li>
+<li><a href="#14-common-mistakes">14. Common Mistakes</a></li>
+<li><a href="#15-breakdown-report-template">15. Breakdown Report Template</a></li>
+<li><a href="#16-interview-questions-and-answers">16. Interview Questions and Answers</a><ul>
+<li><a href="#q1-what-is-the-difference-between-an-alarm-and-a-root-cause">Q1. What is the difference between an alarm and a root cause?</a></li>
+<li><a href="#q2-why-should-alarms-be-recorded-before-resetting">Q2. Why should alarms be recorded before resetting?</a></li>
+<li><a href="#q3-what-is-a-first-out-alarm">Q3. What is a first-out alarm?</a></li>
+<li><a href="#q4-does-a-plc-generated-timeout-mean-the-plc-is-defective">Q4. Does a PLC-generated timeout mean the PLC is defective?</a></li>
+<li><a href="#q5-what-is-the-difference-between-vfd-overcurrent-and-overload">Q5. What is the difference between VFD overcurrent and overload?</a></li>
+<li><a href="#q6-what-should-be-done-when-several-alarms-appear-simultaneously">Q6. What should be done when several alarms appear simultaneously?</a></li>
+<li><a href="#q7-why-can-alarm-timestamps-be-misleading">Q7. Why can alarm timestamps be misleading?</a></li>
+<li><a href="#q8-when-should-a-drive-fault-be-reset">Q8. When should a drive fault be reset?</a></li>
+<li><a href="#q9-why-should-a-technician-consult-the-exact-device-manual">Q9. Why should a technician consult the exact device manual?</a></li>
+<li><a href="#q10-what-proves-that-a-breakdown-has-been-resolved">Q10. What proves that a breakdown has been resolved?</a></li>
+</ul>
+</li>
+<li><a href="#17-practical-exercise">17. Practical Exercise</a></li>
+<li><a href="#18-completion-criteria">18. Completion Criteria</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\19_Breakdown\01_Approach\03_Read_Alarms</code></p>
+<h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>Reading alarms is the systematic process of collecting, interpreting, and correlating diagnostic messages from an HMI, PLC, VFD, servo drive, CNC, robot controller, safety system, or other automation device to identify the condition that caused a machine to stop or behave abnormally.</p>
+<p>An alarm is diagnostic evidence. It is not automatically the root cause.</p>
+<p>For example, an HMI may display <code>Robot Not Ready</code>, while the robot controller may show a servo fault, and the servo fault may have originated from a mechanical obstruction. Resetting the HMI alarm without investigating the lower-level cause may restore nothing except the operator's hope.</p>
+<p>The objective is to determine:</p>
+<ul>
+<li>What condition occurred?</li>
+<li>Which device detected it?</li>
+<li>When did it occur?</li>
+<li>Was it the initiating fault or a consequence of another fault?</li>
+<li>What operating condition existed immediately before the fault?</li>
+<li>Which approved checks can confirm the cause?</li>
+<li>What corrective action is required before resetting and restarting?</li>
+</ul>
+<p>Alarm reading should reduce random troubleshooting and help maintenance personnel move from symptoms toward verified causes.</p>
+<h2 id="2-understand-the-different-message-types">2. Understand the Different Message Types</h2>
+<p>Industrial control systems display several kinds of messages. They are related, but they are not interchangeable.</p>
+<table>
+<thead>
+<tr>
+<th>Message type</th>
+<th>Meaning</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Alarm</td>
+<td>A condition requiring operator or maintenance attention</td>
+<td>Low hydraulic pressure</td>
+</tr>
+<tr>
+<td>Fault</td>
+<td>A detected abnormal condition affecting a device or function</td>
+<td>Servo amplifier fault</td>
+</tr>
+<tr>
+<td>Warning</td>
+<td>An abnormal or approaching-limit condition that may not stop operation immediately</td>
+<td>Drive temperature high</td>
+</tr>
+<tr>
+<td>Event</td>
+<td>A recorded state change or occurrence</td>
+<td>Automatic mode selected</td>
+</tr>
+<tr>
+<td>Interlock</td>
+<td>A condition preventing an operation from proceeding</td>
+<td>Clamp confirmation missing</td>
+</tr>
+<tr>
+<td>Trip</td>
+<td>A protective action that disables a function or stops equipment</td>
+<td>VFD overload trip</td>
+</tr>
+<tr>
+<td>Diagnostic message</td>
+<td>Information about device, module, communication, or internal health</td>
+<td>Remote I/O module communication fault</td>
+</tr>
+<tr>
+<td>Information message</td>
+<td>A normal status or operator instruction</td>
+<td>Cycle completed</td>
+</tr>
+<tr>
+<td>First-out indication</td>
+<td>The first detected condition in a fault sequence, where supported</td>
+<td>Safety circuit opened before downstream faults</td>
+</tr>
+</tbody>
+</table>
+<p>A single physical problem may generate multiple message types. For example, loss of a sensor supply can produce a PLC input fault, an HMI sequence timeout, and a robot-not-ready alarm.</p>
+<h3 id="21-alarm-fault-and-root-cause">2.1 Alarm, fault, and root cause</h3>
+<p>These terms should be kept separate during troubleshooting.</p>
+<ul>
+<li>Symptom: The machine does not complete the cycle.</li>
+<li>Alarm: <code>Clamp not confirmed</code>.</li>
+<li>Fault condition: The PLC did not receive the required clamp-confirmation input within the allowed time.</li>
+<li>Possible root cause: Failed proximity sensor, damaged cable, loss of sensor supply, clamp mechanism not reaching position, or incorrect input mapping.</li>
+<li>Verified root cause: The specific cause confirmed by inspection and testing.</li>
+</ul>
+<p>Do not label a suspected cause as the root cause until evidence supports it.</p>
+<h2 id="3-the-correct-alarm-reading-workflow">3. The Correct Alarm-Reading Workflow</h2>
+<p>Use a repeatable sequence whenever a breakdown occurs.</p>
+<ol>
+<li>Make the equipment safe and follow site procedures.</li>
+<li>Record the exact HMI alarm text and code.</li>
+<li>Check whether the alarm is active, historical, acknowledged, or reset.</li>
+<li>Record the occurrence time and the sequence of related events.</li>
+<li>Identify the device that generated the message.</li>
+<li>Check the PLC, drive, servo, CNC, robot, and safety-system diagnostics as relevant.</li>
+<li>Find the earliest credible initiating event rather than focusing only on the final machine-stop message.</li>
+<li>Compare the alarm with machine state, sequence step, input/output status, and physical conditions.</li>
+<li>Consult the correct manufacturer's documentation for device-specific codes.</li>
+<li>Test the leading hypothesis using an approved, safe diagnostic method.</li>
+<li>Correct the verified cause, then follow the approved reset and restart procedure.</li>
+<li>Record the cause, action, and verification result.</li>
+</ol>
+<p>Preserve evidence before resetting. A reset may clear a current fault indication or alter the available diagnostic information. Capture the alarm screen, code, timestamp, fault history, and relevant device status first whenever it is safe and practical to do so.</p>
+<h2 id="4-what-to-record-from-an-alarm">4. What to Record from an Alarm</h2>
+<p>A useful alarm record contains enough information for another technician to understand and reproduce the investigation.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>What to capture</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine identity</td>
+<td>Line, station, machine number, and equipment tag</td>
+</tr>
+<tr>
+<td>Exact message</td>
+<td>Full alarm text without paraphrasing</td>
+</tr>
+<tr>
+<td>Alarm code</td>
+<td>Complete code, including prefixes and suffixes</td>
+</tr>
+<tr>
+<td>Source device</td>
+<td>HMI, PLC, VFD, servo, CNC, robot, safety controller, or network device</td>
+</tr>
+<tr>
+<td>Device identity</td>
+<td>Manufacturer, model, and relevant firmware or software version</td>
+</tr>
+<tr>
+<td>Timestamp</td>
+<td>Date and time, including timezone or clock source where relevant</td>
+</tr>
+<tr>
+<td>Alarm state</td>
+<td>Active, cleared, acknowledged, latched, or historical</td>
+</tr>
+<tr>
+<td>Machine condition</td>
+<td>Automatic/manual mode, cycle step, speed, load, and operating state</td>
+</tr>
+<tr>
+<td>Related messages</td>
+<td>Alarms immediately before and after the event</td>
+</tr>
+<tr>
+<td>Occurrence count</td>
+<td>First occurrence, recurrence, and frequency</td>
+</tr>
+<tr>
+<td>Recent changes</td>
+<td>Maintenance, parameter edits, program changes, wiring work, or replacement parts</td>
+</tr>
+<tr>
+<td>Diagnostic evidence</td>
+<td>Input/output status, measured values, diagnostic buffers, and fault-history details</td>
+</tr>
+<tr>
+<td>Action taken</td>
+<td>Inspection, measurement, repair, reset, or controlled test</td>
+</tr>
+<tr>
+<td>Result</td>
+<td>Whether the condition cleared and normal operation was verified</td>
+</tr>
+</tbody>
+</table>
+<p>Use the exact alarm wording. <code>Drive fault</code> is too vague when the actual message is <code>DC bus overvoltage during deceleration</code>.</p>
+<h2 id="5-reading-hmi-alarms">5. Reading HMI Alarms</h2>
+<p>The Human-Machine Interface (HMI) displays alarms and machine status in a form intended for operators and maintenance personnel. Depending on the architecture, the HMI may obtain alarm conditions from PLC logic, a drive, a robot controller, a CNC, or another device.</p>
+<h3 id="51-examine-the-complete-alarm-record">5.1 Examine the complete alarm record</h3>
+<p>Check the following details where available:</p>
+<ul>
+<li>Alarm description and unique alarm ID.</li>
+<li>Active status and whether the alarm is latched.</li>
+<li>Occurrence and clearance timestamps.</li>
+<li>Acknowledgement status.</li>
+<li>Alarm priority or severity.</li>
+<li>Associated station, actuator, sensor, drive, or sequence.</li>
+<li>Additional information, such as the affected axis or device.</li>
+<li>Alarm history and first-out information, if implemented.</li>
+</ul>
+<p>Do not assume every HMI provides every field. The available information depends on the application design.</p>
+<h3 id="52-active-acknowledged-cleared-and-reset">5.2 Active, acknowledged, cleared, and reset</h3>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Meaning</th>
+<th>What it does not prove</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Active</td>
+<td>The alarm condition currently exists or remains logically asserted</td>
+<td>It does not identify the physical cause by itself</td>
+</tr>
+<tr>
+<td>Acknowledged</td>
+<td>The operator or authorized user has recognized the alarm</td>
+<td>The fault has not necessarily been corrected</td>
+</tr>
+<tr>
+<td>Cleared</td>
+<td>The alarm condition is no longer active, or the application has marked it cleared</td>
+<td>The machine is not necessarily ready to restart</td>
+</tr>
+<tr>
+<td>Latched</td>
+<td>The alarm remains recorded until a defined reset or clearing condition is met</td>
+<td>The original fault condition must still be present</td>
+</tr>
+<tr>
+<td>Reset</td>
+<td>A reset command or procedure has been executed</td>
+<td>Reset does not prove that the underlying problem is repaired</td>
+</tr>
+<tr>
+<td>Historical</td>
+<td>The event remains in the alarm log after the active condition has ended</td>
+<td>The historical event may still be relevant to a recurring breakdown</td>
+</tr>
+</tbody>
+</table>
+<p>Alarm implementations differ. Acknowledgement, clearing, latching, and resetting are separate concepts, although some HMIs combine or simplify their presentation.</p>
+<h3 id="53-alarm-priority">5.3 Alarm priority</h3>
+<p>Many HMIs classify alarms by urgency, such as critical, high, medium, and low. The exact categories and response rules are application-specific.</p>
+<ul>
+<li>Critical: May involve an immediate hazard, protective shutdown, or severe equipment condition.</li>
+<li>High: Requires prompt intervention to restore safe operation.</li>
+<li>Medium: Requires attention but may permit a controlled operating state.</li>
+<li>Low or advisory: May indicate a developing condition, maintenance requirement, or non-blocking issue.</li>
+</ul>
+<p>Never determine safety significance from color alone. Follow the machine's risk assessment, alarm-response instructions, and site procedures.</p>
+<h3 id="54-alarm-history-and-first-out-analysis">5.4 Alarm history and first-out analysis</h3>
+<p>The most visible alarm is not always the initiating fault. If a station stops, the HMI may show:</p>
+<ul>
+<li><code>Cycle timeout</code></li>
+<li><code>Robot not ready</code></li>
+<li><code>Part not transferred</code></li>
+<li><code>Downstream station not ready</code></li>
+</ul>
+<p>These may all be consequences of one earlier event.</p>
+<p>Review the history in chronological order. Identify the earliest credible fault and check whether the subsequent alarms are logically explained by it.</p>
+<p>An alarm history is only as reliable as its timestamps, logging design, retention settings, and source data. If multiple devices have unsynchronized clocks, the displayed order may be misleading.</p>
+<h2 id="6-reading-plc-diagnostics">6. Reading PLC Diagnostics</h2>
+<p>The PLC controls machine logic and exchanges signals with sensors, actuators, drives, robots, and other controllers. PLC-related diagnostics can reveal whether a fault concerns the controller itself, a module, communications, program execution, or a process condition.</p>
+<h3 id="61-common-plc-diagnostic-categories">6.1 Common PLC diagnostic categories</h3>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Typical indication</th>
+<th>Investigation direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Controller fault</td>
+<td>CPU or controller fault indication</td>
+<td>Controller diagnostics, task status, program faults, power and hardware condition</td>
+</tr>
+<tr>
+<td>I/O module fault</td>
+<td>Module error or unavailable input/output data</td>
+<td>Module status, configuration, power, wiring, channel diagnostics</td>
+</tr>
+<tr>
+<td>Remote I/O communication</td>
+<td>Adapter or remote station disconnected</td>
+<td>Network link, power, addressing, connection status, cable and switch diagnostics</td>
+</tr>
+<tr>
+<td>Communication timeout</td>
+<td>Expected data or response not received in time</td>
+<td>Device state, network path, timeout settings, request/response sequence</td>
+</tr>
+<tr>
+<td>Program or task fault</td>
+<td>Execution error, watchdog or scan-time issue</td>
+<td>Fault record, task execution, logic path, resource usage, recent changes</td>
+</tr>
+<tr>
+<td>Input mismatch</td>
+<td>Physical condition and PLC input do not agree</td>
+<td>Sensor, supply, wiring, channel configuration, input status</td>
+</tr>
+<tr>
+<td>Output command mismatch</td>
+<td>PLC commands an output but the expected response does not occur</td>
+<td>Output status, interlocks, output module, actuator power, contactor or valve</td>
+</tr>
+<tr>
+<td>Sequence timeout</td>
+<td>A required condition did not occur within the allowed interval</td>
+<td>Sequence step, permissives, feedback signals, mechanics, timing assumptions</td>
+</tr>
+</tbody>
+</table>
+<h3 id="62-distinguish-a-plc-diagnostic-fault-from-a-process-timeout">6.2 Distinguish a PLC diagnostic fault from a process timeout</h3>
+<p>A process timeout does not necessarily mean that the PLC has failed.</p>
+<p>Example:</p>
+<p>A PLC commands a pneumatic clamp to close. The sequence expects a clamp-closed sensor within 1.5 seconds. The sensor does not turn on before the timer expires, so the HMI displays <code>Clamp close timeout</code>.</p>
+<p>The PLC may be executing correctly. The actual issue could be:</p>
+<ul>
+<li>The clamp is mechanically obstructed.</li>
+<li>Pneumatic pressure is insufficient.</li>
+<li>The solenoid valve does not operate.</li>
+<li>The sensor is misaligned or defective.</li>
+<li>The sensor supply or wiring has failed.</li>
+<li>The PLC input channel is faulty.</li>
+<li>The sequence uses the wrong input address.</li>
+<li>The timeout is inappropriate for the actual machine cycle.</li>
+</ul>
+<p>The correct method is to inspect the sequence state, command, feedback, and physical operation. Do not replace a PLC merely because a PLC-generated alarm appeared.</p>
+<h3 id="63-check-plc-status-and-logic-in-a-controlled-way">6.3 Check PLC status and logic in a controlled way</h3>
+<p>Where authorized, use the engineering software to inspect:</p>
+<ul>
+<li>Controller health and diagnostic buffer.</li>
+<li>I/O module and network status.</li>
+<li>Relevant input and output states.</li>
+<li>Sequence step or state-machine state.</li>
+<li>Permissives and interlocks.</li>
+<li>Timer and counter status.</li>
+<li>Fault-handling logic and latched bits.</li>
+<li>Communication status and device health.</li>
+<li>Recent program, configuration, or parameter changes.</li>
+</ul>
+<p>Compare the program's expected behavior with the actual field condition. For example, if the PLC input bit is OFF, determine whether the physical sensor is inactive, the signal is missing, or the channel/address is incorrect. The bit value alone does not distinguish those possibilities.</p>
+<p>Do not force PLC bits, bypass interlocks, or modify logic simply to clear an alarm. Such actions can create unexpected motion or defeat a protective function.</p>
+<h2 id="7-reading-vfd-alarm-and-fault-messages">7. Reading VFD Alarm and Fault Messages</h2>
+<p>A Variable Frequency Drive (VFD) controls motor operation and monitors electrical, thermal, and control conditions. Its fault history may contain more specific evidence than the HMI message.</p>
+<p>A machine-level alarm such as <code>Conveyor stopped</code> may conceal a drive-level message such as <code>Overcurrent during acceleration</code>. Always capture the exact drive code and description.</p>
+<h3 id="71-common-vfd-fault-categories">7.1 Common VFD fault categories</h3>
+<table>
+<thead>
+<tr>
+<th>Fault category</th>
+<th>What it generally indicates</th>
+<th>Checks to consider</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Overcurrent</td>
+<td>Current exceeded a configured or protective limit</td>
+<td>Mechanical jam, acceleration settings, motor/cable condition, output short circuit, drive sizing</td>
+</tr>
+<tr>
+<td>Overload</td>
+<td>Thermal or electronic motor-overload model indicates excessive loading over time</td>
+<td>Mechanical load, binding, motor current, duty cycle, motor data and overload settings</td>
+</tr>
+<tr>
+<td>DC bus overvoltage</td>
+<td>DC link voltage exceeded the permitted range</td>
+<td>Deceleration profile, regenerative energy, supply conditions, braking circuit where fitted</td>
+</tr>
+<tr>
+<td>DC bus undervoltage</td>
+<td>DC link voltage fell below the permitted range</td>
+<td>Supply voltage, phase loss, supply interruption, input connections, drive diagnostics</td>
+</tr>
+<tr>
+<td>Overtemperature</td>
+<td>Drive or monitored thermal condition exceeded a limit</td>
+<td>Cooling fan, filters, cabinet temperature, ventilation, loading</td>
+</tr>
+<tr>
+<td>Ground fault</td>
+<td>The drive detected a ground-leakage or earth-fault condition</td>
+<td>Motor cable, motor insulation, wiring and approved insulation-test procedure</td>
+</tr>
+<tr>
+<td>Input phase loss</td>
+<td>A supply phase may be missing or outside the expected condition</td>
+<td>Incoming supply, fuses, terminals, contactor and drive diagnostics</td>
+</tr>
+<tr>
+<td>Output phase or motor connection fault</td>
+<td>The drive detected an output or motor-connection abnormality</td>
+<td>Motor leads, terminals, cable, motor windings and the drive's specified diagnostic checks</td>
+</tr>
+<tr>
+<td>Communication fault</td>
+<td>Control data or communication with a PLC or network was lost</td>
+<td>Network link, addressing, adapter status, protocol configuration and connection timeout</td>
+</tr>
+<tr>
+<td>Parameter or configuration fault</td>
+<td>Required parameters or configuration are invalid or inconsistent</td>
+<td>Drive model, motor data, parameter set, replacement history and approved configuration</td>
+</tr>
+<tr>
+<td>Safety-related indication</td>
+<td>A safety input or torque-disable condition is active</td>
+<td>Safety circuit status, STO channels, safety controller diagnostics and approved reset procedure</td>
+</tr>
+</tbody>
+</table>
+<p>The precise fault names and definitions vary by manufacturer and model. Use the drive's own manual and diagnostic record rather than assuming that a code has a universal meaning.</p>
+<h3 id="72-overcurrent-versus-overload">7.2 Overcurrent versus overload</h3>
+<p>These are different conditions, even if both stop a motor.</p>
+<ul>
+<li>Overcurrent often relates to a high current event, potentially occurring quickly during starting, acceleration, a jam, or an electrical fault.</li>
+<li>Overload generally relates to excessive current or estimated thermal loading over a period of time.</li>
+</ul>
+<p>These descriptions are general, not universal. A manufacturer's protection algorithms and exact fault definitions determine the actual interpretation.</p>
+<p>A conveyor that trips on overcurrent immediately when starting may have a mechanical jam, a short circuit, an aggressive acceleration profile, or another drive-specific issue. A conveyor that trips on overload after running for several minutes may be carrying excessive load, experiencing bearing friction, or operating with incorrect motor data.</p>
+<p>Do not repeatedly reset a tripping drive without finding the reason. Repeated starts can damage equipment and worsen an electrical or mechanical fault.</p>
+<h3 id="73-read-drive-history-not-just-the-current-display">7.3 Read drive history, not just the current display</h3>
+<p>Capture the fault code and any available details such as:</p>
+<ul>
+<li>Fault timestamp and recurrence count.</li>
+<li>Output frequency and speed reference.</li>
+<li>Output current and DC bus voltage.</li>
+<li>Motor thermal estimate or temperature, if supported.</li>
+<li>Drive operating state at the time of the fault.</li>
+<li>Acceleration or deceleration phase.</li>
+<li>Control source and active command.</li>
+<li>Relevant drive status bits.</li>
+<li>Parameter changes or recent motor/cable work.</li>
+</ul>
+<p>Values shown after a reset may no longer represent the values at the time of the trip. Prefer stored fault snapshots when the drive supports them.</p>
+<h2 id="8-reading-servo-drive-messages">8. Reading Servo Drive Messages</h2>
+<p>Servo systems provide position, speed, and torque control. Faults may involve the motor, feedback device, power stage, tuning, mechanical load, communications, or safety-related functions.</p>
+<table>
+<thead>
+<tr>
+<th>Message category</th>
+<th>General meaning</th>
+<th>Investigation direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Following error</td>
+<td>Actual position differs from commanded position beyond a configured limit</td>
+<td>Mechanical obstruction, coupling, load, tuning, acceleration, feedback</td>
+</tr>
+<tr>
+<td>Encoder or feedback fault</td>
+<td>Feedback signal is missing, invalid, inconsistent, or outside permitted conditions</td>
+<td>Encoder cable, connector, feedback device, power, grounding and noise</td>
+</tr>
+<tr>
+<td>Overcurrent</td>
+<td>Servo current protection has operated</td>
+<td>Jam, collision, short circuit, motor/cable condition, acceleration or torque settings</td>
+</tr>
+<tr>
+<td>Overload</td>
+<td>The drive's load or thermal model indicates excessive loading</td>
+<td>Mechanical resistance, duty cycle, torque demand, sizing, motor and drive parameters</td>
+</tr>
+<tr>
+<td>DC bus fault</td>
+<td>DC link voltage is outside the permitted range</td>
+<td>Supply condition, regeneration, braking components, wiring</td>
+</tr>
+<tr>
+<td>Communication fault</td>
+<td>Controller and servo drive cannot exchange required data</td>
+<td>Network, cabling, addressing, controller state, configuration</td>
+</tr>
+<tr>
+<td>Motor identification or configuration fault</td>
+<td>Motor and drive data do not match required settings</td>
+<td>Correct motor model, feedback type, parameter set and commissioning data</td>
+</tr>
+<tr>
+<td>Safety or torque-off indication</td>
+<td>Torque production is inhibited by a safety-related condition</td>
+<td>STO status, safety relay/controller, channel diagnostics and reset sequence</td>
+</tr>
+</tbody>
+</table>
+<p>A following error is a symptom, not a complete diagnosis. It may be caused by excessive load, a jammed axis, poor tuning, incorrect motion commands, feedback failure, or an unsuitable following-error threshold.</p>
+<p>Before disturbing servo parameters, capture the current configuration and approved backup. Changing gain, torque limits, feedback settings, or safety-related parameters without a verified reason can introduce new faults or unsafe motion.</p>
+<h2 id="9-alarm-codes-and-manufacturer-documentation">9. Alarm Codes and Manufacturer Documentation</h2>
+<p>Never interpret a device-specific code from memory alone when the exact meaning matters. A code such as <code>Fxxx</code>, <code>ALxxx</code>, or a numbered diagnostic can mean different things across product families and firmware versions.</p>
+<p>Use this lookup procedure:</p>
+<ol>
+<li>Record the exact manufacturer and device model.</li>
+<li>Capture the complete alarm code and text.</li>
+<li>Identify the firmware or software version where relevant.</li>
+<li>Obtain the matching manufacturer's manual or official diagnostic guide.</li>
+<li>Find the code's exact description and documented detection conditions.</li>
+<li>Review the listed causes, checks, and corrective actions.</li>
+<li>Confirm required safety precautions and prerequisites before testing.</li>
+<li>Apply only the reset or recovery procedure specified for the device and machine.</li>
+<li>Record the manual revision or document identifier used.</li>
+</ol>
+<p>A replacement drive may have a different model or firmware from the original. A generic manual may therefore provide incorrect recovery steps or omit a model-specific condition.</p>
+<p>When documentation is unclear, escalate through the approved OEM or engineering support route instead of experimenting with unknown parameter changes.</p>
+<h2 id="10-correlating-alarms-across-devices">10. Correlating Alarms Across Devices</h2>
+<p>Automated machines commonly contain several interconnected diagnostic layers:</p>
+<ul>
+<li>HMI and supervisory alarm messages.</li>
+<li>PLC program and I/O diagnostics.</li>
+<li>Remote I/O and industrial network devices.</li>
+<li>VFD and servo drive faults.</li>
+<li>CNC and robot-controller messages.</li>
+<li>Safety relays and safety controllers.</li>
+<li>Sensors, valves, contactors, and other field devices.</li>
+<li>SCADA, historian, and maintenance logging systems.</li>
+</ul>
+<p>The best diagnosis comes from correlating these layers in time and function.</p>
+<h3 id="101-example-robot-not-ready">10.1 Example: robot not ready</h3>
+<p>Suppose the HMI displays:</p>
+<ol>
+<li><code>Robot not ready</code></li>
+<li><code>Part transfer timeout</code></li>
+<li><code>Station cycle incomplete</code></li>
+</ol>
+<p>The robot controller's history shows a servo-axis fault immediately before the HMI messages. The PLC sequence confirms that the transfer command was issued but the expected robot-ready or transfer-complete condition did not arrive.</p>
+<p>The robot-axis fault is a stronger initiating-cause candidate than the later transfer timeout. However, it still needs investigation to establish whether the servo fault resulted from a mechanical obstruction, feedback problem, drive issue, or another cause.</p>
+<h3 id="102-example-plc-communication-loss">10.2 Example: PLC communication loss</h3>
+<p>A remote I/O adapter goes offline. The PLC no longer receives valid input data from that station. Several sensors appear inactive, and the HMI generates multiple process alarms.</p>
+<p>Do not immediately conclude that every sensor has failed. Investigate the shared dependency first: the remote I/O connection, its power supply, the network link, and the relevant module diagnostics.</p>
+<p>A single shared failure can explain many downstream symptoms.</p>
+<h3 id="103-example-safety-circuit-indication">10.3 Example: safety circuit indication</h3>
+<p>A drive reports a safety-related torque-disable condition and the HMI reports <code>Axis not ready</code>.</p>
+<p>Check the safety system's diagnostic information and the approved safety-circuit status indications. Do not bypass the safety circuit or force an input to make the axis move. Determine why the safety function is active and restore operation only through the authorized safety procedure.</p>
+<h3 id="104-timestamp-accuracy">10.4 Timestamp accuracy</h3>
+<p>When comparing PLC, drive, robot, CNC, and SCADA logs, verify whether their clocks are synchronized.</p>
+<ul>
+<li>Check timestamp source and time zone.</li>
+<li>Note clock offsets where they are known.</li>
+<li>Distinguish event time from the time the HMI received or logged the event.</li>
+<li>Be cautious about millisecond-level ordering when devices are not synchronized.</li>
+<li>Use signal dependencies and sequence logic to support the timeline.</li>
+</ul>
+<p>The first message shown on a screen is not necessarily the first event that physically occurred.</p>
+<h2 id="11-a-practical-alarm-investigation-method">11. A Practical Alarm Investigation Method</h2>
+<p>Use the following method to keep diagnosis evidence-based.</p>
+<h3 id="step-1-classify-the-alarm">Step 1: Classify the alarm</h3>
+<p>Determine whether the message concerns safety, electrical power, mechanical loading, process sequence, communications, device health, or configuration.</p>
+<h3 id="step-2-preserve-the-evidence">Step 2: Preserve the evidence</h3>
+<p>Record the alarm code, text, source, timestamps, related messages, and relevant status values before clearing anything.</p>
+<h3 id="step-3-establish-the-machine-state">Step 3: Establish the machine state</h3>
+<p>Identify the operating mode, active sequence step, command issued, feedback expected, and last successful operation.</p>
+<h3 id="step-4-find-the-earliest-credible-event">Step 4: Find the earliest credible event</h3>
+<p>Review related logs and identify the first event that plausibly explains the downstream alarms.</p>
+<h3 id="step-5-trace-dependencies">Step 5: Trace dependencies</h3>
+<p>For a failed sequence, check the command, permissives, output, actuator, physical movement, sensor feedback, and PLC interpretation. Follow the actual architecture of the machine.</p>
+<h3 id="step-6-form-a-testable-hypothesis">Step 6: Form a testable hypothesis</h3>
+<p>Example: <code>The clamp timeout may be caused by missing sensor feedback because the clamp reaches its end position but the PLC input remains OFF.</code></p>
+<p>This is a hypothesis, not yet a root cause.</p>
+<h3 id="step-7-verify-safely">Step 7: Verify safely</h3>
+<p>Use approved visual checks, diagnostics, measurements, and controlled tests. Apply lockout/tagout where hazardous energy must be isolated. Energized measurements or online monitoring must follow site authorization and electrical-safety procedures.</p>
+<h3 id="step-8-correct-and-validate">Step 8: Correct and validate</h3>
+<p>Repair the verified cause. Confirm that the fault condition has cleared, required permissives are healthy, protective functions remain effective, and the machine passes the approved functional test.</p>
+<h3 id="step-9-record-the-outcome">Step 9: Record the outcome</h3>
+<p>Document the initiating fault, evidence, corrective action, reset procedure, functional result, and any follow-up work.</p>
+<h2 id="12-practical-industrial-examples">12. Practical Industrial Examples</h2>
+<h3 id="121-vfd-trips-during-conveyor-acceleration">12.1 VFD trips during conveyor acceleration</h3>
+<p>Observed messages:</p>
+<ul>
+<li>HMI: <code>Conveyor drive fault</code></li>
+<li>VFD: <code>Overcurrent during acceleration</code></li>
+<li>PLC: <code>Conveyor running feedback timeout</code></li>
+</ul>
+<p>Interpretation:</p>
+<p>The PLC timeout may be a consequence of the drive trip. Investigate the drive's stored fault data and the conveyor's mechanical condition before treating the PLC timeout as the primary problem.</p>
+<p>Checks:</p>
+<ul>
+<li>Confirm the conveyor is safe and isolate hazardous energy before mechanical inspection.</li>
+<li>Check for a jam, binding, or abnormal load.</li>
+<li>Inspect motor and cable condition using approved procedures.</li>
+<li>Review acceleration settings and motor parameters against the approved configuration.</li>
+<li>Check drive diagnostics and current data where available.</li>
+</ul>
+<p>Do not increase the current limit or repeatedly reset the drive merely to keep production running.</p>
+<h3 id="122-clamp-does-not-confirm-closed-position">12.2 Clamp does not confirm closed position</h3>
+<p>Observed messages:</p>
+<ul>
+<li>HMI: <code>Clamp close timeout</code></li>
+<li>PLC: Clamp command ON, clamp-closed input OFF</li>
+<li>Pneumatic system: Clamp appears to reach its end position</li>
+</ul>
+<p>Interpretation:</p>
+<p>The machine's physical condition and PLC feedback disagree. Possible causes include a sensor problem, incorrect alignment, wiring or supply fault, input-channel issue, or incorrect signal mapping.</p>
+<p>Checks:</p>
+<ul>
+<li>Inspect the sensor and its mounting.</li>
+<li>Verify the sensor's status indication where fitted.</li>
+<li>Check the input status through approved diagnostics.</li>
+<li>Measure the supply and signal only under appropriate electrical-safety controls.</li>
+<li>Compare the field signal with the PLC address and program logic.</li>
+<li>Verify whether the clamp mechanically reaches its specified position.</li>
+</ul>
+<p>Do not force the input bit to simulate a successful clamp confirmation.</p>
+<h3 id="123-servo-following-error-on-a-cnc-axis">12.3 Servo following error on a CNC axis</h3>
+<p>Observed messages:</p>
+<ul>
+<li>CNC: Axis following error</li>
+<li>Servo drive: Position deviation alarm</li>
+</ul>
+<p>Interpretation:</p>
+<p>The commanded movement and measured position differ beyond the configured limit. The problem could be mechanical, feedback-related, electrical, or motion-control-related.</p>
+<p>Checks:</p>
+<ul>
+<li>Record the exact CNC and drive codes.</li>
+<li>Review the axis state and the point in the movement where the fault occurred.</li>
+<li>Inspect for obstruction, collision evidence, or mechanical binding under the required isolation procedure.</li>
+<li>Review encoder/feedback diagnostics and cable condition.</li>
+<li>Check approved motion and servo parameters against the known-good configuration.</li>
+<li>Involve authorized controls or OEM support before changing tuning parameters.</li>
+</ul>
+<h3 id="124-several-sensors-fail-at-the-same-time">12.4 Several sensors fail at the same time</h3>
+<p>Observed messages:</p>
+<ul>
+<li>Multiple HMI sensor alarms.</li>
+<li>PLC shows several inputs OFF.</li>
+<li>Remote I/O station reports a communication or module fault.</li>
+</ul>
+<p>Interpretation:</p>
+<p>Multiple simultaneous sensor failures may share a common cause, such as a failed 24 V DC supply, a disconnected remote I/O station, or a network issue.</p>
+<p>Checks:</p>
+<ul>
+<li>Inspect the remote I/O diagnostic state.</li>
+<li>Check the station's power and network status.</li>
+<li>Determine whether the affected inputs share a common supply or module.</li>
+<li>Compare physical sensor status with PLC input status.</li>
+<li>Verify the relevant power and network conditions using approved procedures.</li>
+</ul>
+<p>Investigate shared dependencies before replacing several sensors independently.</p>
+<h3 id="125-drive-safety-indication-after-an-emergency-stop">12.5 Drive safety indication after an emergency stop</h3>
+<p>Observed messages:</p>
+<ul>
+<li>HMI: <code>Axis not ready</code></li>
+<li>Drive: Safety input or STO active</li>
+<li>Safety controller: Safety demand or channel status recorded</li>
+</ul>
+<p>Interpretation:</p>
+<p>The drive may be correctly inhibiting torque because a safety function is active. This is not automatically a drive failure.</p>
+<p>Checks:</p>
+<ul>
+<li>Confirm the equipment's safe state.</li>
+<li>Review the safety controller or relay diagnostics.</li>
+<li>Identify the cause of the safety demand using the approved circuit documentation.</li>
+<li>Check the reset sequence and required safety conditions.</li>
+<li>Validate the protective function through the authorized procedure.</li>
+</ul>
+<p>Never bypass STO or any other safety function to restore production.</p>
+<h2 id="13-alarm-management-and-recurring-faults">13. Alarm Management and Recurring Faults</h2>
+<p>Repeated alarms are useful maintenance data. They can expose chronic reliability issues, poor alarm design, intermittent connections, marginal process conditions, or incorrect sequence timing.</p>
+<p>For recurring alarms, track:</p>
+<ul>
+<li>Frequency per shift, day, or production cycle.</li>
+<li>Time between occurrences.</li>
+<li>Duration of downtime.</li>
+<li>Equipment and operating conditions at each occurrence.</li>
+<li>Whether the same initiating fault appears each time.</li>
+<li>Corrective actions attempted and their outcomes.</li>
+<li>Parts replaced and whether the replacement corrected the problem.</li>
+<li>Whether the alarm is a genuine fault, a consequence, or a nuisance indication.</li>
+</ul>
+<p>Alarm rationalization may be needed when an HMI produces excessive, duplicate, unclear, or low-value alarms. Improvements can include better text, correct source identification, sensible priorities, documented operator actions, and useful first-out diagnostics.</p>
+<p>Do not suppress a valid alarm merely because it occurs frequently. Establish why it occurs and assess the safety and operational consequences before changing alarm logic.</p>
+<h2 id="14-common-mistakes">14. Common Mistakes</h2>
+<ul>
+<li>Resetting alarms before recording the diagnostic evidence.</li>
+<li>Assuming the first alarm visible on the HMI is the root cause.</li>
+<li>Treating acknowledgement as fault correction.</li>
+<li>Using an alarm code without confirming the device model and manual.</li>
+<li>Confusing a PLC process timeout with a PLC hardware fault.</li>
+<li>Replacing sensors based only on an HMI sensor alarm.</li>
+<li>Ignoring drive fault history and relying only on the current display.</li>
+<li>Changing parameters before saving the approved configuration.</li>
+<li>Treating multiple alarms as unrelated without checking common dependencies.</li>
+<li>Ignoring timestamp offsets across controllers and devices.</li>
+<li>Repeatedly resetting a drive that trips under the same condition.</li>
+<li>Bypassing interlocks, safety circuits, or feedback signals to restore production.</li>
+<li>Closing a breakdown record without functional verification.</li>
+</ul>
+<h2 id="15-breakdown-report-template">15. Breakdown Report Template</h2>
+<p>Use a consistent structure for the maintenance log, CMMS record, or shift handover.</p>
+<pre><code>Machine / Station:
+Date and Time:
+Operating Mode:
+Last Successful Operation:
+
+HMI Alarm Text:
+HMI Alarm ID:
+Source Device:
+Device Model / Firmware:
+Exact Device Fault Code:
+Alarm Occurrence Time:
+Alarm History / Related Events:
+
+PLC Sequence Step:
+Relevant Command and Feedback:
+I/O or Communication Status:
+Drive / Servo / CNC / Robot Diagnostics:
+
+Initial Hypothesis:
+Evidence Collected:
+Verified Root Cause:
+Corrective Action:
+Reset Procedure Followed:
+Functional Test Result:
+Recurrence After Restart:
+Follow-up Action:
+Technician / Shift:
+</code></pre>
+<p>Keep observed facts separate from suspected causes. If the root cause has not been verified, record the investigation as inconclusive or ongoing rather than inventing certainty for the sake of a tidy report.</p>
+<h2 id="16-interview-questions-and-answers">16. Interview Questions and Answers</h2>
+<h3 id="q1-what-is-the-difference-between-an-alarm-and-a-root-cause">Q1. What is the difference between an alarm and a root cause?</h3>
+<p>An alarm identifies a detected condition requiring attention. The root cause is the verified underlying reason that produced the condition. One root cause may generate multiple alarms.</p>
+<h3 id="q2-why-should-alarms-be-recorded-before-resetting">Q2. Why should alarms be recorded before resetting?</h3>
+<p>Resetting may clear active indications or change diagnostic information. Recording the code, text, timestamp, and history preserves evidence for fault analysis.</p>
+<h3 id="q3-what-is-a-first-out-alarm">Q3. What is a first-out alarm?</h3>
+<p>A first-out alarm identifies the first detected fault in a related sequence, where the control system supports that function. It helps distinguish an initiating event from downstream alarms.</p>
+<h3 id="q4-does-a-plc-generated-timeout-mean-the-plc-is-defective">Q4. Does a PLC-generated timeout mean the PLC is defective?</h3>
+<p>No. The PLC may be functioning correctly but not receiving the expected feedback before the timer expires. The cause may be mechanical, electrical, sensor-related, communication-related, or logical.</p>
+<h3 id="q5-what-is-the-difference-between-vfd-overcurrent-and-overload">Q5. What is the difference between VFD overcurrent and overload?</h3>
+<p>Overcurrent generally indicates a high-current event that crosses a protection threshold, while overload generally reflects excessive loading or estimated thermal stress over time. The manufacturer's specific definitions determine the exact meaning.</p>
+<h3 id="q6-what-should-be-done-when-several-alarms-appear-simultaneously">Q6. What should be done when several alarms appear simultaneously?</h3>
+<p>Preserve the records, establish the event timeline, identify shared dependencies, and investigate the earliest credible initiating event. Check whether later alarms are consequences of the same fault.</p>
+<h3 id="q7-why-can-alarm-timestamps-be-misleading">Q7. Why can alarm timestamps be misleading?</h3>
+<p>Different devices may have unsynchronized clocks, and an HMI may log an event after receiving it from another device. Correlate timestamps with sequence logic and signal dependencies.</p>
+<h3 id="q8-when-should-a-drive-fault-be-reset">Q8. When should a drive fault be reset?</h3>
+<p>Only after the cause has been investigated and the machine is in the required safe condition. Follow the device and machine-specific recovery procedure and verify normal operation after restart.</p>
+<h3 id="q9-why-should-a-technician-consult-the-exact-device-manual">Q9. Why should a technician consult the exact device manual?</h3>
+<p>Alarm codes, detection conditions, and reset procedures can vary by manufacturer, model, and firmware. The correct documentation prevents incorrect interpretation and unsafe troubleshooting.</p>
+<h3 id="q10-what-proves-that-a-breakdown-has-been-resolved">Q10. What proves that a breakdown has been resolved?</h3>
+<p>The identified cause has been corrected, the relevant fault condition has cleared, safety and operating permissives are healthy, and the equipment passes the required functional verification without the same fault recurring under the tested conditions.</p>
+<h2 id="17-practical-exercise">17. Practical Exercise</h2>
+<p>Use a hypothetical automated station with a PLC-controlled clamp, VFD-driven conveyor, and robot handoff.</p>
+<p>The HMI shows <code>Part transfer timeout</code>, followed by <code>Robot not ready</code>. The PLC history shows the conveyor stopped first, and the VFD history records <code>Overcurrent during acceleration</code>.</p>
+<p>Complete the exercise:</p>
+<ol>
+<li>Record all exact messages, codes, source devices, and timestamps.</li>
+<li>Establish whether the VFD trip occurred before the PLC timeout and robot-not-ready alarm.</li>
+<li>Identify which messages are likely initiating faults and which may be consequences.</li>
+<li>List at least four plausible causes of the VFD overcurrent.</li>
+<li>Specify the safe checks needed to distinguish a mechanical jam from an electrical or configuration problem.</li>
+<li>Explain why repeatedly resetting the VFD is not an acceptable corrective action.</li>
+<li>Define the evidence required before declaring the root cause verified.</li>
+<li>Specify the functional checks required before returning the station to production.</li>
+</ol>
+<p>The expected approach is to investigate the drive trip and its initiating condition first, while preserving the associated PLC and robot evidence. The exact root cause cannot be determined from the alarm text alone.</p>
+<h2 id="18-completion-criteria">18. Completion Criteria</h2>
+<p>This topic is complete when the learner can:</p>
+<ul>
+<li>Distinguish alarms, faults, warnings, events, interlocks, trips, and root causes.</li>
+<li>Capture the complete HMI alarm record before clearing it.</li>
+<li>Read PLC diagnostics and distinguish process timeouts from controller faults.</li>
+<li>Interpret common VFD and servo fault categories without assuming universal alarm codes.</li>
+<li>Locate and use the correct device-specific diagnostic manual.</li>
+<li>Correlate HMI, PLC, drive, robot, CNC, and safety-system events.</li>
+<li>Identify likely initiating faults and separate them from downstream alarms.</li>
+<li>Form and test a fault hypothesis using evidence.</li>
+<li>Follow safe isolation, diagnostic, reset, and restart procedures.</li>
+<li>Record the verified cause, corrective action, and functional test result.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\19_Breakdown\01_Approach\04_Isolate_Section - Isolate the section: Split system, test each half</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

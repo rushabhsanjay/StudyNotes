@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sensor Change Management</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Sensor Change Management</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and Scope</a></li>
+<li><a href="#2-essential-sensor-terminology">2. Essential Sensor Terminology</a></li>
+<li><a href="#3-why-sensor-changes-require-control">3. Why Sensor Changes Require Control</a><ul>
+<li><a href="#31-safety">3.1 Safety</a></li>
+<li><a href="#32-product-quality">3.2 Product quality</a></li>
+<li><a href="#33-machine-reliability">3.3 Machine reliability</a></li>
+<li><a href="#34-process-performance">3.4 Process performance</a></li>
+<li><a href="#35-traceability">3.5 Traceability</a></li>
+<li><a href="#36-compatibility">3.6 Compatibility</a></li>
+</ul>
+</li>
+<li><a href="#4-common-sensor-change-triggers">4. Common Sensor Change Triggers</a></li>
+<li><a href="#5-types-of-industrial-sensors">5. Types of Industrial Sensors</a><ul>
+<li><a href="#51-proximity-sensors">5.1 Proximity sensors</a></li>
+<li><a href="#52-position-and-displacement-sensors">5.2 Position and displacement sensors</a></li>
+<li><a href="#53-process-sensors">5.3 Process sensors</a></li>
+<li><a href="#54-inspection-and-measurement-sensors">5.4 Inspection and measurement sensors</a></li>
+<li><a href="#55-force-and-torque-sensors">5.5 Force and torque sensors</a></li>
+<li><a href="#56-safety-sensors">5.6 Safety sensors</a></li>
+</ul>
+</li>
+<li><a href="#6-sensor-change-management-workflow">6. Sensor Change Management Workflow</a></li>
+<li><a href="#7-sensor-identification-and-baseline-records">7. Sensor Identification and Baseline Records</a><ul>
+<li><a href="#71-identification-details">7.1 Identification details</a></li>
+<li><a href="#72-why-tag-identification-matters">7.2 Why tag identification matters</a></li>
+</ul>
+</li>
+<li><a href="#8-sensor-selection-and-replacement-compatibility">8. Sensor Selection and Replacement Compatibility</a><ul>
+<li><a href="#81-compatibility-categories">8.1 Compatibility categories</a></li>
+<li><a href="#82-replacement-decision">8.2 Replacement decision</a></li>
+</ul>
+</li>
+<li><a href="#9-proximity-sensor-changes">9. Proximity Sensor Changes</a><ul>
+<li><a href="#91-inductive-sensors">9.1 Inductive sensors</a></li>
+<li><a href="#92-capacitive-sensors">9.2 Capacitive sensors</a></li>
+<li><a href="#93-photoelectric-sensors">9.3 Photoelectric sensors</a></li>
+<li><a href="#94-change-verification">9.4 Change verification</a></li>
+</ul>
+</li>
+<li><a href="#10-pnp-npn-no-and-nc-compatibility">10. PNP, NPN, NO, and NC Compatibility</a><ul>
+<li><a href="#101-pnp-output">10.1 PNP output</a></li>
+<li><a href="#102-npn-output">10.2 NPN output</a></li>
+<li><a href="#103-no-and-nc-behavior">10.3 NO and NC behavior</a></li>
+<li><a href="#104-compatibility-checklist">10.4 Compatibility checklist</a></li>
+</ul>
+</li>
+<li><a href="#11-analog-sensor-changes-and-signal-scaling">11. Analog Sensor Changes and Signal Scaling</a><ul>
+<li><a href="#111-linear-scaling">11.1 Linear scaling</a></li>
+<li><a href="#112-example-pressure-transmitter">11.2 Example: pressure transmitter</a></li>
+<li><a href="#113-important-verification-points">11.3 Important verification points</a></li>
+</ul>
+</li>
+<li><a href="#12-temperature-sensor-changes">12. Temperature Sensor Changes</a><ul>
+<li><a href="#121-thermocouples">12.1 Thermocouples</a></li>
+<li><a href="#122-rtds">12.2 RTDs</a></li>
+<li><a href="#123-change-related-risks">12.3 Change-related risks</a></li>
+</ul>
+</li>
+<li><a href="#13-pressure-flow-and-level-sensor-changes">13. Pressure, Flow, and Level Sensor Changes</a><ul>
+<li><a href="#131-pressure-sensors">13.1 Pressure sensors</a></li>
+<li><a href="#132-flow-sensors">13.2 Flow sensors</a></li>
+<li><a href="#133-level-sensors">13.3 Level sensors</a></li>
+</ul>
+</li>
+<li><a href="#14-calibration-and-measurement-system-control">14. Calibration and Measurement-System Control</a><ul>
+<li><a href="#141-calibration-versus-adjustment">14.1 Calibration versus adjustment</a></li>
+<li><a href="#142-when-calibration-may-be-required">14.2 When calibration may be required</a></li>
+<li><a href="#143-calibration-record">14.3 Calibration record</a></li>
+</ul>
+</li>
+<li><a href="#15-sensor-filtering-debounce-and-threshold-changes">15. Sensor Filtering, Debounce, and Threshold Changes</a><ul>
+<li><a href="#151-filtering">15.1 Filtering</a></li>
+<li><a href="#152-debounce">15.2 Debounce</a></li>
+<li><a href="#153-threshold">15.3 Threshold</a></li>
+<li><a href="#154-change-assessment">15.4 Change assessment</a></li>
+</ul>
+</li>
+<li><a href="#16-io-link-and-smart-sensor-changes">16. IO-Link and Smart Sensor Changes</a><ul>
+<li><a href="#161-before-changing-a-smart-sensor">16.1 Before changing a smart sensor</a></li>
+<li><a href="#162-after-changing-the-device">16.2 After changing the device</a></li>
+</ul>
+</li>
+<li><a href="#17-safety-related-sensor-changes">17. Safety-Related Sensor Changes</a><ul>
+<li><a href="#171-required-considerations">17.1 Required considerations</a></li>
+<li><a href="#172-examples">17.2 Examples</a></li>
+</ul>
+</li>
+<li><a href="#18-sensor-placement-and-mechanical-modification">18. Sensor Placement and Mechanical Modification</a><ul>
+<li><a href="#181-factors-to-assess">18.1 Factors to assess</a></li>
+<li><a href="#182-example-cylinder-end-position-sensor">18.2 Example: cylinder end-position sensor</a></li>
+</ul>
+</li>
+<li><a href="#19-validation-and-acceptance-testing">19. Validation and Acceptance Testing</a><ul>
+<li><a href="#191-typical-test-categories">19.1 Typical test categories</a></li>
+<li><a href="#192-example-acceptance-criteria">19.2 Example acceptance criteria</a></li>
+</ul>
+</li>
+<li><a href="#20-rollback-and-recovery">20. Rollback and Recovery</a><ul>
+<li><a href="#201-before-implementation">20.1 Before implementation</a></li>
+<li><a href="#202-if-the-change-fails">20.2 If the change fails</a></li>
+</ul>
+</li>
+<li><a href="#21-sensor-register-and-documentation">21. Sensor Register and Documentation</a><ul>
+<li><a href="#documentation-to-update">Documentation to update</a></li>
+</ul>
+</li>
+<li><a href="#22-practical-industrial-example-replacing-a-proximity-sensor">22. Practical Industrial Example: Replacing a Proximity Sensor</a><ul>
+<li><a href="#step-1-diagnose-the-existing-fault">Step 1: Diagnose the existing fault</a></li>
+<li><a href="#step-2-confirm-the-cause">Step 2: Confirm the cause</a></li>
+<li><a href="#step-3-select-the-replacement">Step 3: Select the replacement</a></li>
+<li><a href="#step-4-control-the-installation">Step 4: Control the installation</a></li>
+<li><a href="#step-5-verify-operation">Step 5: Verify operation</a></li>
+<li><a href="#step-6-check-for-hidden-problems">Step 6: Check for hidden problems</a></li>
+<li><a href="#step-7-document-the-change">Step 7: Document the change</a></li>
+</ul>
+</li>
+<li><a href="#23-practical-industrial-example-pressure-sensor-replacement-on-a-test-bed">23. Practical Industrial Example: Pressure Sensor Replacement on a Test Bed</a><ul>
+<li><a href="#controlled-approach">Controlled approach</a></li>
+</ul>
+</li>
+<li><a href="#24-common-sensor-change-failures">24. Common Sensor Change Failures</a></li>
+<li><a href="#25-practical-sensor-change-checklist">25. Practical Sensor Change Checklist</a><ul>
+<li><a href="#before-the-change">Before the change</a></li>
+<li><a href="#during-the-change">During the change</a></li>
+<li><a href="#after-the-change">After the change</a></li>
+</ul>
+</li>
+<li><a href="#26-interview-questions-and-answers">26. Interview Questions and Answers</a><ul>
+<li><a href="#q1-what-is-sensor-change-management">Q1. What is sensor change management?</a></li>
+<li><a href="#q2-what-is-the-difference-between-accuracy-and-precision">Q2. What is the difference between accuracy and precision?</a></li>
+<li><a href="#q3-what-must-be-checked-before-replacing-a-proximity-sensor">Q3. What must be checked before replacing a proximity sensor?</a></li>
+<li><a href="#q4-what-is-the-difference-between-pnp-and-npn-sensors">Q4. What is the difference between PNP and NPN sensors?</a></li>
+<li><a href="#q5-why-is-analog-scaling-important">Q5. Why is analog scaling important?</a></li>
+<li><a href="#q6-what-is-the-difference-between-calibration-and-adjustment">Q6. What is the difference between calibration and adjustment?</a></li>
+<li><a href="#q7-why-can-a-sensor-replacement-affect-product-quality">Q7. Why can a sensor replacement affect product quality?</a></li>
+<li><a href="#q8-what-should-be-done-if-a-replacement-sensor-works-at-low-speed-but-fails-at-production-speed">Q8. What should be done if a replacement sensor works at low speed but fails at production speed?</a></li>
+<li><a href="#q9-can-a-normal-sensor-replace-a-safety-rated-sensor-if-both-detect-the-same-object">Q9. Can a normal sensor replace a safety-rated sensor if both detect the same object?</a></li>
+<li><a href="#q10-why-should-multiple-measurement-points-be-checked-after-changing-a-transmitter">Q10. Why should multiple measurement points be checked after changing a transmitter?</a></li>
+<li><a href="#q11-what-is-sensor-drift">Q11. What is sensor drift?</a></li>
+<li><a href="#q12-why-should-sensor-configuration-be-recorded">Q12. Why should sensor configuration be recorded?</a></li>
+<li><a href="#q13-when-should-a-sensor-change-be-rolled-back">Q13. When should a sensor change be rolled back?</a></li>
+<li><a href="#q14-when-is-a-sensor-change-complete">Q14. When is a sensor change complete?</a></li>
+</ul>
+</li>
+<li><a href="#27-key-principles-to-remember">27. Key Principles to Remember</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-and-scope">1. Purpose and Scope</h2>
+<p>Sensor change management is the controlled process of assessing, approving, implementing, verifying, documenting, and maintaining changes involving industrial sensors and their associated measurement configurations.</p>
+<p>A sensor change can involve replacing a faulty sensor, changing a measurement range, modifying sensor position, selecting a different sensing technology, changing analog scaling, adjusting a detection threshold, changing filtering or debounce settings, updating calibration data, or migrating to an alternative manufacturer or model.</p>
+<p>In industrial automation, sensors provide the information used by PLCs, CNC machines, robots, test beds, safety systems, HMIs, and SCADA applications. If that information is wrong, the control system may make incorrect decisions while appearing to operate normally. Machines are impressively consistent at acting on bad information.</p>
+<p>The key principle is that a sensor change must preserve the required measurement accuracy, detection reliability, process performance, and safety functions.</p>
+<h2 id="2-essential-sensor-terminology">2. Essential Sensor Terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sensor</td>
+<td>Device that detects a physical condition or quantity</td>
+</tr>
+<tr>
+<td>Transducer</td>
+<td>Device that converts one form of energy or physical quantity into another</td>
+</tr>
+<tr>
+<td>Measuring range</td>
+<td>Range of values the sensor is designed to measure</td>
+</tr>
+<tr>
+<td>Measurement span</td>
+<td>Difference between the upper and lower range limits</td>
+</tr>
+<tr>
+<td>Resolution</td>
+<td>Smallest change in input that can be distinguished</td>
+</tr>
+<tr>
+<td>Accuracy</td>
+<td>Closeness of a measured value to the true or accepted reference value</td>
+</tr>
+<tr>
+<td>Precision</td>
+<td>Closeness of repeated measurements to each other</td>
+</tr>
+<tr>
+<td>Repeatability</td>
+<td>Ability to produce consistent results under the same conditions</td>
+</tr>
+<tr>
+<td>Sensitivity</td>
+<td>Change in output relative to a change in input</td>
+</tr>
+<tr>
+<td>Linearity</td>
+<td>Closeness of the input-output relationship to a specified linear relationship</td>
+</tr>
+<tr>
+<td>Hysteresis</td>
+<td>Difference in output at the same input depending on the direction of approach</td>
+</tr>
+<tr>
+<td>Response time</td>
+<td>Time required for the sensor output to respond to an input change</td>
+</tr>
+<tr>
+<td>Drift</td>
+<td>Change in sensor output or measurement characteristics over time</td>
+</tr>
+<tr>
+<td>Calibration</td>
+<td>Establishing the relationship between sensor indications and reference values under specified conditions</td>
+</tr>
+<tr>
+<td>Adjustment</td>
+<td>Changing the sensor or measurement system to alter its response</td>
+</tr>
+<tr>
+<td>Scaling</td>
+<td>Converting a raw signal into an engineering value</td>
+</tr>
+<tr>
+<td>Offset</td>
+<td>Difference or correction applied to the measurement zero or reference point</td>
+</tr>
+<tr>
+<td>Threshold</td>
+<td>Value used to determine whether a condition has been reached</td>
+</tr>
+<tr>
+<td>Deadband</td>
+<td>Range in which a change does not trigger a defined response</td>
+</tr>
+<tr>
+<td>IP rating</td>
+<td>Classification of protection against ingress of solids and water under specified conditions</td>
+</tr>
+<tr>
+<td>Switching frequency</td>
+<td>Rate at which a switching sensor can reliably detect changing targets</td>
+</tr>
+<tr>
+<td>PNP output</td>
+<td>Switching output that sources current toward the load</td>
+</tr>
+<tr>
+<td>NPN output</td>
+<td>Switching output that sinks current from the load</td>
+</tr>
+<tr>
+<td>NO contact</td>
+<td>Normally open switching behavior under the defined normal, unactuated condition</td>
+</tr>
+<tr>
+<td>NC contact</td>
+<td>Normally closed switching behavior under the defined normal, unactuated condition</td>
+</tr>
+</tbody>
+</table>
+<p>Accuracy and precision are different. A sensor can repeatedly produce nearly identical readings while all those readings are wrong.</p>
+<h2 id="3-why-sensor-changes-require-control">3. Why Sensor Changes Require Control</h2>
+<h3 id="31-safety">3.1 Safety</h3>
+<p>Sensors may participate in guard monitoring, presence detection, safe positioning, pressure monitoring, or other protective functions. Replacing a safety-related sensor with an ordinary sensor is not an acceptable substitute merely because both produce an electrical output.</p>
+<h3 id="32-product-quality">3.2 Product quality</h3>
+<p>Torque, pressure, temperature, displacement, flow, and dimensional measurements can determine whether a product passes inspection or a test sequence.</p>
+<h3 id="33-machine-reliability">3.3 Machine reliability</h3>
+<p>An unsuitable sensor may generate false triggers, intermittent faults, missed detections, or repeated production stoppages.</p>
+<h3 id="34-process-performance">3.4 Process performance</h3>
+<p>Sensor range, response time, mounting, and filtering can affect cycle time, repeatability, and control stability.</p>
+<h3 id="35-traceability">3.5 Traceability</h3>
+<p>Changing a sensor can affect calibration status, measurement records, quality decisions, and the validity of historical data.</p>
+<h3 id="36-compatibility">3.6 Compatibility</h3>
+<p>A sensor may physically fit the mounting arrangement but have a different output type, pinout, sensing distance, voltage requirement, response time, or connector assignment.</p>
+<h2 id="4-common-sensor-change-triggers">4. Common Sensor Change Triggers</h2>
+<table>
+<thead>
+<tr>
+<th>Trigger</th>
+<th>Example</th>
+<th>Required assessment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sensor failure</td>
+<td>Proximity sensor stops detecting targets</td>
+<td>Verify sensor, wiring, supply, and target conditions</td>
+</tr>
+<tr>
+<td>Intermittent detection</td>
+<td>Part-present signal fluctuates</td>
+<td>Assess mounting, vibration, alignment, noise, and sensing margin</td>
+</tr>
+<tr>
+<td>Obsolescence</td>
+<td>Original sensor is discontinued</td>
+<td>Confirm successor compatibility</td>
+</tr>
+<tr>
+<td>Process modification</td>
+<td>New component geometry</td>
+<td>Reassess sensing distance, target material, and mounting</td>
+</tr>
+<tr>
+<td>Accuracy issue</td>
+<td>Pressure reading differs from reference</td>
+<td>Check calibration, scaling, installation, and reference instrument</td>
+</tr>
+<tr>
+<td>Product variant</td>
+<td>Different component size</td>
+<td>Confirm detection and measurement requirements</td>
+</tr>
+<tr>
+<td>Environmental change</td>
+<td>Increased temperature or washdown</td>
+<td>Review environmental ratings and operating limits</td>
+</tr>
+<tr>
+<td>Electrical modification</td>
+<td>Change from PNP to NPN</td>
+<td>Verify PLC input compatibility and wiring</td>
+</tr>
+<tr>
+<td>Controller migration</td>
+<td>New analog input module</td>
+<td>Verify electrical range, raw counts, scaling, and diagnostics</td>
+</tr>
+<tr>
+<td>Quality improvement</td>
+<td>Tighter measurement tolerance</td>
+<td>Assess sensor capability and complete measurement system</td>
+</tr>
+<tr>
+<td>False alarms</td>
+<td>Sensor detects unwanted objects</td>
+<td>Review sensing principle, positioning, threshold, and filtering</td>
+</tr>
+<tr>
+<td>Network migration</td>
+<td>Replacement of IO-Link or networked sensor</td>
+<td>Verify device configuration, data mapping, and communication</td>
+</tr>
+<tr>
+<td>Safety improvement</td>
+<td>Change to a safety-rated sensing device</td>
+<td>Perform required risk assessment and safety validation</td>
+</tr>
+</tbody>
+</table>
+<p>A sensor change request should state the problem or requirement clearly. “Sensor is not working” is a starting observation, not a complete root-cause analysis.</p>
+<h2 id="5-types-of-industrial-sensors">5. Types of Industrial Sensors</h2>
+<h3 id="51-proximity-sensors">5.1 Proximity sensors</h3>
+<p>Used to detect the presence or position of objects without necessarily making physical contact.</p>
+<p>Common types include:</p>
+<ul>
+<li>Inductive proximity sensors.</li>
+<li>Capacitive proximity sensors.</li>
+<li>Magnetic proximity sensors.</li>
+<li>Ultrasonic proximity sensors.</li>
+<li>Photoelectric sensors.</li>
+</ul>
+<h3 id="52-position-and-displacement-sensors">5.2 Position and displacement sensors</h3>
+<p>Examples:</p>
+<ul>
+<li>Linear variable differential transformers (LVDTs).</li>
+<li>Linear and rotary encoders.</li>
+<li>Laser displacement sensors.</li>
+<li>Draw-wire position sensors.</li>
+<li>Potentiometric position sensors.</li>
+</ul>
+<h3 id="53-process-sensors">5.3 Process sensors</h3>
+<p>Examples:</p>
+<ul>
+<li>Pressure transmitters.</li>
+<li>Temperature sensors.</li>
+<li>Flowmeters.</li>
+<li>Level sensors.</li>
+<li>Humidity sensors.</li>
+</ul>
+<h3 id="54-inspection-and-measurement-sensors">5.4 Inspection and measurement sensors</h3>
+<p>Examples:</p>
+<ul>
+<li>Vision cameras.</li>
+<li>Laser measurement systems.</li>
+<li>Color and contrast sensors.</li>
+<li>Dimensional inspection sensors.</li>
+<li>Surface and defect inspection systems.</li>
+</ul>
+<h3 id="55-force-and-torque-sensors">5.5 Force and torque sensors</h3>
+<p>Used for press monitoring, tightening systems, load measurement, and end-of-line testing.</p>
+<h3 id="56-safety-sensors">5.6 Safety sensors</h3>
+<p>Examples:</p>
+<ul>
+<li>Safety light curtains.</li>
+<li>Safety laser scanners.</li>
+<li>Safety-rated position or speed sensors.</li>
+<li>Safety interlock switches.</li>
+<li>Safety-rated pressure or presence sensing arrangements where designed for that purpose.</li>
+</ul>
+<p>The safety classification and suitability must be established from the complete device and system documentation, not inferred from the sensor's general technology.</p>
+<h2 id="6-sensor-change-management-workflow">6. Sensor Change Management Workflow</h2>
+<pre><code>Sensor change trigger
+    ↓
+Identify sensor, asset, and affected function
+    ↓
+Record existing model and configuration
+    ↓
+Determine root cause or change requirement
+    ↓
+Define measurement or detection requirements
+    ↓
+Assess electrical, mechanical, process, and safety compatibility
+    ↓
+Select and approve the replacement or modification
+    ↓
+Record original wiring, mounting, and calibration data
+    ↓
+Implement the approved change
+    ↓
+Verify electrical operation and measurement performance
+    ↓
+Perform functional and safety validation where required
+    ↓
+Update drawings, parameter records, and spare inventory
+    ↓
+Monitor performance and close the change
+</code></pre>
+<p>The workflow must be scaled to risk. Replacing an identical non-safety proximity sensor under an approved maintenance procedure may require a simpler review than changing a pressure transmitter that determines product acceptance.</p>
+<h2 id="7-sensor-identification-and-baseline-records">7. Sensor Identification and Baseline Records</h2>
+<p>Before replacing or modifying a sensor, capture enough information to identify the original device and its role.</p>
+<h3 id="71-identification-details">7.1 Identification details</h3>
+<ul>
+<li>Machine and asset ID.</li>
+<li>Sensor tag number.</li>
+<li>Manufacturer and exact model.</li>
+<li>Part number and revision where applicable.</li>
+<li>Sensor type and sensing principle.</li>
+<li>Measuring range or sensing distance.</li>
+<li>Output type.</li>
+<li>Supply voltage and current requirements.</li>
+<li>Connector type and pinout.</li>
+<li>Cable type and length where relevant.</li>
+<li>Mounting arrangement and sensing direction.</li>
+<li>Environmental rating.</li>
+<li>Controller or remote I/O address.</li>
+<li>PLC tag and associated logic.</li>
+<li>Existing scaling, threshold, or filter settings.</li>
+<li>Calibration status and due date, if applicable.</li>
+<li>Safety classification where relevant.</li>
+</ul>
+<h3 id="72-why-tag-identification-matters">7.2 Why tag identification matters</h3>
+<p>The same machine may contain several visually identical sensors serving different functions. One may detect component presence, another may confirm cylinder extension, and a third may provide a quality-critical measurement.</p>
+<p>Record the sensor tag and function, not just its physical appearance.</p>
+<h2 id="8-sensor-selection-and-replacement-compatibility">8. Sensor Selection and Replacement Compatibility</h2>
+<p>A replacement sensor should satisfy the actual application requirements, not merely match the old sensor's dimensions.</p>
+<h3 id="81-compatibility-categories">8.1 Compatibility categories</h3>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>What to verify</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mechanical</td>
+<td>Thread, mounting, body dimensions, connector clearance</td>
+</tr>
+<tr>
+<td>Electrical</td>
+<td>Supply voltage, output type, current, load compatibility</td>
+</tr>
+<tr>
+<td>Functional</td>
+<td>Sensing principle, target type, range, repeatability</td>
+</tr>
+<tr>
+<td>Timing</td>
+<td>Response time, switching frequency, latency</td>
+</tr>
+<tr>
+<td>Environmental</td>
+<td>Temperature, moisture, dust, oil, chemicals, vibration</td>
+</tr>
+<tr>
+<td>Measurement</td>
+<td>Accuracy, resolution, range, calibration requirements</td>
+</tr>
+<tr>
+<td>Control system</td>
+<td>Input type, data format, scaling, diagnostic behavior</td>
+</tr>
+<tr>
+<td>Safety</td>
+<td>Required safety ratings and system compatibility</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>Protocol, device profile, process data, parameter support</td>
+</tr>
+<tr>
+<td>Maintenance</td>
+<td>Availability, interchangeability, spare strategy, service support</td>
+</tr>
+</tbody>
+</table>
+<h3 id="82-replacement-decision">8.2 Replacement decision</h3>
+<p>A replacement may be:</p>
+<ul>
+<li>Identical replacement: Same approved model and configuration.</li>
+<li>Approved equivalent: Different model verified to meet the required specifications.</li>
+<li>Functional redesign: Different sensing technology or measurement architecture.</li>
+<li>Safety-related replacement: A change subject to the applicable safety engineering and validation process.</li>
+</ul>
+<p>A different part number does not automatically mean the replacement is unsuitable. Equally, a manufacturer's description such as “direct replacement” does not remove the need to verify the application's actual requirements.</p>
+<h2 id="9-proximity-sensor-changes">9. Proximity Sensor Changes</h2>
+<h3 id="91-inductive-sensors">9.1 Inductive sensors</h3>
+<p>Inductive sensors typically detect metallic targets through an electromagnetic sensing field.</p>
+<p>Important factors:</p>
+<ul>
+<li>Target material.</li>
+<li>Target size and thickness.</li>
+<li>Rated sensing distance.</li>
+<li>Installation clearance.</li>
+<li>Flush or non-flush mounting requirements.</li>
+<li>Nearby metallic structures.</li>
+<li>Operating temperature.</li>
+<li>Switching frequency.</li>
+</ul>
+<p>Different metals can produce different sensing distances. The rated sensing distance should not be assumed to apply identically to every target material and geometry.</p>
+<h3 id="92-capacitive-sensors">9.2 Capacitive sensors</h3>
+<p>Capacitive sensors can detect various materials, depending on the sensor and application.</p>
+<p>Important factors:</p>
+<ul>
+<li>Material dielectric properties.</li>
+<li>Target size.</li>
+<li>Moisture and contamination.</li>
+<li>Product buildup on the sensor face.</li>
+<li>Sensitivity adjustment.</li>
+<li>Environmental conditions.</li>
+</ul>
+<p>A capacitive sensor that works well for one product may be unreliable for another if their material properties differ.</p>
+<h3 id="93-photoelectric-sensors">9.3 Photoelectric sensors</h3>
+<p>Photoelectric sensors use emitted and received light to detect objects.</p>
+<p>Common arrangements include:</p>
+<ul>
+<li>Through-beam.</li>
+<li>Retroreflective.</li>
+<li>Diffuse reflective.</li>
+<li>Background-suppression types.</li>
+</ul>
+<p>Important factors:</p>
+<ul>
+<li>Target color and reflectivity.</li>
+<li>Object size.</li>
+<li>Background interference.</li>
+<li>Alignment.</li>
+<li>Ambient light.</li>
+<li>Dust, oil, and lens contamination.</li>
+<li>Reflector condition where applicable.</li>
+</ul>
+<h3 id="94-change-verification">9.4 Change verification</h3>
+<p>After replacing a proximity sensor, verify:</p>
+<ul>
+<li>Correct target detection.</li>
+<li>Correct switching output.</li>
+<li>Required sensing margin.</li>
+<li>Repeatability over representative target positions.</li>
+<li>No unwanted detection of adjacent structures.</li>
+<li>Correct PLC input indication.</li>
+<li>Correct sequence response.</li>
+<li>Expected behavior when the target is absent.</li>
+</ul>
+<h2 id="10-pnp-npn-no-and-nc-compatibility">10. PNP, NPN, NO, and NC Compatibility</h2>
+<p>Output compatibility is a frequent source of sensor replacement errors.</p>
+<h3 id="101-pnp-output">10.1 PNP output</h3>
+<p>A PNP sensor typically sources positive voltage to its output when active. It is commonly used with a PLC input arrangement designed to receive current from a sourcing field device.</p>
+<h3 id="102-npn-output">10.2 NPN output</h3>
+<p>An NPN sensor typically sinks current toward 0 V when active. It requires a compatible input arrangement.</p>
+<h3 id="103-no-and-nc-behavior">10.3 NO and NC behavior</h3>
+<p>Normally open and normally closed describe switching behavior under the specified normal, unactuated condition. They do not mean the sensor is inherently safe or fail-safe.</p>
+<p>A device's behavior during loss of power, broken wiring, internal failure, or communication loss must be checked separately.</p>
+<h3 id="104-compatibility-checklist">10.4 Compatibility checklist</h3>
+<ul>
+<li>Supply voltage matches the specification.</li>
+<li>PLC input type is compatible.</li>
+<li>PNP or NPN output is correct.</li>
+<li>NO or NC behavior is correct.</li>
+<li>Pinout and wire colors are verified against the device documentation.</li>
+<li>Output current and input thresholds are compatible.</li>
+<li>Cable and connector assignments are correct.</li>
+<li>The resulting PLC logic and fault behavior are tested.</li>
+</ul>
+<p>Never rely on wire color alone when verifying a replacement. Manufacturer conventions and cable assemblies can differ.</p>
+<h2 id="11-analog-sensor-changes-and-signal-scaling">11. Analog Sensor Changes and Signal Scaling</h2>
+<p>Analog sensors commonly provide voltage or current signals proportional to a measured quantity.</p>
+<p>Common signal ranges include:</p>
+<ul>
+<li>0–10 V.</li>
+<li>1–5 V.</li>
+<li>4–20 mA.</li>
+<li>0–20 mA.</li>
+</ul>
+<p>The correct signal range depends on the sensor, input module, electrical design, and application.</p>
+<h3 id="111-linear-scaling">11.1 Linear scaling</h3>
+<p>For a linear sensor relationship, the engineering value can be calculated as:</p>
+<div class="math-display">\[ y = y\_{\min}+\frac{x-x\_{\min}}{x\_{\max}-x\_{\min}}(y\_{\max}-y\_{\min}) \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(x\)</span> is the measured raw input.</li>
+<li><span class="math-inline">\(x\_{\min}\)</span> and <span class="math-inline">\(x\_{\max}\)</span> are the raw input limits.</li>
+<li><span class="math-inline">\(y\_{\min}\)</span> and <span class="math-inline">\(y\_{\max}\)</span> are the engineering range limits.</li>
+</ul>
+<h3 id="112-example-pressure-transmitter">11.2 Example: pressure transmitter</h3>
+<p>A pressure transmitter uses a 4–20 mA output for a pressure range of 0–10 bar.</p>
+<p>At 12 mA:</p>
+<div class="math-display">\[ P = \frac{12-4}{20-4}\times 10 = 5\text{ bar} \]</div>
+<p>If a replacement transmitter has a range of 0–16 bar but the PLC retains the old 0–10 bar scaling, the indicated value will be incorrect.</p>
+<h3 id="113-important-verification-points">11.3 Important verification points</h3>
+<ul>
+<li>Sensor range and output type.</li>
+<li>Input module configuration.</li>
+<li>Raw input value.</li>
+<li>Scaling limits.</li>
+<li>Engineering units.</li>
+<li>Signal-loss detection.</li>
+<li>Zero and span.</li>
+<li>Filtering and response time.</li>
+<li>Calibration certificate or reference results where required.</li>
+<li>Behavior at minimum, midpoint, and maximum operating values.</li>
+</ul>
+<p>The raw input should be compared with the engineering value. This helps distinguish an electrical or sensor problem from a PLC scaling error.</p>
+<h2 id="12-temperature-sensor-changes">12. Temperature Sensor Changes</h2>
+<p>Common temperature sensing technologies include thermocouples, RTDs such as Pt100 and Pt1000, and integrated electronic temperature sensors.</p>
+<h3 id="121-thermocouples">12.1 Thermocouples</h3>
+<p>Thermocouples generate a small voltage related to the temperature difference between the measuring junction and reference junction.</p>
+<p>Verify:</p>
+<ul>
+<li>Thermocouple type.</li>
+<li>Extension or compensation cable type.</li>
+<li>Input module configuration.</li>
+<li>Polarity.</li>
+<li>Cold-junction compensation.</li>
+<li>Measuring range.</li>
+<li>Grounding and noise considerations.</li>
+</ul>
+<h3 id="122-rtds">12.2 RTDs</h3>
+<p>RTDs use resistance changes associated with temperature.</p>
+<p>Verify:</p>
+<ul>
+<li>Sensor type.</li>
+<li>Two-, three-, or four-wire arrangement.</li>
+<li>Input module compatibility.</li>
+<li>Lead resistance compensation.</li>
+<li>Wiring integrity.</li>
+<li>Measuring range.</li>
+<li>Calibration requirements.</li>
+</ul>
+<h3 id="123-change-related-risks">12.3 Change-related risks</h3>
+<p>Using an incompatible thermocouple type, incorrect RTD wiring, or an incorrect input configuration can produce plausible but inaccurate readings.</p>
+<p>After replacement, verify readings at suitable reference points and confirm the complete control or alarm function, not just the displayed temperature.</p>
+<h2 id="13-pressure-flow-and-level-sensor-changes">13. Pressure, Flow, and Level Sensor Changes</h2>
+<h3 id="131-pressure-sensors">13.1 Pressure sensors</h3>
+<p>Assess:</p>
+<ul>
+<li>Gauge, absolute, or differential pressure type.</li>
+<li>Measuring range.</li>
+<li>Process connection.</li>
+<li>Wetted materials and fluid compatibility.</li>
+<li>Overpressure rating.</li>
+<li>Electrical output.</li>
+<li>Temperature effects.</li>
+<li>Installation position.</li>
+<li>Calibration requirements.</li>
+</ul>
+<h3 id="132-flow-sensors">13.2 Flow sensors</h3>
+<p>Assess:</p>
+<ul>
+<li>Fluid type.</li>
+<li>Flow range and velocity.</li>
+<li>Pipe size and installation arrangement.</li>
+<li>Required straight pipe lengths where applicable.</li>
+<li>Pressure drop.</li>
+<li>Electrical output and scaling.</li>
+<li>Direction of flow.</li>
+<li>Calibration or verification method.</li>
+</ul>
+<h3 id="133-level-sensors">13.3 Level sensors</h3>
+<p>Assess:</p>
+<ul>
+<li>Liquid or solid material.</li>
+<li>Vessel geometry.</li>
+<li>Foam, vapor, dust, or turbulence.</li>
+<li>Measuring technology.</li>
+<li>Blind zones.</li>
+<li>Mounting position.</li>
+<li>Required high and low thresholds.</li>
+<li>Environmental and process compatibility.</li>
+</ul>
+<p>Changing a sensor without checking its physical installation can produce unreliable measurements even when the electrical configuration is correct.</p>
+<h2 id="14-calibration-and-measurement-system-control">14. Calibration and Measurement-System Control</h2>
+<p>Calibration establishes the relationship between a sensor's indications and reference values under specified conditions.</p>
+<p>It is not automatically the same as adjustment, repair, or replacement.</p>
+<h3 id="141-calibration-versus-adjustment">14.1 Calibration versus adjustment</h3>
+<ul>
+<li>Calibration: Determines the relationship between the indication and reference values.</li>
+<li>Adjustment: Alters the device or system to change its response.</li>
+<li>Verification: Confirms whether the device meets specified requirements.</li>
+<li>Validation: Establishes that the complete system is suitable for its intended application.</li>
+</ul>
+<h3 id="142-when-calibration-may-be-required">14.2 When calibration may be required</h3>
+<ul>
+<li>Replacement of a measurement sensor.</li>
+<li>Mechanical or electrical damage.</li>
+<li>Measurement drift.</li>
+<li>Failed verification.</li>
+<li>A change to the measurement range.</li>
+<li>A process or quality requirement.</li>
+<li>A scheduled calibration interval.</li>
+<li>Changes to the measurement chain that affect accuracy.</li>
+</ul>
+<p>The required action depends on the sensor, application, and quality system.</p>
+<h3 id="143-calibration-record">14.3 Calibration record</h3>
+<p>A useful record includes:</p>
+<ul>
+<li>Instrument ID.</li>
+<li>Sensor tag.</li>
+<li>Manufacturer and model.</li>
+<li>Reference equipment ID.</li>
+<li>Reference equipment calibration status.</li>
+<li>Test points and units.</li>
+<li>As-found readings.</li>
+<li>As-left readings when adjustment is performed.</li>
+<li>Acceptance tolerance.</li>
+<li>Pass/fail outcome.</li>
+<li>Date and technician.</li>
+<li>Next due date where applicable.</li>
+</ul>
+<p>For quality-critical measurements, the organization should assess whether measurements made since the last known acceptable calibration remain valid.</p>
+<h2 id="15-sensor-filtering-debounce-and-threshold-changes">15. Sensor Filtering, Debounce, and Threshold Changes</h2>
+<p>A sensor's output may be processed before the PLC or application acts on it.</p>
+<h3 id="151-filtering">15.1 Filtering</h3>
+<p>Filtering reduces unwanted variation in a signal. Excessive filtering can also delay the response to a real event.</p>
+<h3 id="152-debounce">15.2 Debounce</h3>
+<p>Debounce logic requires a signal to remain in a state for a defined time or applies another rule to suppress rapid transitions.</p>
+<p>This is commonly used for mechanical contacts or signals affected by vibration.</p>
+<h3 id="153-threshold">15.3 Threshold</h3>
+<p>A threshold determines when a measured or detected condition triggers an action.</p>
+<p>Examples:</p>
+<ul>
+<li>Pressure alarm threshold.</li>
+<li>Vision inspection confidence threshold.</li>
+<li>Analog level threshold.</li>
+<li>Sensor switching threshold.</li>
+</ul>
+<h3 id="154-change-assessment">15.4 Change assessment</h3>
+<p>Before changing a filter, debounce time, or threshold:</p>
+<ul>
+<li>Determine whether the problem originates in the sensor or its environment.</li>
+<li>Check wiring, mounting, vibration, contamination, and electrical noise.</li>
+<li>Determine the maximum acceptable detection delay.</li>
+<li>Check the effect on machine sequence timing.</li>
+<li>Define false-positive and false-negative acceptance criteria.</li>
+<li>Test representative normal and abnormal conditions.</li>
+</ul>
+<p>Increasing debounce time may eliminate nuisance transitions while also causing a short but valid event to be missed. The setting must be justified by the application's timing requirements.</p>
+<h2 id="16-io-link-and-smart-sensor-changes">16. IO-Link and Smart Sensor Changes</h2>
+<p>Smart sensors may expose configuration and diagnostic information through IO-Link or other supported communication technologies.</p>
+<p>Potential configuration items include:</p>
+<ul>
+<li>Device identity.</li>
+<li>Process data format.</li>
+<li>Switching thresholds.</li>
+<li>Hysteresis.</li>
+<li>Measurement range.</li>
+<li>Filtering.</li>
+<li>Diagnostic settings.</li>
+<li>Device-specific parameters.</li>
+</ul>
+<h3 id="161-before-changing-a-smart-sensor">16.1 Before changing a smart sensor</h3>
+<ul>
+<li>Confirm the exact device model and revision.</li>
+<li>Verify master-port compatibility.</li>
+<li>Confirm the correct device description or configuration file where required.</li>
+<li>Check process data layout and data types.</li>
+<li>Verify PLC tag mapping.</li>
+<li>Confirm parameter storage and restoration behavior.</li>
+<li>Review device replacement and parameterization procedures.</li>
+</ul>
+<h3 id="162-after-changing-the-device">16.2 After changing the device</h3>
+<ul>
+<li>Verify device identity.</li>
+<li>Confirm successful communication.</li>
+<li>Verify the correct process data and engineering units.</li>
+<li>Check diagnostics and quality status.</li>
+<li>Confirm parameter values.</li>
+<li>Test the associated machine function.</li>
+<li>Update the sensor register and configuration backup.</li>
+</ul>
+<p>A smart sensor may communicate successfully while the PLC interprets the returned data incorrectly. Communication health and application correctness must be verified separately.</p>
+<h2 id="17-safety-related-sensor-changes">17. Safety-Related Sensor Changes</h2>
+<p>Sensors may be part of a safety function involving guards, presence detection, position monitoring, or other risk-reduction measures.</p>
+<h3 id="171-required-considerations">17.1 Required considerations</h3>
+<ul>
+<li>Identify the documented safety function.</li>
+<li>Verify the specified sensor type and suitability.</li>
+<li>Check the required safety performance.</li>
+<li>Confirm compatibility with the safety controller or relay.</li>
+<li>Review wiring architecture and fault detection.</li>
+<li>Follow the required installation and validation procedure.</li>
+<li>Verify response to relevant faults.</li>
+<li>Update safety documentation where required.</li>
+</ul>
+<h3 id="172-examples">17.2 Examples</h3>
+<p>Replacing a standard inductive proximity sensor used for ordinary position detection is not equivalent to replacing a safety-rated position sensor used in a protective function.</p>
+<p>Similarly, changing a safety light curtain's configuration or muting arrangement can alter risk reduction even if the equipment still powers up and its status indicators appear normal.</p>
+<p>Never bypass, defeat, or downgrade a required safety function as a shortcut to restore production. Any change affecting safety must follow the applicable risk assessment, authorization, and validation process.</p>
+<h2 id="18-sensor-placement-and-mechanical-modification">18. Sensor Placement and Mechanical Modification</h2>
+<p>A sensor's mounting position can be just as important as its electrical specifications.</p>
+<h3 id="181-factors-to-assess">18.1 Factors to assess</h3>
+<ul>
+<li>Detection distance.</li>
+<li>Target approach direction.</li>
+<li>Alignment.</li>
+<li>Bracket rigidity.</li>
+<li>Vibration.</li>
+<li>Target geometry.</li>
+<li>Nearby objects.</li>
+<li>Cable routing.</li>
+<li>Mechanical clearance.</li>
+<li>Thermal expansion.</li>
+<li>Contamination and cleaning access.</li>
+</ul>
+<h3 id="182-example-cylinder-end-position-sensor">18.2 Example: cylinder end-position sensor</h3>
+<p>A sensor may operate reliably on a stationary test but miss detections when the machine runs at full speed because the target passes through the sensing zone too quickly.</p>
+<p>Possible causes include:</p>
+<ul>
+<li>Incorrect mounting position.</li>
+<li>Insufficient sensing distance.</li>
+<li>Loose brackets.</li>
+<li>Target geometry.</li>
+<li>Excessive response delay.</li>
+<li>PLC input filtering.</li>
+<li>Inadequate timing margin.</li>
+</ul>
+<p>The correction should be based on the complete sensing chain, from the physical target to the PLC input and sequence logic.</p>
+<h2 id="19-validation-and-acceptance-testing">19. Validation and Acceptance Testing</h2>
+<p>The test plan should reflect the sensor's role and the consequences of incorrect measurement or detection.</p>
+<h3 id="191-typical-test-categories">19.1 Typical test categories</h3>
+<ul>
+<li>Electrical supply and wiring verification.</li>
+<li>Correct output type and polarity.</li>
+<li>Detection or measurement range.</li>
+<li>Accuracy and repeatability.</li>
+<li>Response time.</li>
+<li>Signal-loss behavior.</li>
+<li>Environmental suitability.</li>
+<li>PLC or controller input behavior.</li>
+<li>Scaling and engineering units.</li>
+<li>Alarm and sequence behavior.</li>
+<li>Calibration or verification requirements.</li>
+<li>Safety validation where applicable.</li>
+</ul>
+<h3 id="192-example-acceptance-criteria">19.2 Example acceptance criteria</h3>
+<p>A replacement pressure sensor may require:</p>
+<ul>
+<li>Correct output range.</li>
+<li>Correct engineering-unit scaling.</li>
+<li>Agreement with a reference within specified tolerance.</li>
+<li>Stable readings under defined conditions.</li>
+<li>Correct alarm response.</li>
+<li>Correct behavior on signal failure.</li>
+</ul>
+<p>A proximity sensor may require:</p>
+<ul>
+<li>Reliable detection at specified target positions.</li>
+<li>No unwanted triggering within the defined operating envelope.</li>
+<li>Correct PLC input behavior.</li>
+<li>Adequate response at the machine's maximum operating speed.</li>
+</ul>
+<p>Acceptance criteria must come from approved specifications, manufacturer documentation, process requirements, or applicable safety and quality procedures.</p>
+<h2 id="20-rollback-and-recovery">20. Rollback and Recovery</h2>
+<p>A rollback plan defines how to recover if the sensor change fails or creates unacceptable behavior.</p>
+<h3 id="201-before-implementation">20.1 Before implementation</h3>
+<ul>
+<li>Record the original sensor model and configuration.</li>
+<li>Preserve wiring and mounting information.</li>
+<li>Verify availability of the original or an approved equivalent.</li>
+<li>Save relevant PLC scaling and threshold values.</li>
+<li>Record the original calibration and measurement status.</li>
+<li>Establish the safe operating state and restoration procedure.</li>
+</ul>
+<h3 id="202-if-the-change-fails">20.2 If the change fails</h3>
+<ol>
+<li>Stop or place the equipment into the required safe condition.</li>
+<li>Identify whether the issue is mechanical, electrical, configuration-related, or measurement-related.</li>
+<li>Restore the previous approved sensor or configuration where appropriate.</li>
+<li>Verify wiring, scaling, and device compatibility.</li>
+<li>Perform required functional checks.</li>
+<li>Confirm the machine is fit to return to service.</li>
+<li>Record the failure and corrective actions.</li>
+<li>Investigate the cause before repeating the change.</li>
+</ol>
+<p>Restoring the previous sensor does not automatically restore the system to its previous condition if wiring, mounting, calibration, or software settings were also changed.</p>
+<h2 id="21-sensor-register-and-documentation">21. Sensor Register and Documentation</h2>
+<p>A sensor register provides maintenance with a reliable record of sensor identity, function, configuration, and replacement requirements.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Asset ID</td>
+<td>Identifies the machine or equipment</td>
+</tr>
+<tr>
+<td>Sensor tag</td>
+<td>Identifies the individual sensor</td>
+</tr>
+<tr>
+<td>Function</td>
+<td>Explains what the sensor detects or measures</td>
+</tr>
+<tr>
+<td>Manufacturer and model</td>
+<td>Identifies the device</td>
+</tr>
+<tr>
+<td>Part number</td>
+<td>Supports purchasing and replacement</td>
+</tr>
+<tr>
+<td>Sensing principle</td>
+<td>Identifies the technology</td>
+</tr>
+<tr>
+<td>Range or sensing distance</td>
+<td>Defines the operating capability</td>
+</tr>
+<tr>
+<td>Output type</td>
+<td>Records analog, digital, switching, or communication output</td>
+</tr>
+<tr>
+<td>Supply and pinout</td>
+<td>Supports electrical compatibility</td>
+</tr>
+<tr>
+<td>PLC tag or I/O address</td>
+<td>Links the sensor to the control system</td>
+</tr>
+<tr>
+<td>Mounting location</td>
+<td>Supports correct installation</td>
+</tr>
+<tr>
+<td>Calibration requirement</td>
+<td>Defines measurement control needs</td>
+</tr>
+<tr>
+<td>Safety classification</td>
+<td>Records relevant safety role</td>
+</tr>
+<tr>
+<td>Approved replacement</td>
+<td>Identifies a verified alternative</td>
+</tr>
+<tr>
+<td>Configuration reference</td>
+<td>Links to scaling, threshold, or device settings</td>
+</tr>
+<tr>
+<td>Change history</td>
+<td>Preserves modification traceability</td>
+</tr>
+<tr>
+<td>Spare status</td>
+<td>Supports maintenance availability</td>
+</tr>
+</tbody>
+</table>
+<h3 id="documentation-to-update">Documentation to update</h3>
+<ul>
+<li>Electrical drawings.</li>
+<li>PLC I/O lists and tag descriptions.</li>
+<li>Instrumentation lists.</li>
+<li>Calibration records.</li>
+<li>Sensor mounting or installation drawings.</li>
+<li>Approved spare-parts list.</li>
+<li>Machine knowledge base.</li>
+<li>Relevant SOPs and maintenance instructions.</li>
+<li>Safety documentation where applicable.</li>
+<li>Change request and verification evidence.</li>
+</ul>
+<h2 id="22-practical-industrial-example-replacing-a-proximity-sensor">22. Practical Industrial Example: Replacing a Proximity Sensor</h2>
+<p>Problem: A proximity sensor intermittently fails to confirm that a fixture has reached its required position.</p>
+<h3 id="step-1-diagnose-the-existing-fault">Step 1: Diagnose the existing fault</h3>
+<p>Check sensor status, PLC input state, supply voltage, connector condition, mounting, target geometry, and relevant diagnostics.</p>
+<h3 id="step-2-confirm-the-cause">Step 2: Confirm the cause</h3>
+<p>Determine whether the fault originates from the sensor, wiring, target position, vibration, input configuration, or sequence logic.</p>
+<h3 id="step-3-select-the-replacement">Step 3: Select the replacement</h3>
+<p>Verify the exact model or approved equivalent, sensing distance, output type, voltage, mounting requirements, and environmental suitability.</p>
+<h3 id="step-4-control-the-installation">Step 4: Control the installation</h3>
+<p>Follow the site's isolation and maintenance procedure. Record the original wiring and position before removing the device.</p>
+<h3 id="step-5-verify-operation">Step 5: Verify operation</h3>
+<p>Test detection at the required positions, confirm the PLC input state, and check the full machine sequence under approved test conditions.</p>
+<h3 id="step-6-check-for-hidden-problems">Step 6: Check for hidden problems</h3>
+<p>Verify that the sensor does not detect adjacent metalwork, that the mounting is secure, and that the machine's actual operating speed does not cause missed detection.</p>
+<h3 id="step-7-document-the-change">Step 7: Document the change</h3>
+<p>Record the sensor model, tag, replacement date, fault cause, test result, and any updates to drawings or spare records.</p>
+<p>Successful outcome: The machine reliably detects the required position under representative conditions, and the underlying cause of the original fault is understood.</p>
+<h2 id="23-practical-industrial-example-pressure-sensor-replacement-on-a-test-bed">23. Practical Industrial Example: Pressure Sensor Replacement on a Test Bed</h2>
+<p>Problem: A pressure reading is inconsistent with the reference gauge during an end-of-line test.</p>
+<p>Potential causes include:</p>
+<ul>
+<li>Sensor drift.</li>
+<li>Incorrect transmitter range.</li>
+<li>Damaged process connection.</li>
+<li>Incorrect analog scaling.</li>
+<li>Electrical noise.</li>
+<li>Incorrect grounding or wiring.</li>
+<li>Reference gauge error.</li>
+<li>Pressure pulsation or unsuitable installation.</li>
+</ul>
+<h3 id="controlled-approach">Controlled approach</h3>
+<ol>
+<li>Verify the reference instrument and its calibration status.</li>
+<li>Compare the raw analog input with the displayed engineering value.</li>
+<li>Confirm the installed transmitter's range and output specification.</li>
+<li>Inspect wiring, supply, process connection, and installation.</li>
+<li>Determine whether the fault originates in the sensor or elsewhere in the measurement chain.</li>
+<li>Obtain approval for the corrective action.</li>
+<li>Replace, repair, calibrate, or reconfigure the affected component as appropriate.</li>
+<li>Verify multiple representative pressure points.</li>
+<li>Confirm the test-bed acceptance limits and alarm behavior.</li>
+<li>Assess whether previously recorded test results require review.</li>
+<li>Update the calibration record and asset documentation.</li>
+</ol>
+<p>A plausible pressure reading is not sufficient evidence of measurement accuracy. A wrong scaling configuration can produce stable, repeatable, and completely incorrect results.</p>
+<h2 id="24-common-sensor-change-failures">24. Common Sensor Change Failures</h2>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Consequence</th>
+<th>Control</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Selecting a sensor by physical size alone</td>
+<td>Wrong detection or measurement behavior</td>
+<td>Verify the full specification</td>
+</tr>
+<tr>
+<td>Replacing PNP with NPN without review</td>
+<td>PLC input fails to switch correctly</td>
+<td>Confirm electrical compatibility</td>
+</tr>
+<tr>
+<td>Incorrect analog scaling</td>
+<td>False process measurements</td>
+<td>Validate raw and engineering values</td>
+</tr>
+<tr>
+<td>Incorrect mounting distance</td>
+<td>Missed or false detection</td>
+<td>Verify mechanical geometry</td>
+</tr>
+<tr>
+<td>Excessive filtering</td>
+<td>Delayed response</td>
+<td>Validate response-time requirements</td>
+</tr>
+<tr>
+<td>Using an unsuitable sensor in a harsh environment</td>
+<td>Premature failure</td>
+<td>Check environmental ratings</td>
+</tr>
+<tr>
+<td>Ignoring calibration requirements</td>
+<td>Unreliable quality measurements</td>
+<td>Follow the measurement-control procedure</td>
+</tr>
+<tr>
+<td>Using a standard sensor in a safety function</td>
+<td>Required risk reduction may be lost</td>
+<td>Verify safety suitability and validate</td>
+</tr>
+<tr>
+<td>Copying settings from another application</td>
+<td>Incorrect thresholds or device behavior</td>
+<td>Confirm application equivalence</td>
+</tr>
+<tr>
+<td>Ignoring PLC logic dependencies</td>
+<td>Sequence errors</td>
+<td>Test the complete control function</td>
+</tr>
+<tr>
+<td>Failing to update drawings</td>
+<td>Future maintenance errors</td>
+<td>Update controlled documentation</td>
+</tr>
+<tr>
+<td>Replacing the sensor without root-cause analysis</td>
+<td>Repeated failure</td>
+<td>Investigate the complete sensing chain</td>
+</tr>
+</tbody>
+</table>
+<h2 id="25-practical-sensor-change-checklist">25. Practical Sensor Change Checklist</h2>
+<h3 id="before-the-change">Before the change</h3>
+<ul>
+<li>Sensor tag and function identified.</li>
+<li>Existing manufacturer, model, and configuration recorded.</li>
+<li>Root cause or change requirement established.</li>
+<li>Mechanical, electrical, measurement, and environmental compatibility checked.</li>
+<li>PLC or controller dependencies identified.</li>
+<li>Safety and quality impact assessed.</li>
+<li>Calibration requirements reviewed.</li>
+<li>Approved replacement and required authorization confirmed.</li>
+<li>Original wiring, mounting, and settings recorded.</li>
+<li>Test and recovery plans prepared.</li>
+</ul>
+<h3 id="during-the-change">During the change</h3>
+<ul>
+<li>Required isolation and safe working procedures followed.</li>
+<li>Correct sensor and connector verified.</li>
+<li>Wiring and pinout checked against documentation.</li>
+<li>Mounting and alignment verified.</li>
+<li>Approved scaling and configuration applied.</li>
+<li>Required calibration or adjustment performed under the approved procedure.</li>
+</ul>
+<h3 id="after-the-change">After the change</h3>
+<ul>
+<li>Sensor output verified.</li>
+<li>PLC input or communication data verified.</li>
+<li>Measurement accuracy or detection reliability tested.</li>
+<li>Scaling, thresholds, filtering, and units checked.</li>
+<li>Machine sequence tested.</li>
+<li>Safety function validated where applicable.</li>
+<li>Quality and traceability requirements confirmed.</li>
+<li>Drawings, registers, and spare records updated.</li>
+<li>Final configuration and verification evidence saved.</li>
+<li>Equipment release and change closure documented.</li>
+</ul>
+<h2 id="26-interview-questions-and-answers">26. Interview Questions and Answers</h2>
+<h3 id="q1-what-is-sensor-change-management">Q1. What is sensor change management?</h3>
+<p>It is the controlled process of assessing, approving, implementing, verifying, and documenting changes to industrial sensors and their associated configurations.</p>
+<h3 id="q2-what-is-the-difference-between-accuracy-and-precision">Q2. What is the difference between accuracy and precision?</h3>
+<p>Accuracy describes closeness to a true or accepted reference value. Precision describes the closeness of repeated measurements to each other.</p>
+<h3 id="q3-what-must-be-checked-before-replacing-a-proximity-sensor">Q3. What must be checked before replacing a proximity sensor?</h3>
+<p>Verify sensing principle, range, target material, mounting, supply voltage, output type, PLC input compatibility, environmental rating, and required detection behavior.</p>
+<h3 id="q4-what-is-the-difference-between-pnp-and-npn-sensors">Q4. What is the difference between PNP and NPN sensors?</h3>
+<p>PNP outputs typically source current from the positive supply toward the load. NPN outputs typically sink current toward 0 V. The PLC input arrangement must be compatible.</p>
+<h3 id="q5-why-is-analog-scaling-important">Q5. Why is analog scaling important?</h3>
+<p>Scaling converts raw electrical input values into engineering units. Incorrect scaling produces incorrect displayed and control values even when the sensor and electrical signal are functioning.</p>
+<h3 id="q6-what-is-the-difference-between-calibration-and-adjustment">Q6. What is the difference between calibration and adjustment?</h3>
+<p>Calibration establishes the relationship between indications and reference values. Adjustment changes the device or system response.</p>
+<h3 id="q7-why-can-a-sensor-replacement-affect-product-quality">Q7. Why can a sensor replacement affect product quality?</h3>
+<p>The replacement may have different accuracy, range, response time, mounting characteristics, or configuration, affecting process control or acceptance decisions.</p>
+<h3 id="q8-what-should-be-done-if-a-replacement-sensor-works-at-low-speed-but-fails-at-production-speed">Q8. What should be done if a replacement sensor works at low speed but fails at production speed?</h3>
+<p>Investigate response time, sensing margin, target geometry, mounting, PLC filtering, and sequence timing under representative conditions.</p>
+<h3 id="q9-can-a-normal-sensor-replace-a-safety-rated-sensor-if-both-detect-the-same-object">Q9. Can a normal sensor replace a safety-rated sensor if both detect the same object?</h3>
+<p>Not without a suitable engineering assessment and validation of the complete safety function. Similar detection behavior does not establish equivalent safety performance.</p>
+<h3 id="q10-why-should-multiple-measurement-points-be-checked-after-changing-a-transmitter">Q10. Why should multiple measurement points be checked after changing a transmitter?</h3>
+<p>Testing multiple points helps reveal scaling, offset, span, and range errors that a single-point test may miss.</p>
+<h3 id="q11-what-is-sensor-drift">Q11. What is sensor drift?</h3>
+<p>It is a gradual or otherwise unintended change in sensor output or measurement characteristics over time.</p>
+<h3 id="q12-why-should-sensor-configuration-be-recorded">Q12. Why should sensor configuration be recorded?</h3>
+<p>It supports traceability, correct replacement, calibration control, troubleshooting, and restoration of the approved machine configuration.</p>
+<h3 id="q13-when-should-a-sensor-change-be-rolled-back">Q13. When should a sensor change be rolled back?</h3>
+<p>When the change fails acceptance criteria, causes unacceptable behavior, or cannot be validated as required. The machine must be restored to an appropriate verified state before release.</p>
+<h3 id="q14-when-is-a-sensor-change-complete">Q14. When is a sensor change complete?</h3>
+<p>When the approved sensor or configuration is installed, required functional and measurement tests pass, safety and quality requirements are met, documentation is updated, and the change is formally closed.</p>
+<h2 id="27-key-principles-to-remember">27. Key Principles to Remember</h2>
+<ul>
+<li>Identify the sensor's actual function before selecting a replacement.</li>
+<li>Verify mechanical, electrical, measurement, environmental, and controller compatibility.</li>
+<li>Diagnose the complete sensing chain rather than replacing parts blindly.</li>
+<li>Confirm raw input values and engineering scaling.</li>
+<li>Treat calibration and measurement traceability as controlled requirements.</li>
+<li>Validate response time and detection reliability at representative operating conditions.</li>
+<li>Do not downgrade or bypass a required safety function.</li>
+<li>Verify the complete machine or process function after replacement.</li>
+<li>Update drawings, sensor registers, spare lists, and change records.</li>
+<li>Preserve evidence of the approved configuration and successful verification.</li>
+</ul>
+<p>The practical maintenance principle: A sensor change is successful only when the machine receives the correct information, responds correctly to that information, and continues to meet its safety, quality, and operational requirements.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\31_Change_Mgmt\01_Triggers\06_Machine_Modifications - Machine modifications</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

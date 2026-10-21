@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLC-Robot Communication Commissioning</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">PLC-Robot Communication Commissioning</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-scope-of-plc-robot-commissioning">2. Scope of PLC-Robot Commissioning</a></li>
+<li><a href="#3-plc-robot-system-architecture">3. PLC-Robot System Architecture</a></li>
+<li><a href="#4-responsibilities-of-the-plc-and-robot-controller">4. Responsibilities of the PLC and Robot Controller</a></li>
+<li><a href="#5-communication-methods-and-protocols">5. Communication Methods and Protocols</a><ul>
+<li><a href="#51-hardwired-versus-network-communication">5.1 Hardwired versus network communication</a></li>
+</ul>
+</li>
+<li><a href="#6-network-and-device-configuration">6. Network and Device Configuration</a><ul>
+<li><a href="#61-ip-addressing">6.1 IP addressing</a></li>
+<li><a href="#62-network-verification">6.2 Network verification</a></li>
+<li><a href="#63-protocol-specific-configuration">6.3 Protocol-specific configuration</a></li>
+</ul>
+</li>
+<li><a href="#7-plc-robot-signal-mapping">7. PLC-Robot Signal Mapping</a></li>
+<li><a href="#8-robot-handshake-fundamentals">8. Robot Handshake Fundamentals</a><ul>
+<li><a href="#81-example-of-a-basic-cycle-handshake">8.1 Example of a basic cycle handshake</a></li>
+</ul>
+</li>
+<li><a href="#9-request-acknowledgement-and-reset-rules">9. Request, Acknowledgement, and Reset Rules</a><ul>
+<li><a href="#91-edge-triggered-requests">9.1 Edge-triggered requests</a></li>
+<li><a href="#92-example-handshake-truth-table">9.2 Example handshake truth table</a></li>
+</ul>
+</li>
+<li><a href="#10-program-selection-and-job-management">10. Program Selection and Job Management</a><ul>
+<li><a href="#101-binary-program-selection-example">10.1 Binary program selection example</a></li>
+</ul>
+</li>
+<li><a href="#11-robot-modes-and-start-conditions">11. Robot Modes and Start Conditions</a></li>
+<li><a href="#12-plc-robot-coordination-with-fixtures-and-peripherals">12. PLC-Robot Coordination With Fixtures and Peripherals</a></li>
+<li><a href="#13-safety-integration">13. Safety Integration</a><ul>
+<li><a href="#131-safety-commissioning-principles">13.1 Safety commissioning principles</a></li>
+</ul>
+</li>
+<li><a href="#14-fault-handling-and-recovery">14. Fault Handling and Recovery</a><ul>
+<li><a href="#141-fault-handling-requirements">14.1 Fault-handling requirements</a></li>
+<li><a href="#142-timeouts">14.2 Timeouts</a></li>
+</ul>
+</li>
+<li><a href="#15-communication-loss-and-recovery-testing">15. Communication Loss and Recovery Testing</a><ul>
+<li><a href="#151-controlled-test-procedure">15.1 Controlled test procedure</a></li>
+</ul>
+</li>
+<li><a href="#16-robot-position-and-process-feedback">16. Robot Position and Process Feedback</a></li>
+<li><a href="#17-performance-and-cycle-time-verification">17. Performance and Cycle-Time Verification</a></li>
+<li><a href="#18-plc-robot-commissioning-procedure">18. PLC-Robot Commissioning Procedure</a><ul>
+<li><a href="#stage-1-documentation-and-preparation">Stage 1: Documentation and preparation</a></li>
+<li><a href="#stage-2-physical-and-network-checks">Stage 2: Physical and network checks</a></li>
+<li><a href="#stage-3-signal-verification">Stage 3: Signal verification</a></li>
+<li><a href="#stage-4-handshake-testing">Stage 4: Handshake testing</a></li>
+<li><a href="#stage-5-cell-functional-testing">Stage 5: Cell functional testing</a></li>
+<li><a href="#stage-6-fault-and-recovery-testing">Stage 6: Fault and recovery testing</a></li>
+<li><a href="#stage-7-handover">Stage 7: Handover</a></li>
+</ul>
+</li>
+<li><a href="#19-troubleshooting-guide">19. Troubleshooting Guide</a><ul>
+<li><a href="#191-diagnostic-order">19.1 Diagnostic order</a></li>
+</ul>
+</li>
+<li><a href="#20-fat-and-sat-for-plc-robot-communication">20. FAT and SAT for PLC-Robot Communication</a></li>
+<li><a href="#21-acceptance-criteria">21. Acceptance Criteria</a></li>
+<li><a href="#22-practical-example-robot-loading-a-cnc-machine">22. Practical Example: Robot Loading a CNC Machine</a><ul>
+<li><a href="#221-example-sequence">22.1 Example sequence</a></li>
+<li><a href="#222-important-commissioning-tests">22.2 Important commissioning tests</a></li>
+</ul>
+</li>
+<li><a href="#23-common-commissioning-mistakes">23. Common Commissioning Mistakes</a></li>
+<li><a href="#24-interview-questions-and-answers">24. Interview Questions and Answers</a></li>
+<li><a href="#25-final-plc-robot-commissioning-checklist">25. Final PLC-Robot Commissioning Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>PLC-Robot communication commissioning is the process of configuring, testing, and validating data exchange between a Programmable Logic Controller (PLC) and an industrial robot controller so that both systems coordinate machine operations correctly, exchange commands and status information, handle faults predictably, and recover safely from communication interruptions.</p>
+<p>In an automated production line, the PLC typically coordinates the overall machine sequence, conveyors, fixtures, sensors, safety interfaces, and peripheral equipment. The robot controller manages robot motion, robot programs, tool paths, and robot-specific operating states.</p>
+<p>The commissioning objective is to prove that the PLC and robot agree on what operation is requested, whether it is permitted, whether it has started, whether it has completed, and whether a fault has occurred.</p>
+<p>A communication connection alone does not prove that the robot is executing the correct program or that the machine sequence is safe.</p>
+<h2 id="2-scope-of-plc-robot-commissioning">2. Scope of PLC-Robot Commissioning</h2>
+<p>PLC-Robot commissioning includes:</p>
+<ul>
+<li>Physical network and communication interface verification.</li>
+<li>Protocol and device configuration.</li>
+<li>PLC and robot-controller addressing.</li>
+<li>Signal mapping and data exchange.</li>
+<li>Robot program selection and execution requests.</li>
+<li>Cycle-start, busy, complete, ready, and fault handshakes.</li>
+<li>Robot-to-PLC status feedback.</li>
+<li>Workpiece, fixture, clamp, and peripheral coordination.</li>
+<li>Fault detection, recovery, and restart prevention.</li>
+<li>Safety-system integration and validation.</li>
+<li>Cycle timing, diagnostics, testing, and handover documentation.</li>
+</ul>
+<p>It also requires checking robot-specific conditions such as the selected program, tool, work object or frame, operating mode, and applicable motion permissions.</p>
+<h2 id="3-plc-robot-system-architecture">3. PLC-Robot System Architecture</h2>
+<p>A typical industrial robot cell uses the following architecture:</p>
+<pre><code>HMI / Operator
+      ↓
+PLC Sequence and Cell Coordination
+      ↓
+Industrial Communication Network
+      ↓
+Robot Controller
+      ↓
+Robot Motion Program
+      ↓
+Robot Manipulator and Tool
+      ↓
+Workpiece Operation
+</code></pre>
+<p>Additional equipment may exchange signals with the PLC or robot controller:</p>
+<pre><code>Sensors / Fixture / Clamps / Conveyors
+      ↓
+PLC Inputs and Sequence Logic
+      ↓
+PLC-Robot Handshake
+      ↓
+Robot Controller
+      ↓
+Robot Motion and Tool Operation
+      ↓
+Robot Status and Process Feedback
+      ↓
+PLC Sequence Continuation
+</code></pre>
+<p>The exact architecture depends on the robot manufacturer, PLC, communication protocol, and cell design. Some cells connect the robot directly to the PLC over industrial Ethernet. Others use hardwired digital I/O, a fieldbus, a gateway, or a combination of these.</p>
+<h2 id="4-responsibilities-of-the-plc-and-robot-controller">4. Responsibilities of the PLC and Robot Controller</h2>
+<p>The division of responsibility must be clearly defined before testing.</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Typical PLC responsibility</th>
+<th>Typical robot-controller responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cell sequence</td>
+<td>Coordinates the complete station</td>
+<td>Executes the requested robot operation</td>
+</tr>
+<tr>
+<td>Program selection</td>
+<td>Requests an approved program or job</td>
+<td>Validates and selects the available program</td>
+</tr>
+<tr>
+<td>Cycle start</td>
+<td>Sends a permitted start request</td>
+<td>Checks robot-specific start conditions</td>
+</tr>
+<tr>
+<td>Robot motion</td>
+<td>Coordinates external equipment and sequence</td>
+<td>Executes trajectory and motion instructions</td>
+</tr>
+<tr>
+<td>Fixture control</td>
+<td>Controls clamps and verifies feedback</td>
+<td>Uses agreed signals to coordinate with the fixture</td>
+</tr>
+<tr>
+<td>Robot status</td>
+<td>Monitors robot-ready and cycle states</td>
+<td>Reports ready, busy, complete, and fault states</td>
+</tr>
+<tr>
+<td>Fault handling</td>
+<td>Coordinates cell-level response</td>
+<td>Reports robot faults and provides robot diagnostics</td>
+</tr>
+<tr>
+<td>Safety coordination</td>
+<td>Integrates cell safety according to design</td>
+<td>Responds to configured robot safety functions</td>
+</tr>
+</tbody>
+</table>
+<p>This division is typical, not universal. The approved functional specification determines the final ownership of each signal and function.</p>
+<h2 id="5-communication-methods-and-protocols">5. Communication Methods and Protocols</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Typical application</th>
+<th>Commissioning checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hardwired digital I/O</td>
+<td>Basic ready, start, complete, and fault signals</td>
+<td>Wiring, polarity, signal voltage, mapping</td>
+</tr>
+<tr>
+<td>PROFINET</td>
+<td>Siemens PLC and compatible robot controller</td>
+<td>Device name, IP configuration, GSDML, I/O mapping</td>
+</tr>
+<tr>
+<td>EtherNet/IP</td>
+<td>Allen-Bradley PLC and compatible robot controller</td>
+<td>Device identity, EDS/profile, assembly and data mapping</td>
+</tr>
+<tr>
+<td>PROFIBUS DP</td>
+<td>Existing or legacy automation installations</td>
+<td>Node address, GSD configuration, bus termination</td>
+</tr>
+<tr>
+<td>CC-Link or CC-Link IE</td>
+<td>Compatible Mitsubishi and other industrial systems</td>
+<td>Network settings, station configuration, cyclic data</td>
+</tr>
+<tr>
+<td>OPC UA</td>
+<td>Supervisory or structured data exchange where supported</td>
+<td>Endpoint, certificates, access permissions, data model</td>
+</tr>
+<tr>
+<td>Manufacturer-specific interfaces</td>
+<td>Robot-specific PLC integration</td>
+<td>Supported protocol, driver, signal definitions</td>
+</tr>
+</tbody>
+</table>
+<p>Protocol support depends on the exact robot controller, firmware, communication option, and PLC hardware. For example, the availability of PROFINET or EtherNet/IP may depend on an installed option or licensed feature.</p>
+<h3 id="51-hardwired-versus-network-communication">5.1 Hardwired versus network communication</h3>
+<p>Hardwired I/O is often used for simple handshake signals and can be straightforward to troubleshoot electrically. Network communication can support more signals, richer diagnostic data, and easier expansion.</p>
+<p>However, a network connection introduces configuration requirements such as addressing, device descriptions, process-data sizes, and communication-loss handling.</p>
+<p>Some installations use network communication for ordinary control data and a separate safety-rated system for protective functions. Ordinary PLC-Robot communication must not be assumed to be safety-rated.</p>
+<h2 id="6-network-and-device-configuration">6. Network and Device Configuration</h2>
+<h3 id="61-ip-addressing">6.1 IP addressing</h3>
+<p>For Ethernet-based communication, verify:</p>
+<ul>
+<li>Correct IP addresses and subnet masks.</li>
+<li>No duplicate IP addresses.</li>
+<li>Correct device name where required.</li>
+<li>Correct communication interface and protocol configuration.</li>
+<li>Correct PLC hardware configuration.</li>
+<li>Correct robot communication option and device profile.</li>
+<li>Correct process-data size and mapping.</li>
+<li>Required network paths, switches, and VLAN settings.</li>
+</ul>
+<p>Example addressing:</p>
+<table>
+<thead>
+<tr>
+<th>Device</th>
+<th>Example IP address</th>
+<th>Subnet mask</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC</td>
+<td><code>192.168.30.10</code></td>
+<td><code>255.255.255.0</code></td>
+</tr>
+<tr>
+<td>Robot controller</td>
+<td><code>192.168.30.20</code></td>
+<td><code>255.255.255.0</code></td>
+</tr>
+<tr>
+<td>HMI</td>
+<td><code>192.168.30.30</code></td>
+<td><code>255.255.255.0</code></td>
+</tr>
+<tr>
+<td>Engineering PC</td>
+<td><code>192.168.30.40</code></td>
+<td><code>255.255.255.0</code></td>
+</tr>
+</tbody>
+</table>
+<p>These addresses are illustrative. Use the approved plant network plan for the actual machine.</p>
+<h3 id="62-network-verification">6.2 Network verification</h3>
+<p>Useful checks on an authorized engineering PC include:</p>
+<pre><code>ipconfig /all
+ping 192.168.30.20
+arp -a
+</code></pre>
+<p><code>ipconfig /all</code> verifies the PC network configuration. <code>ping</code> tests IP reachability if ICMP is permitted. <code>arp -a</code> displays known IP-to-MAC address mappings.</p>
+<p>A successful ping does not prove that robot process data is being exchanged correctly. A failed ping does not conclusively prove the robot controller is offline because ICMP traffic may be disabled or filtered.</p>
+<h3 id="63-protocol-specific-configuration">6.3 Protocol-specific configuration</h3>
+<p>For PROFINET, verify the device name, IP configuration, GSDML version, module configuration, and cyclic input/output mapping.</p>
+<p>For EtherNet/IP, verify the device identity, supported profile, input and output assembly instances, data sizes, and connection configuration.</p>
+<p>For any protocol, compare the configured data layout with the actual PLC and robot signal definitions. A connection can fail because the configuration is incompatible even when the physical network is correct.</p>
+<h2 id="7-plc-robot-signal-mapping">7. PLC-Robot Signal Mapping</h2>
+<p>The signal list is the central commissioning document for the handshake. Every signal should have a clear source, destination, data type, meaning, and reset rule.</p>
+<p>Typical PLC-to-robot signals include:</p>
+<ul>
+<li><code>Cell_Start_Permit</code></li>
+<li><code>Program_Select</code></li>
+<li><code>Cycle_Start_Request</code></li>
+<li><code>Part_Present</code></li>
+<li><code>Fixture_Clamped</code></li>
+<li><code>External_Device_Ready</code></li>
+<li><code>Fault_Reset_Request</code></li>
+</ul>
+<p>Typical robot-to-PLC signals include:</p>
+<ul>
+<li><code>Robot_Ready</code></li>
+<li><code>Robot_Busy</code></li>
+<li><code>Program_Active</code></li>
+<li><code>Cycle_Complete</code></li>
+<li><code>Robot_Fault</code></li>
+<li><code>Robot_At_Home</code></li>
+<li><code>Robot_At_Load_Position</code></li>
+<li><code>Robot_At_Unload_Position</code></li>
+</ul>
+<p>These are illustrative names. Actual signal names and meanings must follow the robot interface specification.</p>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Direction</th>
+<th>Purpose</th>
+<th>Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Cycle_Start_Request</code></td>
+<td>PLC to robot</td>
+<td>Requests program execution</td>
+<td>Correct trigger and acknowledgement</td>
+</tr>
+<tr>
+<td><code>Robot_Ready</code></td>
+<td>Robot to PLC</td>
+<td>Indicates readiness for the defined operation</td>
+<td>Matches the specified robot state</td>
+</tr>
+<tr>
+<td><code>Robot_Busy</code></td>
+<td>Robot to PLC</td>
+<td>Indicates execution is in progress</td>
+<td>Active during the intended interval</td>
+</tr>
+<tr>
+<td><code>Cycle_Complete</code></td>
+<td>Robot to PLC</td>
+<td>Reports completion of the defined operation</td>
+<td>Set only after the required completion conditions</td>
+</tr>
+<tr>
+<td><code>Robot_Fault</code></td>
+<td>Robot to PLC</td>
+<td>Reports a robot fault condition</td>
+<td>Matches controller diagnostic state</td>
+</tr>
+<tr>
+<td><code>Fixture_Clamped</code></td>
+<td>PLC to robot or cell interface</td>
+<td>Indicates fixture confirmation</td>
+<td>Correct signal ownership and feedback source</td>
+</tr>
+<tr>
+<td><code>Fault_Reset_Request</code></td>
+<td>PLC to robot</td>
+<td>Requests an authorized fault acknowledgement</td>
+<td>Accepted only under specified conditions</td>
+</tr>
+</tbody>
+</table>
+<p>A signal named <code>Robot_Ready</code> does not have a universal meaning. It might mean the controller is powered and ready, that a program is selected, that automatic operation is available, or that the robot is ready for a particular cycle. Its definition must be explicit.</p>
+<h2 id="8-robot-handshake-fundamentals">8. Robot Handshake Fundamentals</h2>
+<p>A handshake is an agreed sequence of requests, acknowledgements, and status signals that allows the PLC and robot controller to coordinate operations.</p>
+<p>A basic handshake commonly includes:</p>
+<ul>
+<li>Request: The PLC asks the robot to perform an operation.</li>
+<li>Acceptance or start feedback: The robot indicates that the request has been accepted or execution has started.</li>
+<li>Busy: The robot reports that the operation is in progress.</li>
+<li>Completion: The robot reports that the defined operation has completed.</li>
+<li>Reset or clear: The request and acknowledgement return to their specified inactive states.</li>
+</ul>
+<p>The exact signals and sequence vary by robot manufacturer and application.</p>
+<h3 id="81-example-of-a-basic-cycle-handshake">8.1 Example of a basic cycle handshake</h3>
+<pre><code>PLC verifies cell permissives
+        ↓
+PLC sends Cycle_Start_Request
+        ↓
+Robot validates program and start conditions
+        ↓
+Robot reports Busy / Program Active
+        ↓
+Robot executes the programmed operation
+        ↓
+Robot reports Cycle_Complete
+        ↓
+PLC verifies completion and continues the cell sequence
+        ↓
+Handshake signals return to the defined idle state
+</code></pre>
+<p>The PLC should not infer completion merely because <code>Robot_Busy</code> turns off. Busy may turn off due to a fault, abort, program termination, or other condition. Completion should be confirmed using the specified signal or state combination.</p>
+<h2 id="9-request-acknowledgement-and-reset-rules">9. Request, Acknowledgement, and Reset Rules</h2>
+<p>A handshake can fail even when all individual signals are mapped correctly if the two controllers disagree about when signals should turn on and off.</p>
+<p>For every handshake, define:</p>
+<ul>
+<li>Which controller sets each signal.</li>
+<li>Which controller clears each signal.</li>
+<li>Whether the signal is pulse-based or maintained.</li>
+<li>Whether acknowledgement is required.</li>
+<li>Whether a timeout is required.</li>
+<li>What happens if the expected response never arrives.</li>
+<li>What happens if the robot faults during execution.</li>
+<li>What happens if the PLC or robot restarts.</li>
+<li>Whether an aborted cycle requires manual recovery.</li>
+</ul>
+<h3 id="91-edge-triggered-requests">9.1 Edge-triggered requests</h3>
+<p>An edge-triggered request is detected when a signal changes from false to true. If the PLC holds the request true and the robot expects a new rising edge, the next cycle may not start.</p>
+<p>Conversely, a level-sensitive request may repeatedly trigger an operation if it is not cleared correctly.</p>
+<p>Use the request pattern defined by the robot interface. Test multiple consecutive cycles, not just the first start.</p>
+<h3 id="92-example-handshake-truth-table">9.2 Example handshake truth table</h3>
+<p>This is a simplified conceptual example, not a universal robot interface.</p>
+<table>
+<thead>
+<tr>
+<th>PLC start request</th>
+<th>Robot busy</th>
+<th>Robot complete</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>Idle or ready for a new request, subject to other conditions</td>
+</tr>
+<tr>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td>Request pending or awaiting acceptance</td>
+</tr>
+<tr>
+<td>1</td>
+<td>1</td>
+<td>0</td>
+<td>Operation in progress</td>
+</tr>
+<tr>
+<td>0</td>
+<td>1</td>
+<td>0</td>
+<td>Operation in progress after request was cleared, if the interface permits this</td>
+</tr>
+<tr>
+<td>0</td>
+<td>0</td>
+<td>1</td>
+<td>Operation complete, subject to defined reset rules</td>
+</tr>
+<tr>
+<td>Any</td>
+<td>Any</td>
+<td>Any with robot fault</td>
+<td>Fault handling takes priority according to the specified sequence</td>
+</tr>
+</tbody>
+</table>
+<p>The project must define the legal combinations. An unexpected combination should generate a diagnostic rather than leave the PLC sequence waiting indefinitely.</p>
+<h2 id="10-program-selection-and-job-management">10. Program Selection and Job Management</h2>
+<p>Many robot applications require the PLC to select a robot program, job, or process routine before requesting execution.</p>
+<p>Commissioning must verify:</p>
+<ul>
+<li>Correct program number or selection code.</li>
+<li>Correct mapping of selection bits or data values.</li>
+<li>Correct interpretation of binary or integer selection data.</li>
+<li>Validity of the selected program.</li>
+<li>Confirmation that the intended program is loaded or active.</li>
+<li>Correct behavior for an invalid program number.</li>
+<li>Required robot mode and program-start conditions.</li>
+<li>Correct program completion and reset behavior.</li>
+</ul>
+<h3 id="101-binary-program-selection-example">10.1 Binary program selection example</h3>
+<p>Suppose a robot interface uses four selection bits to represent a program number in binary. If the interface defines the least significant bit as the first bit, the value can be represented as:</p>
+<div class="math-display">\[ N = b_0 + 2b_1 + 4b_2 + 8b_3 \]</div>
+<p>Where each bit <span class="math-inline">\(b_i\)</span> is either 0 or 1.</p>
+<p>For <span class="math-inline">\(b_3b_2b_1b_0 = 0101\)</span>, the selected value is:</p>
+<div class="math-display">\[ N = 1 + 0 + 4 + 0 = 5 \]</div>
+<p>This example assumes a standard binary encoding and that the interface uses program number 5 for that bit pattern. Actual robot interfaces may use different encoding, offsets, or selection rules.</p>
+<h2 id="11-robot-modes-and-start-conditions">11. Robot Modes and Start Conditions</h2>
+<p>Robot controllers typically distinguish operating modes such as manual, teach, and automatic. The exact names and behaviors depend on the controller and safety configuration.</p>
+<p>A remote PLC start request may be accepted only when the robot is in an appropriate operating mode and all required conditions are satisfied.</p>
+<p>Check:</p>
+<ul>
+<li>Correct operating mode.</li>
+<li>Program selection and program state.</li>
+<li>Robot-controller readiness.</li>
+<li>No active fault preventing operation.</li>
+<li>Required external equipment ready.</li>
+<li>Required safety conditions satisfied.</li>
+<li>Required tooling, workpiece, and fixture conditions satisfied.</li>
+<li>Appropriate restart behavior after an interruption.</li>
+</ul>
+<p>The PLC should provide clear diagnostics for a blocked start, where supported by the design. A start request should not be treated as proof that all robot start conditions are met.</p>
+<h2 id="12-plc-robot-coordination-with-fixtures-and-peripherals">12. PLC-Robot Coordination With Fixtures and Peripherals</h2>
+<p>In a manufacturing cell, robot movement often depends on fixture and peripheral states.</p>
+<p>Examples include:</p>
+<ul>
+<li>Part present and correctly oriented.</li>
+<li>Fixture closed and clamped.</li>
+<li>Clamp pressure or position confirmed.</li>
+<li>Conveyor stopped at the correct location.</li>
+<li>Welding gun ready.</li>
+<li>Gripper open or closed.</li>
+<li>Tool changer confirmed in the required state.</li>
+<li>External axis or positioner ready.</li>
+<li>Process equipment ready.</li>
+</ul>
+<p>A typical operation might be:</p>
+<pre><code>Part arrives
+      ↓
+PLC confirms part position
+      ↓
+PLC commands fixture clamping
+      ↓
+PLC verifies clamp feedback
+      ↓
+PLC permits robot operation
+      ↓
+Robot performs the task
+      ↓
+Robot reports completion
+      ↓
+PLC verifies process and fixture conditions
+      ↓
+PLC releases the part when permitted
+</code></pre>
+<p>Commands and feedback must be separated. A PLC output requesting a clamp to close is not proof that the clamp has physically closed. The robot should rely on the required confirmed state, not merely the command signal.</p>
+<h2 id="13-safety-integration">13. Safety Integration</h2>
+<p>Robot-cell safety requires particular care because the robot can produce hazardous movement and may interact with external equipment.</p>
+<p>Normal PLC-Robot communication generally handles ordinary control coordination. It must not be assumed to provide a safety-rated stop or protective function.</p>
+<p>Safety functions may include:</p>
+<ul>
+<li>Emergency stop.</li>
+<li>Guard-door monitoring and interlocking.</li>
+<li>Safety-rated robot stop functions.</li>
+<li>Safe speed or safe position functions where provided.</li>
+<li>Enabling devices for manual operation.</li>
+<li>Safe torque removal or equivalent drive-level safety functions.</li>
+<li>Safety-rated communication where explicitly designed and supported.</li>
+</ul>
+<p>The required architecture depends on the machine risk assessment, applicable standards, and installed equipment.</p>
+<h3 id="131-safety-commissioning-principles">13.1 Safety commissioning principles</h3>
+<ul>
+<li>Verify the approved safety design and wiring.</li>
+<li>Confirm safety functions are configured and validated by authorized personnel.</li>
+<li>Test protective devices according to the approved safety validation procedure.</li>
+<li>Confirm that ordinary start requests cannot bypass required safety conditions.</li>
+<li>Verify restart prevention after a safety event.</li>
+<li>Verify reset behavior and operator visibility.</li>
+<li>Record the validation results.</li>
+</ul>
+<p>Do not use a normal <code>Robot_Ready</code>, <code>Robot_Busy</code>, or <code>Cycle_Start_Request</code> bit as a substitute for a safety-rated signal. Do not bypass guards or safety circuits to make communication testing easier.</p>
+<h2 id="14-fault-handling-and-recovery">14. Fault Handling and Recovery</h2>
+<p>Typical PLC-Robot faults include:</p>
+<ul>
+<li>Communication loss.</li>
+<li>Robot controller fault.</li>
+<li>Program-selection error.</li>
+<li>Invalid or missing start acknowledgement.</li>
+<li>Cycle timeout.</li>
+<li>Fixture or peripheral not ready.</li>
+<li>Robot not reaching the expected position.</li>
+<li>Tool or process fault.</li>
+<li>Robot safety-system event.</li>
+<li>PLC restart during an active robot cycle.</li>
+</ul>
+<h3 id="141-fault-handling-requirements">14.1 Fault-handling requirements</h3>
+<p>For each fault, define:</p>
+<ul>
+<li>Detection condition.</li>
+<li>Fault priority and message.</li>
+<li>Required machine response.</li>
+<li>Whether the robot must stop, finish a controlled sequence, or enter another defined state.</li>
+<li>Whether the PLC must inhibit downstream equipment.</li>
+<li>Reset conditions.</li>
+<li>Recovery sequence.</li>
+<li>Whether operator intervention is required.</li>
+<li>How the cycle is reconciled after recovery.</li>
+</ul>
+<p>The correct response depends on the specific process and risk assessment. Do not assume every fault requires the same immediate stop, and do not allow an ordinary communication fault to compromise a required safety function.</p>
+<h3 id="142-timeouts">14.2 Timeouts</h3>
+<p>A timeout detects that an expected state has not occurred within the allowed interval.</p>
+<p>Examples include:</p>
+<ul>
+<li>Robot did not acknowledge a start request.</li>
+<li>Robot did not report busy within the expected interval.</li>
+<li>Robot did not complete the cycle.</li>
+<li>Robot did not reach the expected station or process state.</li>
+</ul>
+<p>A timeout should generate a meaningful diagnostic. It should not automatically trigger repeated start commands or blind retries that could create duplicate operations.</p>
+<p>Timeout values should be based on the approved sequence timing, measured performance, and expected process variation.</p>
+<h2 id="15-communication-loss-and-recovery-testing">15. Communication Loss and Recovery Testing</h2>
+<p>Communication loss may occur because of cable failure, switch power loss, incorrect network configuration, controller restart, or a communication-module fault.</p>
+<p>Commissioning should verify:</p>
+<ul>
+<li>How the PLC detects loss of robot data.</li>
+<li>How the robot responds to loss of PLC commands, where applicable.</li>
+<li>Whether process data is marked invalid or stale.</li>
+<li>Whether the cell enters the specified state.</li>
+<li>Whether pending commands are cleared, retained, or rejected.</li>
+<li>Whether the HMI displays the communication fault.</li>
+<li>How reconnection is detected.</li>
+<li>Whether the robot requires explicit operator recovery.</li>
+<li>Whether any unintended program start can occur after reconnection.</li>
+</ul>
+<h3 id="151-controlled-test-procedure">15.1 Controlled test procedure</h3>
+<ol>
+<li>Obtain authorization and establish the approved safe test state.</li>
+<li>Record the PLC, robot, and cell states.</li>
+<li>Interrupt the intended communication path using the approved test method.</li>
+<li>Verify the specified fault detection and machine response.</li>
+<li>Confirm that the sequence does not advance on invalid or stale status.</li>
+<li>Restore communication.</li>
+<li>Verify the data exchange and state reconciliation.</li>
+<li>Confirm that no unintended start or duplicate operation occurs.</li>
+<li>Record the results and correct any defects.</li>
+</ol>
+<p>Do not deliberately disconnect a production robot network without the required risk controls and authorization.</p>
+<h2 id="16-robot-position-and-process-feedback">16. Robot Position and Process Feedback</h2>
+<p>Some PLC-Robot interfaces exchange only discrete status signals. More advanced systems may exchange position, speed, tool, process, or diagnostic data.</p>
+<p>If position values are exchanged, verify:</p>
+<ul>
+<li>Coordinate system and reference frame.</li>
+<li>Units, such as millimetres or degrees.</li>
+<li>Sign convention and axis order.</li>
+<li>Numeric data type and scaling.</li>
+<li>Position validity and update timing.</li>
+<li>Whether the value represents commanded or actual position.</li>
+<li>Whether the value is robot-base, tool, work-object, or another coordinate frame.</li>
+</ul>
+<p>A value called <code>Robot_X_Position</code> is not meaningful without knowing its reference frame and units.</p>
+<p>For process feedback, such as welding status or dispensing completion, verify the exact definition of success. A robot reaching the end of its motion program does not necessarily prove that the process itself met quality requirements.</p>
+<h2 id="17-performance-and-cycle-time-verification">17. Performance and Cycle-Time Verification</h2>
+<p>PLC-Robot commissioning must confirm that the handshake supports the required cell cycle time without compromising safe sequencing.</p>
+<p>Relevant timing measurements include:</p>
+<ul>
+<li>PLC start request to robot acknowledgement.</li>
+<li>Robot acknowledgement to motion start.</li>
+<li>Robot motion duration.</li>
+<li>Robot completion to PLC sequence continuation.</li>
+<li>Peripheral response time.</li>
+<li>Fixture clamping and release time.</li>
+<li>Communication fault detection time.</li>
+<li>Recovery time after the specified fault.</li>
+</ul>
+<p>Measure these intervals under representative operating conditions.</p>
+<p>Do not reduce timeouts simply to improve a cycle-time number. A timeout that is too short can create nuisance faults; one that is too long can delay fault detection. The correct setting must reflect the actual machine requirements.</p>
+<h2 id="18-plc-robot-commissioning-procedure">18. PLC-Robot Commissioning Procedure</h2>
+<h3 id="stage-1-documentation-and-preparation">Stage 1: Documentation and preparation</h3>
+<ul>
+<li>Obtain the approved PLC and robot-controller projects.</li>
+<li>Review the cell sequence and functional specification.</li>
+<li>Obtain the PLC-Robot signal list.</li>
+<li>Confirm the robot model, controller, firmware, and communication options.</li>
+<li>Confirm protocol compatibility.</li>
+<li>Review the robot program-selection and start sequence.</li>
+<li>Review fixture and peripheral dependencies.</li>
+<li>Review the safety design and test authorization.</li>
+<li>Back up the existing PLC and robot configuration.</li>
+</ul>
+<h3 id="stage-2-physical-and-network-checks">Stage 2: Physical and network checks</h3>
+<ul>
+<li>Inspect communication cables and connectors.</li>
+<li>Confirm switch and controller link status.</li>
+<li>Verify IP addresses, device names, and network configuration.</li>
+<li>Confirm that the correct PLC and robot are connected.</li>
+<li>Verify device descriptions and hardware configuration.</li>
+<li>Confirm cyclic input/output sizes and mappings.</li>
+<li>Check for network or configuration diagnostics.</li>
+</ul>
+<h3 id="stage-3-signal-verification">Stage 3: Signal verification</h3>
+<ul>
+<li>Verify PLC-to-robot command signals.</li>
+<li>Verify robot-to-PLC status signals.</li>
+<li>Check bit order and data types.</li>
+<li>Confirm program-selection values.</li>
+<li>Test ready, busy, complete, and fault indications.</li>
+<li>Verify signal ownership and reset rules.</li>
+<li>Check that unexpected signal combinations are diagnosed.</li>
+</ul>
+<h3 id="stage-4-handshake-testing">Stage 4: Handshake testing</h3>
+<ul>
+<li>Verify the idle state.</li>
+<li>Verify program selection.</li>
+<li>Verify the start request.</li>
+<li>Verify robot acknowledgement or busy feedback.</li>
+<li>Verify completion feedback.</li>
+<li>Verify request clearing and acknowledgement reset.</li>
+<li>Test multiple consecutive cycles.</li>
+<li>Test rejected requests and missing permissives.</li>
+<li>Verify timeout and fault behavior.</li>
+</ul>
+<h3 id="stage-5-cell-functional-testing">Stage 5: Cell functional testing</h3>
+<ul>
+<li>Verify fixture and peripheral coordination.</li>
+<li>Confirm required feedback before permitting robot motion.</li>
+<li>Test the intended robot program under controlled conditions.</li>
+<li>Verify process and position feedback where applicable.</li>
+<li>Confirm the PLC sequence continues only after the specified completion conditions.</li>
+<li>Measure relevant cycle-time intervals.</li>
+<li>Verify HMI status and alarm presentation.</li>
+</ul>
+<h3 id="stage-6-fault-and-recovery-testing">Stage 6: Fault and recovery testing</h3>
+<ul>
+<li>Test approved robot faults and diagnostic conditions.</li>
+<li>Test communication loss and recovery.</li>
+<li>Verify behavior after PLC or robot restart where required.</li>
+<li>Confirm no unintended program restart.</li>
+<li>Confirm pending commands are handled correctly.</li>
+<li>Verify restart prevention after faults and safety events.</li>
+<li>Record defects and retest corrected functions.</li>
+</ul>
+<h3 id="stage-7-handover">Stage 7: Handover</h3>
+<ul>
+<li>Save final PLC and robot-controller backups.</li>
+<li>Record firmware, program versions, and network settings.</li>
+<li>Update the signal list and network diagram.</li>
+<li>Complete FAT/SAT and commissioning records.</li>
+<li>Document outstanding issues and approved deviations.</li>
+<li>Obtain the required sign-offs.</li>
+</ul>
+<h2 id="19-troubleshooting-guide">19. Troubleshooting Guide</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Likely causes</th>
+<th>Diagnostic action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Robot not detected by PLC</td>
+<td>Network, addressing, device configuration, or communication option issue</td>
+<td>Check link, address, device identity, and controller diagnostics</td>
+</tr>
+<tr>
+<td>Communication healthy but robot will not start</td>
+<td>Wrong mode, invalid program, missing permissive, or start sequence issue</td>
+<td>Check robot state, program selection, and start conditions</td>
+</tr>
+<tr>
+<td>Start request remains active</td>
+<td>Handshake reset defect or missing acknowledgement</td>
+<td>Trace request and acknowledgement transitions</td>
+</tr>
+<tr>
+<td>Robot starts only once</td>
+<td>Request edge not recreated or handshake not reset</td>
+<td>Check the defined request and reset sequence</td>
+</tr>
+<tr>
+<td>PLC waits indefinitely</td>
+<td>Missing completion signal, timeout defect, or incorrect signal mapping</td>
+<td>Monitor busy, complete, fault, and timeout logic</td>
+</tr>
+<tr>
+<td>Robot reports complete but PLC does not advance</td>
+<td>Completion tag incorrect or PLC sequence condition false</td>
+<td>Compare actual robot status with PLC logic</td>
+</tr>
+<tr>
+<td>Wrong program executes</td>
+<td>Incorrect selection mapping or program-number encoding</td>
+<td>Verify selection data and active program identity</td>
+</tr>
+<tr>
+<td>Robot moves before fixture is ready</td>
+<td>Missing or incorrect permissive</td>
+<td>Check clamp command and confirmed feedback logic</td>
+</tr>
+<tr>
+<td>Robot fault not visible on HMI</td>
+<td>Incorrect mapping, alarm configuration, or stale data</td>
+<td>Check robot diagnostic source and HMI tag</td>
+</tr>
+<tr>
+<td>Intermittent communication faults</td>
+<td>Cable, switch, network configuration, or controller issue</td>
+<td>Inspect physical connections and network diagnostics</td>
+</tr>
+<tr>
+<td>Duplicate cycle after reconnection</td>
+<td>Pending request retained or restart logic incorrect</td>
+<td>Check request clearing and recovery-state handling</td>
+</tr>
+<tr>
+<td>Robot position displayed incorrectly</td>
+<td>Wrong coordinate frame, units, scaling, or data type</td>
+<td>Compare robot diagnostic values with PLC interpretation</td>
+</tr>
+<tr>
+<td>Cycle time is inconsistent</td>
+<td>Peripheral delays, network load, robot program variation, or handshake timing</td>
+<td>Measure each sequence interval separately</td>
+</tr>
+</tbody>
+</table>
+<h3 id="191-diagnostic-order">19.1 Diagnostic order</h3>
+<pre><code>1. Physical connections and network status
+      ↓
+2. Protocol and device configuration
+      ↓
+3. Signal mapping and data validity
+      ↓
+4. Robot mode and program selection
+      ↓
+5. Handshake and sequence logic
+      ↓
+6. Fixture, peripheral, and process conditions
+      ↓
+7. Fault recovery and cycle performance
+</code></pre>
+<p>Record the exact signal states and fault codes before making changes. A timestamped trace of the request, acknowledgement, busy, complete, and fault signals is often far more useful than watching the HMI and guessing.</p>
+<h2 id="20-fat-and-sat-for-plc-robot-communication">20. FAT and SAT for PLC-Robot Communication</h2>
+<p>Factory Acceptance Testing (FAT) verifies the integrated control design before shipment. Site Acceptance Testing (SAT) verifies the installed system and its actual equipment interactions.</p>
+<table>
+<thead>
+<tr>
+<th>Test item</th>
+<th>FAT focus</th>
+<th>SAT focus</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Communication</td>
+<td>Device configuration and data exchange</td>
+<td>Installed network and controller communication</td>
+</tr>
+<tr>
+<td>Signal mapping</td>
+<td>Simulated or bench-tested signals</td>
+<td>Actual cell signals</td>
+</tr>
+<tr>
+<td>Program selection</td>
+<td>Correct program-selection logic</td>
+<td>Correct installed robot program</td>
+</tr>
+<tr>
+<td>Handshake</td>
+<td>Request, acknowledgement, busy, complete</td>
+<td>Real sequence execution</td>
+</tr>
+<tr>
+<td>Peripheral coordination</td>
+<td>Simulated device states</td>
+<td>Actual fixtures, tools, and conveyors</td>
+</tr>
+<tr>
+<td>Fault handling</td>
+<td>Simulated or approved fault conditions</td>
+<td>Installed fault and recovery behavior</td>
+</tr>
+<tr>
+<td>Communication loss</td>
+<td>Controlled simulation</td>
+<td>Approved site-specific test</td>
+</tr>
+<tr>
+<td>Cycle time</td>
+<td>Expected sequence timing</td>
+<td>Measured production-representative timing</td>
+</tr>
+<tr>
+<td>Safety functions</td>
+<td>Design verification and planned testing</td>
+<td>Site validation under the approved safety plan</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Approved configuration and test records</td>
+<td>As-built records and final acceptance</td>
+</tr>
+</tbody>
+</table>
+<p>FAT may not prove the behavior of the final mechanical fixture or installed safety devices. SAT must verify those site-dependent elements.</p>
+<h2 id="21-acceptance-criteria">21. Acceptance Criteria</h2>
+<p>Acceptance criteria must be defined in the approved project specification. Typical criteria include:</p>
+<ul>
+<li>PLC and robot exchange the required data reliably.</li>
+<li>All critical commands and status signals are correctly mapped.</li>
+<li>Program selection identifies the intended robot program.</li>
+<li>Start, busy, completion, and reset handshakes follow the specified sequence.</li>
+<li>Invalid requests are rejected or diagnosed as designed.</li>
+<li>Fixture and peripheral permissives are correctly enforced.</li>
+<li>Faults are reported and handled according to the functional specification.</li>
+<li>Communication loss is detected and handled within specified limits.</li>
+<li>Recovery does not cause unintended movement or duplicate cycles.</li>
+<li>Cycle timing meets the approved requirement.</li>
+<li>Safety functions pass their separate validation.</li>
+<li>Final backups, test evidence, and handover records are complete.</li>
+</ul>
+<p>Do not assume a universal handshake timeout or cycle-time limit. Values depend on the robot program, process, communication architecture, and project requirements.</p>
+<h2 id="22-practical-example-robot-loading-a-cnc-machine">22. Practical Example: Robot Loading a CNC Machine</h2>
+<p>Consider a robot that loads a workpiece into a CNC machine. The PLC coordinates the robot, CNC, fixture, and cell sequence.</p>
+<h3 id="221-example-sequence">22.1 Example sequence</h3>
+<pre><code>PLC confirms CNC is ready for loading
+        ↓
+PLC confirms CNC door and fixture conditions
+        ↓
+PLC selects the robot loading program
+        ↓
+PLC requests robot cycle start
+        ↓
+Robot reports execution in progress
+        ↓
+Robot loads the workpiece and confirms placement
+        ↓
+PLC verifies required loading and fixture conditions
+        ↓
+CNC receives permission to begin its cycle
+        ↓
+CNC reports machining complete
+        ↓
+PLC coordinates robot unloading
+</code></pre>
+<p>The actual order depends on the CNC and robot interface design. For example, the CNC may own its door sequence, or the robot may control an external door actuator through the PLC.</p>
+<h3 id="222-important-commissioning-tests">22.2 Important commissioning tests</h3>
+<ol>
+<li>Verify the CNC-ready signal.</li>
+<li>Confirm the correct robot program is selected.</li>
+<li>Verify the robot start handshake.</li>
+<li>Confirm the robot cannot load when required CNC or fixture conditions are absent.</li>
+<li>Verify workpiece placement and the required confirmation signals.</li>
+<li>Confirm the CNC cannot start until all required loading conditions are satisfied.</li>
+<li>Verify that a robot fault blocks the appropriate next sequence step.</li>
+<li>Test recovery from an interrupted loading cycle.</li>
+<li>Confirm that the system does not assume a part is loaded solely because the robot program ended.</li>
+</ol>
+<p>This example demonstrates why a PLC-Robot interface must coordinate the complete cell state, not just transfer a start bit.</p>
+<h2 id="23-common-commissioning-mistakes">23. Common Commissioning Mistakes</h2>
+<ul>
+<li>Assuming network connectivity proves the handshake is correct.</li>
+<li>Using an undocumented or incorrect signal list.</li>
+<li>Confusing <code>Robot_Ready</code>, <code>Robot_Busy</code>, and <code>Cycle_Complete</code>.</li>
+<li>Ignoring the robot's operating mode and program-selection state.</li>
+<li>Failing to reset request and acknowledgement signals correctly.</li>
+<li>Treating a dropped busy signal as proof of successful completion.</li>
+<li>Allowing the PLC to advance without confirmed fixture or peripheral feedback.</li>
+<li>Ignoring stale data after communication loss.</li>
+<li>Allowing pending start requests to trigger after reconnection.</li>
+<li>Using normal control signals as substitutes for safety functions.</li>
+<li>Failing to test multiple consecutive cycles.</li>
+<li>Making online changes without saving backups or recording revisions.</li>
+</ul>
+<h2 id="24-interview-questions-and-answers">24. Interview Questions and Answers</h2>
+<p>Q1. What is PLC-Robot communication commissioning?</p>
+<p>It is the verification of communication, signal mapping, program selection, handshake behavior, fault handling, and cell coordination between a PLC and robot controller.</p>
+<p>Q2. What is a PLC-Robot handshake?</p>
+<p>It is an agreed sequence of request, acknowledgement, execution status, completion, and reset signals used to coordinate the two controllers.</p>
+<p>Q3. What is the difference between robot ready, busy, and complete?</p>
+<p>Ready indicates that specified conditions for an operation are satisfied. Busy indicates execution is in progress. Complete indicates that the defined operation has completed. Their exact meanings must follow the interface specification.</p>
+<p>Q4. Why might a robot not start even when communication is healthy?</p>
+<p>The robot may be in the wrong mode, the selected program may be invalid, required permissives may be absent, or the start request may not follow the required sequence.</p>
+<p>Q5. Why should the PLC verify fixture feedback before permitting robot motion?</p>
+<p>A command to close a fixture does not prove it physically closed. The required feedback confirms the specified process condition before the next operation is permitted.</p>
+<p>Q6. Why must handshake reset behavior be tested?</p>
+<p>Incorrect reset behavior can prevent subsequent cycles, cause repeated starts, or leave the PLC and robot in inconsistent states.</p>
+<p>Q7. Why is robot communication not automatically a safety function?</p>
+<p>Ordinary control communication is not necessarily safety-rated and must not replace the validated safety architecture required for hazardous motion.</p>
+<p>Q8. What is the difference between FAT and SAT?</p>
+<p>FAT verifies the integrated design before shipment. SAT verifies the installed system, real equipment interactions, and site-dependent behavior.</p>
+<p>Q9. How should a PLC-Robot communication fault be diagnosed?</p>
+<p>Check the physical network, protocol configuration, data mapping, robot state, program selection, handshake transitions, and relevant fixture or process conditions in that order.</p>
+<p>Q10. What proves successful PLC-Robot commissioning?</p>
+<p>Correct data exchange, verified handshake behavior, correct program execution, tested fault and recovery behavior, validated safety functions, and completed commissioning records.</p>
+<h2 id="25-final-plc-robot-commissioning-checklist">25. Final PLC-Robot Commissioning Checklist</h2>
+<ul>
+<li>Approved PLC and robot projects identified and backed up.</li>
+<li>Robot model, firmware, and communication options confirmed.</li>
+<li>Physical network and addressing verified.</li>
+<li>Protocol and device configuration verified.</li>
+<li>PLC-to-robot and robot-to-PLC signals checked.</li>
+<li>Program selection and encoding verified.</li>
+<li>Ready, busy, start, complete, and fault behavior tested.</li>
+<li>Request and acknowledgement reset rules verified.</li>
+<li>Fixture and peripheral permissives tested.</li>
+<li>Robot mode and restart conditions verified.</li>
+<li>Communication loss and recovery tested.</li>
+<li>Cycle timing and diagnostics verified.</li>
+<li>Safety functions separately validated as required.</li>
+<li>FAT/SAT results and final configuration records completed.</li>
+</ul>
+<p>The final objective is a predictable, diagnosable robot cell in which the PLC and robot agree on every important transition. Correct communication is the foundation; correct sequence behavior, process feedback, fault recovery, and validated safety are what make the cell production-ready.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\13_Commissioning\04_Stage4_Communication\04_PLC_CNC - PLC-CNC</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

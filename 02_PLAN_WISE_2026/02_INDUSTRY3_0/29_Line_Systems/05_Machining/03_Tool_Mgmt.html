@@ -1,0 +1,1559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tool Management in CNC Machining</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Tool Management in CNC Machining</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and scope</a></li>
+<li><a href="#2-fundamentals-of-cutting-tools">2. Fundamentals of cutting tools</a><ul>
+<li><a href="#21-what-is-a-cutting-tool">2.1 What is a cutting tool?</a></li>
+<li><a href="#22-common-cutting-tool-types">2.2 Common cutting-tool types</a></li>
+</ul>
+</li>
+<li><a href="#3-tool-assembly-and-identification">3. Tool assembly and identification</a><ul>
+<li><a href="#31-tool-identification-levels">3.1 Tool identification levels</a></li>
+<li><a href="#32-tool-identification-example">3.2 Tool identification example</a></li>
+</ul>
+</li>
+<li><a href="#4-tool-materials-and-cutting-edge-technology">4. Tool materials and cutting-edge technology</a><ul>
+<li><a href="#41-cutting-edge-geometry">4.1 Cutting-edge geometry</a></li>
+</ul>
+</li>
+<li><a href="#5-tool-holders-and-interfaces">5. Tool holders and interfaces</a><ul>
+<li><a href="#51-important-holder-characteristics">5.1 Important holder characteristics</a></li>
+<li><a href="#52-tool-runout">5.2 Tool runout</a></li>
+</ul>
+</li>
+<li><a href="#6-cnc-tool-numbering-offsets-and-tool-data">6. CNC tool numbering, offsets, and tool data</a><ul>
+<li><a href="#61-common-tool-data">6.1 Common tool data</a></li>
+<li><a href="#62-geometry-offset-versus-wear-offset">6.2 Geometry offset versus wear offset</a></li>
+<li><a href="#63-tool-offset-verification">6.3 Tool offset verification</a></li>
+</ul>
+</li>
+<li><a href="#7-tool-presetting-and-measurement">7. Tool presetting and measurement</a><ul>
+<li><a href="#71-common-measurements">7.1 Common measurements</a></li>
+<li><a href="#72-benefits-of-offline-presetting">7.2 Benefits of offline presetting</a></li>
+<li><a href="#73-presetting-workflow">7.3 Presetting workflow</a></li>
+</ul>
+</li>
+<li><a href="#8-tool-magazines-turrets-and-automatic-tool-changers">8. Tool magazines, turrets, and automatic tool changers</a><ul>
+<li><a href="#81-turret-systems">8.1 Turret systems</a></li>
+<li><a href="#82-automatic-tool-changer">8.2 Automatic tool changer</a></li>
+<li><a href="#83-common-atc-faults">8.3 Common ATC faults</a></li>
+</ul>
+</li>
+<li><a href="#9-tool-life-management">9. Tool-life management</a><ul>
+<li><a href="#91-tool-life-measurement-methods">9.1 Tool-life measurement methods</a></li>
+<li><a href="#92-tool-life-policy">9.2 Tool-life policy</a></li>
+<li><a href="#93-example-tool-life-calculation">9.3 Example tool-life calculation</a></li>
+</ul>
+</li>
+<li><a href="#10-tool-wear-and-failure-mechanisms">10. Tool wear and failure mechanisms</a><ul>
+<li><a href="#101-common-wear-mechanisms">10.1 Common wear mechanisms</a></li>
+<li><a href="#102-tool-failure-symptoms">10.2 Tool failure symptoms</a></li>
+</ul>
+</li>
+<li><a href="#11-cutting-parameters-and-tool-life">11. Cutting parameters and tool life</a><ul>
+<li><a href="#111-effect-of-parameter-changes">11.1 Effect of parameter changes</a></li>
+</ul>
+</li>
+<li><a href="#12-tool-inventory-and-spare-management">12. Tool inventory and spare management</a><ul>
+<li><a href="#121-inventory-categories">12.1 Inventory categories</a></li>
+<li><a href="#122-inventory-data">12.2 Inventory data</a></li>
+<li><a href="#123-critical-tooling">12.3 Critical tooling</a></li>
+</ul>
+</li>
+<li><a href="#13-tool-crib-and-tool-issuereturn-control">13. Tool crib and tool issue/return control</a></li>
+<li><a href="#14-tool-management-and-cnc-program-integration">14. Tool management and CNC program integration</a><ul>
+<li><a href="#141-important-consistency-checks">14.1 Important consistency checks</a></li>
+<li><a href="#142-tool-life-monitoring-in-cnc">14.2 Tool-life monitoring in CNC</a></li>
+</ul>
+</li>
+<li><a href="#15-tool-breakage-detection-and-tool-condition-monitoring">15. Tool breakage detection and tool condition monitoring</a><ul>
+<li><a href="#151-detection-considerations">15.1 Detection considerations</a></li>
+</ul>
+</li>
+<li><a href="#16-tool-change-setup-and-first-piece-validation">16. Tool change, setup, and first-piece validation</a><ul>
+<li><a href="#161-controlled-replacement-procedure">16.1 Controlled replacement procedure</a></li>
+<li><a href="#162-first-piece-inspection">16.2 First-piece inspection</a></li>
+</ul>
+</li>
+<li><a href="#17-tool-management-system-architecture">17. Tool management system architecture</a><ul>
+<li><a href="#171-useful-interfaces">17.1 Useful interfaces</a></li>
+</ul>
+</li>
+<li><a href="#18-tool-management-data-model">18. Tool management data model</a></li>
+<li><a href="#19-tool-management-kpis">19. Tool management KPIs</a></li>
+<li><a href="#20-common-tool-management-failures-and-rcacapa">20. Common tool management failures and RCA/CAPA</a></li>
+<li><a href="#21-troubleshooting-procedure-for-tool-related-defects">21. Troubleshooting procedure for tool-related defects</a></li>
+<li><a href="#22-preventive-maintenance-for-tool-management-systems">22. Preventive maintenance for tool-management systems</a></li>
+<li><a href="#23-tool-management-cybersecurity-and-change-control">23. Tool management cybersecurity and change control</a></li>
+<li><a href="#24-practical-exercises">24. Practical exercises</a></li>
+<li><a href="#25-competency-checklist">25. Competency checklist</a></li>
+<li><a href="#26-final-technical-summary">26. Final technical summary</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-and-scope">1. Purpose and scope</h2>
+<p>Tool management is the systematic control of cutting tools, tool holders, inserts, tool assemblies, tool data, tool life, tool availability, and tool condition throughout the machining process.</p>
+<p>In CNC machining lines, tool management directly affects dimensional accuracy, surface finish, cycle time, machine availability, scrap rate, and production cost. An incorrect tool, wrong offset, damaged insert, or untracked tool-life condition can produce defective parts even when the CNC machine and program are operating normally.</p>
+<p>For an industrial maintenance and automation engineer, tool management involves understanding the complete relationship between the physical tool, CNC tool-table data, tool magazine, tool changer, tool-life monitoring, presetting equipment, machining parameters, and production-quality results.</p>
+<p>The objective is to ensure that the correct tool, with the correct configuration and valid condition, is available at the correct machine and used with the correct data.</p>
+<h2 id="2-fundamentals-of-cutting-tools">2. Fundamentals of cutting tools</h2>
+<h3 id="21-what-is-a-cutting-tool">2.1 What is a cutting tool?</h3>
+<p>A cutting tool removes material from a workpiece through controlled relative movement between the tool and the material.</p>
+<p>In CNC machining, common cutting operations include turning, milling, drilling, boring, reaming, tapping, threading, grooving, and finishing.</p>
+<p>The cutting tool must withstand mechanical loading, heat, friction, wear, and sometimes interrupted cutting. Its suitability depends on the workpiece material, operation, cutting conditions, machine rigidity, coolant strategy, and required quality.</p>
+<h3 id="22-common-cutting-tool-types">2.2 Common cutting-tool types</h3>
+<table>
+<thead>
+<tr>
+<th>Tool type</th>
+<th>Typical application</th>
+<th>Common failure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Turning insert</td>
+<td>External or internal turning</td>
+<td>Flank wear, crater wear, chipping</td>
+</tr>
+<tr>
+<td>Face mill</td>
+<td>Machining flat surfaces</td>
+<td>Insert damage, uneven wear</td>
+</tr>
+<tr>
+<td>End mill</td>
+<td>Slots, pockets, profiles</td>
+<td>Edge breakage, deflection</td>
+</tr>
+<tr>
+<td>Drill</td>
+<td>Producing holes</td>
+<td>Wear, breakage, poor hole quality</td>
+</tr>
+<tr>
+<td>Boring tool</td>
+<td>Enlarging or correcting holes</td>
+<td>Chatter, dimensional drift</td>
+</tr>
+<tr>
+<td>Reamer</td>
+<td>Finishing holes accurately</td>
+<td>Oversize holes, surface damage</td>
+</tr>
+<tr>
+<td>Tap</td>
+<td>Producing internal threads</td>
+<td>Broken tap, thread defects</td>
+</tr>
+<tr>
+<td>Thread mill</td>
+<td>Producing internal or external threads</td>
+<td>Wear, incorrect thread profile</td>
+</tr>
+<tr>
+<td>Grooving tool</td>
+<td>Producing grooves and undercuts</td>
+<td>Edge chipping, dimensional error</td>
+</tr>
+<tr>
+<td>Broach</td>
+<td>Producing specific profiles where applicable</td>
+<td>Tooth wear, breakage</td>
+</tr>
+</tbody>
+</table>
+<p>Tool selection must be based on the approved machining process, not merely on whether the tool can physically fit into the spindle or turret.</p>
+<h2 id="3-tool-assembly-and-identification">3. Tool assembly and identification</h2>
+<p>A complete CNC cutting-tool assembly may contain several components.</p>
+<pre><code>Machine Spindle or Turret
+          ↓
+Tool Holder / Interface
+          ↓
+Cutting Tool Body
+          ↓
+Insert, Drill, or Cutting Edge
+          ↓
+Workpiece
+</code></pre>
+<p>For a modular tool, additional adapters, extension holders, collets, shrink-fit holders, or other interfaces may be present.</p>
+<h3 id="31-tool-identification-levels">3.1 Tool identification levels</h3>
+<p>Tool management should distinguish between:</p>
+<ul>
+<li>Tool type: Drill, end mill, boring bar, turning tool.</li>
+<li>Tool model: Manufacturer's specific product designation.</li>
+<li>Tool assembly: The complete holder and cutting-tool combination.</li>
+<li>Tool station or pocket: The physical location in the machine magazine or turret.</li>
+<li>CNC tool number: The identifier used by the CNC program and tool table.</li>
+<li>Cutting-edge or insert identity: The specific insert grade, geometry, or edge being used.</li>
+<li>Tool-life unit: The usage counter associated with the applicable tool or cutting edge.</li>
+</ul>
+<p>These identifiers are not interchangeable. A CNC tool number does not necessarily identify the physical magazine pocket, and a pocket number does not necessarily identify the tool's engineering specification.</p>
+<h3 id="32-tool-identification-example">3.2 Tool identification example</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Example</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tool ID</td>
+<td><code>T104</code></td>
+<td>Logical CNC tool identifier</td>
+</tr>
+<tr>
+<td>Tool description</td>
+<td>Carbide end mill</td>
+<td>General tool function</td>
+</tr>
+<tr>
+<td>Tool assembly ID</td>
+<td><code>ASM-MILL-042</code></td>
+<td>Complete assembly identity</td>
+</tr>
+<tr>
+<td>Magazine pocket</td>
+<td><code>P12</code></td>
+<td>Physical magazine location</td>
+</tr>
+<tr>
+<td>Part operation</td>
+<td>OP30 side milling</td>
+<td>Intended process operation</td>
+</tr>
+<tr>
+<td>Tool holder</td>
+<td>HSK-A63 holder</td>
+<td>Holder interface</td>
+</tr>
+<tr>
+<td>Tool diameter</td>
+<td>16 mm</td>
+<td>Cutting geometry</td>
+</tr>
+<tr>
+<td>Tool material</td>
+<td>Carbide</td>
+<td>Cutting-tool substrate</td>
+</tr>
+<tr>
+<td>Tool grade</td>
+<td>Approved grade code</td>
+<td>Material and coating specification</td>
+</tr>
+<tr>
+<td>Life limit</td>
+<td>800 parts</td>
+<td>Example process-defined limit</td>
+</tr>
+<tr>
+<td>Offset record</td>
+<td>Geometry and wear offsets</td>
+<td>CNC compensation data</td>
+</tr>
+</tbody>
+</table>
+<p>The example values are illustrative. Actual identifiers and limits must come from approved machine and process documentation.</p>
+<h2 id="4-tool-materials-and-cutting-edge-technology">4. Tool materials and cutting-edge technology</h2>
+<p>Tool material influences hardness, wear resistance, toughness, heat resistance, and suitable cutting conditions.</p>
+<table>
+<thead>
+<tr>
+<th>Tool material</th>
+<th>Typical characteristics</th>
+<th>Common applications</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>High-speed steel (HSS)</td>
+<td>Tough, relatively easy to sharpen</td>
+<td>Selected drills, taps, and lower-speed operations</td>
+</tr>
+<tr>
+<td>Cemented carbide</td>
+<td>High hardness and wear resistance</td>
+<td>General CNC turning, milling, and drilling</td>
+</tr>
+<tr>
+<td>Coated carbide</td>
+<td>Improved wear or thermal performance depending on coating</td>
+<td>High-volume production and demanding cutting conditions</td>
+</tr>
+<tr>
+<td>Ceramic</td>
+<td>High hot-hardness; application-dependent toughness</td>
+<td>Selected high-speed and hard-material machining</td>
+</tr>
+<tr>
+<td>Cubic boron nitride (CBN)</td>
+<td>Suitable for certain hard ferrous materials</td>
+<td>Hardened-steel finishing and related operations</td>
+</tr>
+<tr>
+<td>Polycrystalline diamond (PCD)</td>
+<td>High wear resistance for suitable non-ferrous and abrasive materials</td>
+<td>Aluminium and selected non-ferrous machining</td>
+</tr>
+</tbody>
+</table>
+<p>The appropriate material depends on the workpiece, cutting operation, interrupted-cut conditions, rigidity, and manufacturer's recommendations.</p>
+<h3 id="41-cutting-edge-geometry">4.1 Cutting-edge geometry</h3>
+<p>Important parameters include:</p>
+<ul>
+<li>Rake angle.</li>
+<li>Clearance angle.</li>
+<li>Nose radius.</li>
+<li>Cutting-edge preparation.</li>
+<li>Insert shape.</li>
+<li>Insert thickness.</li>
+<li>Chip-breaker geometry.</li>
+<li>Cutting-edge orientation.</li>
+<li>Helix angle for applicable tools.</li>
+<li>Coating type and substrate.</li>
+</ul>
+<p>A change in insert geometry can affect cutting forces, chip formation, surface finish, and tool life. Substitutions should be technically evaluated and approved rather than treated as automatically equivalent.</p>
+<h2 id="5-tool-holders-and-interfaces">5. Tool holders and interfaces</h2>
+<p>The tool holder connects the cutting tool to the spindle, turret, or other machine interface.</p>
+<p>Common systems include:</p>
+<ul>
+<li>CAT or BT taper holders.</li>
+<li>HSK interfaces.</li>
+<li>Collet holders.</li>
+<li>Hydraulic expansion holders.</li>
+<li>Shrink-fit holders.</li>
+<li>Modular boring systems.</li>
+<li>Turning-tool holders.</li>
+<li>Machine-specific turret interfaces.</li>
+</ul>
+<h3 id="51-important-holder-characteristics">5.1 Important holder characteristics</h3>
+<ul>
+<li>Interface compatibility.</li>
+<li>Clamping force and retention.</li>
+<li>Runout.</li>
+<li>Balance rating.</li>
+<li>Tool projection.</li>
+<li>Rigidity.</li>
+<li>Coolant-through capability.</li>
+<li>Permitted rotational speed.</li>
+<li>Tool assembly length.</li>
+<li>Condition of contact surfaces.</li>
+</ul>
+<p>Incorrect holder selection or damaged contact surfaces can cause runout, vibration, poor finish, tool breakage, or spindle-interface damage.</p>
+<h3 id="52-tool-runout">5.2 Tool runout</h3>
+<p>Runout is the variation in the radial or axial position of a rotating tool or assembly relative to its intended axis.</p>
+<p>Excessive runout can cause uneven cutting-edge loading, poor surface finish, dimensional variation, and premature tool failure.</p>
+<p>Runout must be measured using a suitable instrument and the method specified for the assembly. Measurement location matters: runout measured near the holder may not represent the actual cutting-edge runout at the tool tip.</p>
+<h2 id="6-cnc-tool-numbering-offsets-and-tool-data">6. CNC tool numbering, offsets, and tool data</h2>
+<p>The CNC controller uses tool-related data to identify tools, select tools, compensate for geometry, and manage cutting operations.</p>
+<h3 id="61-common-tool-data">6.1 Common tool data</h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Meaning</th>
+<th>Incorrect-data consequence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tool number</td>
+<td>Logical program identifier</td>
+<td>Wrong tool selection</td>
+</tr>
+<tr>
+<td>Magazine pocket</td>
+<td>Physical storage location</td>
+<td>Incorrect tool-change operation</td>
+</tr>
+<tr>
+<td>Tool geometry offset</td>
+<td>Compensation for measured tool geometry</td>
+<td>Dimensional error</td>
+</tr>
+<tr>
+<td>Wear offset</td>
+<td>Small correction for wear or process drift</td>
+<td>Incorrect compensation</td>
+</tr>
+<tr>
+<td>Tool length offset</td>
+<td>Axial tool-length compensation where applicable</td>
+<td>Depth or collision error</td>
+</tr>
+<tr>
+<td>Cutter radius compensation</td>
+<td>Compensation for cutter radius in supported modes</td>
+<td>Profile error</td>
+</tr>
+<tr>
+<td>Tool diameter</td>
+<td>Nominal or measured tool diameter as defined</td>
+<td>Incorrect path or hole size</td>
+</tr>
+<tr>
+<td>Nose radius</td>
+<td>Turning-tool geometry parameter</td>
+<td>Profile or compensation error</td>
+</tr>
+<tr>
+<td>Tool orientation</td>
+<td>Direction or orientation data for supported operations</td>
+<td>Incorrect cutting geometry</td>
+</tr>
+<tr>
+<td>Tool-life counter</td>
+<td>Usage accumulated under a defined method</td>
+<td>Premature failure or unexpected tool change</td>
+</tr>
+<tr>
+<td>Tool status</td>
+<td>Available, active, expired, damaged, or another defined state</td>
+<td>Invalid tool use</td>
+</tr>
+</tbody>
+</table>
+<p>The exact offset structure depends on the CNC controller and machining process. Some controls use separate tool geometry and wear tables; others implement different structures.</p>
+<h3 id="62-geometry-offset-versus-wear-offset">6.2 Geometry offset versus wear offset</h3>
+<p>Geometry offset represents the measured or defined physical geometry of the tool.</p>
+<p>Wear offset provides a controlled correction for small process changes, such as gradual dimensional drift associated with tool wear.</p>
+<p>Wear offsets must remain within approved adjustment limits. If a dimension requires an unusually large correction, investigate the tool, holder, fixture, machine condition, measurement system, and program before applying further compensation.</p>
+<h3 id="63-tool-offset-verification">6.3 Tool offset verification</h3>
+<p>Before releasing a tool for production, verify:</p>
+<ul>
+<li>Correct CNC tool number.</li>
+<li>Correct tool assembly and cutting edge.</li>
+<li>Correct offset assignment.</li>
+<li>Correct units and sign conventions.</li>
+<li>Valid geometry measurements.</li>
+<li>Correct work coordinate system.</li>
+<li>Correct program revision.</li>
+<li>Appropriate tool-life status.</li>
+<li>Correct tool orientation and compensation mode where applicable.</li>
+</ul>
+<p>Never assume that an offset table is correct merely because the CNC program loads without an alarm.</p>
+<h2 id="7-tool-presetting-and-measurement">7. Tool presetting and measurement</h2>
+<p>Tool presetting determines relevant tool dimensions before the tool is installed or used in production.</p>
+<p>Presetting may be performed offline with a dedicated presetting machine or through an approved measurement procedure on the CNC machine.</p>
+<h3 id="71-common-measurements">7.1 Common measurements</h3>
+<ul>
+<li>Tool length.</li>
+<li>Tool diameter.</li>
+<li>Cutting-edge position.</li>
+<li>Tool radius or nose radius where applicable.</li>
+<li>Assembly runout.</li>
+<li>Tool projection.</li>
+<li>Insert seating and cutting-edge condition.</li>
+</ul>
+<h3 id="72-benefits-of-offline-presetting">7.2 Benefits of offline presetting</h3>
+<ul>
+<li>Reduces machine setup time.</li>
+<li>Allows tool measurement outside the production cycle.</li>
+<li>Improves repeatability of tool assembly data.</li>
+<li>Supports tool identification and presetting records.</li>
+<li>Reduces the likelihood of entering incorrect dimensions manually.</li>
+</ul>
+<h3 id="73-presetting-workflow">7.3 Presetting workflow</h3>
+<ol>
+<li>Select the approved tool assembly.</li>
+<li>Verify tool and holder identity.</li>
+<li>Inspect the holder, tool, and cutting edges.</li>
+<li>Measure the required geometry using a suitable presetting system.</li>
+<li>Record the measured values and measurement status.</li>
+<li>Apply the defined data-transfer procedure.</li>
+<li>Verify the values in the correct CNC tool or offset record.</li>
+<li>Confirm that the tool is installed in the intended location.</li>
+<li>Perform the required validation before production.</li>
+</ol>
+<p>A presetting system does not eliminate the need to verify correct tool identification and correct data assignment.</p>
+<h2 id="8-tool-magazines-turrets-and-automatic-tool-changers">8. Tool magazines, turrets, and automatic tool changers</h2>
+<p>CNC machines may use a turret, drum magazine, chain magazine, or another tool-storage arrangement.</p>
+<h3 id="81-turret-systems">8.1 Turret systems</h3>
+<p>Turrets commonly index between installed tools. Typical faults include indexing errors, clamping faults, position-sensor failures, and mechanical wear.</p>
+<h3 id="82-automatic-tool-changer">8.2 Automatic tool changer</h3>
+<p>An automatic tool changer (ATC) transfers tools between the spindle and the tool-storage system.</p>
+<p>A simplified sequence is:</p>
+<pre><code>Tool Change Request
+        ↓
+Verify Machine and ATC Conditions
+        ↓
+Move to Approved Tool-Change Position
+        ↓
+Release Current Tool
+        ↓
+Select Required Tool
+        ↓
+Transfer Tool to Spindle
+        ↓
+Clamp Tool
+        ↓
+Verify Tool and Clamp Status
+        ↓
+Confirm Tool Change Complete
+</code></pre>
+<p>Actual sequences vary by machine builder, magazine design, and CNC controller.</p>
+<h3 id="83-common-atc-faults">8.3 Common ATC faults</h3>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Diagnostic direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tool change does not start</td>
+<td>Missing permissive or incorrect machine state</td>
+<td>Review the sequence conditions and active alarms</td>
+</tr>
+<tr>
+<td>Magazine fails to index</td>
+<td>Motor, drive, sensor, or mechanical fault</td>
+<td>Check drive diagnostics and indexing feedback</td>
+</tr>
+<tr>
+<td>Tool not found in expected pocket</td>
+<td>Incorrect tool-management data</td>
+<td>Verify physical pocket assignment and logical mapping</td>
+</tr>
+<tr>
+<td>Tool not clamped</td>
+<td>Clamp mechanism, sensor, or hydraulic/pneumatic issue</td>
+<td>Verify the actual clamping mechanism and confirmation signal</td>
+</tr>
+<tr>
+<td>ATC stops midway</td>
+<td>Timeout, missing position confirmation, or obstruction</td>
+<td>Identify the sequence step and compare command with feedback</td>
+</tr>
+<tr>
+<td>Tool drops or is damaged</td>
+<td>Retention, mechanism, or tooling fault</td>
+<td>Secure the area and inspect the system under the approved procedure</td>
+</tr>
+<tr>
+<td>Repeated tool-change alarms</td>
+<td>Intermittent sensor, wear, or sequence issue</td>
+<td>Review alarm history and recurring conditions</td>
+</tr>
+</tbody>
+</table>
+<p>Never manually move an ATC mechanism or enter its hazardous area without following the required energy-isolation and machine-specific recovery procedures.</p>
+<h2 id="9-tool-life-management">9. Tool-life management</h2>
+<p>Tool life is the usable period or production quantity during which a tool performs its intended operation within the defined quality and process requirements.</p>
+<p>Tool life is affected by:</p>
+<ul>
+<li>Workpiece material and hardness.</li>
+<li>Cutting speed.</li>
+<li>Feed rate.</li>
+<li>Depth of cut.</li>
+<li>Tool material and coating.</li>
+<li>Tool geometry.</li>
+<li>Coolant strategy.</li>
+<li>Machine and fixture rigidity.</li>
+<li>Interrupted cutting.</li>
+<li>Chip evacuation.</li>
+<li>Tool assembly condition.</li>
+<li>Operator or process variation.</li>
+</ul>
+<h3 id="91-tool-life-measurement-methods">9.1 Tool-life measurement methods</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Description</th>
+<th>Limitation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Time-based</td>
+<td>Accumulates cutting or operating time</td>
+<td>Requires a clearly defined timing basis</td>
+</tr>
+<tr>
+<td>Part-count based</td>
+<td>Counts parts or operations performed</td>
+<td>Different parts or conditions may consume different amounts of tool life</td>
+</tr>
+<tr>
+<td>Cycle-count based</td>
+<td>Counts defined machining cycles</td>
+<td>A cycle may contain different tool-loading conditions</td>
+</tr>
+<tr>
+<td>Distance-based</td>
+<td>Estimates cutting distance</td>
+<td>Requires suitable motion and engagement data</td>
+</tr>
+<tr>
+<td>Load-based</td>
+<td>Uses force, torque, or spindle-load information</td>
+<td>Load is affected by process variation</td>
+</tr>
+<tr>
+<td>Condition-based</td>
+<td>Uses inspection, sensors, or wear measurements</td>
+<td>Requires reliable detection and defined decision thresholds</td>
+</tr>
+</tbody>
+</table>
+<p>A tool-life counter must have a defined reset rule, increment condition, unit, and relationship to the physical cutting edge.</p>
+<h3 id="92-tool-life-policy">9.2 Tool-life policy</h3>
+<p>A practical tool-life policy defines:</p>
+<ul>
+<li>Approved tool and insert specification.</li>
+<li>Expected life under specified conditions.</li>
+<li>Maximum permitted life.</li>
+<li>Inspection or replacement criteria.</li>
+<li>Tool-life counter method.</li>
+<li>Warning threshold.</li>
+<li>Expiry behavior.</li>
+<li>Replacement and reset authorization.</li>
+<li>Quality verification after replacement.</li>
+<li>Handling of abnormal tool failure.</li>
+</ul>
+<p>Tool-life values should be established and validated through process engineering and production-quality requirements. They should not be guessed from a single successful run.</p>
+<h3 id="93-example-tool-life-calculation">9.3 Example tool-life calculation</h3>
+<p>Suppose an approved cutting edge has a validated limit of 800 parts, and the controller has recorded 620 parts.</p>
+<p>Remaining part-count allowance:</p>
+<div class="math-display">\[ 800 - 620 = 180 \text{ parts} \]</div>
+<p>This indicates the remaining allowance under that specific counter policy. It does not guarantee that the tool can safely produce another 180 acceptable parts if it has suffered abnormal wear, chipping, or damage.</p>
+<h2 id="10-tool-wear-and-failure-mechanisms">10. Tool wear and failure mechanisms</h2>
+<h3 id="101-common-wear-mechanisms">10.1 Common wear mechanisms</h3>
+<table>
+<thead>
+<tr>
+<th>Wear mechanism</th>
+<th>Description</th>
+<th>Typical consequence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Flank wear</td>
+<td>Wear along the clearance face</td>
+<td>Dimensional drift and increased cutting forces</td>
+</tr>
+<tr>
+<td>Crater wear</td>
+<td>Wear on the rake face</td>
+<td>Edge weakening and possible failure</td>
+</tr>
+<tr>
+<td>Notch wear</td>
+<td>Localized wear near a depth-of-cut boundary</td>
+<td>Edge damage and dimensional problems</td>
+</tr>
+<tr>
+<td>Chipping</td>
+<td>Small fragments break from the cutting edge</td>
+<td>Surface damage and unpredictable tool life</td>
+</tr>
+<tr>
+<td>Plastic deformation</td>
+<td>Cutting edge deforms under heat and load</td>
+<td>Loss of geometry and dimensional control</td>
+</tr>
+<tr>
+<td>Built-up edge</td>
+<td>Workpiece material adheres to the cutting edge</td>
+<td>Poor surface finish and unstable cutting</td>
+</tr>
+<tr>
+<td>Thermal cracking</td>
+<td>Repeated thermal changes produce cracks</td>
+<td>Cutting-edge fracture</td>
+</tr>
+<tr>
+<td>Abrasive wear</td>
+<td>Hard particles remove tool material</td>
+<td>Progressive loss of cutting geometry</td>
+</tr>
+</tbody>
+</table>
+<p>The wear mechanism depends on the material, tool grade, cutting conditions, coolant strategy, and operation.</p>
+<h3 id="102-tool-failure-symptoms">10.2 Tool failure symptoms</h3>
+<ul>
+<li>Increasing spindle load.</li>
+<li>Dimensional drift.</li>
+<li>Poor surface finish.</li>
+<li>Burr formation.</li>
+<li>Chatter or vibration.</li>
+<li>Abnormal cutting noise.</li>
+<li>Increased cycle time.</li>
+<li>Tool breakage.</li>
+<li>Unexpected tool-life expiry.</li>
+<li>Frequent insert changes.</li>
+</ul>
+<p>A sudden tool failure should trigger inspection of the tool, holder, workpiece, fixture, and machining conditions rather than an automatic increase in tool-life limits.</p>
+<h2 id="11-cutting-parameters-and-tool-life">11. Cutting parameters and tool life</h2>
+<p>Important machining parameters include cutting speed, spindle speed, feed rate, feed per tooth, depth of cut, and width of cut.</p>
+<p>For a rotating tool, cutting speed is related to spindle speed and tool diameter.</p>
+<div class="math-display">\[ V_c = \frac{\pi D n}{1000} \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(V_c\)</span> is cutting speed in metres per minute.</li>
+<li><span class="math-inline">\(D\)</span> is tool diameter in millimetres.</li>
+<li><span class="math-inline">\(n\)</span> is spindle speed in revolutions per minute.</li>
+</ul>
+<p>Rearranging:</p>
+<div class="math-display">\[ n = \frac{1000V_c}{\pi D} \]</div>
+<p>For milling, feed rate is commonly calculated using:</p>
+<div class="math-display">\[ V_f = f_z \times z \times n \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(V_f\)</span> is feed rate in millimetres per minute.</li>
+<li><span class="math-inline">\(f_z\)</span> is feed per tooth in millimetres per tooth.</li>
+<li><span class="math-inline">\(z\)</span> is the number of effective cutting teeth.</li>
+<li><span class="math-inline">\(n\)</span> is spindle speed in revolutions per minute.</li>
+</ul>
+<p>These relationships are calculation tools, not authorization to change production parameters. Actual limits depend on the tool manufacturer's recommendations, machine capability, workpiece material, operation, and approved process settings.</p>
+<h3 id="111-effect-of-parameter-changes">11.1 Effect of parameter changes</h3>
+<table>
+<thead>
+<tr>
+<th>Change</th>
+<th>Potential effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Higher cutting speed</td>
+<td>Increased productivity but potentially higher thermal loading and wear</td>
+</tr>
+<tr>
+<td>Higher feed</td>
+<td>Reduced cycle time in some operations but increased load and surface-finish risk</td>
+</tr>
+<tr>
+<td>Greater depth of cut</td>
+<td>Higher material-removal rate but increased cutting forces</td>
+</tr>
+<tr>
+<td>Incorrect feed per tooth</td>
+<td>Poor chip formation, excessive load, or rubbing</td>
+</tr>
+<tr>
+<td>Inadequate chip evacuation</td>
+<td>Recutting, tool damage, and poor finish</td>
+</tr>
+<tr>
+<td>Incorrect coolant strategy</td>
+<td>Thermal problems, inadequate lubrication, or chip-removal issues</td>
+</tr>
+</tbody>
+</table>
+<p>When a tool fails repeatedly, verify the actual process conditions against the approved baseline before altering parameters.</p>
+<h2 id="12-tool-inventory-and-spare-management">12. Tool inventory and spare management</h2>
+<p>Tool inventory ensures that approved tools and consumables are available when needed without excessive stock or uncontrolled substitutions.</p>
+<h3 id="121-inventory-categories">12.1 Inventory categories</h3>
+<ul>
+<li>Complete tool assemblies.</li>
+<li>Cutting inserts and replacement edges.</li>
+<li>Drills, taps, reamers, and end mills.</li>
+<li>Tool holders and adapters.</li>
+<li>Collets and clamping components.</li>
+<li>Special-purpose boring tools.</li>
+<li>Tool presetting accessories.</li>
+<li>Tool identification components.</li>
+<li>Repairable tooling.</li>
+<li>Obsolete tools requiring controlled replacement.</li>
+</ul>
+<h3 id="122-inventory-data">12.2 Inventory data</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tool ID</td>
+<td>Unique inventory identification</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Identifies the tool or component</td>
+</tr>
+<tr>
+<td>Manufacturer and model</td>
+<td>Establishes the specified product</td>
+</tr>
+<tr>
+<td>Approved substitute</td>
+<td>Defines validated alternatives</td>
+</tr>
+<tr>
+<td>Store location</td>
+<td>Supports physical retrieval</td>
+</tr>
+<tr>
+<td>Quantity on hand</td>
+<td>Shows available inventory</td>
+</tr>
+<tr>
+<td>Minimum stock</td>
+<td>Defines the replenishment threshold</td>
+</tr>
+<tr>
+<td>Lead time</td>
+<td>Supports replenishment planning</td>
+</tr>
+<tr>
+<td>Machine compatibility</td>
+<td>Identifies suitable machines and interfaces</td>
+</tr>
+<tr>
+<td>Criticality</td>
+<td>Reflects production impact if unavailable</td>
+</tr>
+<tr>
+<td>Revision or status</td>
+<td>Identifies approved, obsolete, or restricted items</td>
+</tr>
+<tr>
+<td>Supplier and part number</td>
+<td>Supports purchasing and technical verification</td>
+</tr>
+</tbody>
+</table>
+<h3 id="123-critical-tooling">12.3 Critical tooling</h3>
+<p>Tool criticality should consider:</p>
+<ul>
+<li>Production impact if unavailable.</li>
+<li>Supplier lead time.</li>
+<li>Number of machines using the tool.</li>
+<li>Availability of validated substitutes.</li>
+<li>Failure frequency.</li>
+<li>Tooling cost.</li>
+<li>Shelf life or storage requirements where relevant.</li>
+<li>Quality or safety consequences of substitution.</li>
+</ul>
+<p>A low-cost insert can be production-critical if its absence stops a bottleneck machine. Price alone is a poor measure of maintenance importance.</p>
+<h2 id="13-tool-crib-and-tool-issuereturn-control">13. Tool crib and tool issue/return control</h2>
+<p>A tool crib manages the storage, issue, return, inspection, and replenishment of tooling.</p>
+<p>A controlled process should include:</p>
+<ol>
+<li>Verify the requested tool against the approved tool list.</li>
+<li>Confirm part number, grade, geometry, and quantity.</li>
+<li>Record the issue to the relevant machine or operation where required.</li>
+<li>Identify the status of returned tooling.</li>
+<li>Segregate damaged or suspect tools.</li>
+<li>Inspect reusable holders and assemblies.</li>
+<li>Replenish inserts and consumables through controlled inventory procedures.</li>
+<li>Maintain records of substitutions and approved revisions.</li>
+<li>Monitor shortages and abnormal consumption.</li>
+<li>Reconcile physical stock with inventory records.</li>
+</ol>
+<p>Returned tools should not automatically be treated as serviceable. Damaged, worn, or unidentified tooling should be segregated until its condition and permitted use are established.</p>
+<h2 id="14-tool-management-and-cnc-program-integration">14. Tool management and CNC program integration</h2>
+<p>The CNC program, tool table, physical tool magazine, and process documentation must agree.</p>
+<h3 id="141-important-consistency-checks">14.1 Important consistency checks</h3>
+<ul>
+<li>Program tool call matches the intended logical tool.</li>
+<li>Logical tool maps to the correct physical tool or magazine location.</li>
+<li>Tool geometry data matches the installed assembly.</li>
+<li>Wear offset belongs to the correct tool or cutting edge.</li>
+<li>Tool-life counter tracks the intended unit.</li>
+<li>Tool substitution is approved for the operation.</li>
+<li>Tool orientation and compensation settings are correct.</li>
+<li>Tool replacement and offset updates are recorded.</li>
+</ul>
+<h3 id="142-tool-life-monitoring-in-cnc">14.2 Tool-life monitoring in CNC</h3>
+<p>CNC controllers may support tool groups, sister tools, tool-life counters, tool-use monitoring, and automatic replacement logic.</p>
+<p>A sister tool is an alternative tool assigned to perform the same defined operation when the primary tool reaches a specified status or limit. The replacement must be technically suitable and configured correctly.</p>
+<p>Automatic tool substitution requires correct tool-group configuration, offset mapping, physical magazine data, and process validation. A controller's ability to select another tool does not prove that the alternative is equivalent or ready for production.</p>
+<h2 id="15-tool-breakage-detection-and-tool-condition-monitoring">15. Tool breakage detection and tool condition monitoring</h2>
+<p>Tool breakage detection attempts to identify a broken or damaged tool before further production occurs.</p>
+<p>Possible methods include:</p>
+<ul>
+<li>Dedicated tool-breakage detection sensors.</li>
+<li>Laser tool measurement.</li>
+<li>Contact-based tool setters.</li>
+<li>Spindle-load monitoring.</li>
+<li>Drive torque monitoring.</li>
+<li>Acoustic or vibration sensing.</li>
+<li>Vision inspection.</li>
+<li>Post-operation dimensional measurement.</li>
+</ul>
+<h3 id="151-detection-considerations">15.1 Detection considerations</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Strength</th>
+<th>Limitation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tool setter</td>
+<td>Can measure defined tool dimensions</td>
+<td>Requires suitable access, calibration, and correct tool presentation</td>
+</tr>
+<tr>
+<td>Laser measurement</td>
+<td>Non-contact measurement for supported tools</td>
+<td>Sensitive to setup, contamination, and system capability</td>
+</tr>
+<tr>
+<td>Spindle-load monitoring</td>
+<td>Can identify some abnormal cutting conditions</td>
+<td>Process variation may cause false positives or missed failures</td>
+</tr>
+<tr>
+<td>Vibration monitoring</td>
+<td>Can detect certain abnormal dynamic conditions</td>
+<td>Requires suitable sensor placement and validated thresholds</td>
+</tr>
+<tr>
+<td>Vision inspection</td>
+<td>Can identify visible damage in suitable arrangements</td>
+<td>Hidden or subtle damage may not be detectable</td>
+</tr>
+<tr>
+<td>Part measurement</td>
+<td>Verifies the produced feature</td>
+<td>Defects may already have been produced before detection</td>
+</tr>
+</tbody>
+</table>
+<p>Tool-breakage detection should have a defined response: stop or inhibit the relevant process, identify affected parts, inspect the tool and machine, and follow the approved recovery procedure.</p>
+<h2 id="16-tool-change-setup-and-first-piece-validation">16. Tool change, setup, and first-piece validation</h2>
+<p>A tool change can affect geometry, cutting performance, and product quality. The replacement process must preserve the approved tool configuration.</p>
+<h3 id="161-controlled-replacement-procedure">16.1 Controlled replacement procedure</h3>
+<ol>
+<li>Identify the tool and cutting edge that require replacement.</li>
+<li>Confirm the approved replacement specification.</li>
+<li>Stop or place the machine in the required safe state.</li>
+<li>Follow the applicable isolation and tool-change procedure.</li>
+<li>Inspect the holder, interface, and clamping surfaces.</li>
+<li>Install the replacement tool correctly.</li>
+<li>Verify tool identification and physical location.</li>
+<li>Enter or transfer the required tool data.</li>
+<li>Verify geometry, offsets, and tool-life counter state.</li>
+<li>Run the approved validation cycle.</li>
+<li>Inspect the required product characteristics.</li>
+<li>Record the replacement and release the tool for production according to site procedure.</li>
+</ol>
+<p>Not every insert replacement requires the same validation scope, but the required checks must be defined by the process and quality plan.</p>
+<h3 id="162-first-piece-inspection">16.2 First-piece inspection</h3>
+<p>After a tool or offset change, the required first-piece checks may include:</p>
+<ul>
+<li>Critical dimensions.</li>
+<li>Hole diameter and position.</li>
+<li>Thread quality.</li>
+<li>Surface finish.</li>
+<li>Burr condition.</li>
+<li>Feature location.</li>
+<li>Tool-related visual defects.</li>
+</ul>
+<p>A first-piece inspection should use the approved drawing revision, measurement method, and acceptance criteria.</p>
+<h2 id="17-tool-management-system-architecture">17. Tool management system architecture</h2>
+<p>Tool management may be performed through CNC-native functions, a dedicated tool-management application, MES integration, or a combination.</p>
+<pre><code>Engineering Tool Specification
+             ↓
+      Tool Management System
+             ↓
+ Tool Crib / Presetting / Inventory
+             ↓
+   CNC Tool Table / Magazine Data
+             ↓
+       CNC Machining Process
+             ↓
+ Tool-Life / Breakage / Quality Data
+             ↓
+      MES / SQL / Reporting
+             ↓
+ Inventory Planning and Process Improvement
+</code></pre>
+<p>The architecture varies by plant. Some machines operate with locally managed tool tables, while others exchange tool data with central systems.</p>
+<h3 id="171-useful-interfaces">17.1 Useful interfaces</h3>
+<ul>
+<li>CNC tool-table interface.</li>
+<li>Tool presetting equipment.</li>
+<li>Tool identification system.</li>
+<li>Magazine and tool-changer status.</li>
+<li>MES production orders.</li>
+<li>Tool-life counters.</li>
+<li>Tool-breakage detection.</li>
+<li>Inventory or ERP system.</li>
+<li>Quality measurement systems.</li>
+<li>Maintenance-management system.</li>
+<li>Reporting and analytics platforms.</li>
+</ul>
+<p>Any interface must have clear data ownership. For example, engineering may own the approved tool specification, while the CNC controller holds the active machine-specific offset data. Uncontrolled bidirectional updates can overwrite valid settings.</p>
+<h2 id="18-tool-management-data-model">18. Tool management data model</h2>
+<p>A structured data model supports tool identification, maintenance, traceability, inventory, and analysis.</p>
+<table>
+<thead>
+<tr>
+<th>Entity</th>
+<th>Example fields</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tool master</td>
+<td>Tool ID, description, manufacturer, model</td>
+<td>Defines the approved tool</td>
+</tr>
+<tr>
+<td>Tool assembly</td>
+<td>Assembly ID, holder, tool, geometry</td>
+<td>Defines the complete assembly</td>
+</tr>
+<tr>
+<td>Tool location</td>
+<td>Machine ID, magazine, pocket</td>
+<td>Identifies physical placement</td>
+</tr>
+<tr>
+<td>Tool offset</td>
+<td>Tool number, geometry, wear values</td>
+<td>Records CNC compensation data</td>
+</tr>
+<tr>
+<td>Tool-life record</td>
+<td>Counter type, current usage, limit</td>
+<td>Tracks permitted usage</td>
+</tr>
+<tr>
+<td>Tool transaction</td>
+<td>Issue, return, replacement, timestamp</td>
+<td>Records movement and status</td>
+</tr>
+<tr>
+<td>Tool inspection</td>
+<td>Condition, measured wear, disposition</td>
+<td>Records inspection outcomes</td>
+</tr>
+<tr>
+<td>Tool specification</td>
+<td>Approved geometry, grade, revision</td>
+<td>Defines engineering requirements</td>
+</tr>
+<tr>
+<td>Tool inventory</td>
+<td>Quantity, store, minimum stock</td>
+<td>Supports replenishment</td>
+</tr>
+<tr>
+<td>Tool usage event</td>
+<td>Tool, machine, operation, product</td>
+<td>Links tooling to production where required</td>
+</tr>
+</tbody>
+</table>
+<p>Tool data should include clear identifiers, units, revisions, timestamps, and source information. Avoid relying only on free-text descriptions when unique identifiers are available.</p>
+<h2 id="19-tool-management-kpis">19. Tool management KPIs</h2>
+<p>Key performance indicators help identify waste, process instability, and inventory problems.</p>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Example definition</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tool life achieved</td>
+<td>Actual usage compared with the validated target</td>
+<td>Evaluates wear performance</td>
+</tr>
+<tr>
+<td>Tool consumption per part</td>
+<td>Quantity of tooling consumed per accepted part</td>
+<td>Monitors tooling cost</td>
+</tr>
+<tr>
+<td>Tool-breakage rate</td>
+<td>Breakage events per defined production quantity</td>
+<td>Identifies reliability issues</td>
+</tr>
+<tr>
+<td>Unplanned tool-change rate</td>
+<td>Unplanned changes per defined production quantity</td>
+<td>Measures process stability</td>
+</tr>
+<tr>
+<td>Tool-related scrap rate</td>
+<td>Rejected parts attributed to tooling</td>
+<td>Evaluates quality impact</td>
+</tr>
+<tr>
+<td>Tool availability</td>
+<td>Required approved tooling available when needed</td>
+<td>Tracks supply readiness</td>
+</tr>
+<tr>
+<td>Tool inventory accuracy</td>
+<td>Agreement between recorded and physical stock</td>
+<td>Improves replenishment control</td>
+</tr>
+<tr>
+<td>Tool-change downtime</td>
+<td>Production time lost to tool changes</td>
+<td>Identifies improvement opportunities</td>
+</tr>
+<tr>
+<td>Emergency tool purchases</td>
+<td>Urgent purchases caused by shortages</td>
+<td>Measures inventory weaknesses</td>
+</tr>
+<tr>
+<td>Offset correction frequency</td>
+<td>Frequency of approved corrections</td>
+<td>Helps detect wear or process drift</td>
+</tr>
+</tbody>
+</table>
+<p>KPI definitions must be consistent. For example, tool life measured in cutting minutes cannot be compared directly with tool life measured in part count without a valid conversion basis.</p>
+<h2 id="20-common-tool-management-failures-and-rcacapa">20. Common tool management failures and RCA/CAPA</h2>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Potential root cause</th>
+<th>Corrective action</th>
+<th>Effectiveness verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tool breaks before expected life</td>
+<td>Incorrect cutting conditions, tool defect, or abnormal loading</td>
+<td>Investigate the tool, material, process, and machine condition</td>
+<td>Compare subsequent tool life and quality</td>
+</tr>
+<tr>
+<td>Dimensions drift gradually</td>
+<td>Tool wear or incorrect offset management</td>
+<td>Verify wear pattern and establish controlled compensation or replacement</td>
+<td>Measure consecutive parts</td>
+</tr>
+<tr>
+<td>Wrong tool is loaded</td>
+<td>Incorrect pocket mapping or tool identification</td>
+<td>Correct the mapping and strengthen verification</td>
+<td>Test tool calls and physical locations</td>
+</tr>
+<tr>
+<td>Tool-life counter resets incorrectly</td>
+<td>Incorrect reset logic or operator procedure</td>
+<td>Correct counter configuration and access control</td>
+<td>Verify counter behavior through multiple cycles</td>
+</tr>
+<tr>
+<td>Repeated tool-change timeout</td>
+<td>Sensor, mechanism, or sequence fault</td>
+<td>Repair the verified cause</td>
+<td>Run repeated tool-change cycles</td>
+</tr>
+<tr>
+<td>High insert consumption</td>
+<td>Incorrect process conditions, unsuitable grade, or unstable workholding</td>
+<td>Conduct controlled process investigation</td>
+<td>Compare consumption and quality trends</td>
+</tr>
+<tr>
+<td>Tool inventory shortage</td>
+<td>Inaccurate stock records or poor replenishment settings</td>
+<td>Correct inventory data and reorder rules</td>
+<td>Monitor shortage frequency</td>
+</tr>
+<tr>
+<td>Incorrect tool offsets</td>
+<td>Wrong data assignment or uncontrolled edits</td>
+<td>Restore approved values and establish change control</td>
+<td>Validate dimensions and audit offset records</td>
+</tr>
+<tr>
+<td>Tool substitution causes defects</td>
+<td>Alternative not fully validated</td>
+<td>Restore the approved tool and evaluate the substitute</td>
+<td>Confirm product quality and process capability</td>
+</tr>
+<tr>
+<td>Tool breakage goes undetected</td>
+<td>Detection method unsuitable or incorrectly configured</td>
+<td>Validate the detection system and response sequence</td>
+<td>Perform controlled functional tests</td>
+</tr>
+</tbody>
+</table>
+<h2 id="21-troubleshooting-procedure-for-tool-related-defects">21. Troubleshooting procedure for tool-related defects</h2>
+<p>When a machining defect appears to be tool-related, use a structured diagnostic approach.</p>
+<ol>
+<li>Identify the affected machine, operation, tool number, assembly, and product.</li>
+<li>Confirm the correct engineering drawing and CNC program revision.</li>
+<li>Inspect the cutting edge and tool holder.</li>
+<li>Verify tool identification, magazine location, and tool data.</li>
+<li>Check geometry and wear offsets.</li>
+<li>Review tool-life counter behavior and replacement history.</li>
+<li>Compare spindle load, cutting conditions, and cycle time with the approved baseline.</li>
+<li>Inspect fixture condition and workpiece seating.</li>
+<li>Verify coolant delivery and chip evacuation where relevant.</li>
+<li>Check the measurement method and instrument condition.</li>
+<li>Determine the root cause from evidence.</li>
+<li>Implement the approved corrective action.</li>
+<li>Validate the resulting product and process.</li>
+<li>Update the tool record and maintenance or quality documentation.</li>
+</ol>
+<p>Do not change several variables at once unless required for safety or containment. Multiple simultaneous changes make it difficult to determine which action actually corrected the problem.</p>
+<h2 id="22-preventive-maintenance-for-tool-management-systems">22. Preventive maintenance for tool-management systems</h2>
+<p>Tool management includes physical tooling and the systems that identify, store, measure, and track it.</p>
+<table>
+<thead>
+<tr>
+<th>Frequency</th>
+<th>Typical checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Each shift</td>
+<td>Inspect critical tools, review tool-life warnings, and verify tooling availability</td>
+</tr>
+<tr>
+<td>Daily</td>
+<td>Check presetting records, tool identification, damaged-tool segregation, and tool-changer alarms</td>
+</tr>
+<tr>
+<td>Weekly</td>
+<td>Review tool-breakage trends, tool consumption, inventory discrepancies, and repeated offset corrections</td>
+</tr>
+<tr>
+<td>Monthly or scheduled interval</td>
+<td>Audit tool master data, verify selected tool-life rules, inspect storage conditions, and review approved substitutions</td>
+</tr>
+<tr>
+<td>Manufacturer-defined interval</td>
+<td>Service presetting equipment, tool setters, measuring systems, and tool-changer mechanisms</td>
+</tr>
+<tr>
+<td>After tool-system modification</td>
+<td>Verify tool mappings, data transfer, counter behavior, and production-quality results</td>
+</tr>
+</tbody>
+</table>
+<p>Tool storage should protect precision contact surfaces and cutting edges from corrosion, contamination, impact, and accidental mixing. Measurement and presetting equipment must be maintained and calibrated according to the applicable requirements.</p>
+<h2 id="23-tool-management-cybersecurity-and-change-control">23. Tool management cybersecurity and change control</h2>
+<p>Tool-related data can directly affect machine movement and finished-part dimensions. Access to CNC offsets, tool tables, tool-life limits, and automatic tool-substitution rules should therefore be controlled.</p>
+<p>Important controls include:</p>
+<ul>
+<li>Role-based access to tool data.</li>
+<li>Approved program and tool-specification revisions.</li>
+<li>Audit logs for critical changes.</li>
+<li>Backups of machine-specific tool configurations where supported.</li>
+<li>Validation of imported presetting data.</li>
+<li>Restricted remote access.</li>
+<li>Controlled use of removable media.</li>
+<li>Defined recovery procedures.</li>
+<li>Separation of engineering approval from routine operation where required.</li>
+</ul>
+<p>A valid engineering tool specification does not automatically guarantee that the correct data has been transferred to the correct machine. The receiving machine's tool mapping and active values must be verified.</p>
+<h2 id="24-practical-exercises">24. Practical exercises</h2>
+<ul>
+<li>Identify the main cutting tools used on a selected CNC machine.</li>
+<li>Distinguish tool number, magazine pocket, tool assembly, and cutting-edge identity.</li>
+<li>Locate the tool geometry and wear offset tables.</li>
+<li>Identify how tool life is measured and when the counter increments.</li>
+<li>Review one tool-breakage event and establish the likely failure mechanism.</li>
+<li>Inspect an approved tool assembly for holder damage and runout.</li>
+<li>Trace a tool-change request through the CNC and machine PLC sequence.</li>
+<li>Identify the physical and logical tool-magazine mapping.</li>
+<li>Review the tool presetting and measurement procedure.</li>
+<li>Identify the approved replacement tool for a critical operation.</li>
+<li>Review the tool inventory and determine how shortages are detected.</li>
+<li>Examine tool consumption data and identify an opportunity for improvement.</li>
+<li>Prepare an RCA/CAPA for a recurring tool-related dimensional defect.</li>
+<li>Verify how a tool replacement is validated before production release.</li>
+</ul>
+<h2 id="25-competency-checklist">25. Competency checklist</h2>
+<p>A maintenance and automation engineer working with CNC tool management should be able to:</p>
+<ul>
+<li>Explain cutting-tool types, materials, geometry, and wear mechanisms.</li>
+<li>Understand tool assemblies, holders, tool numbers, and magazine locations.</li>
+<li>Interpret CNC tool tables and geometry and wear offsets.</li>
+<li>Explain tool presetting and tool measurement.</li>
+<li>Diagnose automatic tool-changer and magazine faults.</li>
+<li>Understand tool-life counters, replacement rules, and sister-tool concepts.</li>
+<li>Identify tool-breakage detection methods and limitations.</li>
+<li>Connect tooling condition to machining quality and process parameters.</li>
+<li>Manage tool inventory, approved substitutions, and tool issue/return records.</li>
+<li>Support controlled tool changes and first-piece validation.</li>
+<li>Understand tool-management data exchange with CNC, MES, and inventory systems.</li>
+<li>Prepare useful RCA/CAPA records and verify corrective-action effectiveness.</li>
+</ul>
+<h2 id="26-final-technical-summary">26. Final technical summary</h2>
+<p>Tool management connects cutting-tool engineering, CNC configuration, physical tool handling, tool-life monitoring, inventory control, machining quality, and production data.</p>
+<p>Reliable tool management requires correct tool identification, suitable tooling, verified geometry and offsets, controlled tool-life rules, accurate magazine mapping, and validated replacement procedures. Tool-related breakdowns should be diagnosed by examining the cutting edge, holder, machining parameters, fixture, machine condition, and measurement system rather than simply replacing the tool and restarting production.</p>
+<p>For maintenance, the goal is to maintain tool availability, predictable tool life, consistent product quality, controlled costs, and traceable changes throughout the machining process.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\29_Line_Systems\05_Machining\04_Coolant - Coolant</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

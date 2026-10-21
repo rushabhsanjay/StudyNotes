@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CNC Backup and Disaster Recovery</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">CNC Backup and Disaster Recovery</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and scope</a></li>
+<li><a href="#2-cnc-system-architecture">2. CNC system architecture</a></li>
+<li><a href="#3-essential-terminology">3. Essential terminology</a></li>
+<li><a href="#4-what-must-be-backed-up">4. What must be backed up?</a></li>
+<li><a href="#5-cnc-backup-classification">5. CNC backup classification</a><ul>
+<li><a href="#51-part-program-backup">5.1 Part-program backup</a></li>
+<li><a href="#52-machine-parameter-backup">5.2 Machine-parameter backup</a></li>
+<li><a href="#53-plc-or-pmc-backup">5.3 PLC or PMC backup</a></li>
+<li><a href="#54-system-and-storage-backup">5.4 System and storage backup</a></li>
+</ul>
+</li>
+<li><a href="#6-cnc-backup-methods">6. CNC backup methods</a><ul>
+<li><a href="#61-manufacturer-supported-backup-utility">6.1 Manufacturer-supported backup utility</a></li>
+<li><a href="#62-external-storage-or-network-backup">6.2 External storage or network backup</a></li>
+<li><a href="#63-parameter-listing-or-printed-report">6.3 Parameter listing or printed report</a></li>
+<li><a href="#64-storage-device-image">6.4 Storage-device image</a></li>
+</ul>
+</li>
+<li><a href="#7-cnc-specific-data-that-requires-special-protection">7. CNC-specific data that requires special protection</a><ul>
+<li><a href="#71-tool-offsets">7.1 Tool offsets</a></li>
+<li><a href="#72-work-offsets-and-coordinate-systems">7.2 Work offsets and coordinate systems</a></li>
+<li><a href="#73-compensation-data">7.3 Compensation data</a></li>
+<li><a href="#74-machine-coordinates-and-reference-positions">7.4 Machine coordinates and reference positions</a></li>
+</ul>
+</li>
+<li><a href="#8-cnc-backup-frequency-and-triggers">8. CNC backup frequency and triggers</a></li>
+<li><a href="#9-backup-integrity-storage-and-version-control">9. Backup integrity, storage, and version control</a><ul>
+<li><a href="#91-backup-validation">9.1 Backup validation</a></li>
+<li><a href="#92-version-naming">9.2 Version naming</a></li>
+<li><a href="#93-storage-architecture">9.3 Storage architecture</a></li>
+</ul>
+</li>
+<li><a href="#10-cnc-restoration-procedure">10. CNC restoration procedure</a><ul>
+<li><a href="#101-pre-restoration-checklist">10.1 Pre-restoration checklist</a></li>
+<li><a href="#102-restoration-sequence">10.2 Restoration sequence</a></li>
+<li><a href="#103-safety-precautions">10.3 Safety precautions</a></li>
+</ul>
+</li>
+<li><a href="#11-post-restoration-verification">11. Post-restoration verification</a><ul>
+<li><a href="#111-functional-test-checklist">11.1 Functional test checklist</a></li>
+<li><a href="#112-proving-a-cnc-after-recovery">11.2 Proving a CNC after recovery</a></li>
+</ul>
+</li>
+<li><a href="#12-common-cnc-disaster-recovery-scenarios">12. Common CNC disaster-recovery scenarios</a><ul>
+<li><a href="#121-cnc-controller-failure">12.1 CNC controller failure</a></li>
+<li><a href="#122-cnc-storage-device-failure">12.2 CNC storage-device failure</a></li>
+<li><a href="#123-incorrect-machine-parameter-modification">12.3 Incorrect machine parameter modification</a></li>
+<li><a href="#124-part-program-or-macro-loss">12.4 Part program or macro loss</a></li>
+<li><a href="#125-tool-offset-or-work-offset-corruption">12.5 Tool offset or work offset corruption</a></li>
+<li><a href="#126-plcpmc-recovery-failure">12.6 PLC/PMC recovery failure</a></li>
+<li><a href="#127-cnc-obsolescence-migration">12.7 CNC obsolescence migration</a></li>
+</ul>
+</li>
+<li><a href="#13-cnc-backup-troubleshooting">13. CNC backup troubleshooting</a></li>
+<li><a href="#14-practical-maintenance-implementation">14. Practical maintenance implementation</a><ul>
+<li><a href="#141-cnc-backup-register">14.1 CNC backup register</a></li>
+<li><a href="#142-suggested-folder-structure">14.2 Suggested folder structure</a></li>
+<li><a href="#143-work-order-integration">14.3 Work-order integration</a></li>
+</ul>
+</li>
+<li><a href="#15-recovery-drills-and-audit">15. Recovery drills and audit</a><ul>
+<li><a href="#151-recovery-drill">15.1 Recovery drill</a></li>
+<li><a href="#152-audit-checklist">15.2 Audit checklist</a></li>
+</ul>
+</li>
+<li><a href="#16-cnc-backup-management-kpis">16. CNC backup management KPIs</a></li>
+<li><a href="#17-interview-questions-and-technical-answers">17. Interview questions and technical answers</a></li>
+<li><a href="#18-final-engineering-principles">18. Final engineering principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-and-scope">1. Purpose and scope</h2>
+<p>A Computer Numerical Control (CNC) system controls machine-tool operations such as axis movement, spindle speed, tool changes, machining cycles, and coordinate positioning. Depending on the machine, it may include a CNC controller, PLC, servo drives, spindle drive, operator panel, machine-builder software, tool data, and external communication systems.</p>
+<p>CNC backup and disaster recovery preserve the data and configuration needed to restore machine operation after controller failure, storage-device failure, parameter corruption, accidental program deletion, component replacement, or obsolescence migration.</p>
+<p>CNC recovery requires special care because a machine may power up successfully while still having incorrect axis references, tool offsets, compensation data, PLC sequences, or machine-builder settings. Such errors can cause scrap, collisions, tool damage, or injury.</p>
+<p>The objectives are to:</p>
+<ul>
+<li>Preserve CNC programs, machine parameters, and controller configuration.</li>
+<li>Restore machine-specific PLC logic and builder settings.</li>
+<li>Protect tool offsets, work offsets, compensation data, and required production information.</li>
+<li>Reduce recovery time after controller or storage failure.</li>
+<li>Maintain traceability of program and configuration revisions.</li>
+<li>Support CNC replacement, firmware migration, and machine modernization.</li>
+<li>Verify machine behavior before releasing it for production.</li>
+</ul>
+<p>Core principle: A CNC backup must preserve the machine's approved configuration and the data required to reproduce its intended behavior, not merely the visible part programs.</p>
+<h2 id="2-cnc-system-architecture">2. CNC system architecture</h2>
+<pre><code>Operator Panel / HMI
+        ↓
+CNC Controller
+        ├── Part Programs and Machining Cycles
+        ├── Machine Parameters and Compensation Data
+        ├── Coordinate Systems and Tool Data
+        └── Machine-Builder PLC / Sequence Logic
+                    ↓
+        Axis and Spindle Control
+                    ↓
+        Servo Drives / Spindle Drive
+                    ↓
+        Motors, Encoders, and Feedback
+                    ↓
+        Machine Mechanics and Tooling
+
+Supporting systems:
+Network configuration, engineering software, manuals,
+backup storage, tool-management data, and recovery records
+</code></pre>
+<p>The exact architecture depends on the CNC manufacturer and machine builder. Some machines store data across multiple devices, while others use centralized controller storage or separate PLC and CNC processors.</p>
+<h2 id="3-essential-terminology">3. Essential terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+<th>Industrial example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CNC</td>
+<td>Computer Numerical Control system that executes programmed machine operations</td>
+<td>CNC machining center</td>
+</tr>
+<tr>
+<td>Part program</td>
+<td>Program defining machining operations and movements</td>
+<td>G-code program for drilling and milling</td>
+</tr>
+<tr>
+<td>Machine parameters</td>
+<td>Settings defining machine behavior and controller configuration</td>
+<td>Axis travel limits and reference parameters</td>
+</tr>
+<tr>
+<td>PLC program</td>
+<td>Logic controlling machine sequences, interlocks, and auxiliary functions</td>
+<td>Tool changer sequence</td>
+</tr>
+<tr>
+<td>Machine-builder data</td>
+<td>OEM-specific configuration, cycles, settings, and interface information</td>
+<td>Spindle or magazine management configuration</td>
+</tr>
+<tr>
+<td>Work offset</td>
+<td>Coordinate transformation locating a workpiece relative to the machine coordinate system</td>
+<td>G54 work coordinate system</td>
+</tr>
+<tr>
+<td>Tool offset</td>
+<td>Data describing tool geometry or compensation</td>
+<td>Tool length and radius compensation</td>
+</tr>
+<tr>
+<td>Backlash compensation</td>
+<td>Correction for mechanical lost motion where supported</td>
+<td>Compensation for screw or transmission backlash</td>
+</tr>
+<tr>
+<td>Pitch-error compensation</td>
+<td>Correction for measured axis positioning errors</td>
+<td>Linear-axis compensation table</td>
+</tr>
+<tr>
+<td>Reference return</td>
+<td>Procedure establishing the machine axis reference</td>
+<td>Returning an axis to its reference position</td>
+</tr>
+<tr>
+<td>Absolute encoder data</td>
+<td>Position information retained by a supported absolute-feedback system</td>
+<td>Absolute position after power loss</td>
+</tr>
+<tr>
+<td>Ladder program</td>
+<td>Graphical or textual PLC logic used for machine control</td>
+<td>Machine-builder interlock logic</td>
+</tr>
+<tr>
+<td>PMC</td>
+<td>Programmable Machine Controller, a term used in some CNC families for machine-sequence control</td>
+<td>FANUC PMC logic</td>
+</tr>
+<tr>
+<td>SRAM backup</td>
+<td>Backup of supported data held in static random-access memory</td>
+<td>CNC parameter or compensation backup on certain systems</td>
+</tr>
+<tr>
+<td>System image</td>
+<td>A captured image of supported storage or system partitions</td>
+<td>Controller storage recovery image</td>
+</tr>
+<tr>
+<td>Recovery media</td>
+<td>Manufacturer-supported media used to restore software or system data</td>
+<td>CNC recovery USB or service media</td>
+</tr>
+<tr>
+<td>Golden backup</td>
+<td>Approved reference backup representing a known-good machine configuration</td>
+<td>Released baseline after commissioning</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-what-must-be-backed-up">4. What must be backed up?</h2>
+<p>CNC data is often divided into several categories. The exact categories and storage locations vary by controller, machine builder, and software version.</p>
+<table>
+<thead>
+<tr>
+<th>Backup item</th>
+<th>Typical contents</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CNC part programs</td>
+<td>Approved machining programs and subprograms</td>
+<td>Preserves production capability</td>
+</tr>
+<tr>
+<td>CNC parameters</td>
+<td>Controller-specific machine configuration</td>
+<td>Restores controller behavior</td>
+</tr>
+<tr>
+<td>PLC or PMC program</td>
+<td>Machine sequencing, interlocks, and auxiliary logic</td>
+<td>Restores machine functions</td>
+</tr>
+<tr>
+<td>Machine-builder data</td>
+<td>OEM-specific cycles, screens, macros, and configuration</td>
+<td>Preserves machine-specific operation</td>
+</tr>
+<tr>
+<td>Tool offsets</td>
+<td>Tool length, radius, wear, and related data</td>
+<td>Maintains machining accuracy</td>
+</tr>
+<tr>
+<td>Work offsets</td>
+<td>Workpiece coordinate systems and fixture references</td>
+<td>Maintains part location and machining coordinates</td>
+</tr>
+<tr>
+<td>Compensation data</td>
+<td>Supported pitch-error, backlash, and other compensation tables</td>
+<td>Preserves axis accuracy</td>
+</tr>
+<tr>
+<td>Servo parameters</td>
+<td>Drive settings, motor configuration, and supported tuning data</td>
+<td>Restores axis behavior</td>
+</tr>
+<tr>
+<td>Spindle configuration</td>
+<td>Spindle parameters, orientation settings, and drive interface data</td>
+<td>Restores spindle operation</td>
+</tr>
+<tr>
+<td>Tool-management data</td>
+<td>Tool inventory, pocket mapping, and tool-life records where supported</td>
+<td>Supports correct tool handling</td>
+</tr>
+<tr>
+<td>Custom macros</td>
+<td>User-defined cycles and macro programs</td>
+<td>Preserves specialized machining functions</td>
+</tr>
+<tr>
+<td>System configuration</td>
+<td>Controller options, installed software, and supported system settings</td>
+<td>Supports compatible restoration</td>
+</tr>
+<tr>
+<td>Network configuration</td>
+<td>IP addresses, device names, and communication settings</td>
+<td>Restores network integration</td>
+</tr>
+<tr>
+<td>Alarm history</td>
+<td>Relevant alarms and diagnostic records</td>
+<td>Supports fault investigation</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Electrical diagrams, manuals, parameter lists, and recovery procedures</td>
+<td>Supports maintenance work</td>
+</tr>
+<tr>
+<td>Firmware and software records</td>
+<td>CNC, PLC, drive, and engineering-software versions</td>
+<td>Helps verify compatibility</td>
+</tr>
+<tr>
+<td>Validation records</td>
+<td>Machine geometry, reference checks, and acceptance results</td>
+<td>Establishes the approved machine condition</td>
+</tr>
+</tbody>
+</table>
+<p>Not every item is stored in the CNC controller. Some data may reside in the PLC, servo drives, tool-management system, network server, external PC, or machine-builder-specific storage.</p>
+<h2 id="5-cnc-backup-classification">5. CNC backup classification</h2>
+<h3 id="51-part-program-backup">5.1 Part-program backup</h3>
+<p>Includes machining programs, subprograms, custom macros, and related files.</p>
+<p>Important controls:</p>
+<ul>
+<li>Preserve approved production revisions.</li>
+<li>Record program numbers and file names.</li>
+<li>Keep revision history and change authorization.</li>
+<li>Protect critical programs against accidental deletion.</li>
+<li>Verify that required subprograms and macro dependencies are included.</li>
+<li>Preserve units, tool-call assumptions, and machine-specific requirements.</li>
+<li>Confirm that the saved program matches the approved production version.</li>
+</ul>
+<p>A program file by itself does not preserve the machine's tool offsets, work offsets, parameters, or PLC sequence logic.</p>
+<h3 id="52-machine-parameter-backup">5.2 Machine-parameter backup</h3>
+<p>Includes supported controller parameters and configuration values that define axis, spindle, communication, reference, and machine behavior.</p>
+<p>Parameter backup must be specific to the CNC model and machine configuration. Parameters from a different machine may look similar but have different values because of different motors, encoders, gearboxes, travels, spindle arrangements, or machine-builder options.</p>
+<h3 id="53-plc-or-pmc-backup">5.3 PLC or PMC backup</h3>
+<p>Includes the logic responsible for auxiliary machine functions, such as:</p>
+<ul>
+<li>Tool changer sequences.</li>
+<li>Coolant and lubrication control.</li>
+<li>Hydraulic and pneumatic sequences.</li>
+<li>Door and chuck interlocks.</li>
+<li>Pallet and fixture handling.</li>
+<li>Spindle orientation and readiness signals.</li>
+<li>Machine alarms and status signals.</li>
+<li>Communication between the CNC and machine I/O.</li>
+</ul>
+<p>A CNC can display normally while its PLC or PMC program is missing or incompatible. The resulting machine may be unable to perform normal sequences.</p>
+<h3 id="54-system-and-storage-backup">5.4 System and storage backup</h3>
+<p>Some CNC controllers support full or partial system images, recovery media, or manufacturer-specific system restoration procedures.</p>
+<p>These backups may include operating-system files, application software, configuration, or selected data partitions. They may also be tied to particular controller hardware, storage layouts, firmware versions, or license arrangements.</p>
+<p>Do not assume that copying the controller's storage device creates a valid recovery image. Use manufacturer-supported methods and retain any required recovery media or service documentation.</p>
+<h2 id="6-cnc-backup-methods">6. CNC backup methods</h2>
+<h3 id="61-manufacturer-supported-backup-utility">6.1 Manufacturer-supported backup utility</h3>
+<p>Use the controller manufacturer's supported utility to save the CNC parameters and other supported configuration data.</p>
+<p>Typical workflow:</p>
+<ol>
+<li>Identify the CNC controller model, machine model, software version, and machine-builder configuration.</li>
+<li>Confirm the approved maintenance state and required access level.</li>
+<li>Identify which data is stored in the CNC, PLC/PMC, drives, and external systems.</li>
+<li>Use the supported utility to save parameters and configuration files.</li>
+<li>Back up the PLC/PMC program separately if required.</li>
+<li>Export part programs, macros, offsets, and compensation data where supported.</li>
+<li>Save a readable parameter listing for comparison.</li>
+<li>Verify the backup files and record their revisions.</li>
+<li>Store the files in the controlled repository.</li>
+<li>Confirm that the documented restoration method is available.</li>
+</ol>
+<p>Examples of manufacturer environments include FANUC CNC data backup and restoration functions, Siemens SINUMERIK Operate and supported service tools, and Mitsubishi CNC maintenance and data-transfer utilities. The exact utility and supported data depend on the controller generation and machine builder.</p>
+<h3 id="62-external-storage-or-network-backup">6.2 External storage or network backup</h3>
+<p>Depending on the CNC, programs and selected data may be transferred using supported USB storage, network shares, Ethernet transfer tools, or an engineering workstation.</p>
+<p>Before using external storage:</p>
+<ul>
+<li>Verify the supported file system and media type.</li>
+<li>Confirm the permitted transfer method for the controller.</li>
+<li>Check file names, program numbers, extensions, and directory structure.</li>
+<li>Preserve the original files before conversion or editing.</li>
+<li>Confirm that network paths and permissions are correct.</li>
+<li>Verify that transferred files are readable on the target system.</li>
+</ul>
+<p>Do not connect unapproved storage devices to production controllers. External media and engineering PCs can introduce malware or unauthorized configuration changes.</p>
+<h3 id="63-parameter-listing-or-printed-report">6.3 Parameter listing or printed report</h3>
+<p>A parameter listing can provide a readable record of the controller configuration.</p>
+<p>It is useful for:</p>
+<ul>
+<li>Comparing values before and after a repair.</li>
+<li>Reviewing machine-specific settings.</li>
+<li>Supporting troubleshooting when electronic files are unavailable.</li>
+<li>Recording important values during migration.</li>
+<li>Providing an audit trail.</li>
+</ul>
+<p>A printed or exported list may not include all binary data, system files, compensation tables, options, or proprietary configuration. Treat it as supporting documentation rather than a complete system backup.</p>
+<h3 id="64-storage-device-image">6.4 Storage-device image</h3>
+<p>A storage image may be appropriate where the manufacturer supports recovery of the controller's storage device.</p>
+<p>Before creating or restoring an image:</p>
+<ul>
+<li>Identify the exact controller hardware and storage arrangement.</li>
+<li>Follow the manufacturer's approved imaging procedure.</li>
+<li>Confirm image completeness and integrity.</li>
+<li>Verify any hardware-bound licensing or controller identity requirements.</li>
+<li>Preserve the original storage device where practical.</li>
+<li>Confirm the recovery method and required boot or service media.</li>
+</ul>
+<p>A raw storage image is not automatically portable between different CNC controllers. Differences in hardware, storage geometry, firmware, or software licensing may prevent successful restoration.</p>
+<h2 id="7-cnc-specific-data-that-requires-special-protection">7. CNC-specific data that requires special protection</h2>
+<h3 id="71-tool-offsets">7.1 Tool offsets</h3>
+<p>Tool data may include tool length, radius, wear corrections, tool orientation, and tool-management information.</p>
+<p>Incorrect offsets can cause dimensional errors, collisions, or tool damage.</p>
+<p>During recovery:</p>
+<ol>
+<li>Retrieve the approved offset data.</li>
+<li>Confirm that tool numbers and tool identities match the actual tools.</li>
+<li>Verify the units and offset conventions used by the controller.</li>
+<li>Confirm that tool-length and radius compensation are assigned correctly.</li>
+<li>Check whether offsets are stored in the CNC, tool-management system, or another device.</li>
+<li>Validate critical tool data using the approved setup and inspection process.</li>
+</ol>
+<p>Do not restore an old offset file without confirming whether tools, holders, fixtures, or machine setup have changed.</p>
+<h3 id="72-work-offsets-and-coordinate-systems">7.2 Work offsets and coordinate systems</h3>
+<p>Work offsets define the relationship between the machine coordinate system and the workpiece or fixture coordinate system.</p>
+<p>Examples include G54 through G59 on controllers that support these standard work-coordinate selections, plus additional coordinate systems where available.</p>
+<p>Recovery checks should include:</p>
+<ul>
+<li>Work-offset values and units.</li>
+<li>Fixture and workpiece identification.</li>
+<li>Machine coordinate reference.</li>
+<li>Coordinate rotation or transformation settings where used.</li>
+<li>Tool-center-point or kinematic transformation settings where applicable.</li>
+<li>Any separate probing or measurement offsets.</li>
+</ul>
+<p>A correct part program combined with an incorrect work offset can move the tool to the wrong physical location.</p>
+<h3 id="73-compensation-data">7.3 Compensation data</h3>
+<p>Compensation data can be critical to dimensional accuracy.</p>
+<table>
+<thead>
+<tr>
+<th>Compensation type</th>
+<th>Purpose</th>
+<th>Recovery consideration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backlash compensation</td>
+<td>Corrects supported effects of mechanical lost motion</td>
+<td>Verify the machine's current mechanical condition</td>
+</tr>
+<tr>
+<td>Pitch-error compensation</td>
+<td>Corrects measured positioning error along an axis</td>
+<td>Confirm the correct axis and machine-specific table</td>
+</tr>
+<tr>
+<td>Thermal compensation</td>
+<td>Corrects supported thermal effects</td>
+<td>Verify sensors, model settings, and calibration</td>
+</tr>
+<tr>
+<td>Tool-length compensation</td>
+<td>Adjusts for tool length</td>
+<td>Match data to the actual tool and holder</td>
+</tr>
+<tr>
+<td>Tool-radius compensation</td>
+<td>Adjusts the programmed tool path for tool radius</td>
+<td>Verify tool geometry and controller conventions</td>
+</tr>
+<tr>
+<td>Rotary-axis compensation</td>
+<td>Corrects supported rotary-axis errors</td>
+<td>Verify axis configuration and calibration data</td>
+</tr>
+<tr>
+<td>Kinematic compensation</td>
+<td>Corrects machine-specific geometric relationships where supported</td>
+<td>Preserve machine-specific calibration and validation records</td>
+</tr>
+</tbody>
+</table>
+<p>Do not replace calibrated compensation tables with generic values. If compensation data is missing or questionable, follow the machine builder's metrology and calibration procedure.</p>
+<h3 id="74-machine-coordinates-and-reference-positions">7.4 Machine coordinates and reference positions</h3>
+<p>CNC machines may rely on reference-return procedures, absolute encoders, machine-coordinate parameters, or combinations of these methods.</p>
+<p>Before recovery:</p>
+<ul>
+<li>Verify whether reference position data was preserved.</li>
+<li>Check encoder and battery status where relevant.</li>
+<li>Confirm the actual physical position of the axes.</li>
+<li>Verify the correct reference-return sequence.</li>
+<li>Review machine travel limits and reference switches.</li>
+<li>Check whether mechanical movement occurred during power loss or maintenance.</li>
+</ul>
+<p>Never assume that the displayed axis position is physically correct merely because the controller starts without an alarm.</p>
+<h2 id="8-cnc-backup-frequency-and-triggers">8. CNC backup frequency and triggers</h2>
+<table>
+<thead>
+<tr>
+<th>Trigger</th>
+<th>Required action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Initial machine commissioning</td>
+<td>Create the approved baseline backup</td>
+</tr>
+<tr>
+<td>Part-program release</td>
+<td>Archive the released program and its dependencies</td>
+</tr>
+<tr>
+<td>Parameter modification</td>
+<td>Save the approved parameter revision after verification</td>
+</tr>
+<tr>
+<td>PLC/PMC change</td>
+<td>Preserve the released machine-control logic</td>
+</tr>
+<tr>
+<td>Tool or work-offset change</td>
+<td>Back up data where required by the recovery policy</td>
+</tr>
+<tr>
+<td>Compensation adjustment</td>
+<td>Preserve the updated compensation data and calibration record</td>
+</tr>
+<tr>
+<td>CNC controller replacement</td>
+<td>Restore compatible data and validate machine behavior</td>
+</tr>
+<tr>
+<td>Storage-device replacement</td>
+<td>Preserve the supported system image and recovery files</td>
+</tr>
+<tr>
+<td>Firmware or software update</td>
+<td>Save the pre-update configuration and verify the post-update state</td>
+</tr>
+<tr>
+<td>Machine geometry work</td>
+<td>Preserve relevant calibration and compensation records</td>
+</tr>
+<tr>
+<td>Network or system integration change</td>
+<td>Back up updated communication and interface settings</td>
+</tr>
+<tr>
+<td>Obsolescence migration</td>
+<td>Preserve source configuration and separately release target configuration</td>
+</tr>
+<tr>
+<td>Periodic audit</td>
+<td>Verify backup currency, integrity, and restoration readiness</td>
+</tr>
+</tbody>
+</table>
+<p>For critical CNC equipment, use event-driven backups after approved changes and define periodic verification intervals according to equipment criticality and plant policy.</p>
+<h2 id="9-backup-integrity-storage-and-version-control">9. Backup integrity, storage, and version control</h2>
+<h3 id="91-backup-validation">9.1 Backup validation</h3>
+<table>
+<thead>
+<tr>
+<th>Validation level</th>
+<th>What it confirms</th>
+<th>What remains unverified</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>File existence</td>
+<td>Backup files are present</td>
+<td>Completeness and correctness</td>
+</tr>
+<tr>
+<td>File integrity</td>
+<td>Files match their recorded checksums</td>
+<td>Suitability for the target controller</td>
+</tr>
+<tr>
+<td>File readability</td>
+<td>Supported software can read the saved files</td>
+<td>Successful restoration</td>
+</tr>
+<tr>
+<td>Parameter comparison</td>
+<td>Values match the approved baseline</td>
+<td>Correct physical machine behavior</td>
+</tr>
+<tr>
+<td>Compatibility check</td>
+<td>Controller and software requirements are satisfied</td>
+<td>Full recovery success</td>
+</tr>
+<tr>
+<td>Restore test</td>
+<td>Restoration succeeds in the tested environment</td>
+<td>Untested production conditions</td>
+</tr>
+<tr>
+<td>Functional verification</td>
+<td>Required machine functions operate correctly</td>
+<td>Any functions not included in the test</td>
+</tr>
+</tbody>
+</table>
+<p>A SHA-256 checksum can detect unexpected file changes when compared with a trusted recorded checksum. It does not prove that the configuration is correct or safe.</p>
+<h3 id="92-version-naming">9.2 Version naming</h3>
+<p>Use a controlled naming convention based on the plant's approved asset identifiers.</p>
+<pre><code>MACHINE_ID_CNC_DATA_TYPE_REVISION_DATE
+
+MACHINE1059_CNC_PARAMS_R005_20261017
+MACHINE1059_PLC_PROGRAM_R012_20261017
+MACHINE1059_PART_PROGRAM_O1234_R003_20261017
+</code></pre>
+<p>These are illustrative examples. Follow the controller's supported naming rules, especially where program numbers or file-name formats are restricted.</p>
+<p>Record:</p>
+<ul>
+<li>Machine ID and CNC controller identification.</li>
+<li>Controller model and software version.</li>
+<li>Machine-builder and PLC/PMC program revisions.</li>
+<li>Backup type and included data.</li>
+<li>Backup timestamp and responsible person.</li>
+<li>Approved revision and change reference.</li>
+<li>Checksum where required.</li>
+<li>Storage location and independent recovery-copy status.</li>
+<li>Validation or restoration-test status.</li>
+</ul>
+<h3 id="93-storage-architecture">9.3 Storage architecture</h3>
+<pre><code>Primary controlled engineering repository
+        ↓
+Independent backup repository
+        ↓
+Offline or isolated recovery copy
+        ↓
+Verified recovery media and procedure
+</code></pre>
+<p>Apply the 3-2-1 principle where practical: maintain at least three copies, use two storage types or platforms, and keep one copy off-site or isolated.</p>
+<p>Protect CNC programs and configuration files from unauthorized changes. Use controlled access, retention policies, and appropriate cybersecurity controls.</p>
+<h2 id="10-cnc-restoration-procedure">10. CNC restoration procedure</h2>
+<h3 id="101-pre-restoration-checklist">10.1 Pre-restoration checklist</h3>
+<ul>
+<li>Identify the machine, CNC model, controller version, and machine builder.</li>
+<li>Determine which component failed and which data was lost.</li>
+<li>Retrieve the latest approved backup package.</li>
+<li>Verify file integrity and configuration revision.</li>
+<li>Confirm controller, firmware, hardware, and software compatibility.</li>
+<li>Identify required options, licenses, and recovery media.</li>
+<li>Check whether CNC parameters, PLC/PMC logic, and system files require separate restoration.</li>
+<li>Preserve the current state before making further changes where practical.</li>
+<li>Confirm tool offsets, work offsets, compensation data, and machine-reference information.</li>
+<li>Review electrical isolation, machine safeguarding, and commissioning requirements.</li>
+<li>Establish an approved recovery and acceptance-test plan.</li>
+</ul>
+<h3 id="102-restoration-sequence">10.2 Restoration sequence</h3>
+<ol>
+<li>Diagnose the failure and determine the required recovery scope.</li>
+<li>Place the machine in the approved safe state and secure any hazardous mechanical movement.</li>
+<li>Confirm that the backup matches the intended machine and controller generation.</li>
+<li>Verify the required software, hardware, options, and service access.</li>
+<li>Restore the controller system using the manufacturer's supported procedure where required.</li>
+<li>Restore CNC parameters and machine-specific configuration.</li>
+<li>Restore PLC/PMC programs and required machine-builder data.</li>
+<li>Restore part programs, macros, tool data, work offsets, and compensation data as applicable.</li>
+<li>Verify axis and spindle drive configuration.</li>
+<li>Check network communication and controller-to-drive interfaces.</li>
+<li>Confirm the machine-reference method and physical axis state.</li>
+<li>Perform required reference return and controlled movement checks.</li>
+<li>Verify tool-change sequences, spindle functions, coolant, lubrication, and other relevant auxiliaries.</li>
+<li>Complete machine-specific functional and safety verification.</li>
+<li>Save the verified final configuration and update the recovery register.</li>
+</ol>
+<p>The sequence depends on the controller and the machine builder. Some systems require a particular order of restoration or commissioning. Follow the applicable manufacturer's procedure rather than treating all CNC systems as interchangeable.</p>
+<h3 id="103-safety-precautions">10.3 Safety precautions</h3>
+<ul>
+<li>Follow the plant's lockout/tagout and hazardous-energy isolation procedures.</li>
+<li>Secure gravity-loaded or mechanically unstable components.</li>
+<li>Verify the machine's physical state before commanding axis movement.</li>
+<li>Do not bypass guards, interlocks, or safety functions to complete a recovery test.</li>
+<li>Check that the spindle, tool changer, pallet system, and auxiliary equipment are in safe conditions.</li>
+<li>Use reduced-speed or other approved commissioning modes where applicable.</li>
+<li>Ensure that the correct tool, fixture, workpiece, and coordinate system are selected before machining tests.</li>
+<li>Verify required safety functions according to the approved safety-validation process.</li>
+</ul>
+<p>A CNC controller that boots without errors is not proof that the machine is safe or ready to machine a part.</p>
+<h2 id="11-post-restoration-verification">11. Post-restoration verification</h2>
+<h3 id="111-functional-test-checklist">11.1 Functional test checklist</h3>
+<ul>
+<li>CNC controller starts correctly and reports the expected software version.</li>
+<li>CNC parameters match the approved configuration.</li>
+<li>PLC/PMC logic and machine-builder functions are correct.</li>
+<li>Servo and spindle drives are recognized and report healthy status.</li>
+<li>Axis reference and displayed positions are consistent with the machine state.</li>
+<li>Axis directions, travel limits, and reference-return functions are verified.</li>
+<li>Tool and work offsets match the approved setup.</li>
+<li>Compensation tables and required calibration data are present.</li>
+<li>Spindle speed, orientation, and relevant feedback are verified.</li>
+<li>Tool changer and other auxiliary sequences operate correctly.</li>
+<li>Coolant, lubrication, hydraulic, and pneumatic functions are verified as applicable.</li>
+<li>Network communication and required interfaces are working.</li>
+<li>Alarms and fault-recovery behavior are checked.</li>
+<li>Safety functions and interlocks are verified.</li>
+<li>A controlled test program or approved proving procedure is completed.</li>
+<li>Dimensional results meet the specified acceptance criteria.</li>
+<li>The final verified backup is saved and documented.</li>
+</ul>
+<h3 id="112-proving-a-cnc-after-recovery">11.2 Proving a CNC after recovery</h3>
+<p>A suitable proving process may include:</p>
+<ol>
+<li>Confirming machine configuration and reference status.</li>
+<li>Verifying motion under approved conditions without cutting where practical.</li>
+<li>Checking spindle and auxiliary functions.</li>
+<li>Reviewing the test program, tool list, work offset, and intended machine path.</li>
+<li>Running the approved dry-run, simulation, or reduced-risk proving method where supported.</li>
+<li>Performing the required test cut or calibration procedure.</li>
+<li>Measuring the result against the drawing and approved tolerance.</li>
+<li>Recording the acceptance results and releasing the machine through the plant's process.</li>
+</ol>
+<p>The test method must suit the machine, tooling, workpiece, and risk assessment. Simulation does not replace physical verification of the restored machine configuration.</p>
+<h2 id="12-common-cnc-disaster-recovery-scenarios">12. Common CNC disaster-recovery scenarios</h2>
+<h3 id="121-cnc-controller-failure">12.1 CNC controller failure</h3>
+<p>Situation: The controller fails to start or must be replaced.</p>
+<ul>
+<li>Identify the failed controller and supported replacement.</li>
+<li>Verify the system software, hardware options, licenses, and storage requirements.</li>
+<li>Retrieve the approved CNC, PLC/PMC, and machine-builder backups.</li>
+<li>Restore data using the supported procedure.</li>
+<li>Verify machine parameters, axis references, offsets, and compensation.</li>
+<li>Complete the required machine-specific commissioning and acceptance tests.</li>
+</ul>
+<p>A controller replacement may require machine-builder service data or software options that are not included in a routine parameter backup.</p>
+<h3 id="122-cnc-storage-device-failure">12.2 CNC storage-device failure</h3>
+<p>Situation: The controller's storage device fails or its contents become corrupted.</p>
+<ul>
+<li>Preserve the failed device for authorized investigation where practical.</li>
+<li>Confirm the required recovery media and controller compatibility.</li>
+<li>Restore the supported system image or software environment.</li>
+<li>Restore machine-specific parameters and programs.</li>
+<li>Verify PLC/PMC logic and other separately stored data.</li>
+<li>Confirm licensing, controller identity, and software options.</li>
+<li>Perform the full required functional verification.</li>
+</ul>
+<p>A replacement storage device may need a specific partition layout, boot configuration, or manufacturer-supported recovery image.</p>
+<h3 id="123-incorrect-machine-parameter-modification">12.3 Incorrect machine parameter modification</h3>
+<p>Situation: An axis behaves incorrectly after a parameter change.</p>
+<ol>
+<li>Stop the machine using the approved procedure.</li>
+<li>Record the current alarm and configuration state.</li>
+<li>Identify the modified parameters and change history.</li>
+<li>Compare current values against the approved baseline.</li>
+<li>Restore the appropriate approved values under authorization.</li>
+<li>Verify axis reference, limits, scaling, and compensation.</li>
+<li>Complete the required controlled movement and acceptance tests.</li>
+<li>Record the corrective action and final configuration revision.</li>
+</ol>
+<p>Do not restore every parameter indiscriminately when only one configuration group changed. Some parameters may have been legitimately updated since the last full backup.</p>
+<h3 id="124-part-program-or-macro-loss">12.4 Part program or macro loss</h3>
+<p>Situation: A production program or custom macro is missing.</p>
+<ul>
+<li>Retrieve the approved program revision from the controlled repository.</li>
+<li>Verify program number, machine compatibility, and dependencies.</li>
+<li>Confirm the tool list, work offset, and machining assumptions.</li>
+<li>Check whether the program calls subprograms or custom macros.</li>
+<li>Verify the program against the approved production revision.</li>
+<li>Prove the program using the approved procedure before machining production parts.</li>
+</ul>
+<p>A syntactically valid program can still be unsuitable for the installed tooling, fixture, or machine configuration.</p>
+<h3 id="125-tool-offset-or-work-offset-corruption">12.5 Tool offset or work offset corruption</h3>
+<p>Situation: A machine reports unexpected dimensions or incorrect tool positions.</p>
+<ul>
+<li>Stop production and protect the workpiece and tooling.</li>
+<li>Confirm the actual tool and fixture configuration.</li>
+<li>Compare current offsets with the approved records.</li>
+<li>Verify the machine coordinate reference.</li>
+<li>Check for changes to tool geometry, holders, or workpiece setup.</li>
+<li>Restore or re-establish the correct values.</li>
+<li>Verify dimensional accuracy before releasing production.</li>
+</ul>
+<p>Do not assume that the previous offset values remain valid after a tool, fixture, or mechanical change.</p>
+<h3 id="126-plcpmc-recovery-failure">12.6 PLC/PMC recovery failure</h3>
+<p>Situation: The CNC powers up but machine sequences do not work.</p>
+<p>Potential causes include:</p>
+<ul>
+<li>Incorrect PLC/PMC program revision.</li>
+<li>Missing machine-builder data.</li>
+<li>Incompatible controller or PLC firmware.</li>
+<li>Incorrect I/O configuration.</li>
+<li>Changed drive or network interface.</li>
+<li>Missing machine options or dependencies.</li>
+<li>Incorrect machine-builder parameter configuration.</li>
+</ul>
+<p>Verify the approved program, I/O mapping, interface signals, and machine-builder requirements before attempting to modify logic.</p>
+<h3 id="127-cnc-obsolescence-migration">12.7 CNC obsolescence migration</h3>
+<p>Situation: An obsolete controller must be replaced by a newer CNC generation.</p>
+<ol>
+<li>Preserve the original CNC and PLC/PMC data.</li>
+<li>Record controller, firmware, options, drives, motors, encoders, and network details.</li>
+<li>Obtain the machine builder's migration requirements.</li>
+<li>Check part-program and macro compatibility.</li>
+<li>Map supported parameters and identify changed or removed functions.</li>
+<li>Review axis scaling, reference positions, compensation, and tool data.</li>
+<li>Validate drive and communication compatibility.</li>
+<li>Test machine sequences, interlocks, and safety functions.</li>
+<li>Prove machining performance against approved acceptance criteria.</li>
+<li>Retain the original backup and released target configuration separately.</li>
+</ol>
+<p>A successful software conversion does not prove that the replacement machine configuration is mechanically accurate or safe.</p>
+<h2 id="13-cnc-backup-troubleshooting">13. CNC backup troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Corrective action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backup transfer fails</td>
+<td>Unsupported media, communication issue, or access restriction</td>
+<td>Verify supported transfer methods and permissions</td>
+</tr>
+<tr>
+<td>Parameter file is rejected</td>
+<td>Wrong controller generation or incompatible data format</td>
+<td>Confirm controller model and supported restoration method</td>
+</tr>
+<tr>
+<td>CNC starts but machine functions are missing</td>
+<td>PLC/PMC or machine-builder data is absent</td>
+<td>Restore and verify the required machine-control data</td>
+</tr>
+<tr>
+<td>Axis reference is incorrect</td>
+<td>Reference configuration, encoder state, or physical position differs</td>
+<td>Verify the actual machine state and reference procedure</td>
+</tr>
+<tr>
+<td>Machine dimensions are incorrect</td>
+<td>Tool offsets, work offsets, compensation, or scaling is wrong</td>
+<td>Compare configuration and verify using approved measurement procedures</td>
+</tr>
+<tr>
+<td>Part program fails</td>
+<td>Missing macro, subprogram, option, or unsupported command</td>
+<td>Check program dependencies and controller compatibility</td>
+</tr>
+<tr>
+<td>Spindle does not operate</td>
+<td>Spindle configuration, drive interface, or interlock issue</td>
+<td>Check the approved configuration and machine sequence</td>
+</tr>
+<tr>
+<td>Tool changer fails</td>
+<td>PLC/PMC sequence, I/O, or machine-builder data issue</td>
+<td>Diagnose sequence conditions and interface signals</td>
+</tr>
+<tr>
+<td>Recovery image will not boot</td>
+<td>Image incompatibility, storage layout, or missing recovery components</td>
+<td>Follow the manufacturer-supported recovery procedure</td>
+</tr>
+<tr>
+<td>Network communication fails</td>
+<td>Incorrect address, device configuration, or interface settings</td>
+<td>Verify network configuration and controller mappings</td>
+</tr>
+<tr>
+<td>Alarms occur after restoration</td>
+<td>Incomplete configuration, hardware mismatch, or unresolved machine fault</td>
+<td>Diagnose the actual cause before resetting alarms</td>
+</tr>
+<tr>
+<td>Backup appears valid but restoration fails</td>
+<td>Missing dependencies or unsupported file format</td>
+<td>Review backup scope and perform a controlled restore test</td>
+</tr>
+</tbody>
+</table>
+<h2 id="14-practical-maintenance-implementation">14. Practical maintenance implementation</h2>
+<h3 id="141-cnc-backup-register">14.1 CNC backup register</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine ID</td>
+<td>Plant-approved machine identifier</td>
+</tr>
+<tr>
+<td>CNC model</td>
+<td>Controller manufacturer and exact series</td>
+</tr>
+<tr>
+<td>Controller software</td>
+<td>Installed software and firmware revision</td>
+</tr>
+<tr>
+<td>Machine builder</td>
+<td>OEM and machine model</td>
+</tr>
+<tr>
+<td>PLC/PMC revision</td>
+<td>Approved machine-control program revision</td>
+</tr>
+<tr>
+<td>Drive configuration</td>
+<td>Relevant axis and spindle-drive identification</td>
+</tr>
+<tr>
+<td>Backup scope</td>
+<td>Parameters, programs, offsets, PLC, system image, or other data</td>
+</tr>
+<tr>
+<td>Approved revision</td>
+<td>Released configuration revision</td>
+</tr>
+<tr>
+<td>Backup date</td>
+<td>Actual completed date</td>
+</tr>
+<tr>
+<td>Program revision</td>
+<td>Approved production-program revision where applicable</td>
+</tr>
+<tr>
+<td>Compensation status</td>
+<td>Availability and revision of required compensation data</td>
+</tr>
+<tr>
+<td>Reference information</td>
+<td>Required homing and machine-reference records</td>
+</tr>
+<tr>
+<td>Storage location</td>
+<td>Controlled repository path</td>
+</tr>
+<tr>
+<td>Independent copy</td>
+<td>Secondary or isolated recovery-copy status</td>
+</tr>
+<tr>
+<td>Restore-test date</td>
+<td>Actual completed test date</td>
+</tr>
+<tr>
+<td>RTO/RPO</td>
+<td>Approved recovery targets</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Current, overdue, failed, or under review</td>
+</tr>
+<tr>
+<td>Responsible owner</td>
+<td>Assigned maintenance or engineering role</td>
+</tr>
+</tbody>
+</table>
+<h3 id="142-suggested-folder-structure">14.2 Suggested folder structure</h3>
+<pre><code>CNC_BACKUP_SYSTEM/
+    01_ASSET_REGISTER/
+    02_APPROVED_BACKUPS/
+        MACHINE_1059/
+            CNC_CONTROLLER/
+                CNC_PARAMETERS/
+                SYSTEM_CONFIGURATION/
+                PART_PROGRAMS/
+                CUSTOM_MACROS/
+                TOOL_OFFSETS/
+                WORK_OFFSETS/
+                COMPENSATION_DATA/
+            PLC_PMC/
+                PLC_PROGRAM/
+                MACHINE_BUILDER_DATA/
+                I_O_CONFIGURATION/
+            AXIS_AND_SPINDLE/
+                DRIVE_PARAMETERS/
+                MOTOR_AND_ENCODER/
+            SYSTEM_RECOVERY/
+                RECOVERY_MEDIA/
+                SOFTWARE_VERSIONS/
+                LICENSE_RECORDS/
+            DOCUMENTATION/
+                ELECTRICAL_DRAWINGS/
+                MACHINE_MANUALS/
+                COMMISSIONING_RECORDS/
+                CHANGE_HISTORY/
+                RECOVERY_PROCEDURE/
+    03_INDEPENDENT_RECOVERY_COPIES/
+    04_RESTORE_TEST_RECORDS/
+    05_MIGRATION_RECORDS/
+</code></pre>
+<p>Use the actual machine and controller identifiers in the repository. Restrict access to production programs, machine configuration, and safety-related files according to plant policy.</p>
+<h3 id="143-work-order-integration">14.3 Work-order integration</h3>
+<p>For a CNC breakdown, configuration change, or controller replacement:</p>
+<ol>
+<li>Identify the affected controller and machine subsystems.</li>
+<li>Record the alarm history and failure symptoms.</li>
+<li>Preserve the current configuration where practical.</li>
+<li>Retrieve the approved recovery package.</li>
+<li>Complete the authorized repair or restoration.</li>
+<li>Verify machine references, offsets, compensation, and program revisions.</li>
+<li>Perform the required functional and acceptance tests.</li>
+<li>Save the verified final configuration.</li>
+<li>Update the asset register and work-order history.</li>
+<li>Record unresolved obsolescence or recovery risks.</li>
+</ol>
+<h2 id="15-recovery-drills-and-audit">15. Recovery drills and audit</h2>
+<h3 id="151-recovery-drill">15.1 Recovery drill</h3>
+<p>A recovery drill verifies that the saved CNC files and supporting procedures can restore the required machine configuration.</p>
+<ol>
+<li>Select an approved test controller, nonproduction environment, or controlled recovery exercise.</li>
+<li>Retrieve the released backup package.</li>
+<li>Verify the controller identity, file integrity, and backup revision.</li>
+<li>Confirm the required software, hardware, recovery media, and licensing.</li>
+<li>Restore the selected data using the documented procedure.</li>
+<li>Verify parameters, programs, PLC/PMC data, and required dependencies.</li>
+<li>Review reference, offset, and compensation information.</li>
+<li>Perform appropriate functional checks in the approved environment.</li>
+<li>Record recovery time and any missing files or dependencies.</li>
+<li>Correct the recovery package and repeat the test if required.</li>
+</ol>
+<p>Do not test a full system restore on a live production machine without formal authorization and an approved recovery plan.</p>
+<h3 id="152-audit-checklist">15.2 Audit checklist</h3>
+<ul>
+<li>Critical CNC machines are recorded in the installed-base register.</li>
+<li>Required CNC parameter backups exist.</li>
+<li>PLC/PMC and machine-builder data are preserved.</li>
+<li>Approved part programs and custom macros are archived.</li>
+<li>Tool offsets and work offsets are protected according to policy.</li>
+<li>Required compensation and calibration data are available.</li>
+<li>Firmware, software, and option dependencies are documented.</li>
+<li>Recovery media and supported restoration procedures are available.</li>
+<li>Independent recovery copies are maintained.</li>
+<li>Backup integrity and revision currency are verified.</li>
+<li>Restore tests are performed at the defined interval.</li>
+<li>Machine acceptance checks are documented after recovery.</li>
+<li>Obsolete controllers have documented migration plans.</li>
+<li>Configuration changes trigger the required backup updates.</li>
+<li>Recovery times are compared against approved targets.</li>
+</ul>
+<h2 id="16-cnc-backup-management-kpis">16. CNC backup management KPIs</h2>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Calculation</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backup coverage</td>
+<td>Machines with required backups divided by machines requiring backups, multiplied by 100%</td>
+<td>Measures backup availability</td>
+</tr>
+<tr>
+<td>Backup currency</td>
+<td>Machines with current approved backups divided by machines requiring backups, multiplied by 100%</td>
+<td>Measures revision accuracy</td>
+</tr>
+<tr>
+<td>Restore-test success</td>
+<td>Successful restore tests divided by completed restore tests, multiplied by 100%</td>
+<td>Measures demonstrated recoverability</td>
+</tr>
+<tr>
+<td>Recovery time</td>
+<td>Total measured recovery time divided by recovery events</td>
+<td>Measures recovery performance</td>
+</tr>
+<tr>
+<td>Program revision compliance</td>
+<td>Audited programs matching approved revisions divided by programs audited, multiplied by 100%</td>
+<td>Measures program control</td>
+</tr>
+<tr>
+<td>Missing-dependency rate</td>
+<td>Recovery packages missing required dependencies divided by packages audited, multiplied by 100%</td>
+<td>Identifies incomplete backups</td>
+</tr>
+<tr>
+<td>Post-recovery acceptance rate</td>
+<td>Restored machines passing required acceptance checks divided by restored machines tested, multiplied by 100%</td>
+<td>Measures recovery quality</td>
+</tr>
+</tbody>
+</table>
+<p>For example, if 24 of 25 critical CNC machines have current approved backups:</p>
+<div class="math-display">\[ \text{Backup coverage}=\frac{24}{25}\times100=96\\% \]</div>
+<p>High coverage alone does not prove successful recovery. The backup must also be complete, compatible, restorable, and verified against the machine's acceptance requirements.</p>
+<h2 id="17-interview-questions-and-technical-answers">17. Interview questions and technical answers</h2>
+<p>1. Why is a CNC backup more than a part-program backup?</p>
+<p>A CNC machine also depends on controller parameters, PLC/PMC logic, machine-builder data, offsets, compensation tables, drive settings, and system configuration.</p>
+<p>2. Why must CNC parameters be machine-specific?</p>
+<p>Parameters depend on the controller, motors, encoders, axis travel, mechanical arrangement, spindle, and machine-builder configuration.</p>
+<p>3. What is the difference between a CNC parameter backup and a system image?</p>
+<p>A parameter backup preserves supported configuration values. A system image may preserve supported software and storage contents. Their scope and restoration requirements differ by controller.</p>
+<p>4. Why are tool and work offsets critical during recovery?</p>
+<p>They establish the relationship between the programmed tool path, the tool geometry, the workpiece, and the machine coordinate system. Incorrect values can cause collisions or dimensional errors.</p>
+<p>5. Why must PLC/PMC logic be backed up separately?</p>
+<p>The machine sequence logic may be stored separately from CNC parameters and may control tool changes, interlocks, coolant, lubrication, and other auxiliary functions.</p>
+<p>6. Why is compensation data important?</p>
+<p>Compensation tables can correct machine-specific positioning or geometric errors. Missing or incorrect data may reduce accuracy even if the controller and programs work normally.</p>
+<p>7. Can a backup from one CNC machine be restored directly to another identical model?</p>
+<p>Not automatically. Differences in hardware, machine geometry, options, motors, encoders, firmware, and machine-builder configuration may make the backup incompatible.</p>
+<p>8. What must be verified after CNC controller replacement?</p>
+<p>Verify controller configuration, PLC/PMC logic, axis references, tool and work offsets, compensation, spindle behavior, communication, interlocks, safety functions, and machining acceptance results.</p>
+<p>9. Why should recovery procedures be tested?</p>
+<p>A stored file may be incomplete, incompatible, corrupted, or missing required dependencies. A controlled restore test helps demonstrate that the recovery process works.</p>
+<p>10. Does a CNC starting without alarms prove that it is ready for production?</p>
+<p>No. Machine references, offsets, compensation, axis movement, spindle behavior, auxiliary sequences, safety functions, and required machining accuracy must be verified.</p>
+<h2 id="18-final-engineering-principles">18. Final engineering principles</h2>
+<ul>
+<li>Back up the complete CNC system, not just its part programs.</li>
+<li>Preserve controller parameters, PLC/PMC logic, machine-builder data, and required offsets.</li>
+<li>Keep machine-specific compensation and calibration records.</li>
+<li>Record controller, firmware, software, and hardware dependencies.</li>
+<li>Maintain approved program revisions and controlled change history.</li>
+<li>Verify compatibility before restoring data to replacement equipment.</li>
+<li>Use manufacturer-supported restoration methods.</li>
+<li>Protect machine references and coordinate data from uncontrolled changes.</li>
+<li>Perform required functional and machining acceptance tests before production release.</li>
+<li>Maintain independent recovery copies and periodically test restoration.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\25_Backup_DR\01_Systems_Backup\06_Robot - Robot</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

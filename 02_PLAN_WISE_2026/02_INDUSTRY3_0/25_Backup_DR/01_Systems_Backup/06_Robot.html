@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robot Backup and Disaster Recovery</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Robot Backup and Disaster Recovery</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and scope</a></li>
+<li><a href="#2-robot-system-architecture">2. Robot system architecture</a></li>
+<li><a href="#3-essential-terminology">3. Essential terminology</a></li>
+<li><a href="#4-what-must-be-backed-up">4. What must be backed up?</a></li>
+<li><a href="#5-robot-backup-types-and-methods">5. Robot backup types and methods</a><ul>
+<li><a href="#51-full-controller-backup">5.1 Full controller backup</a></li>
+<li><a href="#52-program-only-backup">5.2 Program-only backup</a></li>
+<li><a href="#53-image-or-recovery-backup">5.3 Image or recovery backup</a></li>
+<li><a href="#54-configuration-exports-and-readable-reports">5.4 Configuration exports and readable reports</a></li>
+</ul>
+</li>
+<li><a href="#6-manufacturer-specific-backup-considerations">6. Manufacturer-specific backup considerations</a></li>
+<li><a href="#7-critical-robot-data-requiring-special-protection">7. Critical robot data requiring special protection</a><ul>
+<li><a href="#71-mastering-and-joint-reference-data">7.1 Mastering and joint reference data</a></li>
+<li><a href="#72-tool-center-point-tcp">7.2 Tool center point (TCP)</a></li>
+<li><a href="#73-user-frames-and-workpiece-frames">7.3 User frames and workpiece frames</a></li>
+<li><a href="#74-payload-configuration">7.4 Payload configuration</a></li>
+<li><a href="#75-external-axes">7.5 External axes</a></li>
+<li><a href="#76-safety-configuration">7.6 Safety configuration</a></li>
+</ul>
+</li>
+<li><a href="#8-robot-backup-frequency-and-triggers">8. Robot backup frequency and triggers</a></li>
+<li><a href="#9-backup-integrity-storage-and-version-control">9. Backup integrity, storage, and version control</a><ul>
+<li><a href="#91-backup-verification-levels">9.1 Backup verification levels</a></li>
+<li><a href="#92-version-naming">9.2 Version naming</a></li>
+<li><a href="#93-storage-architecture">9.3 Storage architecture</a></li>
+</ul>
+</li>
+<li><a href="#10-robot-restoration-procedure">10. Robot restoration procedure</a><ul>
+<li><a href="#101-pre-restoration-checklist">10.1 Pre-restoration checklist</a></li>
+<li><a href="#102-restoration-sequence">10.2 Restoration sequence</a></li>
+<li><a href="#103-safety-precautions">10.3 Safety precautions</a></li>
+</ul>
+</li>
+<li><a href="#11-post-restoration-verification">11. Post-restoration verification</a><ul>
+<li><a href="#111-functional-test-checklist">11.1 Functional test checklist</a></li>
+<li><a href="#112-controlled-proving-process">11.2 Controlled proving process</a></li>
+</ul>
+</li>
+<li><a href="#12-common-robot-disaster-recovery-scenarios">12. Common robot disaster-recovery scenarios</a><ul>
+<li><a href="#121-robot-controller-failure">12.1 Robot controller failure</a></li>
+<li><a href="#122-mastering-or-encoder-data-loss">12.2 Mastering or encoder-data loss</a></li>
+<li><a href="#123-incorrect-tcp-or-user-frame">12.3 Incorrect TCP or user frame</a></li>
+<li><a href="#124-program-loss-or-corruption">12.4 Program loss or corruption</a></li>
+<li><a href="#125-robot-fails-to-communicate-with-plc">12.5 Robot fails to communicate with PLC</a></li>
+<li><a href="#126-safety-fault-after-restoration">12.6 Safety fault after restoration</a></li>
+<li><a href="#127-external-axis-or-coordinated-motion-failure">12.7 External-axis or coordinated-motion failure</a></li>
+<li><a href="#128-robot-obsolescence-migration">12.8 Robot obsolescence migration</a></li>
+</ul>
+</li>
+<li><a href="#13-robot-backup-troubleshooting">13. Robot backup troubleshooting</a></li>
+<li><a href="#14-practical-maintenance-implementation">14. Practical maintenance implementation</a><ul>
+<li><a href="#141-robot-backup-register">14.1 Robot backup register</a></li>
+<li><a href="#142-suggested-folder-structure">14.2 Suggested folder structure</a></li>
+<li><a href="#143-work-order-integration">14.3 Work-order integration</a></li>
+</ul>
+</li>
+<li><a href="#15-recovery-drills-and-audit">15. Recovery drills and audit</a><ul>
+<li><a href="#151-recovery-drill">15.1 Recovery drill</a></li>
+<li><a href="#152-audit-checklist">15.2 Audit checklist</a></li>
+</ul>
+</li>
+<li><a href="#16-robot-backup-management-kpis">16. Robot backup management KPIs</a></li>
+<li><a href="#17-interview-questions-and-technical-answers">17. Interview questions and technical answers</a></li>
+<li><a href="#18-final-engineering-principles">18. Final engineering principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-and-scope">1. Purpose and scope</h2>
+<p>Industrial robots depend on several coordinated systems: the robot controller, robot software, motion programs, calibration data, servo systems, end-of-arm tooling, safety configuration, and interfaces to the PLC and production network.</p>
+<p>Robot backup and disaster recovery preserve the approved configuration required to restore robot operation after controller failure, storage corruption, accidental program deletion, battery failure, software changes, component replacement, or obsolescence migration.</p>
+<p>A robot can power up and still be unsafe or inaccurate if its mastering, calibration, tool data, user frames, safety configuration, or external-axis settings are incorrect. Recovery must therefore include both data restoration and physical verification.</p>
+<p>The main objectives are to:</p>
+<ul>
+<li>Preserve robot programs and controller configuration.</li>
+<li>Protect mastering, calibration, tool, and coordinate-frame data.</li>
+<li>Preserve PLC interfaces, communication settings, and application-specific logic.</li>
+<li>Restore safety configuration using approved procedures.</li>
+<li>Reduce downtime following controller or storage failure.</li>
+<li>Maintain traceability of software versions and approved configuration changes.</li>
+<li>Verify robot accuracy, interlocks, and process operation before production release.</li>
+<li>Support controller replacement, robot migration, and obsolescence planning.</li>
+</ul>
+<p>Core principle: A robot backup must cover the controller's approved software and configuration, plus the machine-specific data required to reproduce safe, accurate motion and process behavior.</p>
+<h2 id="2-robot-system-architecture">2. Robot system architecture</h2>
+<pre><code>HMI / Teach Pendant / Engineering Workstation
+                    ↓
+             Robot Controller
+                    ├── Robot Programs
+                    ├── System and Motion Configuration
+                    ├── Tool and User Frames
+                    ├── Mastering and Calibration Data
+                    ├── I/O and Communication Configuration
+                    └── Safety Configuration
+                              ↓
+                 Servo Drives and Motion Control
+                              ↓
+                 Robot Motors and Encoders
+                              ↓
+                 Robot Arms and Mechanical Axes
+                              ↓
+                 End-of-Arm Tooling and Process
+
+Supporting systems:
+PLC, safety PLC, vision system, external axes,
+fieldbus/network devices, engineering software,
+backup repository, manuals, and recovery procedures
+</code></pre>
+<p>The exact architecture depends on the robot manufacturer, controller generation, application, and machine integrator. Some systems store robot, safety, and process data separately, and some use dedicated recovery media or manufacturer-specific backup utilities.</p>
+<h2 id="3-essential-terminology">3. Essential terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+<th>Industrial example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Robot controller</td>
+<td>Computer system controlling robot motion and application functions</td>
+<td>FANUC R-30iB controller</td>
+</tr>
+<tr>
+<td>Teach pendant</td>
+<td>Operator interface for teaching, jogging, and diagnostics</td>
+<td>FANUC iPendant</td>
+</tr>
+<tr>
+<td>Robot program</td>
+<td>Instructions defining robot movement and process sequences</td>
+<td>KUKA KRL or FANUC TP program</td>
+</tr>
+<tr>
+<td>System image</td>
+<td>Supported image of controller storage or system software</td>
+<td>Controller recovery image</td>
+</tr>
+<tr>
+<td>All-of-system backup</td>
+<td>Backup containing the broad set of supported controller data</td>
+<td>Full robot controller archive</td>
+</tr>
+<tr>
+<td>Mastering</td>
+<td>Establishment of the robot's reference relationship between joint position and controller coordinates</td>
+<td>Axis mastering after encoder or motor work</td>
+</tr>
+<tr>
+<td>Calibration</td>
+<td>Establishment or verification of the relationship between robot coordinates and the real physical system</td>
+<td>Robot-to-fixture calibration</td>
+</tr>
+<tr>
+<td>Tool frame</td>
+<td>Coordinate frame describing the tool center point relative to the robot flange</td>
+<td>Welding gun TCP</td>
+</tr>
+<tr>
+<td>User frame</td>
+<td>Coordinate frame representing a fixture, workpiece, or application reference</td>
+<td>Pallet fixture frame</td>
+</tr>
+<tr>
+<td>Payload data</td>
+<td>Mass, center of gravity, and inertia information for the tool and load</td>
+<td>Gripper with a workpiece</td>
+</tr>
+<tr>
+<td>External axis</td>
+<td>Additional controlled axis associated with the robot application</td>
+<td>Positioner or linear track</td>
+</tr>
+<tr>
+<td>Safety configuration</td>
+<td>Parameters and logic governing supported robot safety functions</td>
+<td>Safe speed or monitored zones</td>
+</tr>
+<tr>
+<td>I/O mapping</td>
+<td>Relationship between logical signals and physical or network I/O</td>
+<td>PLC start and robot-ready signals</td>
+</tr>
+<tr>
+<td>Calibration data</td>
+<td>Data defining relevant geometric or process relationships</td>
+<td>Robot-to-vision calibration</td>
+</tr>
+<tr>
+<td>Recovery media</td>
+<td>Manufacturer-supported media or mechanism used to restore the controller</td>
+<td>Robot controller recovery USB</td>
+</tr>
+<tr>
+<td>Golden backup</td>
+<td>Approved baseline backup representing a known-good robot configuration</td>
+<td>Released backup after commissioning</td>
+</tr>
+</tbody>
+</table>
+<p>Mastering and calibration are not interchangeable. Mastering concerns the robot's internal joint reference relationship. Calibration concerns geometric relationships between the robot and its tools, fixtures, workpieces, or external systems. Both may be required after certain repairs.</p>
+<h2 id="4-what-must-be-backed-up">4. What must be backed up?</h2>
+<p>Robot backup requirements should be defined by controller generation and application. A single backup file may not contain every required item.</p>
+<table>
+<thead>
+<tr>
+<th>Backup item</th>
+<th>Typical contents</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Robot programs</td>
+<td>Motion programs, subroutines, macros, and application logic</td>
+<td>Preserves the operating sequence</td>
+</tr>
+<tr>
+<td>System configuration</td>
+<td>Controller settings and supported system files</td>
+<td>Supports controller recovery</td>
+</tr>
+<tr>
+<td>Motion configuration</td>
+<td>Motion groups, axis assignments, and supported settings</td>
+<td>Restores the intended robot configuration</td>
+</tr>
+<tr>
+<td>Mastering data</td>
+<td>Joint reference and mastering information</td>
+<td>Preserves the robot's reference state</td>
+</tr>
+<tr>
+<td>Tool frames</td>
+<td>Tool center points and tool orientations</td>
+<td>Maintains correct tool positioning</td>
+</tr>
+<tr>
+<td>User frames</td>
+<td>Workpiece and fixture coordinate frames</td>
+<td>Maintains programmed workpiece locations</td>
+</tr>
+<tr>
+<td>Payload data</td>
+<td>Tool and workpiece mass properties</td>
+<td>Supports motion performance and safety requirements</td>
+</tr>
+<tr>
+<td>External-axis configuration</td>
+<td>Axis definitions, kinematics, and supported settings</td>
+<td>Restores tracks and positioners</td>
+</tr>
+<tr>
+<td>I/O configuration</td>
+<td>Digital, analog, and network I/O mappings</td>
+<td>Restores PLC and device interfaces</td>
+</tr>
+<tr>
+<td>Communication settings</td>
+<td>Network addressing, device mapping, and protocols</td>
+<td>Restores integration</td>
+</tr>
+<tr>
+<td>Safety configuration</td>
+<td>Supported safety settings and related records</td>
+<td>Supports approved safety recovery</td>
+</tr>
+<tr>
+<td>Application packages</td>
+<td>Welding, dispensing, handling, or other application-specific configuration</td>
+<td>Preserves process functions</td>
+</tr>
+<tr>
+<td>Vision configuration</td>
+<td>Camera interface, calibration references, and job configuration where supported</td>
+<td>Restores vision-guided operation</td>
+</tr>
+<tr>
+<td>Fieldbus configuration</td>
+<td>Device mapping, network parameters, and I/O assignments</td>
+<td>Restores industrial communication</td>
+</tr>
+<tr>
+<td>Controller options</td>
+<td>Installed software options and licensing information</td>
+<td>Helps identify restoration dependencies</td>
+</tr>
+<tr>
+<td>Software versions</td>
+<td>Controller, application, and engineering-software versions</td>
+<td>Supports compatibility checks</td>
+</tr>
+<tr>
+<td>Diagnostics</td>
+<td>Alarm history and relevant maintenance records</td>
+<td>Helps investigate the failure</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Electrical drawings, robot layout, manuals, and recovery procedures</td>
+<td>Supports maintenance and validation</td>
+</tr>
+<tr>
+<td>Validation records</td>
+<td>Mastering checks, TCP checks, safety tests, and acceptance results</td>
+<td>Establishes the approved machine condition</td>
+</tr>
+</tbody>
+</table>
+<p>Some data may reside in the PLC, safety PLC, vision controller, external-axis drive, application PC, or machine-integrator system rather than the robot controller.</p>
+<h2 id="5-robot-backup-types-and-methods">5. Robot backup types and methods</h2>
+<h3 id="51-full-controller-backup">5.1 Full controller backup</h3>
+<p>A full controller backup captures the broadest set of data supported by the robot controller's approved backup mechanism.</p>
+<p>It may include programs, system configuration, motion data, frames, I/O settings, and selected application data. The exact scope varies by manufacturer and controller generation.</p>
+<p>Typical procedure:</p>
+<ol>
+<li>Identify the robot model, controller generation, software version, and installed options.</li>
+<li>Confirm the approved maintenance state and required access permissions.</li>
+<li>Use the manufacturer-supported backup utility or controller function.</li>
+<li>Select the appropriate full-backup scope.</li>
+<li>Include separately stored application or safety data where required.</li>
+<li>Verify backup completion and review any reported omissions.</li>
+<li>Save the files with the machine identifier, revision, and date.</li>
+<li>Confirm the supported restoration procedure and required recovery media.</li>
+</ol>
+<p>A full backup is usually the primary recovery artifact, but its name alone does not prove that every safety, calibration, licensing, or external-device dependency is included.</p>
+<h3 id="52-program-only-backup">5.2 Program-only backup</h3>
+<p>A program-only backup preserves robot motion programs and supported application routines.</p>
+<p>It is useful for recovering deleted or modified programs, but it does not necessarily preserve system settings, mastering data, tool frames, payloads, safety configuration, or I/O mappings.</p>
+<p>Program backups should include:</p>
+<ul>
+<li>Main programs and called subroutines.</li>
+<li>Application-specific routines.</li>
+<li>Required macros and shared libraries.</li>
+<li>Program comments and revision information.</li>
+<li>Relevant process data and dependencies.</li>
+<li>Approved versions and change records.</li>
+</ul>
+<h3 id="53-image-or-recovery-backup">5.3 Image or recovery backup</h3>
+<p>Some robot controllers support recovery images, recovery partitions, or dedicated recovery media.</p>
+<p>These may be required when controller storage fails or system software becomes unusable. Such recovery packages may depend on controller hardware, software versions, storage layout, licensing, or manufacturer-specific service procedures.</p>
+<p>Do not assume that copying a controller disk or memory card produces a valid recovery image. Use the manufacturer's approved method and preserve the required recovery media.</p>
+<h3 id="54-configuration-exports-and-readable-reports">5.4 Configuration exports and readable reports</h3>
+<p>Readable exports help maintenance personnel compare settings and investigate differences between revisions.</p>
+<p>Useful records include:</p>
+<ul>
+<li>Robot and controller identification.</li>
+<li>Tool and user frame definitions.</li>
+<li>Payload settings.</li>
+<li>Mastering and calibration records.</li>
+<li>I/O assignments.</li>
+<li>Network settings.</li>
+<li>External-axis configuration.</li>
+<li>Safety configuration revision and validation record.</li>
+<li>Installed software options and versions.</li>
+</ul>
+<p>Readable reports support review but may not contain all proprietary or binary configuration data. They should supplement, not replace, the supported full backup.</p>
+<h2 id="6-manufacturer-specific-backup-considerations">6. Manufacturer-specific backup considerations</h2>
+<p>Robot manufacturers use different controller architectures, file formats, terminology, and recovery methods. A backup procedure for one family should not be assumed to work on another.</p>
+<table>
+<thead>
+<tr>
+<th>Manufacturer</th>
+<th>Common programming environment</th>
+<th>Backup considerations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FANUC</td>
+<td>TP programs and supported KAREL applications</td>
+<td>Preserve supported controller image, programs, system variables, mastering data, frames, and relevant options</td>
+</tr>
+<tr>
+<td>ABB</td>
+<td>RAPID programs and system configuration</td>
+<td>Preserve the supported system backup, RAPID modules, configuration, calibration information, and application dependencies</td>
+</tr>
+<tr>
+<td>KUKA</td>
+<td>KRL programs and controller configuration</td>
+<td>Preserve the supported archive, robot programs, machine data, mastering information, and relevant technology packages</td>
+</tr>
+<tr>
+<td>Yaskawa Motoman</td>
+<td>INFORM jobs and controller parameters</td>
+<td>Preserve supported CMOS or full backups, jobs, parameters, and application-specific data</td>
+</tr>
+<tr>
+<td>Kawasaki</td>
+<td>AS language programs and controller data</td>
+<td>Preserve programs, supported system data, parameters, and relevant calibration records</td>
+</tr>
+<tr>
+<td>Mitsubishi Electric</td>
+<td>MELFA robot programs and controller settings</td>
+<td>Preserve programs, parameters, and supported controller configuration</td>
+</tr>
+<tr>
+<td>Universal Robots</td>
+<td>UR programs and installation configuration</td>
+<td>Preserve supported program and installation files, software version, calibration-related information, and safety configuration records</td>
+</tr>
+</tbody>
+</table>
+<p>These are general examples, not universal file-level guarantees. The exact backup contents and restore method must be confirmed for the installed controller and software release.</p>
+<h2 id="7-critical-robot-data-requiring-special-protection">7. Critical robot data requiring special protection</h2>
+<h3 id="71-mastering-and-joint-reference-data">7.1 Mastering and joint reference data</h3>
+<p>Mastering establishes the controller's reference relationship for each robot joint. Depending on the robot design, mastering may rely on mechanical witness marks, encoder reference data, mastering fixtures, or manufacturer-specific procedures.</p>
+<p>Mastering data can be affected by:</p>
+<ul>
+<li>Motor or encoder replacement.</li>
+<li>Battery failure on systems that rely on battery-backed position retention.</li>
+<li>Mechanical disassembly or joint movement.</li>
+<li>Controller or drive replacement.</li>
+<li>Loss or corruption of reference data.</li>
+<li>Certain maintenance or calibration operations.</li>
+</ul>
+<p>Recovery requirements:</p>
+<ol>
+<li>Preserve existing mastering information before relevant maintenance where possible.</li>
+<li>Record the robot model, serial number, and controller identification.</li>
+<li>Determine whether the existing mastering data remains valid.</li>
+<li>Follow the manufacturer's mastering procedure if reference data has been lost or disturbed.</li>
+<li>Verify the result using the approved mastering and calibration checks.</li>
+<li>Document any changes to mastering data.</li>
+</ol>
+<p>Never copy mastering data from a different robot merely because the robots share the same model. Robot-specific mechanical and encoder relationships may differ.</p>
+<h3 id="72-tool-center-point-tcp">7.2 Tool center point (TCP)</h3>
+<p>The TCP defines the tool's reference point and orientation relative to the robot flange. Incorrect TCP data can shift the actual tool path even when the robot program is unchanged.</p>
+<p>TCP-related data may include:</p>
+<ul>
+<li>Tool translation relative to the flange.</li>
+<li>Tool orientation.</li>
+<li>Tool identification.</li>
+<li>Tool-specific configuration.</li>
+<li>Associated payload information.</li>
+</ul>
+<p>After recovery:</p>
+<ul>
+<li>Confirm the installed tool matches the intended tool definition.</li>
+<li>Verify the TCP using the approved calibration method.</li>
+<li>Check the tool orientation and process direction.</li>
+<li>Verify critical points against a known fixture or reference.</li>
+<li>Recalibrate if the tool, mounting, or relevant geometry has changed.</li>
+</ul>
+<p>For example, a welding robot may follow the expected joint coordinates while the actual wire tip is displaced because the TCP definition is wrong.</p>
+<h3 id="73-user-frames-and-workpiece-frames">7.3 User frames and workpiece frames</h3>
+<p>User frames describe workpiece or fixture coordinate systems. Their values depend on the physical setup and the controller's coordinate conventions.</p>
+<p>Recovery checks should include:</p>
+<ul>
+<li>Correct fixture or workpiece identification.</li>
+<li>Frame translation and orientation.</li>
+<li>Workpiece or pallet positioning.</li>
+<li>Relevant coordinate transformations.</li>
+<li>Frame relationships used by external axes or vision systems.</li>
+<li>Consistency between the program and the installed fixture.</li>
+</ul>
+<p>A restored frame must be verified against the physical setup. A numerically correct frame from an earlier fixture arrangement may be wrong after tooling changes.</p>
+<h3 id="74-payload-configuration">7.4 Payload configuration</h3>
+<p>Payload settings may include mass, center of gravity, and inertia. Incorrect values can affect motion performance, collision detection, motor loading, and supported safety monitoring.</p>
+<p>Verify:</p>
+<ul>
+<li>Tool mass and attached workpiece mass.</li>
+<li>Center of gravity and inertia assumptions.</li>
+<li>Tool changes and automatic tool-change arrangements.</li>
+<li>Payload selection logic in the robot program.</li>
+<li>Supported payload monitoring settings.</li>
+<li>Manufacturer limits for the installed robot and wrist.</li>
+</ul>
+<p>Do not reduce configured payload values simply to suppress motion alarms. Investigate the actual load and configuration.</p>
+<h3 id="75-external-axes">7.5 External axes</h3>
+<p>Robot cells may include linear tracks, rotary positioners, turntables, or other coordinated axes.</p>
+<p>Their configuration may include:</p>
+<ul>
+<li>Axis identification and direction.</li>
+<li>Mechanical ratio and scaling.</li>
+<li>Motor and encoder configuration.</li>
+<li>Coordinate transformations.</li>
+<li>Motion-group assignment.</li>
+<li>Synchronization and coordinated-motion settings.</li>
+<li>Relevant limits and interlocks.</li>
+</ul>
+<p>Restoring the robot arm without restoring compatible external-axis configuration may produce incorrect coordinated motion. Verify both the controller settings and the actual mechanical installation.</p>
+<h3 id="76-safety-configuration">7.6 Safety configuration</h3>
+<p>Robot safety configuration may include supported monitored zones, speed limits, safe positions, enabling-device behavior, protective-stop settings, and safety communication.</p>
+<p>Recovery must account for:</p>
+<ul>
+<li>The robot controller's supported safety configuration backup.</li>
+<li>Safety PLC or external safety-controller programs.</li>
+<li>Safety I/O and network configuration.</li>
+<li>The approved safety design and validation records.</li>
+<li>Any hardware changes affecting safety functions.</li>
+<li>Required verification and validation following restoration.</li>
+</ul>
+<p>Safety configuration must not be assumed to be complete merely because it appears in a general controller archive. Follow the manufacturer's procedure and applicable plant safety-validation process. Never bypass a safety function to make a restored robot run.</p>
+<h2 id="8-robot-backup-frequency-and-triggers">8. Robot backup frequency and triggers</h2>
+<table>
+<thead>
+<tr>
+<th>Trigger</th>
+<th>Required action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Initial commissioning</td>
+<td>Create the approved baseline backup</td>
+</tr>
+<tr>
+<td>Robot program release</td>
+<td>Archive the approved program and dependencies</td>
+</tr>
+<tr>
+<td>Tool change or TCP calibration</td>
+<td>Preserve updated tool data and calibration records</td>
+</tr>
+<tr>
+<td>Fixture or workpiece change</td>
+<td>Review affected user frames and program dependencies</td>
+</tr>
+<tr>
+<td>Mastering-related maintenance</td>
+<td>Preserve original data and document the verified mastering state</td>
+</tr>
+<tr>
+<td>Payload change</td>
+<td>Update approved payload configuration and associated records</td>
+</tr>
+<tr>
+<td>PLC or I/O change</td>
+<td>Preserve updated interface and sequence configuration</td>
+</tr>
+<tr>
+<td>Safety modification</td>
+<td>Preserve configuration and complete required validation</td>
+</tr>
+<tr>
+<td>Controller replacement</td>
+<td>Restore compatible data and verify the complete cell</td>
+</tr>
+<tr>
+<td>Firmware update</td>
+<td>Preserve pre-update data and verify the resulting configuration</td>
+</tr>
+<tr>
+<td>External-axis modification</td>
+<td>Back up axis configuration and verify coordinated motion</td>
+</tr>
+<tr>
+<td>Vision-system integration change</td>
+<td>Preserve affected robot, camera, calibration, and interface settings</td>
+</tr>
+<tr>
+<td>Obsolescence migration</td>
+<td>Preserve source configuration and separately release the target configuration</td>
+</tr>
+<tr>
+<td>Periodic audit</td>
+<td>Verify backup integrity, currency, and recovery readiness</td>
+</tr>
+</tbody>
+</table>
+<p>For critical production robots, use event-driven backups after approved changes and set periodic verification intervals based on equipment criticality, plant policy, and the consequences of lost configuration.</p>
+<h2 id="9-backup-integrity-storage-and-version-control">9. Backup integrity, storage, and version control</h2>
+<h3 id="91-backup-verification-levels">9.1 Backup verification levels</h3>
+<table>
+<thead>
+<tr>
+<th>Validation level</th>
+<th>What it confirms</th>
+<th>What remains unverified</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>File existence</td>
+<td>Backup files are present</td>
+<td>Completeness and correctness</td>
+</tr>
+<tr>
+<td>File integrity</td>
+<td>Files match trusted recorded checksums</td>
+<td>Compatibility with the target controller</td>
+</tr>
+<tr>
+<td>File readability</td>
+<td>Supported software can read the files</td>
+<td>Successful restoration</td>
+</tr>
+<tr>
+<td>Configuration comparison</td>
+<td>Settings match the approved revision</td>
+<td>Physical accuracy and safety</td>
+</tr>
+<tr>
+<td>Compatibility review</td>
+<td>Required hardware and software dependencies are known</td>
+<td>Successful recovery</td>
+</tr>
+<tr>
+<td>Restore test</td>
+<td>Restoration works in the tested environment</td>
+<td>Untested production conditions</td>
+</tr>
+<tr>
+<td>Functional verification</td>
+<td>Required robot functions operate correctly</td>
+<td>Functions excluded from testing</td>
+</tr>
+</tbody>
+</table>
+<p>A checksum such as SHA-256 can detect unexpected file changes when compared with a trusted recorded value. It does not establish that the robot configuration is correct or safe.</p>
+<h3 id="92-version-naming">9.2 Version naming</h3>
+<p>Use the plant's approved asset identifiers and naming conventions.</p>
+<pre><code>ROBOT_ID_DATA_TYPE_REVISION_DATE
+
+ROBOT1059_FULL_BACKUP_R006_20261017
+ROBOT1059_PROGRAMS_R014_20261017
+ROBOT1059_SAFETY_RECORD_R004_20261017
+ROBOT1059_TCP_CALIBRATION_R003_20261017
+</code></pre>
+<p>These are illustrative names. Use file naming rules supported by the controller and repository.</p>
+<p>Record:</p>
+<ul>
+<li>Robot and controller identification.</li>
+<li>Controller software version and installed options.</li>
+<li>Backup scope and file inventory.</li>
+<li>Backup date and responsible person.</li>
+<li>Approved configuration revision.</li>
+<li>Program and application revisions.</li>
+<li>Checksum where required.</li>
+<li>Storage location and independent-copy status.</li>
+<li>Restore-test date and result.</li>
+<li>Required recovery software, licenses, and media.</li>
+<li>Safety and calibration validation status.</li>
+</ul>
+<h3 id="93-storage-architecture">9.3 Storage architecture</h3>
+<pre><code>Primary controlled engineering repository
+        ↓
+Independent backup repository
+        ↓
+Offline or isolated recovery copy
+        ↓
+Verified recovery media and procedure
+</code></pre>
+<p>Apply the 3-2-1 principle where practical: maintain at least three copies, use two storage types or platforms, and keep one copy off-site or isolated.</p>
+<p>Robot programs and configuration files should be protected against unauthorized changes. Apply access control, revision management, retention rules, and suitable cybersecurity protections for engineering workstations and removable media.</p>
+<h2 id="10-robot-restoration-procedure">10. Robot restoration procedure</h2>
+<h3 id="101-pre-restoration-checklist">10.1 Pre-restoration checklist</h3>
+<ul>
+<li>Identify the robot model, serial number, controller, and software version.</li>
+<li>Determine the failed component and the required recovery scope.</li>
+<li>Retrieve the latest approved backup package.</li>
+<li>Verify file integrity, revision, and backup scope.</li>
+<li>Confirm hardware, software, and option compatibility.</li>
+<li>Check whether recovery media or manufacturer service support is required.</li>
+<li>Identify separately stored PLC, safety PLC, vision, and external-axis data.</li>
+<li>Preserve the current controller state where practical.</li>
+<li>Review mastering, TCP, user frames, payloads, and external-axis configuration.</li>
+<li>Confirm safety configuration and validation requirements.</li>
+<li>Establish an approved restoration and commissioning plan.</li>
+<li>Secure the robot cell against unexpected movement.</li>
+</ul>
+<h3 id="102-restoration-sequence">10.2 Restoration sequence</h3>
+<ol>
+<li>Diagnose the failure and define the required restoration scope.</li>
+<li>Place the cell in the approved safe state and secure hazardous energy.</li>
+<li>Verify the target controller and robot identity against the backup package.</li>
+<li>Confirm the required recovery software, options, licenses, and media.</li>
+<li>Restore controller software or the system image if required, using the manufacturer's supported procedure.</li>
+<li>Restore robot programs and supported system configuration.</li>
+<li>Restore I/O mapping, communication settings, and application configuration.</li>
+<li>Restore external-axis and associated motion configuration where applicable.</li>
+<li>Restore or verify mastering data according to the manufacturer's procedure.</li>
+<li>Verify TCPs, user frames, payloads, and calibration-dependent data.</li>
+<li>Restore separately stored PLC, safety PLC, vision, and other cell-system data as required.</li>
+<li>Verify safety configuration and complete required validation.</li>
+<li>Confirm robot position and physical cell conditions before motion.</li>
+<li>Conduct approved controlled-motion and functional tests.</li>
+<li>Verify process operation, communication, interlocks, and fault handling.</li>
+<li>Save the verified final configuration and update the recovery records.</li>
+</ol>
+<p>The correct sequence varies by manufacturer and controller generation. Some systems require special recovery procedures or revalidation after controller replacement. Follow the applicable service documentation rather than applying a generic sequence blindly.</p>
+<h3 id="103-safety-precautions">10.3 Safety precautions</h3>
+<ul>
+<li>Follow plant hazardous-energy isolation procedures.</li>
+<li>Secure loads and tooling that could fall or move unexpectedly.</li>
+<li>Verify the robot's physical state before enabling motion.</li>
+<li>Keep personnel outside hazardous movement zones during tests.</li>
+<li>Use approved operating modes and speed restrictions for commissioning.</li>
+<li>Verify guards, scanners, interlocks, emergency stops, and enabling devices.</li>
+<li>Confirm external-axis and cell equipment states before coordinated motion.</li>
+<li>Do not bypass safety functions to complete restoration.</li>
+<li>Verify that automatic restart cannot occur unexpectedly.</li>
+<li>Complete required safety validation before releasing the cell.</li>
+</ul>
+<p>Robot recovery can create unexpected motion if the restored program, frame, payload, mastering, or safety configuration differs from the physical cell.</p>
+<h2 id="11-post-restoration-verification">11. Post-restoration verification</h2>
+<h3 id="111-functional-test-checklist">11.1 Functional test checklist</h3>
+<ul>
+<li>Controller starts correctly and reports the expected software version.</li>
+<li>Approved robot programs and application routines are present.</li>
+<li>System configuration matches the approved baseline.</li>
+<li>Mastering data is valid and reference checks are complete.</li>
+<li>TCP definitions match the installed tooling.</li>
+<li>User frames match the actual fixtures and workpieces.</li>
+<li>Payload settings match the installed tool and expected load.</li>
+<li>External axes and coordinated motion are configured correctly.</li>
+<li>Robot I/O and PLC communication are verified.</li>
+<li>Vision and process interfaces operate correctly where applicable.</li>
+<li>Required safety configuration and validation are complete.</li>
+<li>Guards, interlocks, emergency stops, and protective devices are verified.</li>
+<li>Approved controlled-motion tests are completed.</li>
+<li>Motion paths and critical positions are verified.</li>
+<li>Process sequences and fault-recovery behavior are checked.</li>
+<li>The cell completes its required acceptance tests.</li>
+<li>Final approved configuration is archived.</li>
+</ul>
+<h3 id="112-controlled-proving-process">11.2 Controlled proving process</h3>
+<p>A suitable proving process may include:</p>
+<ol>
+<li>Verify the robot and controller identity.</li>
+<li>Check the mastering status and reference information.</li>
+<li>Confirm tool, user-frame, payload, and external-axis configuration.</li>
+<li>Verify I/O, interlocks, and communication without initiating hazardous movement.</li>
+<li>Perform approved controlled-motion checks under the specified commissioning conditions.</li>
+<li>Verify critical approach, pickup, placement, and process positions.</li>
+<li>Check coordination with conveyors, positioners, fixtures, and other robots.</li>
+<li>Verify process quality against the approved acceptance criteria.</li>
+<li>Test required alarms, stops, and recovery behavior.</li>
+<li>Record results and obtain the required release approval.</li>
+</ol>
+<p>The actual tests must be defined by the cell's risk assessment, robot manufacturer's procedure, and application requirements.</p>
+<h2 id="12-common-robot-disaster-recovery-scenarios">12. Common robot disaster-recovery scenarios</h2>
+<h3 id="121-robot-controller-failure">12.1 Robot controller failure</h3>
+<p>Situation: The controller fails and must be repaired or replaced.</p>
+<ul>
+<li>Confirm the controller model and supported replacement.</li>
+<li>Identify required software options, licenses, and recovery media.</li>
+<li>Retrieve the approved backup and associated records.</li>
+<li>Restore the supported controller configuration.</li>
+<li>Verify robot identity and mastering requirements.</li>
+<li>Check tool frames, user frames, payloads, and external axes.</li>
+<li>Verify I/O and communication with the PLC and cell devices.</li>
+<li>Complete required motion, safety, and process acceptance tests.</li>
+</ul>
+<p>Controller replacement does not automatically establish that the robot's mechanical reference and calibration are correct.</p>
+<h3 id="122-mastering-or-encoder-data-loss">12.2 Mastering or encoder-data loss</h3>
+<p>Situation: The controller reports a mastering or position-reference problem after battery failure, encoder work, or component replacement.</p>
+<ul>
+<li>Stop the robot and prevent uncontrolled motion.</li>
+<li>Determine whether the robot's reference data remains valid.</li>
+<li>Check the manufacturer's requirements for the affected joint and encoder.</li>
+<li>Retrieve robot-specific records where available.</li>
+<li>Follow the approved mastering procedure if necessary.</li>
+<li>Verify the result using the required reference and calibration checks.</li>
+<li>Update the records only after the result has been validated.</li>
+</ul>
+<p>Do not copy reference data from another robot or assume that a program backup can recreate lost mastering information.</p>
+<h3 id="123-incorrect-tcp-or-user-frame">12.3 Incorrect TCP or user frame</h3>
+<p>Situation: The robot moves but the tool misses its target.</p>
+<p>Potential causes include:</p>
+<ul>
+<li>Wrong TCP selection.</li>
+<li>Incorrect tool orientation.</li>
+<li>Incorrect user frame.</li>
+<li>Changed fixture or tool mounting.</li>
+<li>Incorrect coordinate transformation.</li>
+<li>Vision-to-robot calibration error.</li>
+<li>Incorrect mastering or mechanical alignment.</li>
+</ul>
+<p>Verify the physical tooling and fixture, confirm the selected frames, and repeat the relevant calibration procedure where required. Do not compensate for an unknown calibration error by arbitrarily editing program positions.</p>
+<h3 id="124-program-loss-or-corruption">12.4 Program loss or corruption</h3>
+<p>Situation: A robot program is missing, damaged, or replaced by an incorrect revision.</p>
+<ol>
+<li>Retrieve the approved program from the controlled repository.</li>
+<li>Verify the robot model and application compatibility.</li>
+<li>Restore required subroutines and dependencies.</li>
+<li>Check tool, frame, payload, and I/O assumptions.</li>
+<li>Compare the restored program with the approved revision.</li>
+<li>Prove the program using the cell's approved commissioning process.</li>
+<li>Record the released revision.</li>
+</ol>
+<p>A program can be syntactically valid and still be unsafe for the current fixture, tool, or cell arrangement.</p>
+<h3 id="125-robot-fails-to-communicate-with-plc">12.5 Robot fails to communicate with PLC</h3>
+<p>Situation: The robot controller starts but does not receive start commands or exchange status signals.</p>
+<p>Investigate:</p>
+<ul>
+<li>Network link and physical connections.</li>
+<li>IP addressing and device identity.</li>
+<li>Fieldbus configuration and device mapping.</li>
+<li>PLC and robot program revisions.</li>
+<li>Signal assignment and polarity.</li>
+<li>I/O update status and communication faults.</li>
+<li>PLC interlocks and robot-ready conditions.</li>
+<li>Required configuration or options.</li>
+</ul>
+<p>Verify the communication path from the physical network through device configuration to the application signals. Do not assume that a working Ethernet link proves that the application-level I/O mapping is correct.</p>
+<h3 id="126-safety-fault-after-restoration">12.6 Safety fault after restoration</h3>
+<p>Situation: The robot reports a safety fault or cannot enter the expected operating mode.</p>
+<ul>
+<li>Preserve the fault information.</li>
+<li>Check the safety configuration revision and hardware identity.</li>
+<li>Verify the safety PLC or external safety controller.</li>
+<li>Check safety I/O, network configuration, guards, scanners, and enabling devices.</li>
+<li>Follow the manufacturer's approved recovery procedure.</li>
+<li>Complete required safety validation before release.</li>
+</ul>
+<p>Do not bypass a safety fault or change safety parameters simply to return the robot to automatic operation.</p>
+<h3 id="127-external-axis-or-coordinated-motion-failure">12.7 External-axis or coordinated-motion failure</h3>
+<p>Situation: The robot arm operates but a track, positioner, or coordinated axis does not.</p>
+<ul>
+<li>Verify the external-axis drive and feedback status.</li>
+<li>Check axis assignment, scaling, direction, and limits.</li>
+<li>Confirm mechanical ratio and coordinate relationships.</li>
+<li>Verify the motion-group configuration and synchronization settings.</li>
+<li>Check the required PLC interlocks and communication.</li>
+<li>Validate coordinated movement under approved conditions.</li>
+</ul>
+<p>Restoring the robot arm alone may not restore the complete coordinated cell.</p>
+<h3 id="128-robot-obsolescence-migration">12.8 Robot obsolescence migration</h3>
+<p>Situation: An obsolete robot controller must be replaced with a newer controller generation or robot platform.</p>
+<ol>
+<li>Preserve the original programs, configuration, and recovery records.</li>
+<li>Record robot, controller, software, drive, and option details.</li>
+<li>Document mastering, TCP, user frames, payloads, and external-axis configuration.</li>
+<li>Obtain the manufacturer's migration guidance.</li>
+<li>Check programming-language and application-package compatibility.</li>
+<li>Identify changes to motion behavior, communication, and I/O mapping.</li>
+<li>Review safety configuration and required validation.</li>
+<li>Re-establish or verify calibration and coordinate relationships.</li>
+<li>Test the complete cell, including PLC, vision, fixtures, and process devices.</li>
+<li>Archive the released target configuration separately from the source backup.</li>
+</ol>
+<p>A newer controller may interpret or implement some functions differently. Program conversion alone does not establish functional equivalence.</p>
+<h2 id="13-robot-backup-troubleshooting">13. Robot backup troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Corrective action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backup operation fails</td>
+<td>Storage, access, or controller error</td>
+<td>Verify supported media, access, and controller status</td>
+</tr>
+<tr>
+<td>Backup files cannot be restored</td>
+<td>Wrong controller generation or incompatible format</td>
+<td>Confirm manufacturer-supported restoration requirements</td>
+</tr>
+<tr>
+<td>Controller starts but programs are missing</td>
+<td>Incomplete backup scope</td>
+<td>Restore the required program and application data</td>
+</tr>
+<tr>
+<td>Robot reports mastering error</td>
+<td>Lost reference data or encoder issue</td>
+<td>Follow the robot-specific mastering procedure</td>
+</tr>
+<tr>
+<td>Tool misses target positions</td>
+<td>Incorrect TCP or frame</td>
+<td>Verify tooling and calibration</td>
+</tr>
+<tr>
+<td>Robot motion differs from baseline</td>
+<td>Payload, mastering, frame, or configuration mismatch</td>
+<td>Compare approved configuration and perform controlled checks</td>
+</tr>
+<tr>
+<td>External axis does not move correctly</td>
+<td>Incorrect axis assignment, scaling, or drive configuration</td>
+<td>Verify external-axis configuration and feedback</td>
+</tr>
+<tr>
+<td>PLC signals are incorrect</td>
+<td>I/O mapping or communication mismatch</td>
+<td>Check fieldbus configuration and application signals</td>
+</tr>
+<tr>
+<td>Safety fault persists</td>
+<td>Safety configuration, device, or validation issue</td>
+<td>Diagnose and follow approved safety recovery</td>
+</tr>
+<tr>
+<td>Vision-guided movement is inaccurate</td>
+<td>Calibration or frame mismatch</td>
+<td>Verify camera calibration and robot-coordinate transformation</td>
+</tr>
+<tr>
+<td>Controller image fails</td>
+<td>Incompatible image, media, or storage configuration</td>
+<td>Use the approved recovery procedure</td>
+</tr>
+<tr>
+<td>Cell fails during automatic cycle</td>
+<td>Missing dependencies, interlocks, or process configuration</td>
+<td>Check the complete cell sequence and safety conditions</td>
+</tr>
+</tbody>
+</table>
+<h2 id="14-practical-maintenance-implementation">14. Practical maintenance implementation</h2>
+<h3 id="141-robot-backup-register">14.1 Robot backup register</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Robot ID</td>
+<td>Plant-approved asset identifier</td>
+</tr>
+<tr>
+<td>Robot model</td>
+<td>Exact robot series and payload class</td>
+</tr>
+<tr>
+<td>Serial number</td>
+<td>Robot-specific identification</td>
+</tr>
+<tr>
+<td>Controller model</td>
+<td>Controller generation and hardware identification</td>
+</tr>
+<tr>
+<td>Software version</td>
+<td>Installed controller and application software revisions</td>
+</tr>
+<tr>
+<td>Program revision</td>
+<td>Approved robot program revision</td>
+</tr>
+<tr>
+<td>Backup scope</td>
+<td>Full backup, programs, system data, or other supported content</td>
+</tr>
+<tr>
+<td>Mastering status</td>
+<td>Verified status and record location</td>
+</tr>
+<tr>
+<td>TCP record</td>
+<td>Approved tool definitions and calibration record</td>
+</tr>
+<tr>
+<td>User-frame record</td>
+<td>Approved fixture and workpiece coordinate definitions</td>
+</tr>
+<tr>
+<td>Payload record</td>
+<td>Approved load data and tool configuration</td>
+</tr>
+<tr>
+<td>External-axis record</td>
+<td>Axis identification and configuration revision</td>
+</tr>
+<tr>
+<td>Safety record</td>
+<td>Safety configuration revision and validation status</td>
+</tr>
+<tr>
+<td>Communication record</td>
+<td>Network and I/O configuration</td>
+</tr>
+<tr>
+<td>Backup date</td>
+<td>Actual completed date</td>
+</tr>
+<tr>
+<td>Storage location</td>
+<td>Controlled repository location</td>
+</tr>
+<tr>
+<td>Restore-test date</td>
+<td>Actual completed test date</td>
+</tr>
+<tr>
+<td>RTO/RPO</td>
+<td>Approved recovery targets</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Current, overdue, failed, or under review</td>
+</tr>
+<tr>
+<td>Responsible owner</td>
+<td>Assigned maintenance or engineering role</td>
+</tr>
+</tbody>
+</table>
+<h3 id="142-suggested-folder-structure">14.2 Suggested folder structure</h3>
+<pre><code>ROBOT_BACKUP_SYSTEM/
+    01_ASSET_REGISTER/
+    02_APPROVED_BACKUPS/
+        ROBOT_1059/
+            FULL_CONTROLLER_BACKUP/
+            ROBOT_PROGRAMS/
+            SYSTEM_CONFIGURATION/
+            MASTERING_RECORDS/
+            TCP_AND_USER_FRAMES/
+            PAYLOAD_CONFIGURATION/
+            EXTERNAL_AXIS_CONFIGURATION/
+            PLC_AND_IO_CONFIGURATION/
+            SAFETY_CONFIGURATION_RECORDS/
+            VISION_AND_PROCESS_DATA/
+            SOFTWARE_AND_OPTIONS/
+            CALIBRATION_RECORDS/
+            COMMISSIONING_RESULTS/
+            CHANGE_HISTORY/
+            RECOVERY_PROCEDURE/
+    03_INDEPENDENT_RECOVERY_COPIES/
+    04_RESTORE_TEST_RECORDS/
+    05_MIGRATION_RECORDS/
+</code></pre>
+<p>The folder names are illustrative. Use the actual asset tags, approved naming conventions, and manufacturer-supported file formats. Store restricted safety configuration and engineering files under appropriate access controls.</p>
+<h3 id="143-work-order-integration">14.3 Work-order integration</h3>
+<p>For robot breakdowns, controller replacement, or configuration changes:</p>
+<ol>
+<li>Record the robot ID, alarm, symptoms, and affected subsystem.</li>
+<li>Preserve the current configuration where practical.</li>
+<li>Retrieve the approved backup package and recovery procedure.</li>
+<li>Complete the authorized repair or restoration.</li>
+<li>Verify mastering, frames, payload, external axes, and I/O.</li>
+<li>Complete required safety and functional tests.</li>
+<li>Save the verified final configuration.</li>
+<li>Update the backup register and work-order history.</li>
+<li>Record unresolved obsolescence or recovery risks.</li>
+</ol>
+<h2 id="15-recovery-drills-and-audit">15. Recovery drills and audit</h2>
+<h3 id="151-recovery-drill">15.1 Recovery drill</h3>
+<p>A recovery drill verifies that the robot backup and documented process are sufficient for the intended recovery scenario.</p>
+<ol>
+<li>Select an approved test controller, nonproduction environment, or controlled recovery exercise.</li>
+<li>Retrieve the released backup package.</li>
+<li>Verify the robot and controller identity, file integrity, and revision.</li>
+<li>Confirm required software, licenses, hardware, and recovery media.</li>
+<li>Restore the selected configuration using the documented procedure.</li>
+<li>Verify programs, system data, frames, payloads, and I/O configuration.</li>
+<li>Confirm that mastering and calibration information is available and appropriate.</li>
+<li>Verify separately stored PLC, safety PLC, vision, and external-axis dependencies.</li>
+<li>Record restoration time, missing data, and compatibility issues.</li>
+<li>Correct the recovery package and repeat the test where required.</li>
+</ol>
+<p>A file restoration exercise does not replace physical robot validation or required safety testing.</p>
+<h3 id="152-audit-checklist">15.2 Audit checklist</h3>
+<ul>
+<li>Critical robots are recorded in the installed-base register.</li>
+<li>Required controller backups exist and are current.</li>
+<li>Robot programs and application dependencies are archived.</li>
+<li>Robot-specific mastering records are available.</li>
+<li>TCPs and user frames are documented.</li>
+<li>Payload and external-axis configurations are preserved.</li>
+<li>PLC, I/O, and communication dependencies are documented.</li>
+<li>Safety configuration and validation records are controlled.</li>
+<li>Required recovery software, options, and media are available.</li>
+<li>Independent recovery copies are maintained.</li>
+<li>Backup integrity and revision currency are checked.</li>
+<li>Restore tests are completed at the defined interval.</li>
+<li>Post-restoration acceptance checks are documented.</li>
+<li>Obsolete controllers have migration plans.</li>
+<li>Configuration changes trigger required backup updates.</li>
+<li>Recovery times are compared against approved targets.</li>
+</ul>
+<h2 id="16-robot-backup-management-kpis">16. Robot backup management KPIs</h2>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Calculation</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backup coverage</td>
+<td>Robots with required backups divided by robots requiring backups, multiplied by 100%</td>
+<td>Measures backup availability</td>
+</tr>
+<tr>
+<td>Backup currency</td>
+<td>Robots with current approved backups divided by robots requiring backups, multiplied by 100%</td>
+<td>Measures revision accuracy</td>
+</tr>
+<tr>
+<td>Restore-test success</td>
+<td>Successful restore tests divided by completed restore tests, multiplied by 100%</td>
+<td>Measures demonstrated recoverability</td>
+</tr>
+<tr>
+<td>Recovery time</td>
+<td>Total measured recovery time divided by recovery events</td>
+<td>Measures recovery performance</td>
+</tr>
+<tr>
+<td>Missing-dependency rate</td>
+<td>Recovery packages missing required dependencies divided by packages audited, multiplied by 100%</td>
+<td>Identifies incomplete recovery packages</td>
+</tr>
+<tr>
+<td>Calibration-record coverage</td>
+<td>Critical robots with current required calibration records divided by critical robots requiring them, multiplied by 100%</td>
+<td>Measures calibration documentation</td>
+</tr>
+<tr>
+<td>Post-recovery acceptance rate</td>
+<td>Restored robots passing required acceptance checks divided by restored robots tested, multiplied by 100%</td>
+<td>Measures recovery quality</td>
+</tr>
+</tbody>
+</table>
+<p>For example, if 19 of 20 critical robots have current approved backups:</p>
+<div class="math-display">\[ \text{Backup coverage}=\frac{19}{20}\times100=95\\% \]</div>
+<p>This indicates backup availability, not proven recoverability. Restoration testing, calibration verification, and required safety validation provide additional evidence.</p>
+<h2 id="17-interview-questions-and-technical-answers">17. Interview questions and technical answers</h2>
+<p>1. Why is robot backup more than program backup?</p>
+<p>The robot also depends on system configuration, mastering, TCPs, user frames, payloads, I/O mappings, external axes, safety configuration, and application-specific data.</p>
+<p>2. What is the difference between mastering and calibration?</p>
+<p>Mastering establishes the internal joint reference relationship. Calibration establishes or verifies geometric relationships involving the robot, tools, fixtures, workpieces, or external systems.</p>
+<p>3. Why should mastering data not be copied from another robot?</p>
+<p>Mastering is robot-specific. Similar model numbers do not guarantee identical mechanical or encoder reference relationships.</p>
+<p>4. Why are TCP and user-frame backups important?</p>
+<p>They define how programmed coordinates relate to the physical tool, workpiece, and fixture. Incorrect values can cause positional errors or collisions.</p>
+<p>5. Why must payload settings be verified?</p>
+<p>Payload data affects motion performance and may be relevant to supported load monitoring and safety functions. Incorrect values can cause poor performance or unsafe conditions.</p>
+<p>6. Does a full controller backup always contain safety configuration?</p>
+<p>Not necessarily. Backup scope depends on the controller and safety architecture. Verify what is included and preserve separate safety-controller data and validation records where required.</p>
+<p>7. What must be checked after robot controller replacement?</p>
+<p>Verify controller compatibility, programs, mastering, TCPs, frames, payloads, external axes, I/O, safety functions, communication, and complete cell behavior.</p>
+<p>8. Why can a robot move correctly but still produce defective parts?</p>
+<p>Tool frames, user frames, payloads, calibration, fixture positions, or process parameters may be incorrect even when motion commands execute.</p>
+<p>9. Why should robot backups be restore-tested?</p>
+<p>File existence does not prove compatibility or completeness. Restore testing helps establish that the recovery package and procedure work in the tested environment.</p>
+<p>10. Is a successful automatic cycle sufficient for safety release?</p>
+<p>No. Required safety functions, protective devices, interlocks, and validation criteria must be verified according to the approved safety process.</p>
+<h2 id="18-final-engineering-principles">18. Final engineering principles</h2>
+<ul>
+<li>Back up the complete supported robot configuration, not just motion programs.</li>
+<li>Preserve robot-specific mastering and calibration records.</li>
+<li>Verify TCPs, user frames, payloads, and external-axis configuration after restoration.</li>
+<li>Preserve PLC, safety PLC, vision, and network dependencies separately where necessary.</li>
+<li>Use manufacturer-supported recovery methods and compatible software.</li>
+<li>Maintain independent, revision-controlled recovery copies.</li>
+<li>Test restoration under controlled conditions.</li>
+<li>Complete required functional and safety validation before production release.</li>
+<li>Keep migration records for obsolete robot controllers.</li>
+<li>Archive the verified final configuration after every approved recovery or major change.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\25_Backup_DR\01_Systems_Backup\07_Vision - Vision</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

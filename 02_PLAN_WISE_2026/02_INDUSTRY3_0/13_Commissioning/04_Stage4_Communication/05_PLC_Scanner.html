@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLC-Scanner Communication Commissioning</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">PLC-Scanner Communication Commissioning</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-objectives-and-scope">2. Objectives and Scope</a></li>
+<li><a href="#3-typical-plc-scanner-architecture">3. Typical PLC-Scanner Architecture</a></li>
+<li><a href="#4-identify-the-scanner-before-commissioning">4. Identify the Scanner Before Commissioning</a></li>
+<li><a href="#5-common-communication-interfaces">5. Common Communication Interfaces</a></li>
+<li><a href="#6-pre-commissioning-requirements">6. Pre-Commissioning Requirements</a></li>
+<li><a href="#7-physical-installation-and-optical-setup">7. Physical Installation and Optical Setup</a><ul>
+<li><a href="#71-mounting-and-alignment">7.1 Mounting and alignment</a></li>
+<li><a href="#72-code-quality-and-application-setup">7.2 Code quality and application setup</a></li>
+</ul>
+</li>
+<li><a href="#8-network-configuration-and-communication-verification">8. Network Configuration and Communication Verification</a><ul>
+<li><a href="#81-ethernet-configuration">8.1 Ethernet configuration</a></li>
+<li><a href="#82-profinet-and-ethernetip">8.2 PROFINET and EtherNet/IP</a></li>
+</ul>
+</li>
+<li><a href="#9-plc-scanner-signal-mapping">9. PLC-Scanner Signal Mapping</a><ul>
+<li><a href="#91-mapping-verification-procedure">9.1 Mapping verification procedure</a></li>
+</ul>
+</li>
+<li><a href="#10-scanner-trigger-and-read-handshake">10. Scanner Trigger and Read Handshake</a><ul>
+<li><a href="#101-handshake-design-considerations">10.1 Handshake design considerations</a></li>
+<li><a href="#102-avoid-repeated-triggering">10.2 Avoid repeated triggering</a></li>
+</ul>
+</li>
+<li><a href="#11-data-capture-and-validation">11. Data Capture and Validation</a><ul>
+<li><a href="#111-example-validation-logic">11.1 Example validation logic</a></li>
+<li><a href="#112-data-freshness">11.2 Data freshness</a></li>
+</ul>
+</li>
+<li><a href="#12-no-read-and-retry-handling">12. No-Read and Retry Handling</a><ul>
+<li><a href="#121-retry-strategy">12.1 Retry strategy</a></li>
+</ul>
+</li>
+<li><a href="#13-scanner-integration-with-machine-sequence">13. Scanner Integration With Machine Sequence</a></li>
+<li><a href="#14-plc-scanner-integration-for-measurement-systems">14. PLC-Scanner Integration for Measurement Systems</a></li>
+<li><a href="#15-safety-laser-scanner-integration">15. Safety Laser Scanner Integration</a><ul>
+<li><a href="#151-required-checks">15.1 Required checks</a></li>
+<li><a href="#152-safety-boundary">15.2 Safety boundary</a></li>
+</ul>
+</li>
+<li><a href="#16-troubleshooting-guide">16. Troubleshooting Guide</a></li>
+<li><a href="#17-fault-recovery-and-communication-loss">17. Fault Recovery and Communication Loss</a></li>
+<li><a href="#18-performance-and-reliability-testing">18. Performance and Reliability Testing</a></li>
+<li><a href="#19-fat-and-sat">19. FAT and SAT</a></li>
+<li><a href="#20-acceptance-criteria">20. Acceptance Criteria</a></li>
+<li><a href="#21-documentation-and-handover">21. Documentation and Handover</a></li>
+<li><a href="#22-common-commissioning-mistakes">22. Common Commissioning Mistakes</a></li>
+<li><a href="#23-interview-questions-and-answers">23. Interview Questions and Answers</a></li>
+<li><a href="#24-final-commissioning-checklist">24. Final Commissioning Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>PLC-scanner communication commissioning is the process of configuring, integrating, and validating communication between a PLC and an industrial scanner or scanning system so that the PLC receives the correct identification, measurement, position, or inspection data and can use it reliably in the machine sequence.</p>
+<p>In industrial automation, the term scanner can refer to several different devices:</p>
+<ul>
+<li>Barcode scanner: Reads 1D barcodes and 2D codes such as QR codes or Data Matrix.</li>
+<li>Industrial identification reader: Reads product, component, or traceability codes.</li>
+<li>Laser measurement scanner: Measures distance, dimensions, profiles, or object geometry.</li>
+<li>Vision scanner or code reader: Uses an imaging sensor to identify codes or inspect features.</li>
+<li>Safety laser scanner: Detects people or objects within configured protective fields and provides safety-related outputs.</li>
+<li>Area or 3D scanner: Detects object presence, shape, position, or volume.</li>
+</ul>
+<p>These devices do not all communicate in the same way. A barcode reader returning a product ID is fundamentally different from a safety laser scanner protecting access to a robot cell. Commissioning must begin by identifying the device type and its intended function.</p>
+<h2 id="2-objectives-and-scope">2. Objectives and Scope</h2>
+<p>The main objectives are to verify that:</p>
+<ul>
+<li>The scanner is installed and configured correctly.</li>
+<li>The PLC can communicate with the scanner using the intended interface.</li>
+<li>Scanner data reaches the correct PLC variables.</li>
+<li>Data formatting, byte order, scaling, and validity are correct.</li>
+<li>Successful reads, failed reads, and communication faults are distinguished.</li>
+<li>The machine sequence responds correctly to scanner results.</li>
+<li>Invalid or stale data cannot accidentally authorize the wrong operation.</li>
+<li>Diagnostic information is available to maintenance personnel.</li>
+<li>Required safety functions are validated separately where a safety scanner is used.</li>
+</ul>
+<p>Typical applications include part identification, model selection, barcode-based traceability, robot guidance, dimensional inspection, presence detection, and protective-field monitoring.</p>
+<h2 id="3-typical-plc-scanner-architecture">3. Typical PLC-Scanner Architecture</h2>
+<p>For an ordinary industrial identification scanner, a typical architecture is:</p>
+<pre><code>Barcode / Data Matrix / QR Code
+             ↓
+Industrial Scanner
+             ↓
+Ethernet / PROFINET / EtherNet/IP / Serial / Digital I/O
+             ↓
+PLC Communication Interface
+             ↓
+Data Validation and Decoding
+             ↓
+Part Identification and Sequence Logic
+             ↓
+HMI / MES / Traceability Database / Machine Control
+</code></pre>
+<p>A safety laser scanner follows a different architecture because its protective function must be implemented through an appropriate safety-rated system.</p>
+<pre><code>Protective Field and Scanner Sensors
+             ↓
+Safety Laser Scanner
+             ↓
+Safety Outputs or Safety Communication
+             ↓
+Safety Relay / Safety PLC / Compatible Safety Controller
+             ↓
+Validated Machine Safety Function
+</code></pre>
+<p>A standard PLC may monitor diagnostic or status information from a safety scanner, but ordinary PLC logic must not replace the validated safety function.</p>
+<h2 id="4-identify-the-scanner-before-commissioning">4. Identify the Scanner Before Commissioning</h2>
+<p>Before connecting or configuring the scanner, identify its function and interface.</p>
+<table>
+<thead>
+<tr>
+<th>Scanner type</th>
+<th>Typical output</th>
+<th>Common use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Barcode or code reader</td>
+<td>Text, code bytes, result status</td>
+<td>Product identification and traceability</td>
+</tr>
+<tr>
+<td>Laser displacement scanner</td>
+<td>Distance or measurement values</td>
+<td>Position and dimensional checks</td>
+</tr>
+<tr>
+<td>Profile scanner</td>
+<td>Point cloud, profile, or measurement data</td>
+<td>Geometry and quality inspection</td>
+</tr>
+<tr>
+<td>Vision-based reader</td>
+<td>Code, image result, or inspection status</td>
+<td>Identification and visual inspection</td>
+</tr>
+<tr>
+<td>Safety laser scanner</td>
+<td>Safety outputs, protective-field status, diagnostics</td>
+<td>Personnel protection</td>
+</tr>
+<tr>
+<td>Presence scanner</td>
+<td>Object-present or detection data</td>
+<td>Part detection and machine sequencing</td>
+</tr>
+</tbody>
+</table>
+<p>The device manual and machine-builder specification determine the actual capabilities. A scanner may support several interfaces, but only one or a limited combination may be configured for the machine.</p>
+<h2 id="5-common-communication-interfaces">5. Common Communication Interfaces</h2>
+<table>
+<thead>
+<tr>
+<th>Interface</th>
+<th>Typical application</th>
+<th>Commissioning checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Discrete digital I/O</td>
+<td>Trigger, busy, result-valid, good-read, fault</td>
+<td>Wiring, polarity, voltage, pulse timing, and feedback</td>
+</tr>
+<tr>
+<td>Serial RS-232</td>
+<td>Barcode data and simple device commands</td>
+<td>Baud rate, parity, data bits, stop bits, and termination</td>
+</tr>
+<tr>
+<td>Serial RS-485</td>
+<td>Industrial serial communication</td>
+<td>Wiring topology, termination, biasing, and protocol configuration</td>
+</tr>
+<tr>
+<td>TCP/IP Ethernet</td>
+<td>Scanner commands and result data</td>
+<td>IP address, port, connection behavior, and message framing</td>
+</tr>
+<tr>
+<td>PROFINET</td>
+<td>Cyclic industrial data exchange</td>
+<td>Device name, IP configuration, hardware configuration, and I/O mapping</td>
+</tr>
+<tr>
+<td>EtherNet/IP</td>
+<td>Cyclic or configured industrial data exchange</td>
+<td>Device identity, connection settings, and assembly mapping</td>
+</tr>
+<tr>
+<td>IO-Link</td>
+<td>Sensor data and parameters on supported devices</td>
+<td>Master port configuration, process data, and device description</td>
+</tr>
+<tr>
+<td>OPC UA</td>
+<td>Structured data exchange where supported</td>
+<td>Endpoint, certificates, authentication, namespaces, and data types</td>
+</tr>
+<tr>
+<td>Safety communication</td>
+<td>Safety-related scanner information</td>
+<td>Compatibility, configuration, safety validation, and diagnostic behavior</td>
+</tr>
+</tbody>
+</table>
+<p>A scanner may use Ethernet for configuration but provide its production result through PROFINET, TCP sockets, or digital outputs. Do not assume that the configuration interface is also the production interface.</p>
+<h2 id="6-pre-commissioning-requirements">6. Pre-Commissioning Requirements</h2>
+<p>Collect the following before changing the system:</p>
+<ul>
+<li>Scanner manufacturer, model, serial number, and firmware.</li>
+<li>Scanner application and intended function.</li>
+<li>PLC model, firmware, and engineering software version.</li>
+<li>Scanner configuration backup or configuration export.</li>
+<li>Electrical drawings and I/O list.</li>
+<li>Network topology, IP addresses, device names, and port assignments.</li>
+<li>Communication protocol and data-format specification.</li>
+<li>Trigger conditions and expected reading rate.</li>
+<li>Expected code format, measurement range, or detection behavior.</li>
+<li>PLC tag mapping and machine sequence description.</li>
+<li>Safety documentation and risk assessment if a safety scanner is involved.</li>
+<li>Existing fault logs and the approved recovery procedure.</li>
+</ul>
+<p>The scanner's optical setup also matters. A perfectly configured PLC cannot compensate for an unreadable label, unsuitable working distance, excessive glare, poor mounting, or a damaged lens.</p>
+<h2 id="7-physical-installation-and-optical-setup">7. Physical Installation and Optical Setup</h2>
+<h3 id="71-mounting-and-alignment">7.1 Mounting and alignment</h3>
+<p>For a barcode or identification scanner, verify:</p>
+<ul>
+<li>The scanner is rigidly mounted.</li>
+<li>The working distance is within the manufacturer's specified range.</li>
+<li>The reading angle and field of view are suitable.</li>
+<li>The entire code can be seen under normal operating conditions.</li>
+<li>The label or code is positioned consistently.</li>
+<li>Vibration does not move the scanner or blur the image.</li>
+<li>Ambient light and reflective surfaces do not interfere with reading.</li>
+<li>The lens and protective window are clean.</li>
+<li>Cables are routed away from sources of electrical interference where required.</li>
+</ul>
+<p>For a measurement scanner, also verify the specified reference plane, measurement range, mounting geometry, calibration status, and environmental limits.</p>
+<h3 id="72-code-quality-and-application-setup">7.2 Code quality and application setup</h3>
+<p>For identification systems, confirm:</p>
+<ul>
+<li>Correct symbology, such as Code 128 or Data Matrix.</li>
+<li>Expected code length and character set.</li>
+<li>Prefixes, suffixes, separators, and terminators.</li>
+<li>Check-digit handling, if applicable.</li>
+<li>Duplicate-code behavior.</li>
+<li>Multiple-code selection rules.</li>
+<li>Read timeout and retry policy.</li>
+<li>Good-read and no-read reporting.</li>
+</ul>
+<p>A reader that successfully decodes a code is not necessarily proving that the code belongs to the correct product. PLC logic must validate the result against the expected production sequence and permitted values.</p>
+<h2 id="8-network-configuration-and-communication-verification">8. Network Configuration and Communication Verification</h2>
+<h3 id="81-ethernet-configuration">8.1 Ethernet configuration</h3>
+<p>Verify:</p>
+<ul>
+<li>Correct scanner IP address.</li>
+<li>Correct subnet mask and any required gateway.</li>
+<li>Unique addresses within the network.</li>
+<li>Correct Ethernet port and cable.</li>
+<li>Correct PLC hardware configuration.</li>
+<li>Correct protocol and connection settings.</li>
+<li>No duplicate IP address or unexpected routing issue.</li>
+<li>Stable communication during normal machine operation.</li>
+<li>Correct scanner startup behavior after power cycling.</li>
+</ul>
+<p>A ping response proves only basic IP reachability. It does not prove that a PLC connection is established, that process data is valid, or that the scanner is returning current results.</p>
+<h3 id="82-profinet-and-ethernetip">8.2 PROFINET and EtherNet/IP</h3>
+<p>For PROFINET, verify the configured device identity, device name, network parameters, module configuration, and input/output mapping.</p>
+<p>For EtherNet/IP, verify the device identity, connection configuration, requested packet interval where applicable, input/output assembly layout, and connection status.</p>
+<p>For both protocols:</p>
+<ol>
+<li>Compare the configured device with the installed scanner.</li>
+<li>Confirm the expected cyclic data length.</li>
+<li>Monitor raw input and output data.</li>
+<li>Confirm the intended trigger and result bits.</li>
+<li>Validate the data format and interpretation.</li>
+<li>Check connection-loss diagnostics and recovery behavior.</li>
+</ol>
+<p>The exact device configuration depends on the scanner model, PLC platform, and supported protocol options.</p>
+<h2 id="9-plc-scanner-signal-mapping">9. PLC-Scanner Signal Mapping</h2>
+<p>Signal mapping links a physical or communication-interface signal to its intended PLC variable and machine function.</p>
+<p>A typical identification scanner may use the following signals.</p>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Typical direction</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Trigger request</td>
+<td>PLC to scanner</td>
+<td>Requests a new read</td>
+</tr>
+<tr>
+<td>Trigger accepted or ready</td>
+<td>Scanner to PLC</td>
+<td>Indicates readiness or acceptance, depending on the interface</td>
+</tr>
+<tr>
+<td>Busy</td>
+<td>Scanner to PLC</td>
+<td>Indicates an operation is in progress</td>
+</tr>
+<tr>
+<td>Good read</td>
+<td>Scanner to PLC</td>
+<td>Indicates a successful decode</td>
+</tr>
+<tr>
+<td>No read</td>
+<td>Scanner to PLC</td>
+<td>Indicates that no valid code was decoded</td>
+</tr>
+<tr>
+<td>Result valid</td>
+<td>Scanner to PLC</td>
+<td>Indicates that result data is available</td>
+</tr>
+<tr>
+<td>Result data</td>
+<td>Scanner to PLC</td>
+<td>Contains the decoded value</td>
+</tr>
+<tr>
+<td>Acknowledge or result clear</td>
+<td>PLC to scanner</td>
+<td>Clears or acknowledges a result when supported</td>
+</tr>
+<tr>
+<td>Scanner fault</td>
+<td>Scanner to PLC</td>
+<td>Indicates a device or application fault</td>
+</tr>
+<tr>
+<td>Communication status</td>
+<td>Interface to PLC</td>
+<td>Indicates communication health</td>
+</tr>
+<tr>
+<td>Quality or confidence value</td>
+<td>Scanner to PLC</td>
+<td>Provides a reading-quality measure where supported</td>
+</tr>
+</tbody>
+</table>
+<p>These signals are examples, not a universal interface definition. Some scanners provide a single result status; others use handshakes or structured data records.</p>
+<h3 id="91-mapping-verification-procedure">9.1 Mapping verification procedure</h3>
+<p>For each signal:</p>
+<ol>
+<li>Identify the source and destination.</li>
+<li>Verify the physical I/O address or communication-data offset.</li>
+<li>Confirm the expected active state.</li>
+<li>Monitor the raw value.</li>
+<li>Compare the raw value with the mapped PLC variable.</li>
+<li>Trigger a controlled test.</li>
+<li>Confirm that the intended state or data changes.</li>
+<li>Verify that unrelated signals do not change unexpectedly.</li>
+<li>Record the result and restore normal operation.</li>
+</ol>
+<p>For structured data, also check the field length, byte order, character encoding, signedness, and validity indicators.</p>
+<h2 id="10-scanner-trigger-and-read-handshake">10. Scanner Trigger and Read Handshake</h2>
+<p>A trigger is the command that starts a reading or measurement operation. It may be initiated by a PLC output, an Ethernet command, a sensor input, or an internal scanner event.</p>
+<p>A typical PLC-triggered barcode-read sequence is:</p>
+<pre><code>PLC confirms correct part is present
+             ↓
+PLC confirms scanner is ready
+             ↓
+PLC issues trigger request
+             ↓
+Scanner accepts trigger and starts reading
+             ↓
+Scanner reports result or no-read
+             ↓
+PLC validates result status and data
+             ↓
+PLC acknowledges or clears result if required
+             ↓
+PLC permits the next sequence step
+</code></pre>
+<h3 id="101-handshake-design-considerations">10.1 Handshake design considerations</h3>
+<p>The interface specification must define:</p>
+<ul>
+<li>Whether the trigger is a pulse or maintained signal.</li>
+<li>Whether the scanner requires a rising edge.</li>
+<li>How trigger acceptance is confirmed.</li>
+<li>How busy status is interpreted.</li>
+<li>When result data becomes valid.</li>
+<li>Whether result-valid remains active until acknowledgement.</li>
+<li>How a no-read condition is reported.</li>
+<li>Whether the result must be copied before acknowledgement.</li>
+<li>How the trigger is reset.</li>
+<li>What happens if the scanner never responds.</li>
+<li>Whether multiple triggers can be queued or must be separated.</li>
+</ul>
+<p>Do not assume that every scanner uses <code>TRIGGER</code>, <code>BUSY</code>, <code>GOOD_READ</code>, and <code>RESULT_VALID</code> as separate signals. Some interfaces use a command-response message, while others exchange cyclic status and data.</p>
+<h3 id="102-avoid-repeated-triggering">10.2 Avoid repeated triggering</h3>
+<p>If the PLC maintains a trigger signal continuously when the scanner expects a rising edge, the scanner may execute only one read. Conversely, if the scanner treats a maintained signal as repeated triggering, it may perform multiple reads.</p>
+<p>The PLC should generate the trigger behavior required by the scanner manual and verify that one intended event produces one intended reading.</p>
+<h2 id="11-data-capture-and-validation">11. Data Capture and Validation</h2>
+<p>A decoded string is only one part of a valid result. The PLC should verify the status, content, and context of the result.</p>
+<p>For a code reader, validation may include:</p>
+<ul>
+<li>Good-read status is active.</li>
+<li>Result-valid is active or a valid response has been received.</li>
+<li>Data length is within the allowed range.</li>
+<li>Character set and format are correct.</li>
+<li>Prefixes and suffixes are handled correctly.</li>
+<li>The decoded identifier is valid for the current product or production step.</li>
+<li>The result belongs to the current trigger event.</li>
+<li>The result has not already been consumed by the sequence.</li>
+<li>The data is not stale from a previous read.</li>
+</ul>
+<h3 id="111-example-validation-logic">11.1 Example validation logic</h3>
+<p>The following pseudocode illustrates the concept:</p>
+<pre><code>IF New_Result_Received THEN
+    IF Result_Status = GOOD_READ
+       AND Result_Data_Valid
+       AND Result_Length_Is_Valid
+       AND Result_Belongs_To_Current_Part
+    THEN
+        Store_Result
+        Set_Identification_Complete
+    ELSE
+        Set_Read_Validation_Fault
+        Inhibit_Dependent_Operation
+    END_IF
+END_IF
+</code></pre>
+<p>This is conceptual logic. Actual PLC implementation must handle data copying, string representation, status clearing, and handshake sequencing according to the selected platform.</p>
+<h3 id="112-data-freshness">11.2 Data freshness</h3>
+<p>A common error is accepting a previous successful read after the current read has failed.</p>
+<p>To prevent this:</p>
+<ul>
+<li>Clear or invalidate the previous result at the correct point in the sequence.</li>
+<li>Associate the result with the current trigger or transaction.</li>
+<li>Wait for a new valid response.</li>
+<li>Reject stale data after timeout or communication loss.</li>
+<li>Do not treat a retained good-read bit as proof of a new successful read.</li>
+</ul>
+<p>The exact method may use a result handshake, sequence counter, timestamp, transaction ID, or explicit clear operation, depending on the interface.</p>
+<h2 id="12-no-read-and-retry-handling">12. No-Read and Retry Handling</h2>
+<p>A no-read condition can result from a damaged label, poor alignment, incorrect focus, insufficient illumination, contamination, unsupported symbology, or an invalid trigger sequence.</p>
+<p>A robust sequence should distinguish:</p>
+<ul>
+<li>Scanner did not accept the trigger.</li>
+<li>Scanner is still busy.</li>
+<li>Scanner completed a read but found no valid code.</li>
+<li>Scanner returned a code that failed PLC validation.</li>
+<li>Scanner communication failed.</li>
+<li>Scanner hardware or application reported a fault.</li>
+</ul>
+<p>These conditions require different responses.</p>
+<h3 id="121-retry-strategy">12.1 Retry strategy</h3>
+<p>A controlled retry strategy may include:</p>
+<ol>
+<li>Detect a no-read result.</li>
+<li>Verify that the current part is still in the reading position.</li>
+<li>Check whether a retry is permitted.</li>
+<li>Re-trigger according to the scanner's interface requirements.</li>
+<li>Apply the configured retry limit.</li>
+<li>If retries fail, stop the dependent sequence and generate a clear diagnostic.</li>
+<li>Require the approved operator or maintenance recovery procedure.</li>
+</ol>
+<p>Repeated retries should not conceal poor optical setup or unreliable labels. Record the no-read frequency and investigate recurring patterns.</p>
+<h2 id="13-scanner-integration-with-machine-sequence">13. Scanner Integration With Machine Sequence</h2>
+<p>The PLC often uses scanner results to select the next production operation.</p>
+<p>Examples include:</p>
+<ul>
+<li>Identifying a vehicle component before assembly.</li>
+<li>Selecting the correct CNC program based on a validated part identifier.</li>
+<li>Confirming a serial number before marking or inspection.</li>
+<li>Associating a test result with the correct component.</li>
+<li>Confirming a label after packaging.</li>
+<li>Checking the identity of a tool, fixture, pallet, or container.</li>
+</ul>
+<p>A typical sequence is:</p>
+<pre><code>Part arrives at identification station
+             ↓
+Part-present condition verified
+             ↓
+PLC triggers scanner
+             ↓
+Scanner returns result
+             ↓
+PLC validates code and production context
+             ↓
+Correct product or recipe selected
+             ↓
+Required machine permissives checked
+             ↓
+Operation permitted
+</code></pre>
+<p>The scanner should not directly authorize an operation merely because it returns a syntactically valid string. The PLC must check that the identifier is permitted for the current station, product, recipe, and process state.</p>
+<h2 id="14-plc-scanner-integration-for-measurement-systems">14. PLC-Scanner Integration for Measurement Systems</h2>
+<p>A measurement scanner may return a distance, dimension, profile, or position value rather than a text string.</p>
+<p>Commissioning should verify:</p>
+<ul>
+<li>Measurement range and units.</li>
+<li>Reference plane and coordinate system.</li>
+<li>Sensor-to-part geometry.</li>
+<li>Data type and scaling.</li>
+<li>Validity and error indicators.</li>
+<li>Calibration and reference checks.</li>
+<li>Measurement update rate.</li>
+<li>Filtering and averaging behavior.</li>
+<li>Tolerance limits and boundary handling.</li>
+<li>Response to missing, invalid, or out-of-range measurements.</li>
+</ul>
+<p>For example, a scanner might return a distance in millimetres as a floating-point value. The PLC must verify that the received number is interpreted correctly and compared with the correct engineering tolerance.</p>
+<p>If a scanner reports a raw integer, scaling may be required. The scaling equation depends on the device specification and must not be assumed.</p>
+<p>A measurement scanner used for quality inspection also requires a defined response to invalid data. Invalid measurement data must not automatically be treated as a passing result.</p>
+<h2 id="15-safety-laser-scanner-integration">15. Safety Laser Scanner Integration</h2>
+<p>A safety laser scanner detects objects or people within configured protective fields and may be used to initiate a safety-related stop or other protective response.</p>
+<p>Its commissioning is fundamentally different from that of a barcode reader.</p>
+<h3 id="151-required-checks">15.1 Required checks</h3>
+<ul>
+<li>Confirm the scanner model and its intended safety function.</li>
+<li>Verify protective-field geometry and configuration.</li>
+<li>Confirm mounting height, orientation, and blind spots.</li>
+<li>Verify the configured warning and protective fields.</li>
+<li>Check required safety outputs or safety communication.</li>
+<li>Verify the safety controller configuration and diagnostics.</li>
+<li>Test the protective response using the approved safety-validation procedure.</li>
+<li>Verify reset conditions and restart interlocks.</li>
+<li>Document the safety configuration and validation results.</li>
+</ul>
+<h3 id="152-safety-boundary">15.2 Safety boundary</h3>
+<p>A safety laser scanner must be integrated into a validated safety architecture appropriate to the machine's risk assessment and required safety performance.</p>
+<p>Do not use a normal PLC input from a standard scanner as a replacement for a required safety-rated output. Similarly, do not assume that a standard Ethernet connection carries safety-rated data simply because the device is marketed as an industrial scanner.</p>
+<p>The actual safety behavior, reset method, muting behavior, protective-field switching, and stopping response must be verified against the approved design.</p>
+<h2 id="16-troubleshooting-guide">16. Troubleshooting Guide</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Scanner does not respond to trigger</td>
+<td>Incorrect trigger mapping, scanner not ready, or wrong trigger mode</td>
+<td>Monitor the trigger output, scanner status, and device diagnostics</td>
+</tr>
+<tr>
+<td>Scanner remains busy</td>
+<td>Read operation not completed, blocked acquisition, or incorrect handshake</td>
+<td>Check acquisition status, result handling, and reset or acknowledgement behavior</td>
+</tr>
+<tr>
+<td>Good-read status appears but data is empty</td>
+<td>Incorrect data mapping, incomplete transfer, or wrong result-handling sequence</td>
+<td>Inspect raw data, data length, and result-valid behavior</td>
+</tr>
+<tr>
+<td>Data contains unexpected characters</td>
+<td>Incorrect framing, terminator handling, character encoding, or serial settings</td>
+<td>Compare the received byte sequence with the scanner output</td>
+</tr>
+<tr>
+<td>PLC receives only part of the code</td>
+<td>Incorrect buffer length, message parsing, or data-transfer handling</td>
+<td>Inspect full received data and configured maximum length</td>
+</tr>
+<tr>
+<td>PLC uses the previous part's code</td>
+<td>Stale result not cleared or new-result event not detected</td>
+<td>Verify result reset, transaction handling, and data freshness</td>
+</tr>
+<tr>
+<td>Intermittent no-read faults</td>
+<td>Poor alignment, vibration, contamination, glare, or unsuitable exposure</td>
+<td>Check optical setup and read-quality diagnostics</td>
+</tr>
+<tr>
+<td>Ethernet connection works but PLC data is unavailable</td>
+<td>Wrong protocol, connection configuration, mapping, or data format</td>
+<td>Check connection status and raw cyclic or message data</td>
+</tr>
+<tr>
+<td>Scanner reads correctly in its configuration tool but not in PLC</td>
+<td>Configuration interface differs from production interface</td>
+<td>Verify the selected output channel and PLC communication method</td>
+</tr>
+<tr>
+<td>PLC accepts the wrong product</td>
+<td>Insufficient validation against the current production context</td>
+<td>Verify product whitelist, recipe mapping, station state, and transaction association</td>
+</tr>
+<tr>
+<td>Measurement values are consistently incorrect</td>
+<td>Wrong scaling, units, reference plane, or calibration</td>
+<td>Compare raw data with a known reference measurement</td>
+</tr>
+<tr>
+<td>Scanner faults after power cycling</td>
+<td>Configuration not retained, startup sequence issue, or network initialization timing</td>
+<td>Verify persistent configuration and startup diagnostics</td>
+</tr>
+<tr>
+<td>Safety scanner does not permit operation</td>
+<td>Protective field interrupted, configuration mismatch, safety fault, or reset condition not satisfied</td>
+<td>Follow the approved safety diagnostic and validation procedure</td>
+</tr>
+</tbody>
+</table>
+<h2 id="17-fault-recovery-and-communication-loss">17. Fault Recovery and Communication Loss</h2>
+<p>For an ordinary identification or measurement scanner, communication loss should be handled explicitly.</p>
+<p>The PLC should:</p>
+<ul>
+<li>Detect loss of communication or invalid process data.</li>
+<li>Invalidate results that cannot be confirmed as current.</li>
+<li>Prevent dependent operations from using missing or stale data.</li>
+<li>Record the fault and relevant sequence state.</li>
+<li>Avoid issuing uncontrolled repeated triggers.</li>
+<li>Restore communication and confirm valid current data.</li>
+<li>Require the defined recovery sequence before resuming the process.</li>
+</ul>
+<p>For a safety scanner, follow the validated safety architecture and manufacturer-defined recovery behavior. A standard PLC recovery sequence cannot override a safety fault or substitute for a required safety reset.</p>
+<p>A useful recovery sequence is:</p>
+<pre><code>Communication fault detected
+             ↓
+Apply the defined machine response
+             ↓
+Invalidate uncertain or stale data
+             ↓
+Diagnose scanner, wiring, network, or configuration
+             ↓
+Restore communication
+             ↓
+Verify current status and valid results
+             ↓
+Confirm machine permissives and recovery conditions
+             ↓
+Resume only through the approved sequence
+</code></pre>
+<h2 id="18-performance-and-reliability-testing">18. Performance and Reliability Testing</h2>
+<p>Commissioning should verify more than whether the scanner works once.</p>
+<p>Measure or record:</p>
+<ul>
+<li>Read success rate under representative operating conditions.</li>
+<li>No-read frequency.</li>
+<li>Trigger-to-result time.</li>
+<li>Communication update time.</li>
+<li>Measurement stability and repeatability, where applicable.</li>
+<li>Data-validation failures.</li>
+<li>Duplicate or stale result events.</li>
+<li>Response to scanner power cycling.</li>
+<li>Response to communication interruption.</li>
+<li>Performance under normal production speed and environmental conditions.</li>
+</ul>
+<p>A read-success percentage can be calculated as:</p>
+<div class="math-display">\[ \text{Read Success Rate} = \frac{\text{Successful Valid Reads}}{\text{Total Read Attempts}} \times 100\\% \]</div>
+<p>The acceptance threshold must be defined by the application requirements. A high average success rate may still be unacceptable if failures occur on a critical part or cause incorrect product selection.</p>
+<h2 id="19-fat-and-sat">19. FAT and SAT</h2>
+<p>FAT verifies the scanner interface and logic under factory test conditions. SAT verifies the complete installed system under actual site conditions.</p>
+<table>
+<thead>
+<tr>
+<th>Test item</th>
+<th>FAT focus</th>
+<th>SAT focus</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Device configuration</td>
+<td>Verify scanner settings and saved configuration</td>
+<td>Verify installed device and final configuration</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>Verify configured protocol and data mapping</td>
+<td>Verify actual cables, network, and production data</td>
+</tr>
+<tr>
+<td>Trigger sequence</td>
+<td>Verify trigger and result handshake</td>
+<td>Verify real part detection and scanner timing</td>
+</tr>
+<tr>
+<td>Data validation</td>
+<td>Test valid, invalid, and malformed results</td>
+<td>Verify actual product identification and process decisions</td>
+</tr>
+<tr>
+<td>No-read handling</td>
+<td>Simulate or test failed reads</td>
+<td>Test representative labels and site conditions</td>
+</tr>
+<tr>
+<td>Measurement accuracy</td>
+<td>Use known references where available</td>
+<td>Verify actual installation geometry and reference measurements</td>
+</tr>
+<tr>
+<td>Fault recovery</td>
+<td>Verify designed timeout and reset behavior</td>
+<td>Verify recovery with installed equipment</td>
+</tr>
+<tr>
+<td>Safety functions</td>
+<td>Verify the designed safety integration within the approved test scope</td>
+<td>Complete the required on-site safety validation</td>
+</tr>
+<tr>
+<td>Performance</td>
+<td>Verify test-case timing and behavior</td>
+<td>Verify performance under representative production conditions</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Review settings, I/O mapping, and test records</td>
+<td>Confirm final backups, as-built configuration, and handover</td>
+</tr>
+</tbody>
+</table>
+<h2 id="20-acceptance-criteria">20. Acceptance Criteria</h2>
+<p>Define acceptance criteria before testing. Typical requirements include:</p>
+<ul>
+<li>Correct scanner identity and configuration.</li>
+<li>Stable communication through the intended production interface.</li>
+<li>Correct signal and data mapping.</li>
+<li>Correct trigger, busy, result-valid, and acknowledgement behavior where supported.</li>
+<li>Correct handling of valid reads, no-reads, invalid codes, and malformed data.</li>
+<li>No acceptance of stale data as a new result.</li>
+<li>Correct product or recipe selection.</li>
+<li>Correct response to communication loss and device faults.</li>
+<li>Measurement results within the defined accuracy and repeatability limits, where applicable.</li>
+<li>Read performance within the agreed requirements.</li>
+<li>Safety functions validated separately when applicable.</li>
+<li>No unresolved critical defects.</li>
+<li>Final configuration, backups, and commissioning records handed over.</li>
+</ul>
+<p>Do not invent a universal read-success threshold, maximum latency, or measurement tolerance. These values depend on the scanner, application, product, and production requirements.</p>
+<h2 id="21-documentation-and-handover">21. Documentation and Handover</h2>
+<p>The final commissioning package should contain:</p>
+<ul>
+<li>Scanner make, model, serial number, and firmware.</li>
+<li>Scanner configuration backup.</li>
+<li>PLC program version and final backup.</li>
+<li>Electrical drawings and verified I/O list.</li>
+<li>Network topology and communication configuration.</li>
+<li>Data format and signal-mapping document.</li>
+<li>Trigger, result, acknowledgement, and timeout definitions.</li>
+<li>Product-code or measurement-validation rules.</li>
+<li>Fault list and recovery instructions.</li>
+<li>FAT/SAT test results.</li>
+<li>Safety validation records where applicable.</li>
+<li>As-built changes and approval records.</li>
+<li>Maintenance troubleshooting instructions.</li>
+</ul>
+<p>For maintenance teams, include the exact scanner diagnostic method, how to perform an approved test read, how to inspect raw PLC data, and how to distinguish a scanner fault from a PLC mapping or machine-sequence fault.</p>
+<h2 id="22-common-commissioning-mistakes">22. Common Commissioning Mistakes</h2>
+<ul>
+<li>Treating every scanner as a barcode reader.</li>
+<li>Confusing a safety laser scanner with a standard industrial scanner.</li>
+<li>Assuming the configuration-tool connection is the production communication interface.</li>
+<li>Using the wrong data length, byte order, or character format.</li>
+<li>Failing to handle message terminators or serial communication settings.</li>
+<li>Keeping old result data valid after a failed read.</li>
+<li>Treating <code>GOOD_READ</code> as proof that the code belongs to the correct part.</li>
+<li>Re-triggering continuously without understanding the scanner handshake.</li>
+<li>Ignoring optical alignment, label quality, and contamination.</li>
+<li>Accepting invalid measurement data as a passing result.</li>
+<li>Using arbitrary retry counts or timeouts.</li>
+<li>Allowing automatic restart after communication recovery without validating the machine state.</li>
+<li>Treating standard PLC logic as a replacement for a required safety function.</li>
+<li>Failing to save the final scanner configuration and document the verified mapping.</li>
+</ul>
+<h2 id="23-interview-questions-and-answers">23. Interview Questions and Answers</h2>
+<p>1. What is PLC-scanner communication commissioning?</p>
+<p>It is the configuration and validation of the scanner interface, data mapping, trigger sequence, result handling, diagnostics, and machine response.</p>
+<p>2. What is the difference between a good read and a valid production result?</p>
+<p>A good read means the scanner decoded a code successfully according to its configured criteria. A valid production result also requires PLC validation of the data, current part, expected format, and process context.</p>
+<p>3. Why is a trigger handshake necessary?</p>
+<p>It coordinates the read request, scanner response, result availability, and result clearing so that readings are not missed, duplicated, or associated with the wrong part.</p>
+<p>4. Why might a scanner work in its configuration software but fail in the PLC?</p>
+<p>The configuration tool may use a separate interface from the production connection. The PLC may also have incorrect protocol settings, data mapping, framing, or result-handling logic.</p>
+<p>5. How can stale scanner data cause a production problem?</p>
+<p>The PLC might reuse the previous part's identifier after a failed read and select an incorrect recipe or operation. Result freshness and transaction association must therefore be verified.</p>
+<p>6. How would you troubleshoot intermittent no-reads?</p>
+<p>Check optical alignment, working distance, label quality, contamination, lighting, vibration, trigger timing, read-quality diagnostics, and the scanner's acquisition settings.</p>
+<p>7. What is the difference between a barcode scanner and a safety laser scanner?</p>
+<p>A barcode scanner identifies encoded information. A safety laser scanner detects objects or people within configured protective fields and participates in a safety-related protective function.</p>
+<p>8. Why is data validation required even after communication is established?</p>
+<p>Communication can deliver incorrect, stale, truncated, or incorrectly interpreted data. The PLC must verify data integrity and application-specific validity.</p>
+<p>9. What should happen when scanner communication is lost?</p>
+<p>The system should apply the defined fault response, reject uncertain data, prevent dependent operations from proceeding incorrectly, diagnose the fault, and resume only after valid communication and recovery conditions are confirmed.</p>
+<p>10. What evidence demonstrates successful commissioning?</p>
+<p>Verified mapping, correct trigger and result handling, successful valid and invalid test cases, appropriate fault recovery, performance within requirements, and complete handover documentation.</p>
+<h2 id="24-final-commissioning-checklist">24. Final Commissioning Checklist</h2>
+<ul>
+<li>Scanner type, model, firmware, and application confirmed.</li>
+<li>Physical installation, alignment, and optical conditions verified.</li>
+<li>Correct communication interface configured.</li>
+<li>Network or serial parameters verified.</li>
+<li>PLC signal and data mapping validated.</li>
+<li>Trigger and acknowledgement behavior tested.</li>
+<li>Good-read, no-read, busy, and fault conditions verified where supported.</li>
+<li>Data format, length, encoding, and scaling verified.</li>
+<li>Stale and invalid data handling verified.</li>
+<li>Machine sequence and product validation tested.</li>
+<li>Communication-loss detection and recovery tested.</li>
+<li>Measurement accuracy and repeatability verified where applicable.</li>
+<li>Safety functions separately validated if a safety scanner is used.</li>
+<li>FAT/SAT results recorded.</li>
+<li>Final configuration, backups, and troubleshooting documents handed over.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\13_Commissioning\04_Stage4_Communication\06_PLC_Printer - PLC-Printer</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

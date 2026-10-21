@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loop Calibrator: Simulate and Measure 4–20 mA</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Loop Calibrator: Simulate and Measure 4–20 mA</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-understanding-the-420-ma-current-loop">2. Understanding the 4–20 mA Current Loop</a></li>
+<li><a href="#3-why-420-ma-is-used-instead-of-020-ma">3. Why 4–20 mA Is Used Instead of 0–20 mA</a><ul>
+<li><a href="#31-live-zero">3.1 Live zero</a></li>
+<li><a href="#32-noise-resistance">3.2 Noise resistance</a></li>
+<li><a href="#33-long-distance-transmission">3.3 Long-distance transmission</a></li>
+<li><a href="#34-standardization">3.4 Standardization</a></li>
+</ul>
+</li>
+<li><a href="#4-important-420-ma-equations">4. Important 4–20 mA Equations</a></li>
+<li><a href="#5-main-components-and-functions-of-a-loop-calibrator">5. Main Components and Functions of a Loop Calibrator</a></li>
+<li><a href="#6-four-important-operating-modes">6. Four Important Operating Modes</a><ul>
+<li><a href="#61-source-current">6.1 Source current</a></li>
+<li><a href="#62-simulate-a-transmitter">6.2 Simulate a transmitter</a></li>
+<li><a href="#63-measure-current">6.3 Measure current</a></li>
+<li><a href="#64-loop-power">6.4 Loop power</a></li>
+</ul>
+</li>
+<li><a href="#7-difference-between-source-simulate-and-measure">7. Difference Between Source, Simulate, and Measure</a></li>
+<li><a href="#8-plc-analog-input-testing">8. PLC Analog Input Testing</a><ul>
+<li><a href="#81-purpose">8.1 Purpose</a></li>
+<li><a href="#82-typical-test-procedure">8.2 Typical test procedure</a></li>
+</ul>
+</li>
+<li><a href="#9-plc-raw-counts-and-scaling">9. PLC Raw Counts and Scaling</a></li>
+<li><a href="#10-testing-a-two-wire-transmitter">10. Testing a Two-Wire Transmitter</a><ul>
+<li><a href="#101-bench-testing">10.1 Bench testing</a></li>
+<li><a href="#102-current-output-and-process-value">10.2 Current output and process value</a></li>
+</ul>
+</li>
+<li><a href="#11-plc-analog-output-testing">11. PLC Analog Output Testing</a><ul>
+<li><a href="#111-testing-the-output">11.1 Testing the output</a></li>
+</ul>
+</li>
+<li><a href="#12-fault-current-underrange-and-overrange">12. Fault Current, Underrange, and Overrange</a></li>
+<li><a href="#13-loop-resistance-and-supply-voltage">13. Loop Resistance and Supply Voltage</a></li>
+<li><a href="#14-accuracy-resolution-and-calibration">14. Accuracy, Resolution, and Calibration</a></li>
+<li><a href="#15-common-loop-calibrator-mistakes">15. Common Loop-Calibrator Mistakes</a></li>
+<li><a href="#16-practical-commissioning-example-pressure-transmitter-on-an-automotive-test-bench">16. Practical Commissioning Example: Pressure Transmitter on an Automotive Test Bench</a></li>
+<li><a href="#17-fat-and-sat-applications">17. FAT and SAT Applications</a><ul>
+<li><a href="#factory-acceptance-test-fat">Factory Acceptance Test (FAT)</a></li>
+<li><a href="#site-acceptance-test-sat">Site Acceptance Test (SAT)</a></li>
+</ul>
+</li>
+<li><a href="#18-loop-calibrator-versus-other-test-instruments">18. Loop Calibrator Versus Other Test Instruments</a></li>
+<li><a href="#19-interview-questions-and-answers">19. Interview Questions and Answers</a><ul>
+<li><a href="#q1-what-is-a-loop-calibrator">Q1. What is a loop calibrator?</a></li>
+<li><a href="#q2-what-is-live-zero-in-a-420-ma-loop">Q2. What is live zero in a 4–20 mA loop?</a></li>
+<li><a href="#q3-what-is-the-difference-between-source-and-simulate-modes">Q3. What is the difference between source and simulate modes?</a></li>
+<li><a href="#q4-how-do-you-test-a-plc-analog-input">Q4. How do you test a PLC analog input?</a></li>
+<li><a href="#q5-how-do-you-test-a-two-wire-transmitter">Q5. How do you test a two-wire transmitter?</a></li>
+<li><a href="#q6-why-is-current-measurement-connected-in-series">Q6. Why is current measurement connected in series?</a></li>
+<li><a href="#q7-what-does-a-near-zero-current-indicate">Q7. What does a near-zero current indicate?</a></li>
+<li><a href="#q8-why-can-a-correct-current-produce-an-incorrect-hmi-value">Q8. Why can a correct current produce an incorrect HMI value?</a></li>
+<li><a href="#q9-what-is-the-difference-between-calibration-and-verification">Q9. What is the difference between calibration and verification?</a></li>
+<li><a href="#q10-why-is-12-ma-equal-to-50-of-a-420-ma-span">Q10. Why is 12 mA equal to 50% of a 4–20 mA span?</a></li>
+</ul>
+</li>
+<li><a href="#20-final-commissioning-checklist">20. Final Commissioning Checklist</a><ul>
+<li><a href="#before-testing">Before testing</a></li>
+<li><a href="#during-testing">During testing</a></li>
+<li><a href="#after-testing">After testing</a></li>
+</ul>
+</li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>A loop calibrator is an electrical test instrument used to generate, simulate, measure, and sometimes source or sink current signals in industrial instrumentation circuits. It is commonly used to commission and troubleshoot analog input/output channels, transmitters, control valves, pressure sensors, temperature transmitters, and PLC-based automation systems.</p>
+<p>The 4–20 mA current loop is one of the most widely used analog signaling methods in industrial automation. The signal represents a measured or commanded process variable, such as pressure, temperature, flow, level, or valve position.</p>
+<p>A loop calibrator helps verify whether the complete signal path behaves correctly.</p>
+<p>Typical applications include:</p>
+<ul>
+<li>Simulating a transmitter signal to test a PLC analog input.</li>
+<li>Measuring current generated by a real transmitter.</li>
+<li>Sourcing current to test an analog input channel.</li>
+<li>Simulating a two-wire transmitter for troubleshooting.</li>
+<li>Checking a PLC analog output and its connected control device.</li>
+<li>Calibrating instruments against known reference values.</li>
+<li>Checking scaling, alarm thresholds, signal wiring, and loop power.</li>
+<li>Isolating whether a fault is in the field instrument, wiring, PLC channel, or configuration.</li>
+</ul>
+<p>A loop calibrator is not necessarily a precision laboratory calibrator. Its accuracy, resolution, operating modes, and measurement uncertainty depend on the instrument model and calibration status.</p>
+<h2 id="2-understanding-the-420-ma-current-loop">2. Understanding the 4–20 mA Current Loop</h2>
+<p>A 4–20 mA signal represents a process variable using electrical current.</p>
+<ul>
+<li>4 mA represents 0% of the configured measurement range.</li>
+<li>12 mA represents 50% of the configured measurement range.</li>
+<li>20 mA represents 100% of the configured measurement range.</li>
+</ul>
+<p>The relationship between current and process value is normally linear for a standard linear 4–20 mA mapping.</p>
+<p>For example, a pressure transmitter configured for 0–10 bar may use 4 mA for 0 bar and 20 mA for 10 bar.</p>
+<pre><code>4 mA  →  0% of span   →  0 bar
+8 mA  →  25% of span  →  2.5 bar
+12 mA →  50% of span  →  5 bar
+16 mA →  75% of span  →  7.5 bar
+20 mA →  100% of span →  10 bar
+</code></pre>
+<p>The physical current remains between the configured signal endpoints during normal measurement. The PLC or controller converts the input current into a digital value and then scales that value into engineering units.</p>
+<h2 id="3-why-420-ma-is-used-instead-of-020-ma">3. Why 4–20 mA Is Used Instead of 0–20 mA</h2>
+<p>The 4–20 mA signal provides several practical advantages.</p>
+<h3 id="31-live-zero">3.1 Live zero</h3>
+<p>A 4 mA signal represents the bottom of the measurement range rather than zero electrical current.</p>
+<p>This is called live zero.</p>
+<p>A signal near 0 mA may indicate:</p>
+<ul>
+<li>A broken wire.</li>
+<li>Loss of loop power.</li>
+<li>An open circuit.</li>
+<li>A disconnected transmitter.</li>
+<li>A faulty input channel.</li>
+<li>Another loop fault.</li>
+</ul>
+<p>A zero-current condition is therefore distinguishable from a valid measurement at the lower end of the configured process range.</p>
+<h3 id="32-noise-resistance">3.2 Noise resistance</h3>
+<p>Current signaling is generally less sensitive than voltage signaling to voltage drops caused by cable resistance, provided the transmitter has sufficient supply voltage and the loop remains within its compliance limits.</p>
+<h3 id="33-long-distance-transmission">3.3 Long-distance transmission</h3>
+<p>A properly designed current loop can transmit process information over long cable distances while maintaining acceptable accuracy.</p>
+<h3 id="34-standardization">3.4 Standardization</h3>
+<p>The 4–20 mA signal is supported by many industrial transmitters, PLCs, remote I/O modules, process controllers, and valve positioners.</p>
+<h2 id="4-important-420-ma-equations">4. Important 4–20 mA Equations</h2>
+<p>The percentage of span represented by a measured current is:</p>
+<div class="math-display">\[ \\%\text{Span}=\frac{I-4}{20-4}\times100 \]</div>
+<p>Where <span class="math-inline">\(I\)</span> is the measured current in mA.</p>
+<p>The engineering value is:</p>
+<div class="math-display">\[ PV=L+\frac{I-4}{16}(U-L) \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(PV\)</span> is the process value.</li>
+<li><span class="math-inline">\(L\)</span> is the configured lower range value.</li>
+<li><span class="math-inline">\(U\)</span> is the configured upper range value.</li>
+<li><span class="math-inline">\(I\)</span> is the measured current in mA.</li>
+</ul>
+<p>For a 0–100 °C temperature transmitter producing 12 mA:</p>
+<div class="math-display">\[ PV=0+\frac{12-4}{16}(100-0) \]</div>
+<div class="math-display">\[ PV=50^\circ\text{C} \]</div>
+<p>For a 0–10 bar pressure transmitter producing 16 mA:</p>
+<div class="math-display">\[ PV=0+\frac{16-4}{16}(10-0) \]</div>
+<div class="math-display">\[ PV=7.5\text{ bar} \]</div>
+<p>The current-to-process relationship depends on the transmitter's configured range and the PLC's scaling configuration. A correct current signal can still produce an incorrect displayed value if the PLC range is configured incorrectly.</p>
+<h2 id="5-main-components-and-functions-of-a-loop-calibrator">5. Main Components and Functions of a Loop Calibrator</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Display</td>
+<td>Shows current, voltage, percentage, or other supported values</td>
+</tr>
+<tr>
+<td>Current source mode</td>
+<td>Generates a controlled current for testing a receiving device</td>
+</tr>
+<tr>
+<td>Current measurement mode</td>
+<td>Measures current flowing through a circuit</td>
+</tr>
+<tr>
+<td>Current simulation mode</td>
+<td>Emulates a transmitter's current behavior in a suitable externally powered loop</td>
+</tr>
+<tr>
+<td>Loop power function</td>
+<td>Supplies loop voltage for compatible transmitter testing</td>
+</tr>
+<tr>
+<td>Voltage measurement</td>
+<td>Checks voltage across loop terminals where supported</td>
+</tr>
+<tr>
+<td>Percentage display</td>
+<td>Converts current into a percentage of the configured 4–20 mA span</td>
+</tr>
+<tr>
+<td>Step or ramp function</td>
+<td>Changes the output automatically to test multiple operating points</td>
+</tr>
+<tr>
+<td>Test leads</td>
+<td>Connect the instrument to the loop</td>
+</tr>
+<tr>
+<td>Calibration label or certificate</td>
+<td>Provides traceability and relevant calibration information</td>
+</tr>
+</tbody>
+</table>
+<p>Not every calibrator includes all these features. Always confirm the functions and terminal markings of the actual instrument.</p>
+<h2 id="6-four-important-operating-modes">6. Four Important Operating Modes</h2>
+<p>The words source, simulate, measure, and loop power are not interchangeable. Choosing the wrong mode can cause misleading readings or electrical conflicts.</p>
+<h3 id="61-source-current">6.1 Source current</h3>
+<p>In source mode, the calibrator actively generates a controlled current, such as 4 mA, 12 mA, or 20 mA.</p>
+<p>Typical application: testing a PLC analog input.</p>
+<pre><code>Loop Calibrator in SOURCE Mode
+          ↓
+      4–20 mA
+          ↓
+PLC Analog Input
+          ↓
+PLC Raw Value
+          ↓
+Scaled Engineering Value
+</code></pre>
+<p>The receiving input must be configured for the appropriate current signal and wired according to the PLC module's requirements.</p>
+<p>Do not connect two active current sources together.</p>
+<h3 id="62-simulate-a-transmitter">6.2 Simulate a transmitter</h3>
+<p>In simulation mode, the calibrator behaves like a transmitter that controls loop current, but the loop normally needs an external supply.</p>
+<p>Typical application: replacing a disconnected two-wire transmitter temporarily to test the input circuit.</p>
+<pre><code>External Loop Supply
+          ↓
+Loop Calibrator in SIMULATE Mode
+          ↓
+PLC Analog Input
+          ↓
+PLC Reading
+</code></pre>
+<p>The actual circuit arrangement depends on the calibrator's terminal design and the input module's wiring scheme. Follow the instrument's connection diagram.</p>
+<h3 id="63-measure-current">6.3 Measure current</h3>
+<p>In current measurement mode, the calibrator measures the current flowing through the circuit.</p>
+<p>Typical application: checking the output current of an installed transmitter.</p>
+<p>The instrument must be connected in series with the loop, unless the particular instrument provides another explicitly supported measurement arrangement.</p>
+<pre><code>Loop Supply
+    ↓
+Transmitter
+    ↓
+Loop Calibrator in mA MEASURE Mode
+    ↓
+PLC Analog Input
+    ↓
+Return to Supply
+</code></pre>
+<p>The circuit must be opened at an appropriate point to insert a series current meter. Incorrectly connecting a current input directly across the supply can short-circuit the circuit.</p>
+<h3 id="64-loop-power">6.4 Loop power</h3>
+<p>Some calibrators can supply the DC voltage needed by compatible two-wire transmitters while measuring their current.</p>
+<pre><code>Loop Calibrator with LOOP POWER
+          ↓
+   Two-Wire Transmitter
+          ↓
+    Current Measurement
+</code></pre>
+<p>This function is useful for bench testing a disconnected transmitter. Confirm that the loop-power voltage, current capability, and wiring arrangement are suitable for the device.</p>
+<h2 id="7-difference-between-source-simulate-and-measure">7. Difference Between Source, Simulate, and Measure</h2>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>What the calibrator does</th>
+<th>Typical use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Source</td>
+<td>Actively generates current</td>
+<td>Test a PLC analog input</td>
+</tr>
+<tr>
+<td>Simulate</td>
+<td>Emulates a transmitter in an externally powered loop</td>
+<td>Test a powered input circuit without the original transmitter</td>
+</tr>
+<tr>
+<td>Measure</td>
+<td>Reads current flowing through the circuit</td>
+<td>Verify actual transmitter output</td>
+</tr>
+<tr>
+<td>Loop power and measure</td>
+<td>Supplies power to a compatible transmitter and measures loop current</td>
+<td>Bench test a two-wire transmitter</td>
+</tr>
+</tbody>
+</table>
+<p>Practical rule: Before connecting the instrument, identify which device supplies loop power and which device controls current. A common commissioning mistake is connecting a calibrator in source mode to a circuit that already has an active transmitter or current source.</p>
+<h2 id="8-plc-analog-input-testing">8. PLC Analog Input Testing</h2>
+<h3 id="81-purpose">8.1 Purpose</h3>
+<p>A PLC analog input receives a field signal and converts it into a digital value. The application program then scales that raw value into engineering units.</p>
+<p>A loop calibrator can test the analog input independently of the field transmitter.</p>
+<p>This helps determine whether a fault originates in:</p>
+<ul>
+<li>The field transmitter.</li>
+<li>The loop wiring.</li>
+<li>The PLC analog input module.</li>
+<li>The channel configuration.</li>
+<li>The PLC scaling logic.</li>
+<li>The HMI display or data-processing logic.</li>
+</ul>
+<h3 id="82-typical-test-procedure">8.2 Typical test procedure</h3>
+<ol>
+<li>Identify the PLC analog input channel and its wiring diagram.</li>
+<li>Confirm the channel is configured for current input.</li>
+<li>Review the module's wiring arrangement and permitted current range.</li>
+<li>Isolate the existing field transmitter if the approved test procedure requires it.</li>
+<li>Connect the calibrator in source mode using the correct polarity and terminals.</li>
+<li>Apply 4 mA, 8 mA, 12 mA, 16 mA, and 20 mA, as required.</li>
+<li>Record the raw PLC value and scaled engineering value at each point.</li>
+<li>Compare the readings with the configured range and the permitted tolerance.</li>
+<li>Check alarms, HMI display, historian values, and other dependent logic as appropriate.</li>
+<li>Restore the field wiring and verify normal operation.</li>
+</ol>
+<p>For an input configured for 0–100 °C, expected values are:</p>
+<table>
+<thead>
+<tr>
+<th>Calibrator current</th>
+<th>Percentage of span</th>
+<th>Expected temperature</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4 mA</td>
+<td>0%</td>
+<td>0 °C</td>
+</tr>
+<tr>
+<td>8 mA</td>
+<td>25%</td>
+<td>25 °C</td>
+</tr>
+<tr>
+<td>12 mA</td>
+<td>50%</td>
+<td>50 °C</td>
+</tr>
+<tr>
+<td>16 mA</td>
+<td>75%</td>
+<td>75 °C</td>
+</tr>
+<tr>
+<td>20 mA</td>
+<td>100%</td>
+<td>100 °C</td>
+</tr>
+</tbody>
+</table>
+<p>These are expected values for this particular configured range. Actual acceptance tolerances depend on the transmitter, calibrator, PLC module, scaling, and project specification.</p>
+<h2 id="9-plc-raw-counts-and-scaling">9. PLC Raw Counts and Scaling</h2>
+<p>PLC analog modules often represent current as a raw digital value. The raw range depends on the module and configuration.</p>
+<p>Some modules use a nominal raw range corresponding to the 4–20 mA span, while others use different ranges, include underrange or overrange codes, or expose values in engineering units.</p>
+<p>Do not assume a universal raw count such as 0–27648 or 0–32767 without checking the specific module and its configuration.</p>
+<p>A general linear scaling equation is:</p>
+<div class="math-display">\[ EU=EU\_{\min}+ \frac{Raw-Raw\_{\min}}{Raw\_{\max}-Raw\_{\min}} (EU\_{\max}-EU\_{\min}) \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(EU\)</span> is the engineering value.</li>
+<li><span class="math-inline">\(Raw\)</span> is the measured digital input.</li>
+<li><span class="math-inline">\(Raw\_{\min}\)</span> and <span class="math-inline">\(Raw\_{\max}\)</span> are the configured raw endpoints.</li>
+<li><span class="math-inline">\(EU\_{\min}\)</span> and <span class="math-inline">\(EU\_{\max}\)</span> are the engineering range endpoints.</li>
+</ul>
+<p>A PLC input can receive the correct current but display an incorrect process value if the raw endpoints or engineering range are wrong.</p>
+<h2 id="10-testing-a-two-wire-transmitter">10. Testing a Two-Wire Transmitter</h2>
+<p>A two-wire transmitter uses the same pair of wires for power and the 4–20 mA signal.</p>
+<p>Typical examples include pressure, flow, level, and temperature transmitters.</p>
+<p>A conventional loop consists of a DC supply, transmitter, receiving input, and return path. Exact wiring varies with the transmitter and input module.</p>
+<h3 id="101-bench-testing">10.1 Bench testing</h3>
+<p>A compatible calibrator with loop-power capability can often power the disconnected transmitter and measure its output current.</p>
+<p>The test should verify:</p>
+<ul>
+<li>Correct supply polarity.</li>
+<li>Correct supply voltage.</li>
+<li>Suitable loop-power capability.</li>
+<li>Proper current measurement connections.</li>
+<li>Configured lower and upper range values.</li>
+<li>Response to a known input, where practical.</li>
+<li>Stability and repeatability of the output.</li>
+<li>Calibration error against a suitable reference.</li>
+</ul>
+<p>A pressure transmitter cannot be fully calibrated by checking electrical current alone if its sensing element must also be tested. A pressure source or other suitable reference may be required.</p>
+<h3 id="102-current-output-and-process-value">10.2 Current output and process value</h3>
+<p>If a transmitter is configured for 0–16 bar:</p>
+<ul>
+<li>4 mA corresponds to 0 bar.</li>
+<li>12 mA corresponds to 8 bar.</li>
+<li>20 mA corresponds to 16 bar.</li>
+</ul>
+<p>The calibrator can verify the electrical signal, while a calibrated pressure reference is used to verify the relationship between applied pressure and output current.</p>
+<h2 id="11-plc-analog-output-testing">11. PLC Analog Output Testing</h2>
+<p>A PLC analog output generates a signal that controls another device, such as a valve positioner, drive reference, or other current-command input.</p>
+<p>For example, a 4–20 mA analog output may command a valve position of 0–100%.</p>
+<table>
+<thead>
+<tr>
+<th>Output current</th>
+<th>Expected valve command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4 mA</td>
+<td>0%</td>
+</tr>
+<tr>
+<td>8 mA</td>
+<td>25%</td>
+</tr>
+<tr>
+<td>12 mA</td>
+<td>50%</td>
+</tr>
+<tr>
+<td>16 mA</td>
+<td>75%</td>
+</tr>
+<tr>
+<td>20 mA</td>
+<td>100%</td>
+</tr>
+</tbody>
+</table>
+<p>These values assume that the actuator or positioner is configured for this relationship.</p>
+<h3 id="111-testing-the-output">11.1 Testing the output</h3>
+<ol>
+<li>Review the PLC output channel wiring and configuration.</li>
+<li>Identify the connected field device and its input specifications.</li>
+<li>Obtain the required process and safety authorization.</li>
+<li>Isolate the actuator or place the machine in an approved safe test condition.</li>
+<li>Measure the output current using a suitable method.</li>
+<li>Command the required test values through an approved PLC test procedure.</li>
+<li>Compare the measured current with the commanded value.</li>
+<li>Verify the receiving device's response without creating an unsafe movement.</li>
+<li>Restore normal control and confirm the machine is ready for operation.</li>
+</ol>
+<p>Do not disconnect a control valve or actuator casually. A change in its command signal may cause unexpected movement or affect process safety. Use the approved bypass, isolation, or maintenance mode.</p>
+<h2 id="12-fault-current-underrange-and-overrange">12. Fault Current, Underrange, and Overrange</h2>
+<p>The nominal measurement span is 4–20 mA, but some transmitters use currents outside that span to indicate faults or measurement limits.</p>
+<p>Examples may include currents below 4 mA or above 20 mA. Specific fault signaling behavior depends on the transmitter configuration and applicable signaling convention.</p>
+<table>
+<thead>
+<tr>
+<th>Signal behavior</th>
+<th>Possible meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Approximately 4 mA</td>
+<td>Lower endpoint of the configured range</td>
+</tr>
+<tr>
+<td>Approximately 12 mA</td>
+<td>Midpoint of the configured range</td>
+</tr>
+<tr>
+<td>Approximately 20 mA</td>
+<td>Upper endpoint of the configured range</td>
+</tr>
+<tr>
+<td>Near 0 mA</td>
+<td>Open loop, loss of power, wiring fault, or failed device</td>
+</tr>
+<tr>
+<td>Below 4 mA but above 0 mA</td>
+<td>Possible underrange or configured fault signal</td>
+</tr>
+<tr>
+<td>Above 20 mA</td>
+<td>Possible overrange or configured fault signal</td>
+</tr>
+<tr>
+<td>Unstable current</td>
+<td>Possible intermittent wiring, unstable supply, grounding issue, or faulty instrument</td>
+</tr>
+</tbody>
+</table>
+<p>Do not assume every transmitter uses the same fault-current thresholds. Check the device's configuration and fault-signaling settings.</p>
+<h2 id="13-loop-resistance-and-supply-voltage">13. Loop Resistance and Supply Voltage</h2>
+<p>A current loop requires sufficient supply voltage to operate the transmitter and overcome voltage drops in the wiring and receiving device.</p>
+<p>The available voltage must be adequate for the transmitter's minimum operating voltage, the input resistance, cable resistance, and any additional series devices.</p>
+<p>For a simple resistive load:</p>
+<div class="math-display">\[ V=IR \]</div>
+<p>If a 250 Ω input resistor carries 20 mA:</p>
+<div class="math-display">\[ V=0.020\times250=5\text{ V} \]</div>
+<p>The input resistor therefore drops 5 V at 20 mA.</p>
+<p>In a real loop, the supply must provide the required voltage for the entire circuit. Excessive cable resistance or an incorrectly chosen load can cause the transmitter to lose regulation at high current.</p>
+<p>A loop calibrator can help check current and voltage, but the complete loop must be evaluated against the transmitter's compliance limits and the supply specification.</p>
+<h2 id="14-accuracy-resolution-and-calibration">14. Accuracy, Resolution, and Calibration</h2>
+<p>A displayed current is only useful if the instrument's performance is suitable for the required tolerance.</p>
+<p>Important terms include:</p>
+<ul>
+<li>Accuracy: How close the indicated or generated value is to the reference value under specified conditions.</li>
+<li>Resolution: The smallest change in value the display or instrument can distinguish.</li>
+<li>Repeatability: How consistently the instrument produces or measures the same value under the same conditions.</li>
+<li>Calibration: Comparison with a traceable reference to determine measurement error.</li>
+<li>Adjustment: A change made to bring an instrument's performance closer to the required value.</li>
+<li>Measurement uncertainty: The quantified uncertainty associated with a measurement result.</li>
+</ul>
+<p>A calibrator with a display resolution of 0.01 mA does not necessarily have an accuracy of ±0.01 mA.</p>
+<p>For example, a display that reads 12.00 mA may still have a specified measurement error greater than 0.01 mA.</p>
+<p>For formal calibration work:</p>
+<ol>
+<li>Check the instrument's calibration status.</li>
+<li>Confirm its specified accuracy and measurement range.</li>
+<li>Use a suitable reference standard.</li>
+<li>Record the as-found readings before adjustment.</li>
+<li>Adjust the device only if authorized and required.</li>
+<li>Record as-left readings after adjustment.</li>
+<li>Document the acceptance criteria and calibration result.</li>
+</ol>
+<h2 id="15-common-loop-calibrator-mistakes">15. Common Loop-Calibrator Mistakes</h2>
+<table>
+<thead>
+<tr>
+<th>Mistake</th>
+<th>Consequence</th>
+<th>Correct practice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Selecting source mode when the loop already has an active current source</td>
+<td>Incorrect readings or possible electrical conflict</td>
+<td>Identify the loop topology and select the correct mode</td>
+</tr>
+<tr>
+<td>Connecting the calibrator in parallel while in current measurement mode</td>
+<td>May short-circuit the loop or damage the instrument</td>
+<td>Insert the current measurement path in series as instructed</td>
+</tr>
+<tr>
+<td>Forgetting loop power for a two-wire transmitter</td>
+<td>Transmitter may not operate</td>
+<td>Use a suitable external supply or compatible loop-power function</td>
+</tr>
+<tr>
+<td>Using the wrong polarity</td>
+<td>Incorrect operation or possible damage</td>
+<td>Verify terminal markings and wiring diagrams</td>
+</tr>
+<tr>
+<td>Applying a current signal to a voltage-only input</td>
+<td>Incorrect reading or possible equipment damage</td>
+<td>Confirm the input channel's signal type</td>
+</tr>
+<tr>
+<td>Ignoring the PLC scaling configuration</td>
+<td>Correct current may display as an incorrect process value</td>
+<td>Verify raw and engineering ranges</td>
+</tr>
+<tr>
+<td>Testing an output while the actuator remains uncontrolled</td>
+<td>Unexpected movement or process disturbance</td>
+<td>Use approved safe test conditions</td>
+</tr>
+<tr>
+<td>Assuming all transmitters use the same fault-current thresholds</td>
+<td>Misdiagnosis of underrange or failure</td>
+<td>Verify device configuration</td>
+</tr>
+<tr>
+<td>Treating display resolution as accuracy</td>
+<td>Incorrect calibration judgment</td>
+<td>Use the specified accuracy and uncertainty</td>
+</tr>
+<tr>
+<td>Failing to restore the field wiring</td>
+<td>Machine remains in a faulty or bypassed condition</td>
+<td>Perform and document the restoration check</td>
+</tr>
+</tbody>
+</table>
+<h2 id="16-practical-commissioning-example-pressure-transmitter-on-an-automotive-test-bench">16. Practical Commissioning Example: Pressure Transmitter on an Automotive Test Bench</h2>
+<p>Consider a pressure transmitter monitoring hydraulic pressure on a production test bench. Its configured range is 0–100 bar, and its output is connected to a PLC analog input.</p>
+<p>The HMI shows 50 bar, but the actual pressure reading from a suitable reference instrument is 70 bar.</p>
+<p>A disciplined troubleshooting sequence is:</p>
+<ol>
+<li>Check the transmitter's configured range and output settings.</li>
+<li>Confirm the PLC input is configured for 4–20 mA.</li>
+<li>Verify the wiring, loop supply, and input channel configuration.</li>
+<li>Use an approved test procedure to isolate the field signal where necessary.</li>
+<li>Apply a known current using the loop calibrator in source mode.</li>
+<li>Check the PLC raw input and scaled engineering value.</li>
+<li>Confirm that 4 mA maps to 0 bar, 12 mA maps to 50 bar, and 20 mA maps to 100 bar.</li>
+<li>If the PLC scaling is correct, test the transmitter against a suitable pressure reference.</li>
+<li>Identify whether the error is caused by the transmitter, process measurement, wiring, input module, or scaling.</li>
+<li>Correct the fault and repeat the required verification.</li>
+<li>Restore the normal loop wiring and confirm the HMI displays the expected value.</li>
+</ol>
+<p>If 15.2 mA is measured from a transmitter configured for 0–100 bar:</p>
+<div class="math-display">\[ PV=\frac{15.2-4}{16}\times100 \]</div>
+<div class="math-display">\[ PV=70\text{ bar} \]</div>
+<p>If the PLC displays 50 bar for that same input, the scaling or configured range may be wrong, assuming the current measurement and signal path are valid.</p>
+<h2 id="17-fat-and-sat-applications">17. FAT and SAT Applications</h2>
+<h3 id="factory-acceptance-test-fat">Factory Acceptance Test (FAT)</h3>
+<p>During FAT, loop calibrators can help verify:</p>
+<ul>
+<li>Analog input and output channels.</li>
+<li>PLC raw values and scaling.</li>
+<li>HMI engineering-unit display.</li>
+<li>Alarm thresholds and fault behavior.</li>
+<li>Signal-loss detection.</li>
+<li>Control valve command scaling.</li>
+<li>Documentation and I/O-list consistency.</li>
+</ul>
+<p>The test must distinguish simulated electrical inputs from actual field-device performance.</p>
+<h3 id="site-acceptance-test-sat">Site Acceptance Test (SAT)</h3>
+<p>During SAT, loop calibrators can verify:</p>
+<ul>
+<li>Installed loop wiring.</li>
+<li>Correct field-to-PLC channel mapping.</li>
+<li>Actual transmitter output.</li>
+<li>Loop supply and signal integrity.</li>
+<li>Control valve or actuator command paths.</li>
+<li>Alarm and interlock behavior.</li>
+<li>Correct integration with the machine control system.</li>
+</ul>
+<p>For a complete loop check, testing only the calibrator output is insufficient. The expected response must be verified at the PLC, HMI, and relevant control function.</p>
+<h2 id="18-loop-calibrator-versus-other-test-instruments">18. Loop Calibrator Versus Other Test Instruments</h2>
+<table>
+<thead>
+<tr>
+<th>Instrument</th>
+<th>Main purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Loop calibrator</td>
+<td>Generates, simulates, or measures instrumentation current signals</td>
+</tr>
+<tr>
+<td>Multimeter</td>
+<td>Measures voltage, resistance, continuity, and current within its specifications</td>
+</tr>
+<tr>
+<td>Process calibrator</td>
+<td>May support multiple process signals, including current, voltage, temperature, or pressure interfaces</td>
+</tr>
+<tr>
+<td>Pressure calibrator</td>
+<td>Generates or measures pressure against a reference</td>
+</tr>
+<tr>
+<td>Temperature calibrator</td>
+<td>Generates a known temperature or simulates compatible temperature-sensor signals</td>
+</tr>
+<tr>
+<td>Oscilloscope</td>
+<td>Examines signal waveforms over time</td>
+</tr>
+<tr>
+<td>Insulation tester</td>
+<td>Applies a specified DC test voltage to assess insulation resistance</td>
+</tr>
+</tbody>
+</table>
+<p>A loop calibrator is particularly valuable when the question is, "Does this analog current loop produce the correct electrical signal and does the control system interpret it correctly?"</p>
+<h2 id="19-interview-questions-and-answers">19. Interview Questions and Answers</h2>
+<h3 id="q1-what-is-a-loop-calibrator">Q1. What is a loop calibrator?</h3>
+<p>A loop calibrator is an instrument used to source, simulate, and measure industrial instrumentation signals, particularly 4–20 mA current loops.</p>
+<h3 id="q2-what-is-live-zero-in-a-420-ma-loop">Q2. What is live zero in a 4–20 mA loop?</h3>
+<p>Live zero means that 4 mA represents the lower endpoint of the configured measurement range, allowing a near-zero current to be distinguished from a valid lower-end measurement.</p>
+<h3 id="q3-what-is-the-difference-between-source-and-simulate-modes">Q3. What is the difference between source and simulate modes?</h3>
+<p>Source mode actively generates a current. Simulate mode emulates a transmitter in a loop that is normally powered externally. The exact wiring depends on the calibrator and receiving input.</p>
+<h3 id="q4-how-do-you-test-a-plc-analog-input">Q4. How do you test a PLC analog input?</h3>
+<p>Isolate the existing field signal as required, inject known current values using the correct calibrator mode, and compare the raw PLC value and scaled engineering value against the expected results.</p>
+<h3 id="q5-how-do-you-test-a-two-wire-transmitter">Q5. How do you test a two-wire transmitter?</h3>
+<p>Use a suitable loop supply or compatible loop-power function, connect the transmitter according to its wiring diagram, and measure its output current. For full calibration, compare its response against a suitable reference for the physical quantity.</p>
+<h3 id="q6-why-is-current-measurement-connected-in-series">Q6. Why is current measurement connected in series?</h3>
+<p>A current meter must measure the current flowing through the circuit. Connecting an ordinary current-measurement input directly across a voltage source can create a short circuit.</p>
+<h3 id="q7-what-does-a-near-zero-current-indicate">Q7. What does a near-zero current indicate?</h3>
+<p>Possible causes include an open loop, loss of power, disconnected wiring, a faulty transmitter, or a circuit fault. The cause must be verified rather than assumed.</p>
+<h3 id="q8-why-can-a-correct-current-produce-an-incorrect-hmi-value">Q8. Why can a correct current produce an incorrect HMI value?</h3>
+<p>The PLC's analog input configuration, raw scaling, engineering range, or HMI mapping may be incorrect even when the electrical current is correct.</p>
+<h3 id="q9-what-is-the-difference-between-calibration-and-verification">Q9. What is the difference between calibration and verification?</h3>
+<p>Verification checks whether performance meets specified requirements. Calibration establishes the relationship between indicated or generated values and a suitable reference. Adjustment may be performed if required and authorized.</p>
+<h3 id="q10-why-is-12-ma-equal-to-50-of-a-420-ma-span">Q10. Why is 12 mA equal to 50% of a 4–20 mA span?</h3>
+<p>The signal span is 16 mA. Twelve milliamps is 8 mA above the 4 mA lower endpoint, which is half of the 16 mA span.</p>
+<div class="math-display">\[ \frac{12-4}{20-4}\times100=50\\% \]</div>
+<h2 id="20-final-commissioning-checklist">20. Final Commissioning Checklist</h2>
+<h3 id="before-testing">Before testing</h3>
+<ul>
+<li>Identify the field instrument, PLC channel, and loop drawing.</li>
+<li>Confirm the signal type and configured measurement range.</li>
+<li>Identify the source of loop power.</li>
+<li>Select the correct source, simulate, measure, or loop-power mode.</li>
+<li>Check polarity, terminals, instrument condition, and calibration status.</li>
+<li>Obtain the required authorization for isolating or manipulating the loop.</li>
+<li>Ensure the process and actuators are in an approved safe condition.</li>
+</ul>
+<h3 id="during-testing">During testing</h3>
+<ul>
+<li>Apply known current values appropriate to the test.</li>
+<li>Record actual current readings.</li>
+<li>Verify PLC raw input values.</li>
+<li>Verify scaled engineering values.</li>
+<li>Check alarms and fault handling where required.</li>
+<li>Confirm the control output response under approved conditions.</li>
+<li>Compare results with the specified acceptance tolerances.</li>
+</ul>
+<h3 id="after-testing">After testing</h3>
+<ul>
+<li>Restore field wiring and remove temporary test connections.</li>
+<li>Restore normal control and power arrangements.</li>
+<li>Verify the field instrument and PLC channel operate correctly.</li>
+<li>Confirm HMI values and alarms behave as expected.</li>
+<li>Remove temporary bypasses and test overrides.</li>
+<li>Record results, deviations, and corrective actions.</li>
+<li>Complete the required commissioning documentation.</li>
+</ul>
+<p>Key principle: A loop calibrator allows controlled testing of the electrical signal path. Correct mode selection, loop wiring, power arrangement, PLC scaling, and end-to-end verification are all necessary for reliable commissioning.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\13_Commissioning\07_Test_Tools\05_Cable_Tester - Cable tester: Copper and fibre continuity</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

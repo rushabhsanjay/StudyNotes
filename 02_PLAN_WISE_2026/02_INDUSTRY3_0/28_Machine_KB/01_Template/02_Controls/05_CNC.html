@@ -1,0 +1,1563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>05. CNC: Controller, Axes, Offsets</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">05. CNC: Controller, Axes, Offsets</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-of-cnc-documentation">1. Purpose of CNC Documentation</a></li>
+<li><a href="#2-cnc-system-architecture">2. CNC System Architecture</a><ul>
+<li><a href="#21-cnc-controller">2.1 CNC controller</a></li>
+<li><a href="#22-plc-or-machine-control-logic">2.2 PLC or machine-control logic</a></li>
+<li><a href="#23-axis-drives-and-spindle-drive">2.3 Axis drives and spindle drive</a></li>
+</ul>
+</li>
+<li><a href="#3-cnc-controller-identification">3. CNC Controller Identification</a><ul>
+<li><a href="#31-controller-master-register">3.1 Controller master register</a></li>
+<li><a href="#32-common-cnc-controller-families">3.2 Common CNC controller families</a></li>
+</ul>
+</li>
+<li><a href="#4-cnc-machine-and-axis-configuration">4. CNC Machine and Axis Configuration</a><ul>
+<li><a href="#41-common-axis-names">4.1 Common axis names</a></li>
+<li><a href="#42-axis-register">4.2 Axis register</a></li>
+<li><a href="#43-machine-coordinate-direction">4.3 Machine coordinate direction</a></li>
+</ul>
+</li>
+<li><a href="#5-coordinate-systems-in-cnc">5. Coordinate Systems in CNC</a><ul>
+<li><a href="#51-machine-coordinate-system">5.1 Machine coordinate system</a></li>
+<li><a href="#52-workpiece-coordinate-system">5.2 Workpiece coordinate system</a></li>
+<li><a href="#53-local-coordinate-systems">5.3 Local coordinate systems</a></li>
+<li><a href="#54-simplified-coordinate-relationship">5.4 Simplified coordinate relationship</a></li>
+</ul>
+</li>
+<li><a href="#6-work-offsets">6. Work Offsets</a><ul>
+<li><a href="#61-purpose-of-work-offsets">6.1 Purpose of work offsets</a></li>
+<li><a href="#62-common-work-offset-fields">6.2 Common work offset fields</a></li>
+<li><a href="#63-work-offset-versus-machine-zero">6.3 Work offset versus machine zero</a></li>
+<li><a href="#64-multiple-work-offsets">6.4 Multiple work offsets</a></li>
+</ul>
+</li>
+<li><a href="#7-tool-offsets">7. Tool Offsets</a><ul>
+<li><a href="#71-common-tool-offset-categories">7.1 Common tool offset categories</a></li>
+<li><a href="#72-typical-tool-offset-register">7.2 Typical tool-offset register</a></li>
+<li><a href="#73-geometry-and-wear-are-not-interchangeable-records">7.3 Geometry and wear are not interchangeable records</a></li>
+</ul>
+</li>
+<li><a href="#8-cnc-offsets-practical-distinctions">8. CNC Offsets: Practical Distinctions</a></li>
+<li><a href="#9-cnc-programming-fundamentals">9. CNC Programming Fundamentals</a><ul>
+<li><a href="#91-illustrative-program-structure">9.1 Illustrative program structure</a></li>
+<li><a href="#92-modal-and-non-modal-commands">9.2 Modal and non-modal commands</a></li>
+<li><a href="#93-absolute-and-incremental-positioning">9.3 Absolute and incremental positioning</a></li>
+</ul>
+</li>
+<li><a href="#10-cnc-programs-and-version-control">10. CNC Programs and Version Control</a><ul>
+<li><a href="#101-program-master-register">10.1 Program master register</a></li>
+<li><a href="#102-program-change-control">10.2 Program change control</a></li>
+<li><a href="#103-program-comparison">10.3 Program comparison</a></li>
+</ul>
+</li>
+<li><a href="#11-cnc-parameters-and-configuration">11. CNC Parameters and Configuration</a><ul>
+<li><a href="#111-common-parameter-categories">11.1 Common parameter categories</a></li>
+<li><a href="#112-parameter-management-principles">11.2 Parameter management principles</a></li>
+</ul>
+</li>
+<li><a href="#12-cnc-and-plc-interaction">12. CNC and PLC Interaction</a><ul>
+<li><a href="#121-cnc-to-plc-interface-register">12.1 CNC-to-PLC interface register</a></li>
+</ul>
+</li>
+<li><a href="#13-cnc-fault-diagnosis">13. CNC Fault Diagnosis</a><ul>
+<li><a href="#131-diagnostic-evidence">13.1 Diagnostic evidence</a></li>
+</ul>
+</li>
+<li><a href="#14-cnc-backup-and-disaster-recovery">14. CNC Backup and Disaster Recovery</a><ul>
+<li><a href="#141-backup-register">14.1 Backup register</a></li>
+<li><a href="#142-recovery-after-storage-or-controller-failure">14.2 Recovery after storage or controller failure</a></li>
+</ul>
+</li>
+<li><a href="#15-offset-related-failure-examples">15. Offset-Related Failure Examples</a><ul>
+<li><a href="#case-1-all-parts-are-consistently-machined-at-the-wrong-location">Case 1: All parts are consistently machined at the wrong location</a></li>
+<li><a href="#case-2-only-one-tool-produces-incorrect-dimensions">Case 2: Only one tool produces incorrect dimensions</a></li>
+<li><a href="#case-3-position-changes-after-encoder-or-battery-related-intervention">Case 3: Position changes after encoder or battery-related intervention</a></li>
+<li><a href="#case-4-a-program-worked-previously-but-now-moves-unexpectedly">Case 4: A program worked previously but now moves unexpectedly</a></li>
+</ul>
+</li>
+<li><a href="#16-cnc-maintenance-and-verification-framework">16. CNC Maintenance and Verification Framework</a></li>
+<li><a href="#17-cnc-knowledge-base-templates">17. CNC Knowledge Base Templates</a><ul>
+<li><a href="#a-cnc-machine-master">A. CNC machine master</a></li>
+<li><a href="#b-axis-and-coordinate-register">B. Axis and coordinate register</a></li>
+<li><a href="#c-work-offset-register">C. Work-offset register</a></li>
+<li><a href="#d-tool-offset-register">D. Tool-offset register</a></li>
+<li><a href="#e-cnc-program-change-record">E. CNC program change record</a></li>
+</ul>
+</li>
+<li><a href="#18-cnc-knowledge-check-and-interview-questions">18. CNC Knowledge Check and Interview Questions</a></li>
+<li><a href="#19-final-cnc-documentation-checklist">19. Final CNC Documentation Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-of-cnc-documentation">1. Purpose of CNC Documentation</h2>
+<p>Computer Numerical Control (CNC) is used to control machine movements and operations through a programmed sequence of commands. A CNC system coordinates axis motion, spindle operation, tool changes, auxiliary functions, and process conditions according to the machine configuration.</p>
+<p>In industrial maintenance, CNC documentation must help a technician understand:</p>
+<ul>
+<li>Which CNC controller operates the machine.</li>
+<li>Which axes and spindles the controller manages.</li>
+<li>How machine coordinates and workpiece coordinates are defined.</li>
+<li>How tool geometry and wear offsets affect machining.</li>
+<li>Where CNC programs, parameters, and compensation data are stored.</li>
+<li>How the CNC communicates with the PLC, drives, HMI, and machine peripherals.</li>
+<li>How to diagnose faults without losing important evidence or introducing unsafe movement.</li>
+<li>How to restore the machine after controller, drive, encoder, or storage failure.</li>
+</ul>
+<p>A CNC knowledge base is not simply a list of G-codes and M-codes. It is a controlled record of the complete machine-control configuration.</p>
+<h2 id="2-cnc-system-architecture">2. CNC System Architecture</h2>
+<p>A typical CNC machine contains a CNC controller, PLC functionality, servo drives, spindle drive, feedback devices, HMI, and machine mechanisms.</p>
+<pre><code>CNC Program
+     ↓
+CNC Controller
+     ↓
+Motion Planning and Interpolation
+     ↓
+Axis Commands and Spindle Commands
+     ↓
+Servo Drives and Spindle Drive
+     ↓
+Motors and Mechanical Transmission
+     ↓
+Machine Motion and Machining Process
+     ↑
+Encoders, Scales, and Other Feedback
+
+CNC Controller ↔ PLC / Machine Logic
+                         ↓
+        Tool Changer, Coolant, Clamps,
+        Interlocks, Lubrication, Auxiliaries
+</code></pre>
+<p>The exact architecture varies by CNC manufacturer and machine builder. Some controllers integrate PLC functions, while others use a separate PLC or machine-control subsystem.</p>
+<h3 id="21-cnc-controller">2.1 CNC controller</h3>
+<p>The CNC controller interprets the part program and coordinates the machine's motion and auxiliary functions.</p>
+<p>Its responsibilities may include:</p>
+<ul>
+<li>Program interpretation.</li>
+<li>Axis interpolation.</li>
+<li>Coordinate transformations.</li>
+<li>Feed-rate control.</li>
+<li>Tool and work offset management.</li>
+<li>Spindle commands.</li>
+<li>Canned cycles and machining functions.</li>
+<li>Alarm handling.</li>
+<li>Communication with drives and PLC logic.</li>
+</ul>
+<h3 id="22-plc-or-machine-control-logic">2.2 PLC or machine-control logic</h3>
+<p>The machine PLC or integrated PLC functionality manages the sequencing and interlocks required to operate the machine.</p>
+<p>Examples include:</p>
+<ul>
+<li>Confirming that a tool change is permitted.</li>
+<li>Operating coolant pumps.</li>
+<li>Controlling hydraulic or pneumatic clamps.</li>
+<li>Monitoring guard and door interlocks.</li>
+<li>Checking lubrication and pressure conditions.</li>
+<li>Managing pallet changers and conveyors.</li>
+</ul>
+<p>The CNC program may request an auxiliary operation, but the PLC and machine logic determine how that operation is executed and interlocked.</p>
+<h3 id="23-axis-drives-and-spindle-drive">2.3 Axis drives and spindle drive</h3>
+<p>Servo drives operate controlled feed axes. A spindle drive controls spindle rotation according to the installed architecture.</p>
+<p>The spindle may use a dedicated spindle motor and drive rather than the same type of servo axis used for linear positioning.</p>
+<p>Record the actual architecture instead of assuming that every motor is controlled by an identical drive.</p>
+<h2 id="3-cnc-controller-identification">3. CNC Controller Identification</h2>
+<p>The controller is a major element of machine identity because programs, parameters, coordinate systems, offsets, and recovery procedures depend on its configuration.</p>
+<h3 id="31-controller-master-register">3.1 Controller master register</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine ID</td>
+<td>Unique machine or production-cell identifier</td>
+</tr>
+<tr>
+<td>Machine builder</td>
+<td>Company that designed or supplied the machine</td>
+</tr>
+<tr>
+<td>CNC manufacturer</td>
+<td>Controller manufacturer</td>
+</tr>
+<tr>
+<td>CNC model</td>
+<td>Exact controller model or product family</td>
+</tr>
+<tr>
+<td>Controller serial number</td>
+<td>Installed unit identity where applicable</td>
+</tr>
+<tr>
+<td>CNC software version</td>
+<td>Installed software or system version</td>
+</tr>
+<tr>
+<td>CNC firmware version</td>
+<td>Record where separately applicable</td>
+</tr>
+<tr>
+<td>PLC type</td>
+<td>Integrated PLC or separate PLC identity</td>
+</tr>
+<tr>
+<td>Axis count</td>
+<td>Number of configured controlled axes</td>
+</tr>
+<tr>
+<td>Spindle count</td>
+<td>Number of configured spindles</td>
+</tr>
+<tr>
+<td>Servo system</td>
+<td>Drive and motor family</td>
+</tr>
+<tr>
+<td>Engineering software</td>
+<td>Required configuration or programming tool</td>
+</tr>
+<tr>
+<td>Storage medium</td>
+<td>Internal drive, removable medium, or supported storage</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>Installed industrial networks and interfaces</td>
+</tr>
+<tr>
+<td>Backup reference</td>
+<td>Approved controller backup</td>
+</tr>
+<tr>
+<td>Electrical drawings</td>
+<td>Controlled drawing reference</td>
+</tr>
+<tr>
+<td>Machine manual</td>
+<td>Applicable builder documentation</td>
+</tr>
+</tbody>
+</table>
+<h3 id="32-common-cnc-controller-families">3.2 Common CNC controller families</h3>
+<p>Examples of industrial CNC platforms include:</p>
+<ul>
+<li>FANUC CNC systems.</li>
+<li>Siemens SINUMERIK systems.</li>
+<li>Mitsubishi CNC systems.</li>
+<li>Haas CNC controls.</li>
+<li>Okuma OSP systems.</li>
+<li>Mazak control systems, depending on machine model.</li>
+<li>Other machine-builder-specific or OEM-integrated controls.</li>
+</ul>
+<p>These systems differ in programming dialects, parameter structures, coordinate handling, tool management, diagnostic screens, and recovery methods.</p>
+<p>Even within a single manufacturer's product family, functions and parameter meanings may differ by model and software version.</p>
+<h2 id="4-cnc-machine-and-axis-configuration">4. CNC Machine and Axis Configuration</h2>
+<p>The axis configuration describes the motion capabilities and coordinate relationships of the machine.</p>
+<h3 id="41-common-axis-names">4.1 Common axis names</h3>
+<table>
+<thead>
+<tr>
+<th>Axis designation</th>
+<th>Common meaning</th>
+<th>Important qualification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>X</td>
+<td>Linear motion along the machine X coordinate</td>
+<td>Physical table or tool movement depends on machine design</td>
+</tr>
+<tr>
+<td>Y</td>
+<td>Linear motion along the machine Y coordinate</td>
+<td>Direction must be verified from machine documentation</td>
+</tr>
+<tr>
+<td>Z</td>
+<td>Linear motion along the machine Z coordinate</td>
+<td>CNC conventions depend on machine type and coordinate definition</td>
+</tr>
+<tr>
+<td>A</td>
+<td>Rotary axis associated with X</td>
+<td>Confirm the installed machine convention</td>
+</tr>
+<tr>
+<td>B</td>
+<td>Rotary axis associated with Y</td>
+<td>Confirm the installed machine convention</td>
+</tr>
+<tr>
+<td>C</td>
+<td>Rotary axis associated with Z</td>
+<td>Confirm the installed machine convention</td>
+</tr>
+<tr>
+<td>Spindle</td>
+<td>Rotational cutting or process motion</td>
+<td>May be configured separately from feed axes</td>
+</tr>
+</tbody>
+</table>
+<p>Do not assume that the physical component moving in the positive X direction is always the table. Some machines move the table, some move the tool head, and some combine both.</p>
+<h3 id="42-axis-register">4.2 Axis register</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Example or required record</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Axis ID</td>
+<td><code>AX-X-001</code></td>
+</tr>
+<tr>
+<td>Controller axis name</td>
+<td>Exact configured name</td>
+</tr>
+<tr>
+<td>Axis function</td>
+<td>Table, slide, tool head, rotary table, or other</td>
+</tr>
+<tr>
+<td>Axis type</td>
+<td>Linear or rotary</td>
+</tr>
+<tr>
+<td>Drive model</td>
+<td>Installed servo drive</td>
+</tr>
+<tr>
+<td>Motor model</td>
+<td>Installed motor</td>
+</tr>
+<tr>
+<td>Feedback device</td>
+<td>Encoder, scale, or other feedback</td>
+</tr>
+<tr>
+<td>Mechanical transmission</td>
+<td>Ball screw, gearbox, rack, direct drive, or other</td>
+</tr>
+<tr>
+<td>Engineering unit</td>
+<td>mm, degrees, or configured unit</td>
+</tr>
+<tr>
+<td>Travel limits</td>
+<td>Approved axis limits</td>
+</tr>
+<tr>
+<td>Reference method</td>
+<td>Configured homing or referencing method</td>
+</tr>
+<tr>
+<td>Direction convention</td>
+<td>Verified positive and negative direction</td>
+</tr>
+<tr>
+<td>Axis group</td>
+<td>Relevant coordinated motion group</td>
+</tr>
+<tr>
+<td>Backup reference</td>
+<td>Approved axis configuration backup</td>
+</tr>
+</tbody>
+</table>
+<h3 id="43-machine-coordinate-direction">4.3 Machine coordinate direction</h3>
+<p>Machine coordinates define the machine's reference coordinate system. Positive and negative directions must be established from the CNC configuration and machine builder's documentation.</p>
+<p>For maintenance work, verify direction using the approved diagnostic procedure. Never infer it solely from the physical appearance of the machine.</p>
+<p>An incorrect assumption about axis direction can cause tool, fixture, or machine collision during recovery or commissioning.</p>
+<h2 id="5-coordinate-systems-in-cnc">5. Coordinate Systems in CNC</h2>
+<p>CNC machines may use several coordinate representations simultaneously. Confusing them is a common source of positioning errors.</p>
+<h3 id="51-machine-coordinate-system">5.1 Machine coordinate system</h3>
+<p>The machine coordinate system defines axis positions relative to the machine's established reference.</p>
+<p>It is used for functions such as:</p>
+<ul>
+<li>Machine referencing.</li>
+<li>Travel-limit management.</li>
+<li>Machine position diagnostics.</li>
+<li>Certain machine setup and recovery operations.</li>
+</ul>
+<p>Machine coordinates are not necessarily the same as the displayed workpiece coordinates.</p>
+<h3 id="52-workpiece-coordinate-system">5.2 Workpiece coordinate system</h3>
+<p>A workpiece coordinate system defines the location of the part or fixture relative to the machine.</p>
+<p>Common CNC programming conventions include work coordinate systems such as <code>G54</code>, <code>G55</code>, and additional supported work offsets. Availability and behavior depend on the controller and programming configuration.</p>
+<p>For example, the programmer may define the top face of a component as the workpiece Z-zero reference. The machine's physical reference is still maintained separately.</p>
+<h3 id="53-local-coordinate-systems">5.3 Local coordinate systems</h3>
+<p>Some CNC controllers support local coordinate shifts, rotations, scaling, or other coordinate transformations.</p>
+<p>These functions can be useful for repeated features and complex setups, but their interaction with the active work coordinate system must be understood.</p>
+<p>Record any machine-specific transformations or local offsets that are necessary to reproduce the intended machining setup.</p>
+<h3 id="54-simplified-coordinate-relationship">5.4 Simplified coordinate relationship</h3>
+<p>Conceptually, a workpiece position is related to the machine position through a coordinate transformation.</p>
+<p>For a simple one-dimensional translation:</p>
+<div class="math-display">\[ X\_{\text{machine}} = X\_{\text{work}} + X\_{\text{work offset}} \]</div>
+<p>This simplified relationship is illustrative only. Actual CNC coordinate calculations may include sign conventions, tool compensation, local shifts, rotations, kinematics, and controller-specific rules.</p>
+<p>Do not use this equation as a universal formula for editing CNC offsets. Confirm the controller's actual coordinate convention before making changes.</p>
+<h2 id="6-work-offsets">6. Work Offsets</h2>
+<p>A work offset defines the relationship between a programmed workpiece coordinate and the machine coordinate system.</p>
+<h3 id="61-purpose-of-work-offsets">6.1 Purpose of work offsets</h3>
+<p>Work offsets allow a part program to use a consistent coordinate reference even when the workpiece is mounted at a different position on the machine.</p>
+<p>They are commonly used for:</p>
+<ul>
+<li>Setting the part datum.</li>
+<li>Machining multiple fixtures.</li>
+<li>Repeating operations on multiple workpieces.</li>
+<li>Managing palletized production.</li>
+<li>Reusing a program across compatible setups.</li>
+</ul>
+<h3 id="62-common-work-offset-fields">6.2 Common work offset fields</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Offset identifier</td>
+<td>For example, <code>G54</code> or another supported work coordinate</td>
+</tr>
+<tr>
+<td>X value</td>
+<td>Configured X-axis coordinate shift</td>
+</tr>
+<tr>
+<td>Y value</td>
+<td>Configured Y-axis coordinate shift</td>
+</tr>
+<tr>
+<td>Z value</td>
+<td>Configured Z-axis coordinate shift</td>
+</tr>
+<tr>
+<td>Rotary values</td>
+<td>Applicable angular coordinate values</td>
+</tr>
+<tr>
+<td>Active state</td>
+<td>Whether the coordinate system is currently selected</td>
+</tr>
+<tr>
+<td>Source</td>
+<td>Setup sheet, probing cycle, or approved measurement</td>
+</tr>
+<tr>
+<td>Revision</td>
+<td>Approved change or setup revision</td>
+</tr>
+<tr>
+<td>Verification</td>
+<td>Confirmation against the setup procedure</td>
+</tr>
+</tbody>
+</table>
+<h3 id="63-work-offset-versus-machine-zero">6.3 Work offset versus machine zero</h3>
+<p>Machine zero and workpiece zero serve different purposes.</p>
+<ul>
+<li>Machine reference: Establishes the machine's coordinate reference.</li>
+<li>Workpiece datum: Establishes the coordinate origin used for the part program.</li>
+<li>Tool reference: Describes the relevant tool geometry relative to the tool or machine reference, according to the controller's tool-management system.</li>
+</ul>
+<p>Changing a work offset is not the same as rehoming the machine. Changing the machine reference configuration can affect the interpretation of all machine positions and must be treated as a controlled engineering action.</p>
+<h3 id="64-multiple-work-offsets">6.4 Multiple work offsets</h3>
+<p>A machine may have several work coordinate systems for different fixtures, parts, or machining positions.</p>
+<p>The setup documentation should identify which work offset is intended for each part number and fixture.</p>
+<p>Do not assume that the first available work offset is the correct one. Confirm the program, fixture, setup sheet, and active coordinate selection.</p>
+<h2 id="7-tool-offsets">7. Tool Offsets</h2>
+<p>Tool offsets account for tool dimensions or tool-specific corrections so that programmed positions correspond to the intended cutting geometry.</p>
+<p>The exact offset structure varies by CNC system and machine configuration.</p>
+<h3 id="71-common-tool-offset-categories">7.1 Common tool offset categories</h3>
+<p>Tool length compensation: Accounts for the effective length of a tool relative to the applicable machine or tool reference.</p>
+<p>Tool radius or diameter compensation: Accounts for the cutting tool's effective radius or diameter when supported and correctly applied by the program.</p>
+<p>Tool geometry data: Stores measured or defined tool dimensions.</p>
+<p>Tool wear compensation: Applies a controlled correction to account for wear or dimensional deviation.</p>
+<p>Nose radius compensation: Used on applicable turning operations to account for insert nose geometry.</p>
+<h3 id="72-typical-tool-offset-register">7.2 Typical tool-offset register</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tool number</td>
+<td>Tool identifier used by the machine</td>
+</tr>
+<tr>
+<td>Tool description</td>
+<td>Drill, end mill, boring tool, turning tool, or other</td>
+</tr>
+<tr>
+<td>Tool geometry</td>
+<td>Relevant length, radius, diameter, or other data</td>
+</tr>
+<tr>
+<td>Wear correction</td>
+<td>Approved tool wear adjustment</td>
+</tr>
+<tr>
+<td>Tool station</td>
+<td>Magazine or turret location</td>
+</tr>
+<tr>
+<td>Tool life status</td>
+<td>Available life information where supported</td>
+</tr>
+<tr>
+<td>Measurement method</td>
+<td>Tool setter, probe, presetter, manual measurement, or other</td>
+</tr>
+<tr>
+<td>Measurement date</td>
+<td>Date of measurement</td>
+</tr>
+<tr>
+<td>Verification</td>
+<td>Setup or measurement approval record</td>
+</tr>
+</tbody>
+</table>
+<h3 id="73-geometry-and-wear-are-not-interchangeable-records">7.3 Geometry and wear are not interchangeable records</h3>
+<p>Tool geometry describes the established tool dimensions according to the controller's offset model. Wear compensation applies a correction to account for tool condition or dimensional deviation.</p>
+<p>Combining these values without understanding the controller's convention can create a setup error.</p>
+<p>Use the approved tool measurement procedure and record the reason for significant offset changes.</p>
+<h2 id="8-cnc-offsets-practical-distinctions">8. CNC Offsets: Practical Distinctions</h2>
+<table>
+<thead>
+<tr>
+<th>Offset or reference</th>
+<th>Main purpose</th>
+<th>Common maintenance concern</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine reference</td>
+<td>Defines the machine coordinate origin</td>
+<td>Incorrect reference or encoder recovery</td>
+</tr>
+<tr>
+<td>Work offset</td>
+<td>Defines the part or fixture coordinate origin</td>
+<td>Incorrect datum or setup selection</td>
+</tr>
+<tr>
+<td>Tool length offset</td>
+<td>Accounts for tool length</td>
+<td>Incorrect tool measurement or offset selection</td>
+</tr>
+<tr>
+<td>Tool radius compensation</td>
+<td>Accounts for cutter radius</td>
+<td>Wrong cutter data or program compensation</td>
+</tr>
+<tr>
+<td>Tool wear offset</td>
+<td>Applies a correction for wear</td>
+<td>Excessive or unexplained correction</td>
+</tr>
+<tr>
+<td>Local coordinate shift</td>
+<td>Applies a local coordinate transformation</td>
+<td>Unexpected shift or inherited setup state</td>
+</tr>
+<tr>
+<td>Rotary-axis offset</td>
+<td>Defines an applicable rotary reference or transformation</td>
+<td>Incorrect alignment or kinematic configuration</td>
+</tr>
+<tr>
+<td>Compensation table</td>
+<td>Corrects supported position-dependent errors</td>
+<td>Invalid or lost compensation data</td>
+</tr>
+</tbody>
+</table>
+<p>The names and exact behavior of these features vary by CNC manufacturer and configuration. Some controllers combine or organize them differently.</p>
+<h2 id="9-cnc-programming-fundamentals">9. CNC Programming Fundamentals</h2>
+<p>A CNC program contains commands that define movement and machining operations.</p>
+<p>Programs commonly contain:</p>
+<ul>
+<li>Preparatory functions, commonly called G-codes.</li>
+<li>Auxiliary functions, commonly called M-codes.</li>
+<li>Axis coordinates.</li>
+<li>Feed rates.</li>
+<li>Spindle commands.</li>
+<li>Tool-selection and tool-change commands.</li>
+<li>Tool and work compensation commands.</li>
+<li>Dwell, canned-cycle, and other controller-specific instructions.</li>
+</ul>
+<h3 id="91-illustrative-program-structure">9.1 Illustrative program structure</h3>
+<pre><code>%
+O1000
+(ILLUSTRATIVE STRUCTURE ONLY)
+G21
+G90
+G54
+T01
+M06
+S1000 M03
+G00 X0 Y0
+G00 Z50
+M05
+M30
+%
+</code></pre>
+<p>This is not a production-ready machining program. It demonstrates only the structure of a small set of commands. The tool-change syntax, spindle sequence, safe positions, axis limits, work setup, and machine-specific requirements must be verified for the installed controller.</p>
+<p>Even apparently standard commands can behave differently depending on the machine builder's integration and configured options.</p>
+<h3 id="92-modal-and-non-modal-commands">9.2 Modal and non-modal commands</h3>
+<p>A modal command remains active until it is cancelled or replaced by another command in the same modal group.</p>
+<p>A non-modal command typically applies to a specific block or operation.</p>
+<p>Understanding modal state matters because a program may inherit an active coordinate system, feed mode, compensation mode, or motion mode from an earlier block.</p>
+<p>A maintenance technician reviewing a program should identify the active modal state before diagnosing unexpected motion.</p>
+<h3 id="93-absolute-and-incremental-positioning">9.3 Absolute and incremental positioning</h3>
+<p>Many CNC systems distinguish absolute positioning from incremental positioning.</p>
+<ul>
+<li>Absolute positioning refers to a location within the active coordinate system.</li>
+<li>Incremental positioning describes movement relative to the current position.</li>
+</ul>
+<p>The common programming conventions include <code>G90</code> and <code>G91</code>, but their exact behavior must be verified for the controller and programming context.</p>
+<p>An incorrect assumption about absolute or incremental mode can cause unexpected movement.</p>
+<h2 id="10-cnc-programs-and-version-control">10. CNC Programs and Version Control</h2>
+<p>CNC programs directly influence machine movement and part quality. They must be controlled like other production-critical configuration.</p>
+<h3 id="101-program-master-register">10.1 Program master register</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine ID</td>
+<td>Machine on which the program is approved</td>
+</tr>
+<tr>
+<td>Program number</td>
+<td>CNC program identifier</td>
+</tr>
+<tr>
+<td>Program name</td>
+<td>Controlled program description</td>
+</tr>
+<tr>
+<td>Part number</td>
+<td>Intended workpiece</td>
+</tr>
+<tr>
+<td>Operation</td>
+<td>Machining operation</td>
+</tr>
+<tr>
+<td>Revision</td>
+<td>Approved program revision</td>
+</tr>
+<tr>
+<td>Controller compatibility</td>
+<td>Required CNC model or supported dialect</td>
+</tr>
+<tr>
+<td>Tool list</td>
+<td>Required tools and tool numbers</td>
+</tr>
+<tr>
+<td>Work offset</td>
+<td>Approved work coordinate or setup</td>
+</tr>
+<tr>
+<td>Fixture</td>
+<td>Approved fixture or pallet</td>
+</tr>
+<tr>
+<td>Author</td>
+<td>Responsible programmer or engineering owner</td>
+</tr>
+<tr>
+<td>Approval</td>
+<td>Required review and authorization</td>
+</tr>
+<tr>
+<td>Backup reference</td>
+<td>Controlled program backup</td>
+</tr>
+<tr>
+<td>Validation status</td>
+<td>Simulation, prove-out, or production approval record</td>
+</tr>
+</tbody>
+</table>
+<h3 id="102-program-change-control">10.2 Program change control</h3>
+<p>For every approved program change, record:</p>
+<ul>
+<li>Reason for the change.</li>
+<li>Original revision.</li>
+<li>Revised program revision.</li>
+<li>Affected operations.</li>
+<li>Expected effect on part quality and cycle time.</li>
+<li>Required tool or fixture changes.</li>
+<li>Simulation or verification results where applicable.</li>
+<li>Approval and release status.</li>
+<li>Recovery path to the previous approved revision.</li>
+</ul>
+<p>Do not overwrite the only known-good production program with an unverified modification.</p>
+<h3 id="103-program-comparison">10.3 Program comparison</h3>
+<p>When a fault begins after a program change, compare the last known-good revision with the current version.</p>
+<p>Check for changes in:</p>
+<ul>
+<li>Axis coordinates.</li>
+<li>Feed and spindle commands.</li>
+<li>Work offset selection.</li>
+<li>Tool selection and compensation.</li>
+<li>Motion mode.</li>
+<li>Coordinate shifts and rotations.</li>
+<li>Canned cycles.</li>
+<li>Auxiliary commands.</li>
+<li>Subprogram calls.</li>
+<li>Tool-change or machine-sequence interactions.</li>
+</ul>
+<p>A program comparison should preserve the original files and establish which revision was active when the problem occurred.</p>
+<h2 id="11-cnc-parameters-and-configuration">11. CNC Parameters and Configuration</h2>
+<p>CNC parameters define system behavior beyond the individual part program. Their function may include axis configuration, machine dynamics, coordinate handling, compensation, communication, and machine-builder-specific behavior.</p>
+<h3 id="111-common-parameter-categories">11.1 Common parameter categories</h3>
+<ul>
+<li>Axis and servo configuration.</li>
+<li>Encoder and feedback scaling.</li>
+<li>Reference-return settings.</li>
+<li>Machine travel limits.</li>
+<li>Spindle configuration.</li>
+<li>Coordinate and kinematic configuration.</li>
+<li>Tool-management configuration.</li>
+<li>Compensation data.</li>
+<li>Communication and interface settings.</li>
+<li>PLC or machine-builder integration settings.</li>
+<li>Display and operator-interface configuration.</li>
+</ul>
+<h3 id="112-parameter-management-principles">11.2 Parameter management principles</h3>
+<ul>
+<li>Record the parameter name or number, description, value, unit, and source.</li>
+<li>Maintain an approved baseline.</li>
+<li>Capture a backup before an authorized change.</li>
+<li>Document the reason and approval for each change.</li>
+<li>Verify the exact controller model and software version.</li>
+<li>Use manufacturer and machine-builder documentation to interpret parameters.</li>
+<li>Validate the machine after changes according to the approved procedure.</li>
+</ul>
+<p>Do not copy a parameter value from another CNC machine merely because the controller model looks similar. Machine-builder integration, axis hardware, feedback configuration, and software revisions can make apparently identical machines different.</p>
+<h2 id="12-cnc-and-plc-interaction">12. CNC and PLC Interaction</h2>
+<p>CNC and PLC functions work together to coordinate machining and auxiliary operations.</p>
+<p>Examples include:</p>
+<ul>
+<li>Tool change requests and completion.</li>
+<li>Spindle enable and status.</li>
+<li>Coolant commands and feedback.</li>
+<li>Clamping and unclamping.</li>
+<li>Pallet exchange.</li>
+<li>Guard and door interlocks.</li>
+<li>Lubrication and pressure monitoring.</li>
+<li>Automatic cycle start and completion.</li>
+<li>Alarm reporting and recovery states.</li>
+</ul>
+<p>A CNC program may request an operation, but the machine logic must confirm the required conditions before completing it.</p>
+<h3 id="121-cnc-to-plc-interface-register">12.1 CNC-to-PLC interface register</h3>
+<table>
+<thead>
+<tr>
+<th>Interface item</th>
+<th>Information to document</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Command</td>
+<td>CNC request or machine operation</td>
+</tr>
+<tr>
+<td>PLC condition</td>
+<td>Logic or interlock required</td>
+</tr>
+<tr>
+<td>Feedback</td>
+<td>Signal confirming the operation's state</td>
+</tr>
+<tr>
+<td>Timeout</td>
+<td>Configured timeout and behavior</td>
+</tr>
+<tr>
+<td>Alarm</td>
+<td>Associated diagnostic message</td>
+</tr>
+<tr>
+<td>Recovery</td>
+<td>Approved sequence for recovering the operation</td>
+</tr>
+<tr>
+<td>Safety relationship</td>
+<td>Relevant safety-related control and interlock references</td>
+</tr>
+</tbody>
+</table>
+<p>Do not assume that a normal PLC status bit is a safety-rated signal. Safety functions must be documented and verified according to the machine's safety design.</p>
+<h2 id="13-cnc-fault-diagnosis">13. CNC Fault Diagnosis</h2>
+<p>CNC alarms can originate from the controller, servo drives, spindle drive, PLC, feedback devices, lubrication system, pneumatic or hydraulic equipment, or the machining process.</p>
+<p>The displayed alarm may identify the affected subsystem without identifying the ultimate root cause.</p>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Initial investigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Axis fails to reference</td>
+<td>Reference switch, encoder, axis configuration, travel conditions</td>
+</tr>
+<tr>
+<td>Axis following error</td>
+<td>Load, drive state, feedback, motion profile, mechanical condition</td>
+</tr>
+<tr>
+<td>Position differs from expected</td>
+<td>Work offset, tool offset, reference state, coordinate mode, setup</td>
+</tr>
+<tr>
+<td>Toolpath unexpectedly shifts</td>
+<td>Active coordinate system, local shifts, program revision, tool compensation</td>
+</tr>
+<tr>
+<td>Spindle fails to start</td>
+<td>Spindle drive, command conditions, interlocks, fault history</td>
+</tr>
+<tr>
+<td>Tool change fails</td>
+<td>Tool changer sequence, position confirmation, PLC logic, mechanical condition</td>
+</tr>
+<tr>
+<td>CNC communication alarm</td>
+<td>Network, device configuration, cable condition, controller state</td>
+</tr>
+<tr>
+<td>Program stops unexpectedly</td>
+<td>Alarm history, modal state, program flow, PLC interlock, operator input</td>
+</tr>
+<tr>
+<td>Poor dimensional accuracy</td>
+<td>Tool condition, offsets, backlash, thermal effects, workholding, measurement method</td>
+</tr>
+<tr>
+<td>Repeated alarm after reset</td>
+<td>Underlying fault, unstable signal, mechanical obstruction, incorrect configuration</td>
+</tr>
+</tbody>
+</table>
+<h3 id="131-diagnostic-evidence">13.1 Diagnostic evidence</h3>
+<p>Capture the following before clearing alarms whenever safe and practical:</p>
+<ul>
+<li>Exact alarm text and code.</li>
+<li>Date and time.</li>
+<li>Machine operating mode.</li>
+<li>Active program and revision.</li>
+<li>Current program block or sequence step.</li>
+<li>Active tool and tool offsets.</li>
+<li>Active work coordinate system.</li>
+<li>Machine and workpiece coordinates.</li>
+<li>Servo and spindle drive status.</li>
+<li>Relevant PLC interlock or sequence state.</li>
+<li>Recent maintenance or configuration changes.</li>
+<li>Corrective action and validation result.</li>
+</ul>
+<p>Avoid repeated resets without diagnosis. They can erase useful evidence and may allow a recurring fault to return during production.</p>
+<h2 id="14-cnc-backup-and-disaster-recovery">14. CNC Backup and Disaster Recovery</h2>
+<p>A complete CNC recovery plan may require more than the part programs.</p>
+<p>Potentially required data includes:</p>
+<ul>
+<li>CNC system and machine parameters.</li>
+<li>Axis and spindle configuration.</li>
+<li>PLC program and data.</li>
+<li>Tool-management data.</li>
+<li>Work offsets.</li>
+<li>Tool offsets and wear values.</li>
+<li>Compensation tables.</li>
+<li>Kinematic configuration.</li>
+<li>Part programs and subprograms.</li>
+<li>Macros and custom cycles.</li>
+<li>Machine-builder settings.</li>
+<li>Network and communication configuration.</li>
+<li>HMI settings and messages.</li>
+<li>Applicable software, licenses, and version information.</li>
+</ul>
+<p>The exact backup scope depends on the CNC architecture and machine-builder requirements.</p>
+<h3 id="141-backup-register">14.1 Backup register</h3>
+<table>
+<thead>
+<tr>
+<th>Data category</th>
+<th>Backup reference</th>
+<th>Revision</th>
+<th>Validation status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CNC parameters</td>
+<td>Record actual file or controlled reference</td>
+<td>Record revision</td>
+<td>Record result</td>
+</tr>
+<tr>
+<td>CNC programs</td>
+<td>Record approved program repository</td>
+<td>Record revision</td>
+<td>Record result</td>
+</tr>
+<tr>
+<td>PLC project</td>
+<td>Record approved project reference</td>
+<td>Record revision</td>
+<td>Record result</td>
+</tr>
+<tr>
+<td>Work offsets</td>
+<td>Record supported backup or controlled setup record</td>
+<td>Record revision</td>
+<td>Record result</td>
+</tr>
+<tr>
+<td>Tool offsets</td>
+<td>Record supported backup or controlled setup record</td>
+<td>Record revision</td>
+<td>Record result</td>
+</tr>
+<tr>
+<td>Compensation data</td>
+<td>Record approved backup reference</td>
+<td>Record revision</td>
+<td>Record result</td>
+</tr>
+<tr>
+<td>Machine-builder settings</td>
+<td>Record approved backup reference</td>
+<td>Record revision</td>
+<td>Record result</td>
+</tr>
+<tr>
+<td>Software and firmware</td>
+<td>Record installed versions and recovery media</td>
+<td>Record revision</td>
+<td>Record result</td>
+</tr>
+</tbody>
+</table>
+<h3 id="142-recovery-after-storage-or-controller-failure">14.2 Recovery after storage or controller failure</h3>
+<p>A controlled recovery process should:</p>
+<ol>
+<li>Identify the failed component and preserve available diagnostic evidence.</li>
+<li>Confirm the approved backup and its compatibility with the installed hardware.</li>
+<li>Restore the system according to the machine builder's procedure.</li>
+<li>Verify controller, PLC, drive, and network communication.</li>
+<li>Verify axis configuration and feedback.</li>
+<li>Confirm machine reference and coordinate behavior.</li>
+<li>Restore or validate work offsets, tool data, and compensation data.</li>
+<li>Verify safety functions and machine interlocks.</li>
+<li>Perform the prescribed commissioning and test procedure.</li>
+<li>Record the restored configuration and release approval.</li>
+</ol>
+<p>Restoring files does not automatically prove that the machine is safe, geometrically accurate, or ready for production.</p>
+<h2 id="15-offset-related-failure-examples">15. Offset-Related Failure Examples</h2>
+<h3 id="case-1-all-parts-are-consistently-machined-at-the-wrong-location">Case 1: All parts are consistently machined at the wrong location</h3>
+<p>Possible causes: Incorrect work offset, incorrect fixture datum, wrong active work coordinate, or setup mismatch.</p>
+<p>Investigation: Compare the approved setup sheet, active work offset, program coordinate selection, fixture position, and measured part location.</p>
+<p>Corrective approach: Identify the incorrect datum or configuration and restore the approved setup. Validate the result using the established inspection method.</p>
+<h3 id="case-2-only-one-tool-produces-incorrect-dimensions">Case 2: Only one tool produces incorrect dimensions</h3>
+<p>Possible causes: Incorrect tool geometry, tool wear compensation, tool identification, tool measurement, or tool installation.</p>
+<p>Investigation: Verify the selected tool, corresponding offset record, measured tool dimensions, and actual cutting condition.</p>
+<p>Corrective approach: Correct the verified tool-data problem and perform the required dimensional verification.</p>
+<h3 id="case-3-position-changes-after-encoder-or-battery-related-intervention">Case 3: Position changes after encoder or battery-related intervention</h3>
+<p>Possible causes: Lost reference, invalid absolute-position data, changed configuration, or an altered mechanical relationship.</p>
+<p>Investigation: Follow the controller's recovery diagnostics. Verify reference validity, encoder state, coordinate configuration, and any movement that occurred during maintenance.</p>
+<p>Corrective approach: Restore the approved reference and configuration using the machine-specific procedure. Do not compensate for an unknown reference error by arbitrarily changing work offsets.</p>
+<h3 id="case-4-a-program-worked-previously-but-now-moves-unexpectedly">Case 4: A program worked previously but now moves unexpectedly</h3>
+<p>Possible causes: Different program revision, changed modal state, different work offset, changed tool data, or a machine configuration change.</p>
+<p>Investigation: Preserve the current program and compare it with the approved revision. Verify the active setup and machine state.</p>
+<p>Corrective approach: Identify the change that explains the behavior and validate the approved correction before returning to production.</p>
+<h2 id="16-cnc-maintenance-and-verification-framework">16. CNC Maintenance and Verification Framework</h2>
+<p>The actual inspection interval must follow the manufacturer, machine builder, plant maintenance strategy, and risk assessment.</p>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Maintenance activity</th>
+<th>Record</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CNC controller</td>
+<td>Review alarms, storage health, and diagnostic state</td>
+<td>Alarm trends and findings</td>
+</tr>
+<tr>
+<td>Axis system</td>
+<td>Review drive faults and positioning behavior</td>
+<td>Fault history and measured results</td>
+</tr>
+<tr>
+<td>Spindle</td>
+<td>Review alarms, vibration, temperature, and condition</td>
+<td>Trends and corrective actions</td>
+</tr>
+<tr>
+<td>Coordinate data</td>
+<td>Verify controlled work and tool offset procedures</td>
+<td>Setup and verification records</td>
+</tr>
+<tr>
+<td>Programs</td>
+<td>Verify approved revisions and change control</td>
+<td>Program release history</td>
+</tr>
+<tr>
+<td>Backups</td>
+<td>Verify availability and restoration readiness</td>
+<td>Backup and recovery test record</td>
+</tr>
+<tr>
+<td>PLC interface</td>
+<td>Review recurring interlock and sequence faults</td>
+<td>Interface fault history</td>
+</tr>
+<tr>
+<td>Cooling and lubrication</td>
+<td>Inspect according to the maintenance plan</td>
+<td>Condition and corrective actions</td>
+</tr>
+<tr>
+<td>Safety systems</td>
+<td>Complete required safety inspections and tests</td>
+<td>Approved validation records</td>
+</tr>
+<tr>
+<td>Obsolescence</td>
+<td>Review controller, drive, storage, and software lifecycle</td>
+<td>Spare and migration plan</td>
+</tr>
+</tbody>
+</table>
+<h2 id="17-cnc-knowledge-base-templates">17. CNC Knowledge Base Templates</h2>
+<h3 id="a-cnc-machine-master">A. CNC machine master</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Entry</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine ID</td>
+<td></td>
+</tr>
+<tr>
+<td>Machine builder and model</td>
+<td></td>
+</tr>
+<tr>
+<td>CNC manufacturer and model</td>
+<td></td>
+</tr>
+<tr>
+<td>CNC software version</td>
+<td></td>
+</tr>
+<tr>
+<td>PLC model and project version</td>
+<td></td>
+</tr>
+<tr>
+<td>Axis configuration</td>
+<td></td>
+</tr>
+<tr>
+<td>Spindle configuration</td>
+<td></td>
+</tr>
+<tr>
+<td>Drive and motor references</td>
+<td></td>
+</tr>
+<tr>
+<td>Engineering software</td>
+<td></td>
+</tr>
+<tr>
+<td>Network configuration reference</td>
+<td></td>
+</tr>
+<tr>
+<td>Electrical drawings</td>
+<td></td>
+</tr>
+<tr>
+<td>Mechanical drawings</td>
+<td></td>
+</tr>
+<tr>
+<td>CNC manuals</td>
+<td></td>
+</tr>
+<tr>
+<td>Approved backup location or record</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="b-axis-and-coordinate-register">B. Axis and coordinate register</h3>
+<table>
+<thead>
+<tr>
+<th>Axis</th>
+<th>Function</th>
+<th>Coordinate convention</th>
+<th>Reference method</th>
+<th>Approved limits</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>X</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Y</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Z</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Rotary axes</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Use the actual installed axis names. Remove rows that do not apply and add any additional axes or spindles.</p>
+<h3 id="c-work-offset-register">C. Work-offset register</h3>
+<table>
+<thead>
+<tr>
+<th>Machine ID</th>
+<th>Part number</th>
+<th>Fixture</th>
+<th>Work offset</th>
+<th>Setup reference</th>
+<th>Verification status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="d-tool-offset-register">D. Tool-offset register</h3>
+<table>
+<thead>
+<tr>
+<th>Tool number</th>
+<th>Tool description</th>
+<th>Geometry reference</th>
+<th>Wear record</th>
+<th>Measurement method</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="e-cnc-program-change-record">E. CNC program change record</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Entry</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine ID</td>
+<td></td>
+</tr>
+<tr>
+<td>Program number</td>
+<td></td>
+</tr>
+<tr>
+<td>Previous revision</td>
+<td></td>
+</tr>
+<tr>
+<td>New revision</td>
+<td></td>
+</tr>
+<tr>
+<td>Reason for change</td>
+<td></td>
+</tr>
+<tr>
+<td>Affected operation</td>
+<td></td>
+</tr>
+<tr>
+<td>Review and approval</td>
+<td></td>
+</tr>
+<tr>
+<td>Verification method</td>
+<td></td>
+</tr>
+<tr>
+<td>Validation result</td>
+<td></td>
+</tr>
+<tr>
+<td>Recovery revision</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="18-cnc-knowledge-check-and-interview-questions">18. CNC Knowledge Check and Interview Questions</h2>
+<p>1. What is the difference between machine coordinates and workpiece coordinates?</p>
+<p>Machine coordinates refer to the machine's established coordinate reference. Workpiece coordinates establish the datum used by the part program.</p>
+<p>2. What is the purpose of a work offset?</p>
+<p>It defines the relationship between the programmed workpiece datum and the machine coordinate system.</p>
+<p>3. What is the difference between tool geometry and tool wear compensation?</p>
+<p>Geometry records the tool's defined or measured dimensions. Wear compensation applies a controlled correction to account for dimensional deviation or tool wear.</p>
+<p>4. Why can a correct program still machine a part incorrectly?</p>
+<p>The active work offset, tool data, fixture setup, coordinate state, machine geometry, or tool condition may be incorrect.</p>
+<p>5. Why should CNC parameters not be copied blindly between machines?</p>
+<p>Machines can differ in axis hardware, feedback configuration, kinematics, builder integration, and software versions.</p>
+<p>6. Why is program revision control important?</p>
+<p>It establishes which program is approved, preserves the known-good version, and supports diagnosis of faults introduced by a change.</p>
+<p>7. What should be checked after controller restoration?</p>
+<p>Verify configuration, communication, axis and feedback behavior, reference state, offsets, programs, safety functions, and the prescribed commissioning results.</p>
+<p>8. Why is a CNC alarm not necessarily the root cause?</p>
+<p>The alarm may report the detected failure condition while the underlying cause lies in another subsystem, such as a mechanical obstruction, feedback problem, or PLC interlock.</p>
+<p>9. What is the danger of changing a work offset to correct an unexplained position error?</p>
+<p>It may conceal a lost reference, configuration error, or mechanical fault and create an unsafe or incorrect coordinate relationship.</p>
+<p>10. What makes a CNC knowledge base useful during a breakdown?</p>
+<p>Accurate equipment identification, approved backups, clear configuration records, fault history, controlled recovery procedures, and verified acceptance criteria.</p>
+<h2 id="19-final-cnc-documentation-checklist">19. Final CNC Documentation Checklist</h2>
+<ul>
+<li>CNC manufacturer, model, software, and firmware are recorded.</li>
+<li>PLC and machine-control architecture are documented.</li>
+<li>Axis and spindle configurations are identified.</li>
+<li>Axis directions, reference methods, and approved travel limits are documented.</li>
+<li>Machine, workpiece, and local coordinate systems are distinguished.</li>
+<li>Work offsets and their approved setup references are recorded.</li>
+<li>Tool geometry and wear compensation are documented.</li>
+<li>CNC programs have controlled revisions and approvals.</li>
+<li>CNC parameters and machine-builder settings have approved backups.</li>
+<li>PLC interfaces, interlocks, and recovery sequences are documented.</li>
+<li>Fault evidence and corrective actions are retained.</li>
+<li>Recovery procedures include configuration and safety verification.</li>
+<li>Backup restoration readiness is periodically verified.</li>
+<li>Obsolete components and migration risks are documented.</li>
+<li>As-built documentation is updated after approved changes.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\28_Machine_KB\01_Template\02_Controls\06_Robot - Robot: Make, model, programs</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

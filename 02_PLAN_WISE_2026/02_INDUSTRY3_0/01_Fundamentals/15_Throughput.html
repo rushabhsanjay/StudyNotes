@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>15. Throughput</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">15. Throughput</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-throughput-formula">2. Throughput Formula</a><ul>
+<li><a href="#example-1-machine-throughput">Example 1: Machine throughput</a></li>
+<li><a href="#example-2-good-part-throughput">Example 2: Good-part throughput</a></li>
+</ul>
+</li>
+<li><a href="#3-types-of-throughput">3. Types of Throughput</a></li>
+<li><a href="#4-throughput-vs-takt-time-vs-cycle-time-vs-capacity">4. Throughput vs Takt Time vs Cycle Time vs Capacity</a><ul>
+<li><a href="#takt-time-versus-throughput">Takt time versus throughput</a></li>
+<li><a href="#cycle-time-versus-throughput">Cycle time versus throughput</a></li>
+</ul>
+</li>
+<li><a href="#5-throughput-in-a-production-line">5. Throughput in a Production Line</a></li>
+<li><a href="#6-what-determines-throughput">6. What Determines Throughput?</a><ul>
+<li><a href="#61-cycle-time">6.1 Cycle time</a></li>
+<li><a href="#62-availability">6.2 Availability</a></li>
+<li><a href="#63-quality">6.3 Quality</a></li>
+<li><a href="#64-material-supply-and-transfer">6.4 Material supply and transfer</a></li>
+<li><a href="#65-bottlenecks">6.5 Bottlenecks</a></li>
+</ul>
+</li>
+<li><a href="#7-throughput-in-industrial-automation">7. Throughput in Industrial Automation</a></li>
+<li><a href="#8-measuring-throughput-correctly">8. Measuring Throughput Correctly</a></li>
+<li><a href="#9-throughput-and-production-losses">9. Throughput and Production Losses</a></li>
+<li><a href="#10-throughput-and-maintenance-priorities">10. Throughput and Maintenance Priorities</a><ul>
+<li><a href="#case-a-repeated-plc-or-sensor-faults">Case A: Repeated PLC or sensor faults</a></li>
+<li><a href="#case-b-robot-cycle-optimization">Case B: Robot cycle optimization</a></li>
+<li><a href="#case-c-a-downstream-bottleneck">Case C: A downstream bottleneck</a></li>
+</ul>
+</li>
+<li><a href="#11-throughput-wip-and-lead-time">11. Throughput, WIP, and Lead Time</a><ul>
+<li><a href="#example">Example</a></li>
+</ul>
+</li>
+<li><a href="#12-common-mistakes">12. Common Mistakes</a></li>
+<li><a href="#13-interview-questions-and-answers">13. Interview Questions and Answers</a></li>
+<li><a href="#14-final-mental-model">14. Final Mental Model</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>Throughput is the quantity of output that a production system completes during a defined period of time.</p>
+<p>In industrial automation, throughput measures how much a machine, workstation, production line, or plant actually produces over time.</p>
+<p>Examples:</p>
+<ul>
+<li>A machine produces 45 components per hour.</li>
+<li>A robotic welding line completes 28 body assemblies per hour.</li>
+<li>An electronic repair station completes 12 repairs per shift.</li>
+<li>A manufacturing plant produces 600 vehicles per day.</li>
+</ul>
+<p>Throughput is a measure of production output, not simply how fast an individual machine operates.</p>
+<p>The important distinction is whether throughput refers to raw output, completed products, or good products that meet quality requirements. The measurement must define this clearly.</p>
+<h2 id="2-throughput-formula">2. Throughput Formula</h2>
+<p>The basic formula is:</p>
+<div class="math-display">\[ \text{Throughput}= \frac{\text{Quantity of Output}} {\text{Elapsed Time}} \]</div>
+<p>Common units include:</p>
+<ul>
+<li>Parts per minute</li>
+<li>Parts per hour</li>
+<li>Assemblies per shift</li>
+<li>Vehicles per day</li>
+<li>Good units per week</li>
+</ul>
+<h3 id="example-1-machine-throughput">Example 1: Machine throughput</h3>
+<p>A machine completes 420 components during 7 hours of production.</p>
+<div class="math-display">\[ \text{Throughput}=\frac{420}{7} =60\text{ parts/hour} \]</div>
+<p>The average throughput is 60 parts per hour.</p>
+<p>This calculation does not tell us whether the machine operated continuously, experienced breakdowns, or produced rejected components. Those factors require additional measurements.</p>
+<h3 id="example-2-good-part-throughput">Example 2: Good-part throughput</h3>
+<p>A production station completes 500 components in 8 hours, but 20 components are rejected.</p>
+<p>Good output:</p>
+<div class="math-display">\[ 500-20=480\text{ good parts} \]</div>
+<p>Good-part throughput over the 8-hour period:</p>
+<div class="math-display">\[ \frac{480}{8}=60\text{ good parts/hour} \]</div>
+<p>Total output throughput is 62.5 parts per hour, while good-part throughput is 60 parts per hour.</p>
+<p>Both values can be useful, but they answer different questions. In production reporting, always establish which one is being measured.</p>
+<h2 id="3-types-of-throughput">3. Types of Throughput</h2>
+<p>The term can be used at different levels of a manufacturing system.</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Meaning</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine throughput</td>
+<td>Output from one machine per unit of time</td>
+<td>80 parts/hour</td>
+</tr>
+<tr>
+<td>Station throughput</td>
+<td>Output from a complete workstation</td>
+<td>55 assemblies/hour</td>
+</tr>
+<tr>
+<td>Line throughput</td>
+<td>Output delivered by a complete production line</td>
+<td>30 vehicles/hour</td>
+</tr>
+<tr>
+<td>Plant throughput</td>
+<td>Output from a plant or defined production area</td>
+<td>500 vehicles/day</td>
+</tr>
+<tr>
+<td>Good-part throughput</td>
+<td>Output that meets specified quality requirements</td>
+<td>480 good parts/shift</td>
+</tr>
+<tr>
+<td>Effective throughput</td>
+<td>Output achieved over a defined period, including the relevant production losses</td>
+<td>420 good parts over an 8-hour shift</td>
+</tr>
+</tbody>
+</table>
+<p>Important: “Effective throughput” is not always defined identically across companies. State the time window, included losses, and output criteria when using the term.</p>
+<h2 id="4-throughput-vs-takt-time-vs-cycle-time-vs-capacity">4. Throughput vs Takt Time vs Cycle Time vs Capacity</h2>
+<p>These concepts are closely related but are not interchangeable.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>What it tells you</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Takt time</td>
+<td>Required pace based on demand</td>
+<td>One unit every 60 seconds</td>
+</tr>
+<tr>
+<td>Cycle time</td>
+<td>Time taken for a defined production cycle</td>
+<td>One unit every 50 seconds</td>
+</tr>
+<tr>
+<td>Throughput</td>
+<td>Actual quantity produced per unit of time</td>
+<td>65 units/hour</td>
+</tr>
+<tr>
+<td>Capacity</td>
+<td>Quantity a system can produce under specified operating assumptions</td>
+<td>72 units/hour</td>
+</tr>
+<tr>
+<td>Bottleneck</td>
+<td>Constraint limiting the system's output</td>
+<td>A station limited to 55 units/hour</td>
+</tr>
+<tr>
+<td>Lead time</td>
+<td>Total elapsed time for a product to move through a defined process</td>
+<td>3 hours from release to completion</td>
+</tr>
+</tbody>
+</table>
+<h3 id="takt-time-versus-throughput">Takt time versus throughput</h3>
+<p>Takt time is a requirement derived from customer demand and available production time. Throughput is an output rate measured from the production system.</p>
+<p>For example:</p>
+<ul>
+<li>Required demand: 60 parts/hour.</li>
+<li>Actual good-part throughput: 52 parts/hour.</li>
+</ul>
+<p>The production system is falling short of demand by:</p>
+<div class="math-display">\[ 60-52=8\text{ parts/hour} \]</div>
+<p>This is a production gap of approximately 13.3% relative to the required rate.</p>
+<div class="math-display">\[ \frac{60-52}{60}\times100 =13.3\\% \]</div>
+<p>The next step is to investigate why actual output is below the required rate.</p>
+<h3 id="cycle-time-versus-throughput">Cycle time versus throughput</h3>
+<p>For a simple machine producing one part per completed cycle, with no overlapping cycles:</p>
+<div class="math-display">\[ R\_{\text{theoretical}}= \frac{3600}{T\_{\text{cycle}}} \]</div>
+<p>Here, cycle time is in seconds and the theoretical rate is in parts per hour.</p>
+<p>If cycle time is 50 seconds:</p>
+<div class="math-display">\[ R\_{\text{theoretical}}= \frac{3600}{50} =72\text{ parts/hour} \]</div>
+<p>But actual throughput might be only 58 parts/hour because of breakdowns, waiting, rejects, or other losses.</p>
+<p>The theoretical rate is not a guarantee of actual production.</p>
+<h2 id="5-throughput-in-a-production-line">5. Throughput in a Production Line</h2>
+<p>A production line consists of connected operations. Each station has its own processing time, availability, and operating constraints.</p>
+<p>Consider this simplified line:</p>
+<pre><code>Station A          Station B          Station C
+40 sec/cycle       55 sec/cycle       65 sec/cycle
+     |                  |                  |
+     v                  v                  v
++----------+       +----------+       +----------+
+| Processing| ----&gt;| Processing| ----&gt;| Processing|
++----------+       +----------+       +----------+
+                                             |
+                                             v
+                                      Finished output
+</code></pre>
+<p>Assume each station processes one unit at a time, the line is serial, and there is no parallel processing.</p>
+<p>Station cycle times:</p>
+<ul>
+<li>Station A: 40 seconds.</li>
+<li>Station B: 55 seconds.</li>
+<li>Station C: 65 seconds.</li>
+</ul>
+<p>Station C has the longest cycle time. Under these simplified assumptions, it constrains the steady-state production rate.</p>
+<p>The approximate theoretical line rate is:</p>
+<div class="math-display">\[ R=\frac{3600}{65} \approx55.4\text{ units/hour} \]</div>
+<p>The other stations may be faster, but they cannot make the complete serial line produce faster than its constraint under these assumptions.</p>
+<p>Actual line throughput may be lower because of downtime, blocking, starvation, rejects, or other production losses.</p>
+<h2 id="6-what-determines-throughput">6. What Determines Throughput?</h2>
+<p>Throughput depends on several interacting factors.</p>
+<h3 id="61-cycle-time">6.1 Cycle time</h3>
+<p>Longer effective processing cycles generally reduce the maximum production rate of a single-cycle operation.</p>
+<p>Causes of increased cycle time may include:</p>
+<ul>
+<li>Excessive robot travel.</li>
+<li>Unnecessary machine movements.</li>
+<li>Long CNC machining programs.</li>
+<li>Slow fixture clamping.</li>
+<li>Excessive material handling.</li>
+<li>Delays between PLC sequence steps.</li>
+</ul>
+<h3 id="62-availability">6.2 Availability</h3>
+<p>A machine may have a fast cycle but spend substantial time stopped.</p>
+<p>Examples include:</p>
+<ul>
+<li>PLC faults.</li>
+<li>Robot alarms.</li>
+<li>Sensor failures.</li>
+<li>Pneumatic pressure problems.</li>
+<li>Drive or servo faults.</li>
+<li>Mechanical jams.</li>
+<li>Communication failures.</li>
+</ul>
+<p>A machine that operates at a high rate while running can still have low average throughput if it frequently stops.</p>
+<h3 id="63-quality">6.3 Quality</h3>
+<p>Rejected products consume production capacity without contributing to good output.</p>
+<p>For example, a station that produces 100 parts but rejects 8 has a good-part yield of:</p>
+<div class="math-display">\[ \frac{100-8}{100}\times100=92\\% \]</div>
+<p>Improving quality can increase good-part throughput even when total cycle count remains unchanged.</p>
+<h3 id="64-material-supply-and-transfer">6.4 Material supply and transfer</h3>
+<p>Machines cannot produce continuously if they lack material or cannot transfer completed products.</p>
+<p>Examples:</p>
+<ul>
+<li>An upstream conveyor is empty.</li>
+<li>A downstream station is occupied.</li>
+<li>A fixture has not released the previous assembly.</li>
+<li>A pallet or carrier has not arrived.</li>
+<li>A material replenishment task is delayed.</li>
+</ul>
+<h3 id="65-bottlenecks">6.5 Bottlenecks</h3>
+<p>The operation that constrains production flow often has the greatest influence on line throughput.</p>
+<p>Improving a non-bottleneck station may reduce local cycle time without increasing total line output.</p>
+<h2 id="7-throughput-in-industrial-automation">7. Throughput in Industrial Automation</h2>
+<p>Consider a robotic automotive welding station.</p>
+<p>Its sequence includes:</p>
+<ol>
+<li>The assembly enters the fixture.</li>
+<li>Positioning and clamping are confirmed.</li>
+<li>PLC interlocks permit robot operation.</li>
+<li>The robot executes the welding sequence.</li>
+<li>Weld completion and process conditions are verified.</li>
+<li>The fixture releases the assembly.</li>
+<li>The assembly transfers to the next station.</li>
+</ol>
+<p>Suppose the robot's programmed sequence takes 42 seconds, but the complete station delivers an assembly every 58 seconds.</p>
+<p>The difference may involve fixture operations, interlocks, transfer, waiting, or other parts of the sequence.</p>
+<p>If the measured steady-state output interval is 58 seconds, the corresponding idealized rate is:</p>
+<div class="math-display">\[ \frac{3600}{58}\approx62.1\text{ assemblies/hour} \]</div>
+<p>This is an approximate rate based on the interval between completed assemblies. It is not necessarily the station's actual hourly throughput because stops, rejects, and other losses may reduce the total.</p>
+<p>For maintenance, the key question is not merely whether the robot executes its program quickly. It is whether the complete station reliably delivers good assemblies at the required rate.</p>
+<h2 id="8-measuring-throughput-correctly">8. Measuring Throughput Correctly</h2>
+<p>Before calculating throughput, define three things:</p>
+<ol>
+<li>Measurement boundary: Which machine, station, line, or process is included?</li>
+<li>Measurement period: One hour, one shift, one day, or another interval?</li>
+<li>Output definition: All completed units, accepted units, or units delivered to the next operation?</li>
+</ol>
+<p>For example, suppose a production line operates during an 8-hour shift and produces 400 accepted assemblies.</p>
+<div class="math-display">\[ \text{Good-part throughput}= \frac{400}{8}=50\text{ assemblies/hour} \]</div>
+<p>This is the average output over the full 8-hour shift.</p>
+<p>If the line was actually running for only 6.5 hours, the output rate during running time would be:</p>
+<div class="math-display">\[ \frac{400}{6.5}\approx61.5\text{ assemblies/hour} \]</div>
+<p>Both calculations are valid, but they measure different things:</p>
+<ul>
+<li>Shift-average throughput: Includes the effect of stopped time within the shift.</li>
+<li>Running-time throughput: Measures output relative to the time classified as running.</li>
+</ul>
+<p>For evaluating production performance, shift-average throughput often gives a more complete picture of delivered output. Running-time throughput helps isolate operating performance. Use the plant's defined reporting rules when comparing official metrics.</p>
+<h2 id="9-throughput-and-production-losses">9. Throughput and Production Losses</h2>
+<p>Suppose a line has a theoretical rate of 60 parts per hour.</p>
+<p>During an 8-hour shift, it could theoretically produce:</p>
+<div class="math-display">\[ 60\times8=480\text{ parts} \]</div>
+<p>Actual good output is 360 parts.</p>
+<p>The shift-average good-part throughput is:</p>
+<div class="math-display">\[ \frac{360}{8}=45\text{ good parts/hour} \]</div>
+<p>The output shortfall against the theoretical maximum is:</p>
+<div class="math-display">\[ 480-360=120\text{ parts} \]</div>
+<p>The system achieved:</p>
+<div class="math-display">\[ \frac{360}{480}\times100=75\\% \]</div>
+<p>of the theoretical output for that shift.</p>
+<p>However, this 75% is not automatically Overall Equipment Effectiveness (OEE). OEE uses defined availability, performance, and quality components and requires consistent measurement rules.</p>
+<p>Potential contributors to the shortfall include:</p>
+<ul>
+<li>Equipment downtime.</li>
+<li>Reduced operating speed.</li>
+<li>Minor stops.</li>
+<li>Rejects and rework.</li>
+<li>Material shortages.</li>
+<li>Blocked or starved stations.</li>
+<li>Planned activities within the measurement window.</li>
+</ul>
+<p>The loss categories must be measured rather than guessed.</p>
+<h2 id="10-throughput-and-maintenance-priorities">10. Throughput and Maintenance Priorities</h2>
+<p>Throughput is useful when deciding which maintenance problems deserve priority.</p>
+<h3 id="case-a-repeated-plc-or-sensor-faults">Case A: Repeated PLC or sensor faults</h3>
+<p>A station stops repeatedly because a sensor intermittently fails to confirm fixture position.</p>
+<p>The immediate repair restores production, but recurring failures continue to reduce output.</p>
+<p>A more complete investigation should examine:</p>
+<ul>
+<li>Sensor condition and mounting.</li>
+<li>Cable damage and connector integrity.</li>
+<li>Input signal stability.</li>
+<li>PLC fault history and sequence conditions.</li>
+<li>Mechanical repeatability.</li>
+<li>Root cause and corrective action effectiveness.</li>
+</ul>
+<p>The objective is to reduce recurring losses and improve reliable good-part output.</p>
+<h3 id="case-b-robot-cycle-optimization">Case B: Robot cycle optimization</h3>
+<p>A robot's motion program is optimized, reducing its programmed cycle from 50 seconds to 43 seconds.</p>
+<p>However, the complete station still delivers one assembly every 60 seconds because fixture operations and transfer are unchanged.</p>
+<p>The robot's local performance improved, but station throughput may not improve by the same amount.</p>
+<p>The improvement must be evaluated at the correct system boundary.</p>
+<h3 id="case-c-a-downstream-bottleneck">Case C: A downstream bottleneck</h3>
+<p>An upstream station can produce 70 parts per hour, but the downstream constraint can process only 50 parts per hour.</p>
+<p>The upstream station may accumulate work-in-process inventory while the downstream station limits delivered output.</p>
+<p>Increasing upstream production speed could worsen congestion without improving line throughput.</p>
+<p>The appropriate response is to understand the constraint, reduce its losses, and coordinate production flow.</p>
+<h2 id="11-throughput-wip-and-lead-time">11. Throughput, WIP, and Lead Time</h2>
+<p>Throughput is also connected to work-in-process (WIP) and lead time.</p>
+<p>WIP is the quantity of partially completed products within a defined production system.</p>
+<p>Lead time is the elapsed time between defined start and end points in a process.</p>
+<p>A useful relationship from production-flow theory is Little's Law:</p>
+<div class="math-display">\[ \text{WIP}=\text{Throughput}\times\text{Lead Time} \]</div>
+<p>The units must be consistent. For example, throughput measured in parts per hour multiplied by lead time measured in hours gives WIP in parts.</p>
+<h3 id="example">Example</h3>
+<p>A production system has:</p>
+<ul>
+<li>Average throughput: 40 assemblies/hour.</li>
+<li>Average lead time: 2 hours.</li>
+</ul>
+<p>Then:</p>
+<div class="math-display">\[ \text{WIP}=40\times2=80\text{ assemblies} \]</div>
+<p>Under stable operating conditions and consistent system boundaries, the relationship estimates an average of 80 assemblies in the system.</p>
+<p>If throughput remains constant but lead time increases, average WIP also increases. This can indicate growing queues, waiting, or excess inventory within the defined boundary.</p>
+<p>Little's Law does not, by itself, identify the cause of high WIP. Process measurements are needed to locate the delay.</p>
+<h2 id="12-common-mistakes">12. Common Mistakes</h2>
+<ol>
+<li>Confusing theoretical production rate with actual throughput. A machine's cycle-based capacity does not guarantee its delivered output.</li>
+<li>Ignoring rejected parts. Total completed units and good-part throughput are different measures.</li>
+<li>Ignoring the measurement period. An hourly rate calculated from running time differs from a shift-average rate.</li>
+<li>Measuring the wrong boundary. A robot's output is not necessarily equivalent to the complete line's output.</li>
+<li>Assuming the fastest machine determines line throughput. A constraint elsewhere may limit the system.</li>
+<li>Improving non-bottleneck equipment without checking the line-level effect. Local gains may not increase delivered output.</li>
+<li>Mixing units. Parts per minute, parts per hour, and parts per shift must be converted consistently.</li>
+<li>Treating every output shortfall as a cycle-time problem. Downtime, quality, material supply, and production flow can also be responsible.</li>
+<li>Using throughput alone to diagnose performance. Throughput identifies the output result, not necessarily the cause of a loss.</li>
+</ol>
+<h2 id="13-interview-questions-and-answers">13. Interview Questions and Answers</h2>
+<p>Q1. What is throughput?</p>
+<p>Throughput is the quantity of output completed by a defined production system during a specified period.</p>
+<p>Q2. What is the basic throughput formula?</p>
+<div class="math-display">\[ \text{Throughput}=\frac{\text{Output}}{\text{Time}} \]</div>
+<p>Q3. What is the difference between throughput and cycle time?</p>
+<p>Cycle time measures the duration of a defined production cycle. Throughput measures output per unit of time. Cycle time can help estimate theoretical production rate under defined assumptions, but actual throughput includes the effects of operating conditions and losses.</p>
+<p>Q4. What is the difference between throughput and takt time?</p>
+<p>Takt time defines the required production pace from customer demand and available time. Throughput measures the production rate actually achieved.</p>
+<p>Q5. Can a machine have a low cycle time but low throughput?</p>
+<p>Yes. Frequent breakdowns, waiting, material shortages, rejects, or other interruptions can reduce output despite a fast cycle.</p>
+<p>Q6. How does a bottleneck affect throughput?</p>
+<p>A bottleneck constrains the rate at which the complete system can deliver output. Improving the bottleneck may increase system throughput, provided another constraint does not immediately take its place.</p>
+<p>Q7. What is good-part throughput?</p>
+<p>It is the quantity of accepted, conforming products produced per unit of time.</p>
+<p>Q8. Why should maintenance teams monitor throughput?</p>
+<p>It helps quantify production impact, evaluate the effects of recurring breakdowns, prioritize constraints, and determine whether corrective actions improve delivered output.</p>
+<p>Q9. Does improving robot cycle time always improve line throughput?</p>
+<p>No. If another operation or production constraint limits the line, a faster robot may not increase the total output rate.</p>
+<p>Q10. What is the relationship between WIP, throughput, and lead time?</p>
+<p>Under stable conditions and consistent measurement boundaries, Little's Law relates them as:</p>
+<div class="math-display">\[ \text{WIP}=\text{Throughput}\times\text{Lead Time} \]</div>
+<h2 id="14-final-mental-model">14. Final Mental Model</h2>
+<pre><code>Machine operation
+       |
+       v
+Completed production cycles
+       |
+       v
+Account for downtime, waiting and quality losses
+       |
+       v
+Measure actual output over a defined time
+       |
+       v
+THROUGHPUT
+       |
+       v
+Compare with required production rate
+       |
+       v
+Investigate constraints and improve system output
+</code></pre>
+<p>Remember these distinctions:</p>
+<ul>
+<li>Takt time: The production pace required by demand.</li>
+<li>Cycle time: The time required for a defined production cycle.</li>
+<li>Capacity: The output a system can produce under specified assumptions.</li>
+<li>Throughput: The output actually achieved per unit of time.</li>
+<li>Bottleneck: The constraint limiting system output.</li>
+<li>Lead time: The elapsed time across a defined process.</li>
+</ul>
+<p>The central principle is that throughput measures what the production system actually delivers, not merely what its machines should theoretically be capable of producing.</p>
+<p>Next topic in sequence: <code>16_Bottleneck | Bottleneck</code>.</p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

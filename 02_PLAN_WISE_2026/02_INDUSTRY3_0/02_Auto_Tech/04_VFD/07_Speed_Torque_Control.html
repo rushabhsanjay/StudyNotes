@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>07_Speed_Torque_Control - Speed/Torque Control</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">07_Speed_Torque_Control - Speed/Torque Control</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-speed-control">2. Speed control</a><ul>
+<li><a href="#basic-operation">Basic operation</a></li>
+<li><a href="#example">Example</a></li>
+</ul>
+</li>
+<li><a href="#3-torque-control">3. Torque control</a><ul>
+<li><a href="#basic-operation_1">Basic operation</a></li>
+<li><a href="#example_1">Example</a></li>
+</ul>
+</li>
+<li><a href="#4-speed-control-versus-torque-control">4. Speed control versus torque control</a></li>
+<li><a href="#5-relationship-between-speed-torque-and-power">5. Relationship between speed, torque, and power</a><ul>
+<li><a href="#example_2">Example</a></li>
+</ul>
+</li>
+<li><a href="#6-how-torque-is-controlled-in-a-vfd">6. How torque is controlled in a VFD</a><ul>
+<li><a href="#is-torque-directly-measured">Is torque directly measured?</a></li>
+</ul>
+</li>
+<li><a href="#7-open-loop-and-closed-loop-speed-control">7. Open-loop and closed-loop speed control</a><ul>
+<li><a href="#open-loop-speed-operation">Open-loop speed operation</a></li>
+<li><a href="#closed-loop-speed-operation">Closed-loop speed operation</a></li>
+</ul>
+</li>
+<li><a href="#8-common-torque-and-speed-limits">8. Common torque and speed limits</a><ul>
+<li><a href="#speed-limits">Speed limits</a></li>
+<li><a href="#torque-and-current-limits">Torque and current limits</a></li>
+<li><a href="#ramp-settings">Ramp settings</a></li>
+</ul>
+</li>
+<li><a href="#9-industrial-applications">9. Industrial applications</a></li>
+<li><a href="#10-torque-control-in-winding-and-tension-applications">10. Torque control in winding and tension applications</a></li>
+<li><a href="#11-practical-setup-and-commissioning">11. Practical setup and commissioning</a></li>
+<li><a href="#12-troubleshooting">12. Troubleshooting</a><ul>
+<li><a href="#example-conveyor-speed-drops-when-the-fixture-arrives">Example: conveyor speed drops when the fixture arrives</a></li>
+</ul>
+</li>
+<li><a href="#13-safety-considerations">13. Safety considerations</a></li>
+<li><a href="#14-interview-questions-and-answers">14. Interview questions and answers</a></li>
+<li><a href="#15-practical-exercises">15. Practical exercises</a></li>
+<li><a href="#16-final-mental-model">16. Final mental model</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\02_Auto_Tech\04_VFD\07_Speed_Torque_Control</code></p>
+<h2 id="1-definition">1. Definition</h2>
+<p>Speed control is a motor-control method in which the drive regulates motor speed to follow a specified speed reference.</p>
+<p>Torque control is a motor-control method in which the drive regulates the motor's electromagnetic torque to follow a specified torque reference, within the limits of the motor, drive, and control system.</p>
+<p>Both modes are available on many industrial VFDs, particularly drives with vector-control capabilities. Availability and implementation depend on the drive model and selected control mode.</p>
+<p>The main difference is what the drive is primarily commanded to regulate:</p>
+<ul>
+<li>Speed control: “Maintain the requested speed.”</li>
+<li>Torque control: “Produce the requested torque.”</li>
+</ul>
+<p>These are not merely two names for the same function. They describe different control objectives.</p>
+<h2 id="2-speed-control">2. Speed control</h2>
+<p>In speed-control mode, the drive receives a speed reference and adjusts motor torque as needed to maintain the requested speed.</p>
+<p>For example, an automotive assembly-line conveyor may be commanded to run at 30 Hz equivalent motor frequency or at a specified speed in RPM. If the load increases, the drive increases motor torque, within its capabilities, to maintain the target speed.</p>
+<h3 id="basic-operation">Basic operation</h3>
+<pre><code>       Speed reference
+       1000 RPM
+           |
+           v
+    Compare with actual speed
+           |
+           v
+      Speed controller
+           |
+           v
+      Torque reference
+           |
+           v
+     Current / torque control
+           |
+           v
+      PWM power inverter
+           |
+           v
+         AC motor
+           |
+           v
+       Mechanical load
+           |
+           +------ Actual speed feedback
+</code></pre>
+<p>In a sensorless drive, actual speed may be estimated rather than measured directly. Encoder-based closed-loop control uses physical speed feedback.</p>
+<h3 id="example">Example</h3>
+<p>Suppose a conveyor is commanded to run at 1,000 RPM.</p>
+<table>
+<thead>
+<tr>
+<th>Operating condition</th>
+<th>Requested speed</th>
+<th>Actual speed</th>
+<th>Drive response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Conveyor empty</td>
+<td>1,000 RPM</td>
+<td>1,000 RPM</td>
+<td>Supplies torque needed for light load</td>
+</tr>
+<tr>
+<td>Fixture enters conveyor</td>
+<td>1,000 RPM</td>
+<td>Briefly drops</td>
+<td>Increases torque to recover speed</td>
+</tr>
+<tr>
+<td>Heavy load remains</td>
+<td>1,000 RPM</td>
+<td>Approximately 1,000 RPM</td>
+<td>Supplies the required torque within its limits</td>
+</tr>
+<tr>
+<td>Conveyor mechanically jams</td>
+<td>1,000 RPM</td>
+<td>Falls significantly</td>
+<td>May reach current/torque limits or trip</td>
+</tr>
+</tbody>
+</table>
+<p>The drive does not create unlimited torque. If the required torque exceeds its available capability, speed regulation can fail or a protection function can trip.</p>
+<h2 id="3-torque-control">3. Torque control</h2>
+<p>In torque-control mode, the drive primarily regulates the requested motor torque rather than forcing the motor to maintain a particular speed.</p>
+<p>The actual speed is determined by the balance between motor torque, load torque, inertia, and friction.</p>
+<p>For example, a winding machine may need controlled tension. The drive adjusts torque to maintain the required winding force or tension, while the resulting speed changes as the roll diameter changes.</p>
+<h3 id="basic-operation_1">Basic operation</h3>
+<pre><code>       Torque reference
+         40% rated
+             |
+             v
+       Torque controller
+             |
+             v
+     Current / torque control
+             |
+             v
+       PWM power inverter
+             |
+             v
+           AC motor
+             |
+             v
+        Mechanical load
+
+  Speed may change as the load changes.
+  Speed feedback may be used for monitoring,
+  limits, or additional control functions.
+</code></pre>
+<p>The exact percentage or torque units depend on the drive's configuration. A 40% reference should not automatically be interpreted as 40% of rated shaft torque unless the manufacturer defines it that way.</p>
+<h3 id="example_1">Example</h3>
+<p>Suppose a motor is commanded to produce a specified positive torque.</p>
+<table>
+<thead>
+<tr>
+<th>Operating condition</th>
+<th>Torque reference</th>
+<th>Load condition</th>
+<th>Possible result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Light load</td>
+<td>Fixed</td>
+<td>Low resistance</td>
+<td>Motor accelerates</td>
+</tr>
+<tr>
+<td>Increasing load</td>
+<td>Fixed</td>
+<td>Greater resistance</td>
+<td>Acceleration decreases</td>
+</tr>
+<tr>
+<td>Balanced load</td>
+<td>Fixed</td>
+<td>Motor and load torque balance</td>
+<td>Speed becomes approximately steady</td>
+</tr>
+<tr>
+<td>Excessive load</td>
+<td>Fixed</td>
+<td>Required load torque exceeds available motor torque</td>
+<td>Speed may fall or the drive may reach a limit</td>
+</tr>
+</tbody>
+</table>
+<p>Torque control is not a speed-holding mode. If the application requires both precise speed and precise tension, the system may use a coordinated control architecture rather than a single fixed torque command.</p>
+<h2 id="4-speed-control-versus-torque-control">4. Speed control versus torque control</h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Speed control</th>
+<th>Torque control</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Primary reference</td>
+<td>Speed</td>
+<td>Torque</td>
+</tr>
+<tr>
+<td>Main objective</td>
+<td>Maintain target speed</td>
+<td>Maintain target torque</td>
+</tr>
+<tr>
+<td>Response to increased load</td>
+<td>Increases torque to preserve speed</td>
+<td>Maintains commanded torque, so speed may change</td>
+</tr>
+<tr>
+<td>Speed behavior</td>
+<td>Regulated around the reference within capability</td>
+<td>Determined by the torque balance and load</td>
+</tr>
+<tr>
+<td>Typical application</td>
+<td>Conveyors, fans, pumps, many machine axes</td>
+<td>Winders, tension control, load-sharing drives</td>
+</tr>
+<tr>
+<td>Important limit</td>
+<td>Available torque/current</td>
+<td>Available torque/current and permissible speed</td>
+</tr>
+<tr>
+<td>Feedback</td>
+<td>Speed measured or estimated, depending on mode</td>
+<td>Torque commonly controlled through current and the motor model; speed feedback may also be used</td>
+</tr>
+<tr>
+<td>Main risk if poorly configured</td>
+<td>Speed loss, excessive torque/current, or trip</td>
+<td>Unexpected acceleration, overspeed, or excessive force</td>
+</tr>
+</tbody>
+</table>
+<p>Important: Both modes can have current limits, torque limits, speed limits, ramps, and protective functions. Selecting torque mode does not disable these protections automatically.</p>
+<h2 id="5-relationship-between-speed-torque-and-power">5. Relationship between speed, torque, and power</h2>
+<p>Mechanical power is related to torque and angular speed:</p>
+<div class="math-display">\[ P = T\omega \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(P\)</span> = mechanical power in watts.</li>
+<li><span class="math-inline">\(T\)</span> = torque in newton-metres (N·m).</li>
+<li><span class="math-inline">\(\omega\)</span> = angular speed in radians per second (rad/s).</li>
+</ul>
+<p>When torque is in N·m and speed is in RPM, a convenient formula is:</p>
+<div class="math-display">\[ P(\text{kW}) = \frac{T(\text{N·m}) \times n(\text{RPM})}{9550} \]</div>
+<h3 id="example_2">Example</h3>
+<p>A motor produces 20 N·m at 1,000 RPM.</p>
+<div class="math-display">\[ P = \frac{20 \times 1000}{9550} \approx 2.09\text{ kW} \]</div>
+<p>This is the mechanical power at that operating point, ignoring losses between electrical input and shaft output.</p>
+<p>The equation also explains why a motor's available torque and power vary with speed. The drive, motor, cooling arrangement, and operating region determine the permissible torque-speed envelope.</p>
+<h2 id="6-how-torque-is-controlled-in-a-vfd">6. How torque is controlled in a VFD</h2>
+<p>In many vector-controlled drives, torque is controlled primarily by regulating the torque-producing current component.</p>
+<p>For a field-oriented induction motor control system, torque is related approximately to rotor flux and the q-axis current:</p>
+<div class="math-display">\[ T_e \propto \psi_r i_q \]</div>
+<p>This is why accurate motor parameters and appropriate identification can matter for torque control.</p>
+<p>A typical control hierarchy is:</p>
+<pre><code>Speed mode:
+Speed reference
+      |
+      v
+Speed controller
+      |
+      v
+Torque reference
+      |
+      v
+Current / torque controller
+      |
+      v
+Inverter and motor
+
+Torque mode:
+Torque reference
+      |
+      v
+Current / torque controller
+      |
+      v
+Inverter and motor
+</code></pre>
+<p>This is a simplified conceptual diagram. Actual drives may add reference ramps, torque limits, speed overrides, supervisory logic, feedforward terms, and other control loops.</p>
+<h3 id="is-torque-directly-measured">Is torque directly measured?</h3>
+<p>Usually, the drive does not measure shaft torque directly with a torque transducer. It commonly estimates or controls torque using motor current and its motor model.</p>
+<p>Therefore, displayed torque may be an estimate or a normalized value, not a direct mechanical torque measurement. A calibrated torque transducer is needed when direct measurement is required.</p>
+<h2 id="7-open-loop-and-closed-loop-speed-control">7. Open-loop and closed-loop speed control</h2>
+<p>The terms open-loop and closed-loop describe whether the control system uses feedback to correct the controlled variable. They are related to, but not identical to, the distinction between V/f and vector control.</p>
+<h3 id="open-loop-speed-operation">Open-loop speed operation</h3>
+<p>The drive receives a speed-related command but does not use direct shaft-speed feedback to correct the actual speed.</p>
+<p>For example, a V/f drive may set output frequency according to a reference. Actual motor speed differs from synchronous speed because of slip and load.</p>
+<h3 id="closed-loop-speed-operation">Closed-loop speed operation</h3>
+<p>The controller compares the speed reference with measured or estimated actual speed and corrects the output to reduce the error.</p>
+<p>Encoder-based control provides physical shaft-speed feedback. Some sensorless vector drives estimate speed and use the estimate in their control loop.</p>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Open-loop</td>
+<td>No feedback of the controlled output is used for correction</td>
+</tr>
+<tr>
+<td>Closed-loop</td>
+<td>Feedback is used to correct the controlled output</td>
+</tr>
+<tr>
+<td>Sensorless</td>
+<td>Speed or flux is estimated without a physical shaft sensor</td>
+</tr>
+<tr>
+<td>Encoder-based</td>
+<td>Shaft motion is measured using an encoder or supported feedback device</td>
+</tr>
+</tbody>
+</table>
+<p>Avoid treating these terms as interchangeable. A sensorless vector drive may still use closed-loop control based on estimated speed.</p>
+<h2 id="8-common-torque-and-speed-limits">8. Common torque and speed limits</h2>
+<p>Drive limits define the operating boundaries. Their exact implementation varies by manufacturer.</p>
+<h3 id="speed-limits">Speed limits</h3>
+<ul>
+<li>Minimum speed.</li>
+<li>Maximum speed.</li>
+<li>Forward and reverse speed limits.</li>
+<li>Overspeed limits, where supported.</li>
+</ul>
+<h3 id="torque-and-current-limits">Torque and current limits</h3>
+<ul>
+<li>Maximum motoring torque.</li>
+<li>Maximum regenerative or braking torque, where supported.</li>
+<li>Current limit.</li>
+<li>Torque-reference limit.</li>
+<li>Speed-dependent torque restrictions.</li>
+</ul>
+<h3 id="ramp-settings">Ramp settings</h3>
+<ul>
+<li>Acceleration time.</li>
+<li>Deceleration time.</li>
+<li>Torque-reference ramp, where available.</li>
+<li>Speed-reference ramp.</li>
+</ul>
+<p>A speed ramp controls how quickly the speed command changes. A torque ramp controls how quickly the torque reference changes. These can have very different effects on the machine.</p>
+<p>Example: A conveyor that accelerates too quickly may produce mechanical shock even if its final speed is correct. Reducing the speed ramp may solve the issue without changing the control mode.</p>
+<h2 id="9-industrial-applications">9. Industrial applications</h2>
+<table>
+<thead>
+<tr>
+<th>Application</th>
+<th>Common control choice</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Standard conveyor</td>
+<td>Speed control</td>
+<td>Maintain line speed</td>
+</tr>
+<tr>
+<td>Heavy fixture conveyor</td>
+<td>Speed control with vector control</td>
+<td>Maintain speed as load changes</td>
+</tr>
+<tr>
+<td>Cooling fan</td>
+<td>Speed control</td>
+<td>Regulate airflow</td>
+</tr>
+<tr>
+<td>Centrifugal pump</td>
+<td>Speed control</td>
+<td>Regulate flow or pressure through a suitable control system</td>
+</tr>
+<tr>
+<td>Winding/unwinding machine</td>
+<td>Torque control or coordinated speed-torque control</td>
+<td>Maintain web tension as roll diameter changes</td>
+</tr>
+<tr>
+<td>Two motors driving a shared load</td>
+<td>Coordinated speed or load-sharing control</td>
+<td>Prevent one motor from carrying disproportionate load</td>
+</tr>
+<tr>
+<td>Mixer</td>
+<td>Speed control, possibly with torque monitoring</td>
+<td>Maintain speed while monitoring process load</td>
+</tr>
+<tr>
+<td>Hoist or vertical axis</td>
+<td>Engineered speed/torque control with brake and safety design</td>
+<td>Control motion while safely managing the suspended load</td>
+</tr>
+</tbody>
+</table>
+<p>A machine may combine modes. For example, one drive may operate as the speed master while another uses a torque reference to share the load.</p>
+<h2 id="10-torque-control-in-winding-and-tension-applications">10. Torque control in winding and tension applications</h2>
+<p>Winding systems illustrate why torque control is useful.</p>
+<p>The relationship between winding torque, web tension, and roll radius is approximately:</p>
+<div class="math-display">\[ T = F r \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(T\)</span> = required shaft torque.</li>
+<li><span class="math-inline">\(F\)</span> = tangential web tension.</li>
+<li><span class="math-inline">\(r\)</span> = effective roll radius.</li>
+</ul>
+<p>If tension must remain constant while the roll radius changes, the required torque changes.</p>
+<p>For example, with a web tension of 100 N:</p>
+<table>
+<thead>
+<tr>
+<th>Roll radius</th>
+<th>Required ideal torque</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.10 m</td>
+<td>10 N·m</td>
+</tr>
+<tr>
+<td>0.20 m</td>
+<td>20 N·m</td>
+</tr>
+<tr>
+<td>0.30 m</td>
+<td>30 N·m</td>
+</tr>
+</tbody>
+</table>
+<p>This is an idealized calculation that excludes friction, inertia, transmission losses, and dynamic effects.</p>
+<p>A practical winding system may therefore use a tension sensor, roll-diameter estimation, torque compensation, and coordinated speed control. Simply setting a fixed torque reference may not maintain constant tension as the roll diameter changes.</p>
+<h2 id="11-practical-setup-and-commissioning">11. Practical setup and commissioning</h2>
+<p>Before choosing speed or torque mode:</p>
+<ol>
+<li>Identify the application and determine whether speed, torque, tension, or load sharing is the actual control objective.</li>
+<li>Verify motor and drive ratings, wiring, motor parameters, and the selected control mode.</li>
+<li>Confirm the source and scaling of the reference, including whether the reference is expressed in RPM, frequency, percentage, or engineering units.</li>
+<li>Configure current, torque, and speed limits according to the equipment design and manufacturer instructions.</li>
+<li>Set appropriate acceleration, deceleration, and reference ramps.</li>
+<li>Verify the required feedback or estimation method.</li>
+<li>Test the machine under controlled conditions, starting with approved low-risk operating conditions.</li>
+<li>Monitor commanded speed, actual or estimated speed, current, torque indication, active limits, and fault history.</li>
+<li>Verify the response to representative load changes.</li>
+<li>Save the approved parameter set and document the final control mode and test results.</li>
+</ol>
+<p>For torque-control applications, specifically verify the behavior at startup, at low speed, when the load is removed, and when the reference or feedback signal is lost. The response must be appropriate for the machine's hazards.</p>
+<h2 id="12-troubleshooting">12. Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Speed drops under load</td>
+<td>Torque/current limit, overload, poor tuning, incorrect motor data</td>
+<td>Check load, actual speed, current, torque limit, and drive status</td>
+</tr>
+<tr>
+<td>Speed oscillates</td>
+<td>Poor tuning, unstable reference, feedback noise, interacting controllers</td>
+<td>Trend reference and actual speed; inspect feedback and control settings</td>
+</tr>
+<tr>
+<td>Motor accelerates unexpectedly in torque mode</td>
+<td>Load torque is too low for the commanded torque, reference error, inadequate speed limiting</td>
+<td>Check torque-reference polarity and scaling, speed limits, and machine response</td>
+</tr>
+<tr>
+<td>Motor cannot produce commanded torque</td>
+<td>Current limit, undersized motor/drive, incorrect parameters, inadequate supply or operating conditions</td>
+<td>Review current, torque estimate, ratings, and limits</td>
+</tr>
+<tr>
+<td>Torque display does not match measured shaft torque</td>
+<td>Display is an estimate, incorrect motor model, scaling differences, mechanical losses</td>
+<td>Confirm the manufacturer's definition and compare with calibrated measurement</td>
+</tr>
+<tr>
+<td>Drive trips during acceleration</td>
+<td>Short ramp, excessive inertia, jam, current limit, drive sizing</td>
+<td>Review fault history, mechanics, ramp, and current trend</td>
+</tr>
+<tr>
+<td>Two drives sharing a load fight each other</td>
+<td>Incorrect master/follower arrangement, reference mismatch, incompatible control strategy</td>
+<td>Check the control architecture and load-sharing settings</td>
+</tr>
+<tr>
+<td>Winder tension changes with roll diameter</td>
+<td>Fixed torque reference, missing diameter compensation, sensor scaling issue</td>
+<td>Verify tension feedback, radius compensation, and torque reference</td>
+</tr>
+</tbody>
+</table>
+<h3 id="example-conveyor-speed-drops-when-the-fixture-arrives">Example: conveyor speed drops when the fixture arrives</h3>
+<p>A drive in speed-control mode should increase torque to recover the requested speed. If the speed remains low:</p>
+<ul>
+<li>Check whether the drive is at its current or torque limit.</li>
+<li>Verify motor nameplate data and vector identification.</li>
+<li>Inspect the conveyor for binding or excessive load.</li>
+<li>Confirm the speed reference and actual-speed feedback.</li>
+<li>Verify the motor and drive ratings.</li>
+</ul>
+<p>If the drive is in torque-control mode, the same speed drop may be an expected result of the torque reference and load balance rather than a speed-control fault. First establish which mode is active. Otherwise, troubleshooting becomes a highly elaborate way to inspect the wrong problem.</p>
+<h2 id="13-safety-considerations">13. Safety considerations</h2>
+<ul>
+<li>Torque control can produce force even when the speed command is low.</li>
+<li>A positive torque command can accelerate a lightly loaded machine.</li>
+<li>Speed and torque limits must be configured and validated for the application.</li>
+<li>Loss of a reference, feedback signal, or communication link must have a defined and safe response.</li>
+<li>Torque control alone does not safely hold a suspended load.</li>
+<li>STO is not a mechanical brake.</li>
+<li>Do not disable interlocks or safety functions to test control behavior.</li>
+</ul>
+<p>The required safe response depends on the machinery risk assessment, drive capabilities, and applicable safety architecture.</p>
+<h2 id="14-interview-questions-and-answers">14. Interview questions and answers</h2>
+<p>Q1. What is the difference between speed control and torque control?</p>
+<p>Speed control regulates motor speed around a reference by adjusting torque. Torque control regulates the requested torque, allowing speed to vary with the load.</p>
+<p>Q2. Does torque control maintain constant speed?</p>
+<p>Not by itself. Speed depends on the balance between motor torque and load torque. A separate speed-control loop or coordinated control strategy may be required.</p>
+<p>Q3. How does a VFD control motor torque?</p>
+<p>In vector-control systems, the drive commonly regulates torque-producing current using a motor model and current feedback.</p>
+<p>Q4. Is torque directly measured by a standard VFD?</p>
+<p>Usually not. The drive commonly estimates torque from electrical quantities and the motor model. Direct measurement requires a suitable torque sensor.</p>
+<p>Q5. Why is speed feedback useful?</p>
+<p>It allows the controller to compare the speed reference with actual or estimated speed and correct the error.</p>
+<p>Q6. Why is torque control useful in a winding machine?</p>
+<p>It allows the drive to regulate winding torque, which can help control web tension when combined with suitable radius compensation and other control functions.</p>
+<p>Q7. What happens if the load becomes too heavy in speed-control mode?</p>
+<p>The drive increases torque within its limits. If the load exceeds available capability, speed may fall and the drive may reach a limit or trip.</p>
+<p>Q8. What happens if the load is suddenly removed in torque-control mode?</p>
+<p>The motor may accelerate because the commanded torque is no longer balanced by the load. Appropriate speed limits, supervisory logic, and safe machine design are essential.</p>
+<p>Q9. Can two motors share a load using torque control?</p>
+<p>Yes, with a properly designed load-sharing strategy. The drives must be coordinated to prevent unequal loading or conflicting control actions.</p>
+<p>Q10. Is speed control always better for conveyors?</p>
+<p>Not universally, but speed control is common because conveyors generally need to maintain a target line speed. The choice depends on the mechanical arrangement and process requirements.</p>
+<h2 id="15-practical-exercises">15. Practical exercises</h2>
+<ol>
+<li>Draw the control paths for speed mode and torque mode.</li>
+<li>Explain why a conveyor can lose speed even when the speed reference remains unchanged.</li>
+<li>Calculate the ideal torque required to maintain 150 N of web tension at a roll radius of 0.25 m.</li>
+<li>Explain why a motor may accelerate unexpectedly when a torque reference remains active after the load is removed.</li>
+<li>Prepare a commissioning checklist for a vector-controlled conveyor.</li>
+<li>Explain the difference between open-loop speed operation, sensorless vector control, and encoder-based closed-loop speed control.</li>
+<li>Diagnose a two-motor conveyor where one motor carries most of the load.</li>
+</ol>
+<h2 id="16-final-mental-model">16. Final mental model</h2>
+<ul>
+<li>Speed control: The drive tries to maintain a requested speed and adjusts torque accordingly.</li>
+<li>Torque control: The drive tries to maintain a requested torque, while speed depends on the load and system dynamics.</li>
+<li>Vector control: Provides a common foundation for precise torque regulation in many AC drive applications.</li>
+<li>Feedback: Helps the system regulate speed or other measured variables, depending on the control architecture.</li>
+<li>Limits and safety: Define what the motor and machine are allowed to do.</li>
+</ul>
+<p>The key commissioning question is: What must the machine control directly, and what is allowed to change as the load changes? That determines whether speed control, torque control, or a coordinated combination is appropriate.</p>
+<p>Next topic in sequence:</p>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\02_Auto_Tech\04_VFD\08_Braking\01_DC_Braking</code></p>
+<p>01_DC_Braking - DC braking: Injects DC to stop motor</p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

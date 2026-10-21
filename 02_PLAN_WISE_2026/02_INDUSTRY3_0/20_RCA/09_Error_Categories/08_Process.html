@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Process Errors in Root Cause Analysis</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Process Errors in Root Cause Analysis</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-of-process-error">1. Definition of Process Error</a></li>
+<li><a href="#2-process-error-vs-other-error-categories">2. Process Error vs Other Error Categories</a></li>
+<li><a href="#3-main-types-of-process-errors">3. Main Types of Process Errors</a><ul>
+<li><a href="#31-incorrect-operating-sequence">3.1 Incorrect operating sequence</a></li>
+<li><a href="#32-inadequate-standard-operating-procedure-sop">3.2 Inadequate Standard Operating Procedure (SOP)</a></li>
+<li><a href="#33-incorrect-setup-or-changeover">3.3 Incorrect setup or changeover</a></li>
+<li><a href="#34-inadequate-maintenance-procedure">3.4 Inadequate maintenance procedure</a></li>
+<li><a href="#35-inadequate-inspection-and-verification">3.5 Inadequate inspection and verification</a></li>
+<li><a href="#36-inadequate-preventive-maintenance-process">3.6 Inadequate preventive maintenance process</a></li>
+<li><a href="#37-inadequate-escalation-and-communication">3.7 Inadequate escalation and communication</a></li>
+<li><a href="#38-inadequate-material-and-spare-part-handling">3.8 Inadequate material and spare-part handling</a></li>
+<li><a href="#39-inadequate-production-process-control">3.9 Inadequate production process control</a></li>
+</ul>
+</li>
+<li><a href="#4-process-error-in-industrial-automation">4. Process Error in Industrial Automation</a><ul>
+<li><a href="#41-plc-controlled-equipment">4.1 PLC-controlled equipment</a></li>
+<li><a href="#42-cnc-machines">4.2 CNC machines</a></li>
+<li><a href="#43-industrial-robots">4.3 Industrial robots</a></li>
+<li><a href="#44-vfd-and-motor-systems">4.4 VFD and motor systems</a></li>
+<li><a href="#45-scada-and-data-collection">4.5 SCADA and data collection</a></li>
+</ul>
+</li>
+<li><a href="#5-process-error-vs-human-error">5. Process Error vs Human Error</a></li>
+<li><a href="#6-how-to-identify-a-process-root-cause">6. How to Identify a Process Root Cause</a><ul>
+<li><a href="#step-1-define-the-expected-process">Step 1: Define the expected process</a></li>
+<li><a href="#step-2-reconstruct-what-actually-happened">Step 2: Reconstruct what actually happened</a></li>
+<li><a href="#step-3-find-the-process-deviation">Step 3: Find the process deviation</a></li>
+<li><a href="#step-4-establish-the-causal-connection">Step 4: Establish the causal connection</a></li>
+<li><a href="#step-5-determine-why-the-process-weakness-existed">Step 5: Determine why the process weakness existed</a></li>
+<li><a href="#step-6-correct-the-process">Step 6: Correct the process</a></li>
+<li><a href="#step-7-verify-effectiveness">Step 7: Verify effectiveness</a></li>
+</ul>
+</li>
+<li><a href="#7-worked-example-repeated-sensor-failure-after-replacement">7. Worked Example: Repeated Sensor Failure After Replacement</a><ul>
+<li><a href="#reported-problem">Reported problem</a></li>
+<li><a href="#initial-hypotheses">Initial hypotheses</a></li>
+<li><a href="#investigation">Investigation</a></li>
+<li><a href="#example-root-cause">Example root cause</a></li>
+<li><a href="#corrective-actions">Corrective actions</a></li>
+</ul>
+</li>
+<li><a href="#8-worked-example-recurring-vfd-trips-after-reset">8. Worked Example: Recurring VFD Trips After Reset</a><ul>
+<li><a href="#reported-problem_1">Reported problem</a></li>
+<li><a href="#possible-causes">Possible causes</a></li>
+<li><a href="#investigation_1">Investigation</a></li>
+<li><a href="#example-root-cause_1">Example root cause</a></li>
+<li><a href="#corrective-actions_1">Corrective actions</a></li>
+</ul>
+</li>
+<li><a href="#9-process-standardization-and-control">9. Process Standardization and Control</a></li>
+<li><a href="#10-corrective-and-preventive-actions-for-process-errors">10. Corrective and Preventive Actions for Process Errors</a><ul>
+<li><a href="#101-corrective-action">10.1 Corrective action</a></li>
+<li><a href="#102-preventive-action">10.2 Preventive action</a></li>
+<li><a href="#103-verification-of-effectiveness">10.3 Verification of effectiveness</a></li>
+</ul>
+</li>
+<li><a href="#11-process-error-rca-record-template">11. Process Error RCA Record Template</a></li>
+<li><a href="#12-common-mistakes-in-process-rca">12. Common Mistakes in Process RCA</a></li>
+<li><a href="#13-interview-questions-and-answers">13. Interview Questions and Answers</a><ul>
+<li><a href="#q1-what-is-a-process-error">Q1. What is a process error?</a></li>
+<li><a href="#q2-how-is-a-process-error-different-from-a-human-error">Q2. How is a process error different from a human error?</a></li>
+<li><a href="#q3-why-can-a-technically-correct-component-replacement-fail-to-solve-a-breakdown">Q3. Why can a technically correct component replacement fail to solve a breakdown?</a></li>
+<li><a href="#q4-what-evidence-helps-identify-a-process-error">Q4. What evidence helps identify a process error?</a></li>
+<li><a href="#q5-what-is-the-difference-between-corrective-action-and-preventive-action">Q5. What is the difference between corrective action and preventive action?</a></li>
+<li><a href="#q6-why-is-an-sop-not-sufficient-by-itself">Q6. Why is an SOP not sufficient by itself?</a></li>
+<li><a href="#q7-how-do-you-prevent-recurring-breakdowns-caused-by-repeated-resets">Q7. How do you prevent recurring breakdowns caused by repeated resets?</a></li>
+<li><a href="#q8-how-do-you-verify-that-a-revised-process-is-effective">Q8. How do you verify that a revised process is effective?</a></li>
+<li><a href="#q9-can-the-process-be-the-root-cause-even-if-an-individual-followed-the-sop">Q9. Can the process be the root cause even if an individual followed the SOP?</a></li>
+<li><a href="#q10-what-is-the-most-important-principle-in-process-rca">Q10. What is the most important principle in process RCA?</a></li>
+</ul>
+</li>
+<li><a href="#14-practical-process-error-checklist">14. Practical Process Error Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition-of-process-error">1. Definition of Process Error</h2>
+<p>A process error occurs when an established work method, operating sequence, production procedure, maintenance procedure, inspection method, or control practice is not followed correctly or is inadequate for achieving the required result.</p>
+<p>In industrial maintenance and automation, process errors can affect machine operation, product quality, equipment reliability, safety, production output, and maintenance effectiveness.</p>
+<p>Examples include:</p>
+<ul>
+<li>A machine is started before the required pre-start checks are completed.</li>
+<li>A maintenance procedure omits an essential verification step.</li>
+<li>A CNC machine operates with the wrong production recipe.</li>
+<li>A technician replaces a component without checking the underlying failure.</li>
+<li>A robot cell follows an incorrect part-handling sequence.</li>
+<li>A preventive maintenance task is performed but critical inspection points are skipped.</li>
+<li>A machine is released to production without a functional test.</li>
+<li>A calibration process is performed using an unsuitable reference.</li>
+<li>A breakdown repair is closed without verifying the original fault has been eliminated.</li>
+<li>An operator uses an incorrect material-loading or setup procedure.</li>
+</ul>
+<p>Core RCA principle: A process error is not necessarily an individual mistake. The process itself may be unclear, incomplete, poorly designed, difficult to follow, inadequately controlled, or unsuitable for actual operating conditions.</p>
+<p>A person may follow the documented procedure exactly and still produce an incorrect result if the procedure is defective.</p>
+<h2 id="2-process-error-vs-other-error-categories">2. Process Error vs Other Error Categories</h2>
+<p>Process errors can overlap with human, software, parameter, design, and environmental errors. RCA should identify the actual mechanism rather than assigning a category based only on the symptom.</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Main issue</th>
+<th>Industrial example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Process</td>
+<td>Work method or operational sequence is incorrect or inadequate</td>
+<td>Machine released without a required functional test</td>
+</tr>
+<tr>
+<td>Human</td>
+<td>An individual action deviates from the requirement</td>
+<td>Technician skips a clearly defined inspection step</td>
+</tr>
+<tr>
+<td>Software</td>
+<td>Application logic behaves incorrectly</td>
+<td>PLC sequence advances before the required feedback</td>
+</tr>
+<tr>
+<td>Parameter</td>
+<td>A configurable value is incorrect</td>
+<td>VFD ramp time differs from the approved setting</td>
+</tr>
+<tr>
+<td>Design</td>
+<td>System architecture or requirements are inadequate</td>
+<td>Maintenance procedure cannot safely isolate all energy sources</td>
+</tr>
+<tr>
+<td>Component</td>
+<td>Physical device has failed</td>
+<td>Contactor contacts are damaged</td>
+</tr>
+<tr>
+<td>Wiring</td>
+<td>Electrical connection is incorrect or defective</td>
+<td>Feedback conductor is disconnected</td>
+</tr>
+<tr>
+<td>Environmental</td>
+<td>Surrounding conditions affect equipment</td>
+<td>Coolant contamination causes sensor malfunction</td>
+</tr>
+</tbody>
+</table>
+<p>The categories are not mutually exclusive.</p>
+<p>For example, if technicians repeatedly miss a lubrication point because the PM sheet does not identify it, the process documentation may be the root cause. If the point is clearly documented but a technician deliberately skips it, the immediate cause may be noncompliance. If the lubrication procedure itself specifies the wrong lubricant, the procedure's technical adequacy is the problem.</p>
+<h2 id="3-main-types-of-process-errors">3. Main Types of Process Errors</h2>
+<h3 id="31-incorrect-operating-sequence">3.1 Incorrect operating sequence</h3>
+<p>The sequence of activities does not match the required operating method.</p>
+<p>Examples:</p>
+<ul>
+<li>Starting a spindle before required clamping confirmation.</li>
+<li>Moving a robot before the workpiece is secured.</li>
+<li>Opening a fixture before the process reaches its required completion state.</li>
+<li>Restarting a machine before the fault condition has been evaluated.</li>
+<li>Releasing a part before the required inspection is complete.</li>
+</ul>
+<p>The sequence may be defined in a work instruction, control specification, operating procedure, or PLC program.</p>
+<p>RCA checks:</p>
+<ul>
+<li>Identify the required sequence.</li>
+<li>Reconstruct the actual sequence.</li>
+<li>Determine which step was omitted, premature, duplicated, or incorrectly ordered.</li>
+<li>Verify whether the procedure and control logic agree.</li>
+<li>Identify why the incorrect sequence was possible.</li>
+</ul>
+<h3 id="32-inadequate-standard-operating-procedure-sop">3.2 Inadequate Standard Operating Procedure (SOP)</h3>
+<p>An SOP may be missing, outdated, ambiguous, incomplete, or technically incorrect.</p>
+<p>Examples:</p>
+<ul>
+<li>The procedure does not define the correct isolation point.</li>
+<li>A maintenance instruction omits the final functional test.</li>
+<li>The document refers to an obsolete drive model.</li>
+<li>A recovery procedure does not cover communication loss.</li>
+<li>The inspection sheet does not identify the relevant acceptance limit.</li>
+<li>The procedure says "check sensor" without defining what constitutes a valid result.</li>
+</ul>
+<p>A document's existence does not prove that the process is adequate.</p>
+<p>A useful SOP should define the purpose, scope, required conditions, sequence of actions, acceptance criteria, abnormal-condition response, and records where applicable.</p>
+<h3 id="33-incorrect-setup-or-changeover">3.3 Incorrect setup or changeover</h3>
+<p>A setup process prepares equipment for a particular product, tool, fixture, program, or operating mode.</p>
+<p>Potential errors include:</p>
+<ul>
+<li>Incorrect product recipe selection.</li>
+<li>Wrong fixture installation.</li>
+<li>Incorrect tool selection.</li>
+<li>Wrong workpiece orientation.</li>
+<li>Incorrect CNC offset verification.</li>
+<li>Robot tool or work-frame mismatch.</li>
+<li>Incorrect sensor positioning.</li>
+<li>Incomplete changeover checks.</li>
+</ul>
+<p>Example: A CNC machine produces dimensional defects after a tool change. Investigation shows that the required tool-offset verification was omitted from the changeover process.</p>
+<p>The corrective action should address the verification step and its effectiveness, not merely correct the affected parts.</p>
+<h3 id="34-inadequate-maintenance-procedure">3.4 Inadequate maintenance procedure</h3>
+<p>Maintenance processes may fail because the work method does not address the actual failure mode.</p>
+<p>Examples:</p>
+<ul>
+<li>Replacing a failed fuse without investigating why it operated.</li>
+<li>Repeatedly resetting a drive without examining the fault history.</li>
+<li>Replacing a sensor without checking its mounting or target.</li>
+<li>Cleaning a cooling filter without checking why contamination is excessive.</li>
+<li>Performing a PM inspection without recording measured results.</li>
+<li>Closing a breakdown without testing the equipment under representative conditions.</li>
+</ul>
+<p>A maintenance process should distinguish between restoring operation and establishing that the equipment is reliable enough to return to service.</p>
+<h3 id="35-inadequate-inspection-and-verification">3.5 Inadequate inspection and verification</h3>
+<p>Inspection processes can fail when checks are absent, inconsistent, or based on unsuitable acceptance criteria.</p>
+<p>Examples:</p>
+<ul>
+<li>Checking only whether a motor starts, not whether it operates correctly under load.</li>
+<li>Confirming an HMI screen displays a value without checking the source tag.</li>
+<li>Checking a safety-related function without following the required validation method.</li>
+<li>Measuring a pressure value without verifying the reference instrument.</li>
+<li>Checking a terminal visually without applying the required approved inspection method.</li>
+<li>Releasing equipment without testing all affected operating modes.</li>
+</ul>
+<p>Inspection quality depends on defined acceptance criteria, appropriate instruments, suitable methods, and traceable results.</p>
+<h3 id="36-inadequate-preventive-maintenance-process">3.6 Inadequate preventive maintenance process</h3>
+<p>A PM process may exist but still fail to prevent recurring breakdowns.</p>
+<p>Possible causes:</p>
+<ul>
+<li>Incorrect maintenance frequency.</li>
+<li>Tasks that do not address the dominant failure modes.</li>
+<li>Missing inspection points.</li>
+<li>Inadequate task duration or resource allocation.</li>
+<li>No condition-based escalation criteria.</li>
+<li>No review of repeated failures.</li>
+<li>Poor feedback from breakdown history into the PM plan.</li>
+<li>Incomplete verification of completed tasks.</li>
+</ul>
+<p>For example, a cabinet filter may be inspected monthly even though it becomes blocked within a week under actual production conditions.</p>
+<p>The issue is not simply that the filter was dirty. The PM frequency or contamination-control strategy may be unsuitable for the real operating environment.</p>
+<h3 id="37-inadequate-escalation-and-communication">3.7 Inadequate escalation and communication</h3>
+<p>Processes fail when important information does not reach the people who need it.</p>
+<p>Examples:</p>
+<ul>
+<li>A recurring fault is not escalated after repeated resets.</li>
+<li>A shift handover omits a temporary repair.</li>
+<li>An engineering change is not communicated to maintenance.</li>
+<li>A replacement component's configuration requirements are not passed to the next shift.</li>
+<li>A machine is returned to service without communicating a remaining limitation.</li>
+<li>A known defect is not transferred into the maintenance planning system.</li>
+</ul>
+<p>RCA checks:</p>
+<ul>
+<li>Review shift handover records.</li>
+<li>Compare breakdown reports with escalation rules.</li>
+<li>Check whether temporary repairs were documented.</li>
+<li>Verify ownership of unresolved issues.</li>
+<li>Determine whether the process requires acknowledgement and closure.</li>
+</ul>
+<h3 id="38-inadequate-material-and-spare-part-handling">3.8 Inadequate material and spare-part handling</h3>
+<p>Incorrect parts, tools, or consumables can cause process-related failures.</p>
+<p>Examples:</p>
+<ul>
+<li>Installing a replacement sensor with an unsuitable range.</li>
+<li>Using the wrong lubricant.</li>
+<li>Fitting an incompatible drive.</li>
+<li>Issuing an obsolete electronic module without checking compatibility.</li>
+<li>Using an unverified cable or connector.</li>
+<li>Storing moisture-sensitive components improperly.</li>
+<li>Installing a spare without completing configuration checks.</li>
+</ul>
+<p>The process should include identification, compatibility verification, storage controls, traceability, and post-replacement validation as appropriate.</p>
+<h3 id="39-inadequate-production-process-control">3.9 Inadequate production process control</h3>
+<p>A production process may operate outside the conditions required for reliable equipment performance.</p>
+<p>Examples:</p>
+<ul>
+<li>Exceeding the specified machine duty cycle.</li>
+<li>Running an unsuitable process recipe.</li>
+<li>Using incorrect clamping conditions.</li>
+<li>Feeding parts outside the permitted range.</li>
+<li>Repeatedly interrupting a sequence in an unsupported state.</li>
+<li>Ignoring required warm-up or stabilization steps.</li>
+<li>Running a machine beyond approved operating limits.</li>
+</ul>
+<p>A recurring equipment failure may be caused by the way the equipment is used rather than a defect in the equipment itself.</p>
+<h2 id="4-process-error-in-industrial-automation">4. Process Error in Industrial Automation</h2>
+<h3 id="41-plc-controlled-equipment">4.1 PLC-controlled equipment</h3>
+<p>Process errors may occur in the operating method even when the PLC logic is correct.</p>
+<p>Examples:</p>
+<ul>
+<li>An operator initiates a cycle before the fixture is loaded correctly.</li>
+<li>A technician restores a machine from the wrong recovery state.</li>
+<li>A maintenance process does not verify the field condition before testing an output.</li>
+<li>The required post-repair sequence is not completed.</li>
+</ul>
+<p>RCA should distinguish between an incorrect physical operating method and a defect in the PLC sequence.</p>
+<h3 id="42-cnc-machines">4.2 CNC machines</h3>
+<p>Common process-related issues include:</p>
+<ul>
+<li>Incorrect tool setup.</li>
+<li>Incomplete offset verification.</li>
+<li>Wrong program revision selected.</li>
+<li>Incorrect workpiece clamping.</li>
+<li>Skipped first-piece inspection.</li>
+<li>Inadequate warm-up or stabilization.</li>
+<li>Improper machine recovery after a fault.</li>
+</ul>
+<p>The process may require verification of program identity, work offsets, tool data, fixture condition, and first-piece acceptance before normal production resumes.</p>
+<h3 id="43-industrial-robots">4.3 Industrial robots</h3>
+<p>Potential process errors include:</p>
+<ul>
+<li>Incomplete tool-change verification.</li>
+<li>Incorrect workpiece loading.</li>
+<li>Incorrect fixture setup.</li>
+<li>Missing confirmation after robot maintenance.</li>
+<li>Inadequate recovery procedure after a peripheral device fault.</li>
+<li>Incorrect sequence for restarting production after a cell interruption.</li>
+</ul>
+<p>Robot program defects and incorrect robot configuration must be investigated separately from procedural errors in setup, recovery, or maintenance.</p>
+<h3 id="44-vfd-and-motor-systems">4.4 VFD and motor systems</h3>
+<p>Process-related problems may include:</p>
+<ul>
+<li>Starting a motor before mechanical restrictions are cleared.</li>
+<li>Repeatedly resetting a drive without investigating the trip.</li>
+<li>Replacing a motor without verifying the required configuration.</li>
+<li>Skipping rotation-direction verification after replacement.</li>
+<li>Failing to test the equipment under representative load.</li>
+<li>Releasing the machine without checking the relevant protective functions.</li>
+</ul>
+<p>A drive fault may be the symptom while the inadequate maintenance or commissioning procedure is the root cause.</p>
+<h3 id="45-scada-and-data-collection">4.5 SCADA and data collection</h3>
+<p>Process errors also occur in data-handling and reporting workflows.</p>
+<p>Examples:</p>
+<ul>
+<li>A maintenance team uses a dashboard without checking whether its data is current.</li>
+<li>A breakdown report is closed before the failure code is verified.</li>
+<li>A data-cleaning process removes valid fault events.</li>
+<li>Production counts are reconciled using an incorrect time window.</li>
+<li>An engineering change is not reflected in tag documentation.</li>
+<li>A recurring fault is not linked to its previous occurrences.</li>
+</ul>
+<p>For a Node-RED, SQL Server, or Grafana monitoring system, an incorrect operational procedure may allow stale data or incomplete records to be treated as reliable information. The application logic must still be examined if it contributes to the issue.</p>
+<h2 id="5-process-error-vs-human-error">5. Process Error vs Human Error</h2>
+<p>This distinction is important in RCA because assigning blame often leaves the actual failure mechanism unchanged.</p>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>Likely process issue</th>
+<th>Likely human issue</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Inspection step is absent from the checklist</td>
+<td>Yes</td>
+<td>Not necessarily</td>
+</tr>
+<tr>
+<td>Procedure is ambiguous</td>
+<td>Yes</td>
+<td>Not necessarily</td>
+</tr>
+<tr>
+<td>Procedure specifies the wrong value</td>
+<td>Yes</td>
+<td>Not necessarily</td>
+</tr>
+<tr>
+<td>Required step is clearly documented but skipped</td>
+<td>Possible contributing issue</td>
+<td>Possible immediate cause</td>
+</tr>
+<tr>
+<td>Several shifts repeatedly miss the same task</td>
+<td>Strong possibility</td>
+<td>Individual actions may contribute</td>
+</tr>
+<tr>
+<td>Required tool is unavailable</td>
+<td>Resource or process weakness</td>
+<td>Not necessarily</td>
+</tr>
+<tr>
+<td>Training does not cover the task</td>
+<td>Competence-development process weakness</td>
+<td>Not necessarily</td>
+</tr>
+<tr>
+<td>Temporary repair is undocumented because no record field exists</td>
+<td>Documentation process weakness</td>
+<td>Not necessarily</td>
+</tr>
+</tbody>
+</table>
+<p>A sound RCA examines the conditions that made the action possible or likely.</p>
+<p>A human action may be the immediate cause, while unclear instructions, inadequate training, time pressure, poor tooling, or missing verification are contributing causes.</p>
+<h2 id="6-how-to-identify-a-process-root-cause">6. How to Identify a Process Root Cause</h2>
+<h3 id="step-1-define-the-expected-process">Step 1: Define the expected process</h3>
+<p>Identify the approved procedure, operating standard, sequence, acceptance criteria, or work instruction.</p>
+<h3 id="step-2-reconstruct-what-actually-happened">Step 2: Reconstruct what actually happened</h3>
+<p>Use available evidence such as:</p>
+<ul>
+<li>Maintenance work orders.</li>
+<li>PM checklists.</li>
+<li>Shift handover records.</li>
+<li>PLC sequence history.</li>
+<li>Machine alarms and event timestamps.</li>
+<li>Production and quality records.</li>
+<li>Inspection results.</li>
+<li>Change-management records.</li>
+<li>Operator and technician observations.</li>
+</ul>
+<h3 id="step-3-find-the-process-deviation">Step 3: Find the process deviation</h3>
+<p>Determine whether a step was omitted, performed incorrectly, performed in the wrong order, or inadequately defined.</p>
+<h3 id="step-4-establish-the-causal-connection">Step 4: Establish the causal connection</h3>
+<p>Show how the process weakness caused or contributed to the failure.</p>
+<p>A missed inspection is not automatically the root cause. Determine what the inspection was supposed to detect and how its omission allowed the fault to develop or escape.</p>
+<h3 id="step-5-determine-why-the-process-weakness-existed">Step 5: Determine why the process weakness existed</h3>
+<p>Investigate:</p>
+<ul>
+<li>Procedure quality.</li>
+<li>Training and competence.</li>
+<li>Availability of tools and materials.</li>
+<li>Workload and time constraints.</li>
+<li>Role clarity.</li>
+<li>Change control.</li>
+<li>Verification requirements.</li>
+<li>Supervisory and escalation arrangements.</li>
+<li>Feedback from previous failures.</li>
+</ul>
+<h3 id="step-6-correct-the-process">Step 6: Correct the process</h3>
+<p>Improve the work method, acceptance criteria, resources, controls, or verification steps that contributed to the failure.</p>
+<h3 id="step-7-verify-effectiveness">Step 7: Verify effectiveness</h3>
+<p>Confirm that the revised process is followed and that it prevents the specific failure mechanism under representative conditions.</p>
+<h2 id="7-worked-example-repeated-sensor-failure-after-replacement">7. Worked Example: Repeated Sensor Failure After Replacement</h2>
+<h3 id="reported-problem">Reported problem</h3>
+<p>A sensor is replaced several times, but the machine continues to experience intermittent detection failures.</p>
+<h3 id="initial-hypotheses">Initial hypotheses</h3>
+<ul>
+<li>Defective replacement sensors.</li>
+<li>Incorrect sensor type or range.</li>
+<li>Poor mounting or alignment.</li>
+<li>Damaged cable.</li>
+<li>Environmental contamination.</li>
+<li>Incorrect PLC input mapping.</li>
+<li>Inadequate replacement procedure.</li>
+</ul>
+<h3 id="investigation">Investigation</h3>
+<ol>
+<li>Review the previous breakdown records.</li>
+<li>Confirm the installed sensor specification and application suitability.</li>
+<li>Inspect mounting, alignment, wiring, and the target.</li>
+<li>Capture the sensor output and PLC input state during a failure.</li>
+<li>Review the replacement and post-repair checklists.</li>
+<li>Determine whether the procedure requires verification of the complete detection path.</li>
+<li>Compare the results before and after the replacement.</li>
+</ol>
+<h3 id="example-root-cause">Example root cause</h3>
+<p>The replacement procedure required technicians to replace the sensor but did not require verification of mounting alignment and detection across the full workpiece position range. The original installation problem remained after each replacement.</p>
+<h3 id="corrective-actions">Corrective actions</h3>
+<ul>
+<li>Correct the mounting and alignment issue.</li>
+<li>Add an alignment and detection verification step to the replacement procedure.</li>
+<li>Define an acceptance test using representative workpieces.</li>
+<li>Update the maintenance record with the verified result.</li>
+<li>Monitor recurrence after implementation.</li>
+</ul>
+<p>Replacing the sensor repeatedly addressed the suspected component, not the underlying process weakness.</p>
+<h2 id="8-worked-example-recurring-vfd-trips-after-reset">8. Worked Example: Recurring VFD Trips After Reset</h2>
+<h3 id="reported-problem_1">Reported problem</h3>
+<p>A conveyor repeatedly stops due to VFD trips. Operators reset the drive and resume production, but the fault returns.</p>
+<h3 id="possible-causes">Possible causes</h3>
+<ul>
+<li>Actual mechanical overload.</li>
+<li>Motor or cable defect.</li>
+<li>Incorrect drive configuration.</li>
+<li>Cooling problem.</li>
+<li>Unstable supply.</li>
+<li>An inadequate breakdown response procedure.</li>
+</ul>
+<h3 id="investigation_1">Investigation</h3>
+<ol>
+<li>Capture the fault code and available drive history before resetting.</li>
+<li>Inspect the motor, drive, supply, cooling, and mechanical load.</li>
+<li>Compare drive settings with the approved configuration.</li>
+<li>Review how previous occurrences were handled.</li>
+<li>Check whether the breakdown procedure requires fault-code recording and escalation after repeated trips.</li>
+<li>Establish the actual initiating cause of the trip.</li>
+</ol>
+<h3 id="example-root-cause_1">Example root cause</h3>
+<p>The approved breakdown procedure allowed repeated resets without requiring investigation of the fault history or escalation after recurrence. The underlying mechanical overload was therefore not addressed.</p>
+<h3 id="corrective-actions_1">Corrective actions</h3>
+<ul>
+<li>Repair the confirmed mechanical problem.</li>
+<li>Revise the troubleshooting procedure to require evidence capture before reset where practical.</li>
+<li>Define escalation criteria for recurring trips.</li>
+<li>Train relevant personnel on the revised method.</li>
+<li>Verify that subsequent trips are investigated and that the original failure does not recur.</li>
+</ul>
+<p>The process weakness allowed the fault to persist, while the mechanical overload was the initiating equipment problem. A complete RCA should record both causal elements.</p>
+<h2 id="9-process-standardization-and-control">9. Process Standardization and Control</h2>
+<p>A standardized process reduces unwanted variation between people, shifts, machines, and maintenance activities.</p>
+<p>A good standard should include:</p>
+<ul>
+<li>Defined purpose and scope.</li>
+<li>Clear task ownership.</li>
+<li>Required tools, materials, and equipment.</li>
+<li>Correct sequence of activities.</li>
+<li>Safety and isolation requirements.</li>
+<li>Acceptance criteria.</li>
+<li>Abnormal-condition response.</li>
+<li>Verification and release requirements.</li>
+<li>Required records.</li>
+<li>Revision control and approval.</li>
+</ul>
+<p>Standardization should not eliminate necessary engineering judgement. It should define the required controls and clarify when escalation or an approved deviation is necessary.</p>
+<h2 id="10-corrective-and-preventive-actions-for-process-errors">10. Corrective and Preventive Actions for Process Errors</h2>
+<h3 id="101-corrective-action">10.1 Corrective action</h3>
+<p>Corrective action addresses the confirmed cause of an existing failure.</p>
+<p>Examples:</p>
+<ul>
+<li>Repair the incorrect setup.</li>
+<li>Correct the work instruction.</li>
+<li>Add the missing inspection step.</li>
+<li>Restore the approved operating sequence.</li>
+<li>Revise an inadequate troubleshooting method.</li>
+<li>Correct the escalation process.</li>
+</ul>
+<h3 id="102-preventive-action">10.2 Preventive action</h3>
+<p>Preventive action reduces the likelihood of recurrence or similar failures elsewhere.</p>
+<p>Examples:</p>
+<ul>
+<li>Apply the revised procedure to equivalent machines.</li>
+<li>Introduce a controlled checklist.</li>
+<li>Improve training and competency verification.</li>
+<li>Add mandatory fields to the work-order system.</li>
+<li>Standardize post-repair validation.</li>
+<li>Review recurring failure trends.</li>
+<li>Improve revision control and communication.</li>
+</ul>
+<h3 id="103-verification-of-effectiveness">10.3 Verification of effectiveness</h3>
+<p>Evidence should demonstrate that the action works.</p>
+<p>Possible measures include:</p>
+<ul>
+<li>Recurrence rate for the original failure.</li>
+<li>Percentage of work orders containing required evidence.</li>
+<li>Completion of post-repair functional tests.</li>
+<li>Reduction in repeat breakdowns.</li>
+<li>Compliance with defined inspection requirements.</li>
+<li>Successful audit of the revised process.</li>
+<li>Improved quality or first-pass acceptance.</li>
+</ul>
+<p>Training completion alone does not prove that a process has become effective.</p>
+<h2 id="11-process-error-rca-record-template">11. Process Error RCA Record Template</h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Information to record</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Process name</td>
+<td>Operating, maintenance, setup, inspection, or recovery process</td>
+</tr>
+<tr>
+<td>Equipment</td>
+<td>Asset ID and affected subsystem</td>
+</tr>
+<tr>
+<td>Failure symptom</td>
+<td>Observable failure and its impact</td>
+</tr>
+<tr>
+<td>Required method</td>
+<td>Approved procedure or standard</td>
+</tr>
+<tr>
+<td>Actual method</td>
+<td>What was actually performed</td>
+</tr>
+<tr>
+<td>Process deviation</td>
+<td>Missing, incorrect, delayed, or inadequate step</td>
+</tr>
+<tr>
+<td>Evidence</td>
+<td>Records, logs, observations, and measurements</td>
+</tr>
+<tr>
+<td>Immediate cause</td>
+<td>Direct event that produced the failure</td>
+</tr>
+<tr>
+<td>Root cause</td>
+<td>Underlying process weakness supported by evidence</td>
+</tr>
+<tr>
+<td>Contributing factors</td>
+<td>Resources, training, tooling, communication, or design</td>
+</tr>
+<tr>
+<td>Corrective action</td>
+<td>Change addressing the confirmed cause</td>
+</tr>
+<tr>
+<td>Preventive action</td>
+<td>Controls to reduce recurrence</td>
+</tr>
+<tr>
+<td>Owner and due date</td>
+<td>Responsible role and completion deadline</td>
+</tr>
+<tr>
+<td>Effectiveness criteria</td>
+<td>Measurable evidence of improvement</td>
+</tr>
+<tr>
+<td>Verification result</td>
+<td>Results after implementation</td>
+</tr>
+</tbody>
+</table>
+<h2 id="12-common-mistakes-in-process-rca">12. Common Mistakes in Process RCA</h2>
+<ol>
+<li>Blaming the operator without examining the work method.</li>
+<li>Assuming an SOP is adequate merely because it exists.</li>
+<li>Treating a missed step as the root cause without asking why it was missed.</li>
+<li>Updating a checklist without correcting the technical weakness.</li>
+<li>Providing training without verifying competence or process effectiveness.</li>
+<li>Replacing components repeatedly without reviewing the repair method.</li>
+<li>Closing breakdowns without testing the original failure mode.</li>
+<li>Ignoring workload, tool availability, and time constraints.</li>
+<li>Failing to update procedures after engineering changes.</li>
+<li>Measuring task completion instead of actual process effectiveness.</li>
+<li>Correcting one machine while ignoring identical processes elsewhere.</li>
+<li>Failing to assign ownership for preventive actions.</li>
+</ol>
+<h2 id="13-interview-questions-and-answers">13. Interview Questions and Answers</h2>
+<h3 id="q1-what-is-a-process-error">Q1. What is a process error?</h3>
+<p>A process error occurs when a work method, operating sequence, maintenance procedure, inspection method, or control practice is incorrect or inadequate and contributes to a failure.</p>
+<h3 id="q2-how-is-a-process-error-different-from-a-human-error">Q2. How is a process error different from a human error?</h3>
+<p>A process error concerns the adequacy of the method or control system. A human error concerns an action that deviates from the required method. Both can contribute to the same failure.</p>
+<h3 id="q3-why-can-a-technically-correct-component-replacement-fail-to-solve-a-breakdown">Q3. Why can a technically correct component replacement fail to solve a breakdown?</h3>
+<p>The actual cause may involve installation, alignment, configuration, environmental conditions, or an inadequate replacement and verification procedure rather than the component itself.</p>
+<h3 id="q4-what-evidence-helps-identify-a-process-error">Q4. What evidence helps identify a process error?</h3>
+<p>Work instructions, maintenance records, event logs, inspection results, shift handovers, setup records, and direct observations can establish the required method, actual method, and deviation.</p>
+<h3 id="q5-what-is-the-difference-between-corrective-action-and-preventive-action">Q5. What is the difference between corrective action and preventive action?</h3>
+<p>Corrective action addresses the confirmed cause of the current failure. Preventive action introduces controls that reduce the likelihood of recurrence or similar failures elsewhere.</p>
+<h3 id="q6-why-is-an-sop-not-sufficient-by-itself">Q6. Why is an SOP not sufficient by itself?</h3>
+<p>The procedure must be technically correct, clear, practical, available, controlled, and followed. Its effectiveness must be verified.</p>
+<h3 id="q7-how-do-you-prevent-recurring-breakdowns-caused-by-repeated-resets">Q7. How do you prevent recurring breakdowns caused by repeated resets?</h3>
+<p>Preserve fault evidence, investigate the initiating condition, define escalation criteria, and revise the troubleshooting process so that recurring faults receive appropriate technical investigation.</p>
+<h3 id="q8-how-do-you-verify-that-a-revised-process-is-effective">Q8. How do you verify that a revised process is effective?</h3>
+<p>Use defined acceptance criteria, review process compliance, test the relevant operating conditions, and monitor recurrence or other measurable outcomes.</p>
+<h3 id="q9-can-the-process-be-the-root-cause-even-if-an-individual-followed-the-sop">Q9. Can the process be the root cause even if an individual followed the SOP?</h3>
+<p>Yes. The SOP itself may be incomplete, technically incorrect, or unsuitable for the actual conditions.</p>
+<h3 id="q10-what-is-the-most-important-principle-in-process-rca">Q10. What is the most important principle in process RCA?</h3>
+<p>Correct the underlying process weakness that allowed the failure to occur or remain undetected, rather than focusing only on the final incorrect action.</p>
+<h2 id="14-practical-process-error-checklist">14. Practical Process Error Checklist</h2>
+<ul>
+<li>The failure and its impact are clearly defined.</li>
+<li>The approved process or procedure is identified.</li>
+<li>The actual sequence of events is reconstructed.</li>
+<li>The process deviation is supported by evidence.</li>
+<li>The connection between the deviation and failure is established.</li>
+<li>Human, design, software, parameter, and component factors are considered.</li>
+<li>The reason for the process weakness is identified.</li>
+<li>Corrective actions address the confirmed cause.</li>
+<li>Preventive actions include appropriate controls and ownership.</li>
+<li>Procedures and records are updated under revision control.</li>
+<li>Relevant personnel can perform the revised method correctly.</li>
+<li>Post-repair or post-change verification is completed.</li>
+<li>Effectiveness is measured using defined criteria.</li>
+<li>Similar machines or processes are reviewed where relevant.</li>
+<li>Recurrence is monitored after implementation.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\21_CAPA\01_Problem_Identification - Problem identification</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

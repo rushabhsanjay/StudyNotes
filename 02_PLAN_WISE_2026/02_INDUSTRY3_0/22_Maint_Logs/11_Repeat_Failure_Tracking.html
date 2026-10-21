@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Repeat-Failure Tracking</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Repeat-Failure Tracking</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-why-repeat-failure-tracking-is-necessary">2. Why Repeat-Failure Tracking Is Necessary</a></li>
+<li><a href="#3-what-qualifies-as-a-repeat-failure">3. What Qualifies as a Repeat Failure?</a></li>
+<li><a href="#4-repeat-failure-versus-repeated-alarm">4. Repeat Failure Versus Repeated Alarm</a></li>
+<li><a href="#5-repeat-failure-tracking-process">5. Repeat-Failure Tracking Process</a></li>
+<li><a href="#6-identifying-repeat-failures-in-maintenance-records">6. Identifying Repeat Failures in Maintenance Records</a></li>
+<li><a href="#7-asset-identity-and-equipment-hierarchy">7. Asset Identity and Equipment Hierarchy</a></li>
+<li><a href="#8-practical-example-repeated-vfd-trips">8. Practical Example: Repeated VFD Trips</a></li>
+<li><a href="#9-repeat-failure-tracking-for-plc-and-network-faults">9. Repeat-Failure Tracking for PLC and Network Faults</a><ul>
+<li><a href="#intermittent-fault-example">Intermittent-fault example</a></li>
+</ul>
+</li>
+<li><a href="#10-repeat-failure-tracking-for-cnc-and-robot-systems">10. Repeat-Failure Tracking for CNC and Robot Systems</a><ul>
+<li><a href="#cnc-systems">CNC systems</a></li>
+<li><a href="#robot-systems">Robot systems</a></li>
+</ul>
+</li>
+<li><a href="#11-repeat-failure-indicators-and-metrics">11. Repeat-Failure Indicators and Metrics</a><ul>
+<li><a href="#repeat-failure-count">Repeat-failure count</a></li>
+<li><a href="#repeat-failure-rate">Repeat-failure rate</a></li>
+<li><a href="#repeat-failures-by-asset">Repeat failures by asset</a></li>
+<li><a href="#repeat-failures-by-failure-mode">Repeat failures by failure mode</a></li>
+<li><a href="#repeat-failures-by-root-cause">Repeat failures by root cause</a></li>
+<li><a href="#repeat-failures-after-corrective-action">Repeat failures after corrective action</a></li>
+<li><a href="#exposure-between-failures">Exposure between failures</a></li>
+</ul>
+</li>
+<li><a href="#12-repeat-failure-tracking-and-mtbf">12. Repeat-Failure Tracking and MTBF</a></li>
+<li><a href="#13-defining-a-repeat-failure-window">13. Defining a Repeat-Failure Window</a><ul>
+<li><a href="#example">Example</a></li>
+</ul>
+</li>
+<li><a href="#14-corrective-action-effectiveness-verification">14. Corrective Action Effectiveness Verification</a><ul>
+<li><a href="#example_1">Example</a></li>
+</ul>
+</li>
+<li><a href="#15-repeat-failure-register">15. Repeat-Failure Register</a></li>
+<li><a href="#16-repeat-failure-tracking-in-excel">16. Repeat-Failure Tracking in Excel</a><ul>
+<li><a href="#important-excel-design-rule">Important Excel design rule</a></li>
+</ul>
+</li>
+<li><a href="#17-repeat-failure-tracking-in-power-bi">17. Repeat-Failure Tracking in Power BI</a><ul>
+<li><a href="#suggested-dashboard-logic">Suggested dashboard logic</a></li>
+</ul>
+</li>
+<li><a href="#18-common-repeat-failure-tracking-mistakes">18. Common Repeat-Failure Tracking Mistakes</a></li>
+<li><a href="#19-practical-investigation-example">19. Practical Investigation Example</a><ul>
+<li><a href="#step-1-establish-the-pattern">Step 1: Establish the pattern</a></li>
+<li><a href="#step-2-validate-recurrence">Step 2: Validate recurrence</a></li>
+<li><a href="#step-3-compare-evidence">Step 3: Compare evidence</a></li>
+<li><a href="#step-4-form-and-test-hypotheses">Step 4: Form and test hypotheses</a></li>
+<li><a href="#step-5-implement-corrective-action">Step 5: Implement corrective action</a></li>
+<li><a href="#step-6-verify-effectiveness">Step 6: Verify effectiveness</a></li>
+<li><a href="#step-7-update-the-knowledge-base">Step 7: Update the knowledge base</a></li>
+</ul>
+</li>
+<li><a href="#20-interview-questions-and-answers">20. Interview Questions and Answers</a><ul>
+<li><a href="#what-is-repeat-failure-tracking">What is repeat-failure tracking?</a></li>
+<li><a href="#is-a-repeated-alarm-always-a-repeat-failure">Is a repeated alarm always a repeat failure?</a></li>
+<li><a href="#what-is-the-difference-between-repeat-failure-and-recurring-root-cause">What is the difference between repeat failure and recurring root cause?</a></li>
+<li><a href="#how-does-repeat-failure-tracking-support-rca">How does repeat-failure tracking support RCA?</a></li>
+<li><a href="#how-does-it-support-capa">How does it support CAPA?</a></li>
+<li><a href="#how-can-repeat-failures-be-reduced">How can repeat failures be reduced?</a></li>
+<li><a href="#why-should-operating-hours-be-recorded-between-failures">Why should operating hours be recorded between failures?</a></li>
+<li><a href="#when-should-a-repeat-failure-item-be-closed">When should a repeat-failure item be closed?</a></li>
+<li><a href="#can-repeat-failure-tracking-be-automated">Can repeat-failure tracking be automated?</a></li>
+</ul>
+</li>
+<li><a href="#21-practical-checklist">21. Practical Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>Repeat-failure tracking is a systematic maintenance process used to identify, record, investigate, and eliminate recurring failures of the same equipment, component, or functional system.</p>
+<p>A repeat failure occurs when an asset experiences another failure that matches a defined recurrence criterion. The new event may have the same symptom, failure mode, root cause, or affected component as an earlier event.</p>
+<p>The purpose is not merely to count how many times a machine breaks down. It is to determine whether previous repairs and corrective actions actually prevented recurrence.</p>
+<p>In industrial maintenance, repeat-failure tracking is particularly useful for:</p>
+<ul>
+<li>PLC and remote I/O communication faults.</li>
+<li>VFD trips and motor-control failures.</li>
+<li>CNC servo, spindle, encoder, and tool-changer faults.</li>
+<li>Robot servo and controller failures.</li>
+<li>Repeated sensor, actuator, relay, and power-supply faults.</li>
+<li>Intermittent electrical and industrial network problems.</li>
+<li>Repeated safety-system interruptions.</li>
+<li>Recurring production-machine breakdowns.</li>
+</ul>
+<p>Core principle: A repair is not proven effective simply because the machine restarted. Effectiveness is demonstrated by verifying that the failure mechanism has been controlled and that recurrence has been reduced over an appropriate observation period.</p>
+<h2 id="2-why-repeat-failure-tracking-is-necessary">2. Why Repeat-Failure Tracking Is Necessary</h2>
+<p>A maintenance team may repeatedly restore equipment without eliminating the underlying cause.</p>
+<p>Consider a VFD that trips every few days. Each time, a technician resets the drive and production resumes. Breakdown records show repeated recovery, but the original problem may remain unresolved.</p>
+<p>Possible causes include:</p>
+<ul>
+<li>Excessive mechanical load.</li>
+<li>Unstable incoming power.</li>
+<li>Motor insulation deterioration.</li>
+<li>Incorrect acceleration or deceleration settings.</li>
+<li>Cooling failure.</li>
+<li>Loose electrical connections.</li>
+<li>An incorrectly selected drive.</li>
+<li>An intermittent control signal.</li>
+</ul>
+<p>Without repeat-failure tracking, the organization may continue spending maintenance hours, consuming production time, and replacing components without addressing the actual cause.</p>
+<p>Repeat-failure tracking helps the maintenance department:</p>
+<ul>
+<li>Identify chronic equipment problems.</li>
+<li>Prioritize recurring failures for root-cause analysis.</li>
+<li>Verify the effectiveness of corrective and preventive actions.</li>
+<li>Identify ineffective repairs and repeated component replacements.</li>
+<li>Reduce breakdown frequency and production losses.</li>
+<li>Improve MTBF and availability.</li>
+<li>Support CAPA, reliability engineering, and maintenance planning.</li>
+<li>Identify recurring failures associated with specific shifts, operating conditions, or machine models.</li>
+</ul>
+<h2 id="3-what-qualifies-as-a-repeat-failure">3. What Qualifies as a Repeat Failure?</h2>
+<p>A repeat failure must be defined using consistent criteria. Two failures that appear similar to an operator may have completely different causes, while failures with different symptoms may originate from the same underlying defect.</p>
+<p>Four useful levels of recurrence are:</p>
+<table>
+<thead>
+<tr>
+<th>Recurrence level</th>
+<th>Definition</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Same symptom</td>
+<td>The same observable problem occurs again</td>
+<td>Repeated CNC axis alarms</td>
+</tr>
+<tr>
+<td>Same failure mode</td>
+<td>The same mechanism of functional failure occurs again</td>
+<td>Repeated encoder signal loss</td>
+</tr>
+<tr>
+<td>Same root cause</td>
+<td>The same underlying cause produces another failure</td>
+<td>Repeated communication loss caused by a damaged cable</td>
+</tr>
+<tr>
+<td>Same unresolved incident</td>
+<td>The original failure was never fully corrected</td>
+<td>An alarm returns immediately after a reset</td>
+</tr>
+</tbody>
+</table>
+<p>The distinction matters because a symptom is not necessarily a failure mode, and a failure mode is not necessarily a root cause.</p>
+<p>For example, repeated PLC communication alarms may result from a damaged cable, an unstable power supply, incorrect network configuration, electromagnetic interference, or a failing communication adapter.</p>
+<p>All can produce similar symptoms. Root-cause classification requires evidence.</p>
+<h2 id="4-repeat-failure-versus-repeated-alarm">4. Repeat Failure Versus Repeated Alarm</h2>
+<p>A repeated alarm is not automatically a repeat failure.</p>
+<p>Suppose a remote I/O adapter loses communication and generates 40 alarm messages during one uninterrupted outage.</p>
+<p>If the system never returned to its required operating condition during that interval, these messages may represent one failure event rather than 40 failures.</p>
+<p>Conversely, if communication is restored, the equipment operates normally, and communication is lost again after a separate operating interval, the later event may qualify as a new failure.</p>
+<p>A practical event-counting approach is:</p>
+<ol>
+<li>Identify the first failure indication.</li>
+<li>Establish whether the required function was lost.</li>
+<li>Determine when the function was restored.</li>
+<li>Identify whether a subsequent failure occurred after restoration.</li>
+<li>Link the event to previous failures using symptom, failure mode, and root-cause classifications.</li>
+<li>Record the evidence supporting the classification.</li>
+</ol>
+<p>The organization should define how it treats intermittent faults, brief recoveries, and repeated trips before analysing the trend.</p>
+<h2 id="5-repeat-failure-tracking-process">5. Repeat-Failure Tracking Process</h2>
+<p>A repeat-failure process should connect breakdown reporting, root-cause analysis, corrective action, and effectiveness verification.</p>
+<pre><code>Failure occurs
+      ↓
+Create breakdown record
+      ↓
+Identify asset and failure mode
+      ↓
+Search previous failure history
+      ↓
+Determine whether the event meets recurrence criteria
+      ↓
+Repeat failure identified?
+      ↓
+Yes → Prioritize investigation and RCA
+      ↓
+Identify root cause and implement corrective action
+      ↓
+Verify repair and monitor recurrence
+      ↓
+Review effectiveness over defined exposure
+      ↓
+Close tracking item or reopen investigation
+</code></pre>
+<p>A repeat failure should not automatically be closed when a work order is completed. The tracking item may remain open until the corrective action has been implemented and its effectiveness evaluated.</p>
+<h2 id="6-identifying-repeat-failures-in-maintenance-records">6. Identifying Repeat Failures in Maintenance Records</h2>
+<p>Repeat-failure identification requires reliable asset identity and failure classification.</p>
+<p>Useful fields include:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Breakdown ID</td>
+<td>Identifies the individual breakdown event</td>
+</tr>
+<tr>
+<td>Asset ID</td>
+<td>Identifies the affected machine or component</td>
+</tr>
+<tr>
+<td>Parent asset ID</td>
+<td>Connects the component to the machine or line</td>
+</tr>
+<tr>
+<td>Failure timestamp</td>
+<td>Establishes event chronology</td>
+</tr>
+<tr>
+<td>Symptom code</td>
+<td>Groups similar observed problems</td>
+</tr>
+<tr>
+<td>Failure-mode code</td>
+<td>Groups similar functional failure mechanisms</td>
+</tr>
+<tr>
+<td>Root-cause code</td>
+<td>Groups events with the same verified cause</td>
+</tr>
+<tr>
+<td>Component ID</td>
+<td>Identifies the affected part</td>
+</tr>
+<tr>
+<td>Repair action</td>
+<td>Records what was done</td>
+</tr>
+<tr>
+<td>Restoration timestamp</td>
+<td>Establishes return to service</td>
+</tr>
+<tr>
+<td>Operating hours</td>
+<td>Measures exposure between failures</td>
+</tr>
+<tr>
+<td>Repeat-failure flag</td>
+<td>Identifies a qualifying recurrence</td>
+</tr>
+<tr>
+<td>RCA reference</td>
+<td>Links the event to its investigation</td>
+</tr>
+<tr>
+<td>CAPA reference</td>
+<td>Links the event to corrective and preventive actions</td>
+</tr>
+<tr>
+<td>Verification status</td>
+<td>Records whether effectiveness was checked</td>
+</tr>
+</tbody>
+</table>
+<p>A SAP notification, work order, alarm history entry, or replacement-material record may provide evidence. None should automatically be treated as a unique failure event without validating its relationship to the incident.</p>
+<h2 id="7-asset-identity-and-equipment-hierarchy">7. Asset Identity and Equipment Hierarchy</h2>
+<p>A repeat-failure system must distinguish the machine from the components installed in it.</p>
+<p>For example:</p>
+<pre><code>Production Line
+    ↓
+CNC Machine
+    ↓
+Axis Servo System
+    ↓
+Servo Amplifier
+    ↓
+Power Module
+</code></pre>
+<p>Suppose a servo amplifier is replaced twice. If the system records only the CNC machine ID, it may identify a recurring machine failure but fail to show that the same component position or component model is involved.</p>
+<p>If the system records only the amplifier's part number, it may combine failures from many machines without distinguishing installation conditions.</p>
+<p>Use both:</p>
+<ul>
+<li>Functional location or asset hierarchy: Where the failure occurred.</li>
+<li>Component identity and part number: What failed.</li>
+<li>Failure mode and root cause: How and why it failed.</li>
+</ul>
+<p>This structure helps determine whether the recurrence is specific to one machine, one component type, a design family, or a common operating condition.</p>
+<h2 id="8-practical-example-repeated-vfd-trips">8. Practical Example: Repeated VFD Trips</h2>
+<p>A conveyor VFD trips repeatedly during production.</p>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>Symptom</th>
+<th>Immediate action</th>
+<th>Later finding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Overcurrent trip</td>
+<td>Reset drive</td>
+<td>No verified root cause</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Overcurrent trip</td>
+<td>Reduce load temporarily</td>
+<td>Trip recurs</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Overcurrent trip</td>
+<td>Replace VFD</td>
+<td>Trip recurs</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Overcurrent trip</td>
+<td>Investigate the complete drive system</td>
+<td>Mechanical binding identified</td>
+</tr>
+</tbody>
+</table>
+<p>The first three interventions restore operation or replace hardware, but they do not establish that the underlying cause has been removed.</p>
+<p>The fourth investigation identifies excessive mechanical resistance in the conveyor system.</p>
+<p>A suitable corrective action may include repairing the mechanical restriction, verifying the load profile, checking drive parameters, and testing the equipment under representative operating conditions.</p>
+<p>Replacing the VFD again without investigating the mechanical load could produce the same outcome.</p>
+<p>The repeat-failure record should preserve the previous symptoms, repairs, component replacements, investigation findings, and final corrective action. This history prevents the next technician from repeating the same unsuccessful troubleshooting sequence.</p>
+<h2 id="9-repeat-failure-tracking-for-plc-and-network-faults">9. Repeat-Failure Tracking for PLC and Network Faults</h2>
+<p>Industrial automation faults are often intermittent, making recurrence analysis particularly important.</p>
+<p>Examples include:</p>
+<ul>
+<li>Remote I/O communication loss.</li>
+<li>Ethernet switch resets.</li>
+<li>Intermittent PLC input signals.</li>
+<li>Network cable or connector faults.</li>
+<li>HMI communication timeouts.</li>
+<li>Fieldbus errors.</li>
+<li>Power-supply instability.</li>
+<li>Intermittent grounding or shielding problems.</li>
+</ul>
+<p>For each event, capture relevant evidence:</p>
+<ul>
+<li>PLC diagnostic buffer.</li>
+<li>Network device status and port counters.</li>
+<li>Communication timeout and reconnection timestamps.</li>
+<li>Power-supply voltage measurements.</li>
+<li>Cable and connector inspection results.</li>
+<li>Switch logs and error counters.</li>
+<li>Machine operating state when the fault occurred.</li>
+<li>Recent configuration or program changes.</li>
+</ul>
+<p>Do not conclude that a communication adapter is defective merely because its communication alarm is the most visible symptom. The actual cause may be elsewhere in the network or electrical system.</p>
+<h3 id="intermittent-fault-example">Intermittent-fault example</h3>
+<p>A remote I/O adapter loses communication for several seconds during high-current motor operation.</p>
+<p>A useful investigation compares fault timestamps against:</p>
+<ul>
+<li>Motor starting and stopping events.</li>
+<li>VFD switching and operating conditions.</li>
+<li>Network error counters.</li>
+<li>Supply-voltage trends.</li>
+<li>Cable routing and shielding arrangements.</li>
+<li>Grounding and bonding conditions.</li>
+</ul>
+<p>If the fault repeatedly coincides with a particular operating condition, that correlation can guide the investigation. It does not prove causation by itself; measurements and controlled verification are still needed.</p>
+<h2 id="10-repeat-failure-tracking-for-cnc-and-robot-systems">10. Repeat-Failure Tracking for CNC and Robot Systems</h2>
+<h3 id="cnc-systems">CNC systems</h3>
+<p>Track recurring failures by:</p>
+<ul>
+<li>CNC alarm number.</li>
+<li>Machine axis or subsystem.</li>
+<li>Servo or spindle drive.</li>
+<li>Encoder and feedback device.</li>
+<li>Tool changer.</li>
+<li>Lubrication or hydraulic system.</li>
+<li>Mechanical binding or overload.</li>
+<li>Parameter or configuration changes.</li>
+</ul>
+<p>The same alarm can have multiple causes, so preserve diagnostic evidence and confirmed findings rather than grouping solely by alarm number.</p>
+<h3 id="robot-systems">Robot systems</h3>
+<p>Track recurring failures by:</p>
+<ul>
+<li>Robot axis.</li>
+<li>Servo amplifier.</li>
+<li>Motor, encoder, brake, or cable.</li>
+<li>Controller and communication faults.</li>
+<li>Tooling or peripheral equipment.</li>
+<li>Safety circuit and interlock.</li>
+<li>Mechanical collision or overload.</li>
+<li>Calibration or mastering requirements.</li>
+</ul>
+<p>A repeated servo fault after a component replacement may indicate a defective replacement, an unresolved external cause, a wiring issue, or an incorrect configuration. The history should show what was tested and what evidence supported the final diagnosis.</p>
+<p>Safety-related faults must be investigated without bypassing safety devices to force the equipment to run.</p>
+<h2 id="11-repeat-failure-indicators-and-metrics">11. Repeat-Failure Indicators and Metrics</h2>
+<p>A repeat-failure register should contain event-level information, while a dashboard should summarize recurrence patterns.</p>
+<h3 id="repeat-failure-count">Repeat-failure count</h3>
+<p>The number of qualifying failure events that meet the recurrence definition within the selected reporting period.</p>
+<h3 id="repeat-failure-rate">Repeat-failure rate</h3>
+<p>A simple event-based rate can be calculated as:</p>
+<div class="math-display">\[ Repeat\ Failure\ Rate= \frac{\text{Qualifying Repeat-Failure Events}}{\text{Total Qualifying Failure Events}}\times100\\% \]</div>
+<p>Suppose a machine records 20 qualifying failure events, of which 8 are classified as repeat failures under the defined rule.</p>
+<div class="math-display">\[ Repeat\ Failure\ Rate=\frac{8}{20}\times100\\%=40\\% \]</div>
+<p>The rate is 40%.</p>
+<p>This metric is meaningful only if the organization defines whether the denominator includes all events or only events eligible for repeat classification, and whether the numerator counts recurrence events or recurring failure groups. Those definitions can produce different results.</p>
+<h3 id="repeat-failures-by-asset">Repeat failures by asset</h3>
+<p>Count qualifying repeat events for each asset to identify chronic equipment problems.</p>
+<h3 id="repeat-failures-by-failure-mode">Repeat failures by failure mode</h3>
+<p>Group recurring events by failure mode to identify dominant technical problems.</p>
+<h3 id="repeat-failures-by-root-cause">Repeat failures by root cause</h3>
+<p>Group events by verified root cause to evaluate whether the same underlying defect continues to occur.</p>
+<h3 id="repeat-failures-after-corrective-action">Repeat failures after corrective action</h3>
+<p>Track events occurring after a corrective action's implementation date and compare them with a defined baseline.</p>
+<h3 id="exposure-between-failures">Exposure between failures</h3>
+<p>Measure operating hours or production cycles between qualifying failures when reliable exposure data is available.</p>
+<p>This provides more context than calendar days alone, particularly when machines operate different shifts or production volumes.</p>
+<h2 id="12-repeat-failure-tracking-and-mtbf">12. Repeat-Failure Tracking and MTBF</h2>
+<p>MTBF measures operating exposure per qualifying failure. Repeat-failure tracking identifies whether failures are recurring under defined classification rules.</p>
+<p>These measures complement each other.</p>
+<p>Suppose a machine experiences several repeat failures within a short operating period. Its observed MTBF may decrease, signalling a worsening failure frequency.</p>
+<p>However, a repeat-failure rate and MTBF are not interchangeable:</p>
+<ul>
+<li>MTBF measures operating time per failure.</li>
+<li>Repeat-failure rate measures the proportion of events classified as repeats under a defined rule.</li>
+<li>Repeat-failure count measures the number of qualifying repeat events.</li>
+<li>Root-cause recurrence measures how often a verified cause reappears.</li>
+</ul>
+<p>A machine may have a high repeat-failure rate but a moderate total failure count. Another machine may have a low repeat-failure rate but many unrelated failures. Both cases deserve different maintenance responses.</p>
+<h2 id="13-defining-a-repeat-failure-window">13. Defining a Repeat-Failure Window</h2>
+<p>A repeat-failure window defines the period or exposure within which a subsequent event qualifies as a recurrence.</p>
+<p>Possible definitions include:</p>
+<ul>
+<li>Recurrence within a specified number of calendar days.</li>
+<li>Recurrence within a specified number of operating hours.</li>
+<li>Recurrence within a specified number of production cycles.</li>
+<li>Recurrence before the effectiveness review is completed.</li>
+<li>Recurrence of the same verified root cause, regardless of a short fixed calendar window.</li>
+</ul>
+<p>The appropriate window depends on the equipment and failure mechanism.</p>
+<p>For example, a sensor fault that returns within one operating shift after replacement may suggest an unresolved installation, wiring, or configuration issue. A wear-related failure may require monitoring over a much longer operating period.</p>
+<p>Avoid choosing a short window simply because it makes the recurrence rate appear lower.</p>
+<h3 id="example">Example</h3>
+<p>A conveyor has a repeat overcurrent fault after 30 operating hours.</p>
+<p>The recurrence may be more informative than a second event occurring 30 calendar days later on a machine that operated only a few hours per week.</p>
+<p>Where possible, use operating hours or production cycles for recurrence analysis and retain calendar time for administrative tracking.</p>
+<h2 id="14-corrective-action-effectiveness-verification">14. Corrective Action Effectiveness Verification</h2>
+<p>A corrective action is not effective merely because it was completed.</p>
+<p>A proper effectiveness review defines:</p>
+<ul>
+<li>The original failure mode and verified root cause.</li>
+<li>The baseline failure frequency or recurrence pattern.</li>
+<li>The corrective action implemented.</li>
+<li>The implementation date.</li>
+<li>The operating conditions under which effectiveness will be checked.</li>
+<li>The required observation period or exposure.</li>
+<li>The criteria for success.</li>
+<li>The response if the failure recurs.</li>
+</ul>
+<h3 id="example_1">Example</h3>
+<p>A machine repeatedly loses a sensor signal because of vibration-induced connector loosening.</p>
+<p>The corrective action includes an approved connector-retention improvement and verification of cable routing.</p>
+<p>The effectiveness review should establish:</p>
+<ol>
+<li>Whether the modification was implemented correctly.</li>
+<li>Whether the sensor signal remains stable under representative operating conditions.</li>
+<li>Whether the original failure mode recurs during the defined exposure.</li>
+<li>Whether related faults or unintended side effects appear.</li>
+<li>Whether the action can be closed based on the documented evidence.</li>
+</ol>
+<p>If the fault returns, reopen the investigation rather than repeatedly closing the same action after a temporary restart.</p>
+<h2 id="15-repeat-failure-register">15. Repeat-Failure Register</h2>
+<p>A repeat-failure register is the central record used to monitor recurring problems and their corrective actions.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Repeat-failure ID</td>
+<td>RF-2026-001</td>
+</tr>
+<tr>
+<td>Asset ID</td>
+<td>CONV-04</td>
+</tr>
+<tr>
+<td>Component</td>
+<td>VFD</td>
+</tr>
+<tr>
+<td>Failure mode</td>
+<td>Overcurrent trip</td>
+</tr>
+<tr>
+<td>First event date</td>
+<td>2026-09-10</td>
+</tr>
+<tr>
+<td>Latest event date</td>
+<td>2026-10-05</td>
+</tr>
+<tr>
+<td>Qualifying event count</td>
+<td>4</td>
+</tr>
+<tr>
+<td>Operating exposure</td>
+<td>180 hours</td>
+</tr>
+<tr>
+<td>Previous repair actions</td>
+<td>Reset, parameter check, replacement</td>
+</tr>
+<tr>
+<td>Verified root cause</td>
+<td>Mechanical binding</td>
+</tr>
+<tr>
+<td>RCA reference</td>
+<td>RCA-2026-014</td>
+</tr>
+<tr>
+<td>CAPA reference</td>
+<td>CAPA-2026-009</td>
+</tr>
+<tr>
+<td>Corrective action status</td>
+<td>Implemented</td>
+</tr>
+<tr>
+<td>Effectiveness status</td>
+<td>Monitoring</td>
+</tr>
+<tr>
+<td>Responsible function</td>
+<td>Maintenance and mechanical engineering</td>
+</tr>
+<tr>
+<td>Closure criteria</td>
+<td>No recurrence over defined exposure and successful functional verification</td>
+</tr>
+</tbody>
+</table>
+<p>The values are illustrative. Use the actual records and approved classification rules.</p>
+<h2 id="16-repeat-failure-tracking-in-excel">16. Repeat-Failure Tracking in Excel</h2>
+<p>A practical event-level table may contain:</p>
+<table>
+<thead>
+<tr>
+<th>Breakdown ID</th>
+<th>Asset ID</th>
+<th>Failure mode</th>
+<th>Root cause</th>
+<th>Event date</th>
+<th>Repeat flag</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BR-001</td>
+<td>CONV-04</td>
+<td>Overcurrent trip</td>
+<td>Unknown</td>
+<td>2026-09-10</td>
+<td>No</td>
+</tr>
+<tr>
+<td>BR-002</td>
+<td>CONV-04</td>
+<td>Overcurrent trip</td>
+<td>Unknown</td>
+<td>2026-09-18</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>BR-003</td>
+<td>CONV-04</td>
+<td>Overcurrent trip</td>
+<td>Unknown</td>
+<td>2026-09-25</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>BR-004</td>
+<td>CONV-04</td>
+<td>Overcurrent trip</td>
+<td>Mechanical binding</td>
+<td>2026-10-05</td>
+<td>Yes</td>
+</tr>
+</tbody>
+</table>
+<p>The repeat flag in this example assumes that the events meet the organization's recurrence criteria. The cause classification can be refined as evidence becomes available.</p>
+<h3 id="important-excel-design-rule">Important Excel design rule</h3>
+<p>Do not use only the failure description text to classify repeat events. Descriptions may vary between technicians, shifts, and work orders.</p>
+<p>Prefer controlled fields for:</p>
+<ul>
+<li>Asset ID.</li>
+<li>Component ID.</li>
+<li>Failure-mode code.</li>
+<li>Root-cause code.</li>
+<li>Failure event ID.</li>
+<li>Recurrence classification.</li>
+<li>Corrective-action reference.</li>
+</ul>
+<p>Free-text descriptions remain valuable for diagnostic detail, but structured fields make filtering and analysis more reliable.</p>
+<h2 id="17-repeat-failure-tracking-in-power-bi">17. Repeat-Failure Tracking in Power BI</h2>
+<p>A maintenance dashboard should help identify chronic failures and show whether corrective actions are working.</p>
+<p>Recommended visuals include:</p>
+<ul>
+<li>Repeat-failure count by asset.</li>
+<li>Repeat-failure count by failure mode.</li>
+<li>Repeat-failure count by verified root cause.</li>
+<li>Repeat-failure rate over time.</li>
+<li>MTBF trend for affected assets.</li>
+<li>Operating hours between repeat failures.</li>
+<li>Repeat failures after corrective-action implementation.</li>
+<li>Open RCA and CAPA items associated with recurring problems.</li>
+<li>Repeat failures by shift, production line, and component family.</li>
+<li>Downtime caused by repeat failures.</li>
+</ul>
+<h3 id="suggested-dashboard-logic">Suggested dashboard logic</h3>
+<pre><code>Breakdown event data
+      ↓
+Validate distinct failure events
+      ↓
+Assign asset and failure-mode classifications
+      ↓
+Apply repeat-failure criteria
+      ↓
+Link RCA and CAPA records
+      ↓
+Calculate recurrence and exposure metrics
+      ↓
+Display chronic failures and action effectiveness
+</code></pre>
+<p>The data model should preserve the difference between a failure event, a recurring failure group, a root-cause investigation, and a corrective-action record. One failure may be linked to multiple actions, and one corrective action may address several related failure events.</p>
+<h2 id="18-common-repeat-failure-tracking-mistakes">18. Common Repeat-Failure Tracking Mistakes</h2>
+<ul>
+<li>Counting repeated alarm messages as separate failures.</li>
+<li>Treating every similar symptom as proof of the same root cause.</li>
+<li>Replacing components repeatedly without investigating the complete system.</li>
+<li>Closing a repeat-failure item immediately after restoring operation.</li>
+<li>Using inconsistent asset IDs or component identifiers.</li>
+<li>Failing to link breakdowns to RCA and CAPA records.</li>
+<li>Comparing recurrence counts without considering operating exposure.</li>
+<li>Changing recurrence rules between reporting periods.</li>
+<li>Using free-text descriptions as the only classification method.</li>
+<li>Failing to distinguish a new failure from an unresolved original incident.</li>
+<li>Declaring corrective action effective after an inadequate observation period.</li>
+<li>Ignoring operating conditions that influence recurrence.</li>
+<li>Hiding recurrence by creating a new asset or failure classification for the same problem.</li>
+<li>Focusing only on the number of repeat failures without considering downtime, safety, quality, or business impact.</li>
+</ul>
+<h2 id="19-practical-investigation-example">19. Practical Investigation Example</h2>
+<p>A CNC machine experiences repeated axis following-error alarms.</p>
+<h3 id="step-1-establish-the-pattern">Step 1: Establish the pattern</h3>
+<p>Collect alarm history, affected axis, operating conditions, repair actions, and time between events.</p>
+<h3 id="step-2-validate-recurrence">Step 2: Validate recurrence</h3>
+<p>Determine whether each event represents a separate failure after restoration or repeated indications from one unresolved incident.</p>
+<h3 id="step-3-compare-evidence">Step 3: Compare evidence</h3>
+<p>Review servo drive diagnostics, encoder feedback, motor cables, mechanical resistance, parameters, and recent maintenance activity.</p>
+<h3 id="step-4-form-and-test-hypotheses">Step 4: Form and test hypotheses</h3>
+<p>Possible causes may include:</p>
+<ul>
+<li>Encoder or feedback instability.</li>
+<li>Cable damage or poor connections.</li>
+<li>Mechanical binding.</li>
+<li>Servo amplifier problems.</li>
+<li>Incorrect parameters.</li>
+<li>Excessive load or an abnormal motion profile.</li>
+</ul>
+<p>Test the hypotheses using approved procedures rather than replacing components based solely on the alarm.</p>
+<h3 id="step-5-implement-corrective-action">Step 5: Implement corrective action</h3>
+<p>Repair or replace the verified defective element, address contributing conditions, and complete the required calibration and functional checks.</p>
+<h3 id="step-6-verify-effectiveness">Step 6: Verify effectiveness</h3>
+<p>Monitor the same failure mode over a defined period of operation and compare recurrence against the baseline.</p>
+<h3 id="step-7-update-the-knowledge-base">Step 7: Update the knowledge base</h3>
+<p>Record the confirmed failure signature, evidence, cause, repair procedure, replacement details, and verification outcome.</p>
+<p>This creates reusable engineering knowledge instead of forcing every new shift to rediscover the same fault.</p>
+<h2 id="20-interview-questions-and-answers">20. Interview Questions and Answers</h2>
+<h3 id="what-is-repeat-failure-tracking">What is repeat-failure tracking?</h3>
+<p>It is a structured process for identifying recurring equipment failures, linking them to previous events, investigating their causes, and verifying corrective-action effectiveness.</p>
+<h3 id="is-a-repeated-alarm-always-a-repeat-failure">Is a repeated alarm always a repeat failure?</h3>
+<p>No. Multiple alarms can occur during one uninterrupted failure. A repeat failure requires a distinct event that meets the defined recurrence criteria.</p>
+<h3 id="what-is-the-difference-between-repeat-failure-and-recurring-root-cause">What is the difference between repeat failure and recurring root cause?</h3>
+<p>A repeat failure is an event classified as a recurrence. A recurring root cause means the same underlying cause has been identified in multiple failure events. The cause may initially be unknown or may change as investigation progresses.</p>
+<h3 id="how-does-repeat-failure-tracking-support-rca">How does repeat-failure tracking support RCA?</h3>
+<p>It identifies patterns, preserves historical evidence, and helps prioritize problems for root-cause investigation.</p>
+<h3 id="how-does-it-support-capa">How does it support CAPA?</h3>
+<p>It allows the maintenance team to link recurring failures to corrective actions and verify whether those actions prevent further recurrence.</p>
+<h3 id="how-can-repeat-failures-be-reduced">How can repeat failures be reduced?</h3>
+<p>Improve failure classification, perform evidence-based RCA, eliminate the verified cause, standardize the corrective action, and monitor recurrence under comparable operating conditions.</p>
+<h3 id="why-should-operating-hours-be-recorded-between-failures">Why should operating hours be recorded between failures?</h3>
+<p>Calendar time can be misleading when equipment operates different shifts or production volumes. Operating exposure provides a more meaningful basis for comparing recurrence.</p>
+<h3 id="when-should-a-repeat-failure-item-be-closed">When should a repeat-failure item be closed?</h3>
+<p>After the required corrective actions are implemented and the predefined effectiveness criteria are satisfied. Completion of the repair alone is not sufficient.</p>
+<h3 id="can-repeat-failure-tracking-be-automated">Can repeat-failure tracking be automated?</h3>
+<p>Partly. SAP work orders, PLC alarms, CNC diagnostics, SCADA historian data, and Power BI can support detection and reporting. Automated alerts still require validated event definitions and human review of root-cause evidence.</p>
+<h2 id="21-practical-checklist">21. Practical Checklist</h2>
+<ul>
+<li>Define what qualifies as a repeat failure.</li>
+<li>Distinguish repeated alarms from distinct failure events.</li>
+<li>Maintain consistent asset and component identifiers.</li>
+<li>Record symptoms, failure modes, and verified root causes separately.</li>
+<li>Link each event to the relevant repair, RCA, and CAPA records.</li>
+<li>Record operating exposure between failures where possible.</li>
+<li>Identify chronic assets and recurring failure modes.</li>
+<li>Investigate ineffective or repeatedly unsuccessful repairs.</li>
+<li>Document the corrective action and implementation date.</li>
+<li>Define effectiveness criteria before closing the action.</li>
+<li>Monitor recurrence over a meaningful period of operation.</li>
+<li>Reopen the investigation if the failure returns.</li>
+<li>Update maintenance procedures and technical knowledge after verified improvement.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\22_Maint_Logs\12_Pareto_Analysis - Pareto analysis</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

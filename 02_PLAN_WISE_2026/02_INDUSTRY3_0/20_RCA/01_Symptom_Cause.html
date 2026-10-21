@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Root Cause Analysis: Symptom vs Cause</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Root Cause Analysis: Symptom vs Cause</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and Scope</a></li>
+<li><a href="#2-symptom-fault-failure-cause-and-root-cause">2. Symptom, Fault, Failure, Cause, and Root Cause</a></li>
+<li><a href="#3-understand-the-difference-through-an-example">3. Understand the Difference Through an Example</a></li>
+<li><a href="#4-the-five-layers-of-failure-analysis">4. The Five Layers of Failure Analysis</a></li>
+<li><a href="#5-why-symptoms-are-often-mistaken-for-causes">5. Why Symptoms Are Often Mistaken for Causes</a><ul>
+<li><a href="#51-alarm-code-bias">5.1 Alarm-code bias</a></li>
+<li><a href="#52-first-fault-bias">5.2 First-fault bias</a></li>
+<li><a href="#53-component-replacement-bias">5.3 Component-replacement bias</a></li>
+<li><a href="#54-operator-blame-bias">5.4 Operator-blame bias</a></li>
+<li><a href="#55-availability-bias">5.5 Availability bias</a></li>
+</ul>
+</li>
+<li><a href="#6-a-disciplined-method-for-separating-symptoms-from-causes">6. A Disciplined Method for Separating Symptoms from Causes</a><ul>
+<li><a href="#step-1-write-the-symptom-objectively">Step 1: Write the symptom objectively</a></li>
+<li><a href="#step-2-define-the-failed-function">Step 2: Define the failed function</a></li>
+<li><a href="#step-3-identify-the-immediate-fault">Step 3: Identify the immediate fault</a></li>
+<li><a href="#step-4-form-competing-hypotheses">Step 4: Form competing hypotheses</a></li>
+<li><a href="#step-5-collect-discriminating-evidence">Step 5: Collect discriminating evidence</a></li>
+<li><a href="#step-6-confirm-the-causal-mechanism">Step 6: Confirm the causal mechanism</a></li>
+<li><a href="#step-7-determine-the-recurrence-mechanism">Step 7: Determine the recurrence mechanism</a></li>
+<li><a href="#step-8-correct-and-verify">Step 8: Correct and verify</a></li>
+</ul>
+</li>
+<li><a href="#7-evidence-types-used-in-rca">7. Evidence Types Used in RCA</a><ul>
+<li><a href="#evidence-quality">Evidence quality</a></li>
+</ul>
+</li>
+<li><a href="#8-practical-examples-across-industrial-automation">8. Practical Examples Across Industrial Automation</a><ul>
+<li><a href="#example-1-plc-communication-fault">Example 1: PLC communication fault</a></li>
+<li><a href="#example-2-cnc-spindle-overload">Example 2: CNC spindle overload</a></li>
+<li><a href="#example-3-robot-intermittently-loses-position">Example 3: Robot intermittently loses position</a></li>
+<li><a href="#example-4-hmi-displays-an-incorrect-analog-value">Example 4: HMI displays an incorrect analog value</a></li>
+<li><a href="#example-5-repeated-sensor-failure">Example 5: Repeated sensor failure</a></li>
+</ul>
+</li>
+<li><a href="#9-distinguishing-correlation-from-causation">9. Distinguishing Correlation from Causation</a></li>
+<li><a href="#10-why-five-whys-must-be-used-carefully">10. Why "Five Whys" Must Be Used Carefully</a><ul>
+<li><a href="#limitations-of-five-whys">Limitations of Five Whys</a></li>
+</ul>
+</li>
+<li><a href="#11-immediate-repair-vs-corrective-and-preventive-action">11. Immediate Repair vs. Corrective and Preventive Action</a></li>
+<li><a href="#12-common-rca-mistakes">12. Common RCA Mistakes</a></li>
+<li><a href="#13-rca-report-template">13. RCA Report Template</a><ul>
+<li><a href="#example-of-a-weak-and-strong-rca-statement">Example of a weak and strong RCA statement</a></li>
+</ul>
+</li>
+<li><a href="#14-interview-questions-and-answers">14. Interview Questions and Answers</a><ul>
+<li><a href="#q1-what-is-the-difference-between-a-symptom-and-a-root-cause">Q1. What is the difference between a symptom and a root cause?</a></li>
+<li><a href="#q2-is-an-alarm-code-a-root-cause">Q2. Is an alarm code a root cause?</a></li>
+<li><a href="#q3-what-is-the-difference-between-an-immediate-cause-and-a-root-cause">Q3. What is the difference between an immediate cause and a root cause?</a></li>
+<li><a href="#q4-how-do-you-prove-a-root-cause">Q4. How do you prove a root cause?</a></li>
+<li><a href="#q5-can-one-failure-have-multiple-root-causes">Q5. Can one failure have multiple root causes?</a></li>
+<li><a href="#q6-what-is-the-difference-between-repair-and-rca">Q6. What is the difference between repair and RCA?</a></li>
+<li><a href="#q7-why-should-maintenance-history-be-reviewed">Q7. Why should maintenance history be reviewed?</a></li>
+<li><a href="#q8-what-if-the-root-cause-cannot-be-confirmed">Q8. What if the root cause cannot be confirmed?</a></li>
+<li><a href="#q9-how-do-you-know-the-corrective-action-is-effective">Q9. How do you know the corrective action is effective?</a></li>
+<li><a href="#q10-what-is-the-most-important-principle-of-rca">Q10. What is the most important principle of RCA?</a></li>
+</ul>
+</li>
+<li><a href="#15-practical-exercise">15. Practical Exercise</a><ul>
+<li><a href="#investigation-plan">Investigation plan</a></li>
+</ul>
+</li>
+<li><a href="#16-final-completion-checklist">16. Final Completion Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\20_RCA\01_Symptom_Cause - Symptom vs cause</code></p>
+<h2 id="1-purpose-and-scope">1. Purpose and Scope</h2>
+<p>Root Cause Analysis (RCA) is a systematic method for determining why a failure occurred, rather than merely describing what happened or repairing the visible damage.</p>
+<p>In industrial maintenance, a machine may stop because a motor overload trips, a PLC loses communication, a CNC axis faults, or a sensor stops detecting a part. These are observable events. The actual reason may be a seized bearing, a damaged cable, an incorrect parameter, a failed power supply, poor maintenance, or a design weakness.</p>
+<p>The central rule is: a symptom describes the problem; a cause explains the mechanism that produced it.</p>
+<p>RCA is intended to help maintenance teams:</p>
+<ul>
+<li>Restore equipment safely and efficiently.</li>
+<li>Separate observable symptoms from verified causes.</li>
+<li>Avoid replacing healthy components unnecessarily.</li>
+<li>Identify recurring and hidden failure mechanisms.</li>
+<li>Develop corrective and preventive actions.</li>
+<li>Reduce downtime, repair costs, and repeat breakdowns.</li>
+<li>Improve equipment reliability, maintainability, and system design.</li>
+</ul>
+<h2 id="2-symptom-fault-failure-cause-and-root-cause">2. Symptom, Fault, Failure, Cause, and Root Cause</h2>
+<p>These terms are related, but they do not mean the same thing.</p>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+<th>Industrial example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Symptom</td>
+<td>Observable indication of a problem</td>
+<td>Conveyor stops unexpectedly</td>
+</tr>
+<tr>
+<td>Fault</td>
+<td>Abnormal condition affecting a component or system</td>
+<td>Motor overload relay trips</td>
+</tr>
+<tr>
+<td>Failure</td>
+<td>Loss of ability to perform a required function</td>
+<td>Conveyor cannot transport parts</td>
+</tr>
+<tr>
+<td>Immediate cause</td>
+<td>Direct mechanism or event producing the failure</td>
+<td>Motor current exceeds the overload threshold</td>
+</tr>
+<tr>
+<td>Contributing cause</td>
+<td>Condition that helped the failure occur</td>
+<td>Excessive mechanical friction</td>
+</tr>
+<tr>
+<td>Root cause</td>
+<td>Underlying condition whose correction prevents recurrence within the defined scope</td>
+<td>Bearing lubrication and inspection controls were inadequate for the actual operating conditions</td>
+</tr>
+<tr>
+<td>Corrective action</td>
+<td>Action taken to eliminate the identified cause</td>
+<td>Correct the lubrication method and inspection interval</td>
+</tr>
+<tr>
+<td>Verification</td>
+<td>Evidence that the action worked</td>
+<td>Bearing temperature and motor current remain within acceptable limits during representative operation</td>
+</tr>
+</tbody>
+</table>
+<p>The exact classification depends on the investigation scope. For example, bearing damage can be the root cause of a motor overload investigation, while inadequate lubrication control can be the root cause of a broader recurring-bearing-failure investigation.</p>
+<p>Do not label a cause "root" merely because it is the deepest explanation currently known. The investigation must establish evidence and define what recurrence mechanism it intends to eliminate.</p>
+<h2 id="3-understand-the-difference-through-an-example">3. Understand the Difference Through an Example</h2>
+<p>Consider a machine whose hydraulic pump repeatedly trips the motor overload.</p>
+<pre><code>Observed symptom
+    ↓
+Hydraulic pump stops
+    ↓
+Immediate fault
+    ↓
+Motor overload relay trips
+    ↓
+Physical mechanism
+    ↓
+Motor current exceeds the permitted threshold
+    ↓
+Underlying condition
+    ↓
+Pump requires excessive torque
+    ↓
+Investigation
+    ↓
+Pump bearing damage caused excessive friction
+    ↓
+Further RCA
+    ↓
+Lubrication contamination and inadequate condition monitoring
+    ↓
+Corrective and preventive action
+    ↓
+Repair pump, correct lubrication controls, and verify operating conditions
+</code></pre>
+<p>This is an illustrative investigation path, not a conclusion that every overload has the same cause.</p>
+<p>An overload trip may also result from excessive load, incorrect overload settings, phase loss, a motor winding problem, or another condition. Each possibility must be tested against evidence.</p>
+<p>Replacing the overload relay without identifying why it trips may remove a healthy protective device from the system while leaving the real problem untouched.</p>
+<h2 id="4-the-five-layers-of-failure-analysis">4. The Five Layers of Failure Analysis</h2>
+<p>A practical way to structure an RCA is to examine five layers.</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Main question</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Symptom</td>
+<td>What did we observe?</td>
+<td>Robot stopped during a cycle</td>
+</tr>
+<tr>
+<td>2. Failed function</td>
+<td>What required function was lost?</td>
+<td>Robot could not complete its motion</td>
+</tr>
+<tr>
+<td>3. Immediate mechanism</td>
+<td>What directly prevented operation?</td>
+<td>Servo drive entered an overcurrent fault</td>
+</tr>
+<tr>
+<td>4. Physical or technical cause</td>
+<td>What produced that mechanism?</td>
+<td>Damaged motor cable caused intermittent insulation failure</td>
+</tr>
+<tr>
+<td>5. Systemic cause</td>
+<td>Why was the condition created or allowed to persist?</td>
+<td>Cable routing and inspection requirements did not adequately address repeated flexing</td>
+</tr>
+</tbody>
+</table>
+<p>The systemic cause is not automatically a person's mistake. It may involve design, standards, spare-part quality, work instructions, environmental conditions, inspection capability, or maintenance strategy.</p>
+<p>An investigation should not force every failure into exactly five layers. Some faults are straightforward, while others involve several interacting causes.</p>
+<h2 id="5-why-symptoms-are-often-mistaken-for-causes">5. Why Symptoms Are Often Mistaken for Causes</h2>
+<h3 id="51-alarm-code-bias">5.1 Alarm-code bias</h3>
+<p>Technicians often assume the alarm identifies the defective component.</p>
+<p>Example:</p>
+<ul>
+<li>Symptom: CNC axis stops.</li>
+<li>Alarm: Servo following error.</li>
+<li>Incorrect conclusion: Servo motor is defective.</li>
+</ul>
+<p>A following error indicates that the position error exceeded a configured limit or condition. Possible causes include mechanical binding, incorrect tuning, encoder feedback failure, drive problems, excessive commanded acceleration, or an electrical connection fault.</p>
+<p>The alarm identifies a condition requiring investigation. It does not necessarily identify the failed component.</p>
+<h3 id="52-first-fault-bias">5.2 First-fault bias</h3>
+<p>The first visible alarm may not be the initiating event.</p>
+<p>For example, a remote I/O power supply may fail, causing communication loss, PLC interlock activation, and a machine-stop alarm. The machine-stop alarm is visible, but the earlier power-supply failure may explain the event.</p>
+<p>Review alarm timestamps, diagnostic buffers, and sequence-of-events records where available. Remember that timestamp accuracy and scan intervals can limit how precisely event order is established.</p>
+<h3 id="53-component-replacement-bias">5.3 Component-replacement bias</h3>
+<p>Replacing the component associated with an alarm is quick and familiar. Unfortunately, familiarity is not proof.</p>
+<p>A new sensor may temporarily restore operation because the connector was disturbed during replacement. The actual problem could be a loose terminal, cable damage, or intermittent power supply.</p>
+<p>Record what changed during the repair and identify which change actually restored the function.</p>
+<h3 id="54-operator-blame-bias">5.4 Operator-blame bias</h3>
+<p>Statements such as "operator error" often describe the final action without explaining the conditions that made the error possible.</p>
+<p>Investigate:</p>
+<ul>
+<li>Whether the instructions were clear and available.</li>
+<li>Whether the interface presented correct information.</li>
+<li>Whether the procedure was practical under actual production conditions.</li>
+<li>Whether training and authorization were adequate.</li>
+<li>Whether machine design allowed an unintended action.</li>
+<li>Whether safeguards and interlocks functioned as intended.</li>
+</ul>
+<p>Human action can be part of a causal chain, but assigning blame is not a substitute for understanding it.</p>
+<h3 id="55-availability-bias">5.5 Availability bias</h3>
+<p>The last failure, most common fault, or easiest-to-replace component receives too much attention.</p>
+<p>A VFD fault may commonly be caused by overheating, but that does not establish overheating as the cause of today's VFD trip. Verify the actual alarm, environmental conditions, operating history, and measured evidence.</p>
+<h2 id="6-a-disciplined-method-for-separating-symptoms-from-causes">6. A Disciplined Method for Separating Symptoms from Causes</h2>
+<p>Use this sequence during a breakdown investigation.</p>
+<h3 id="step-1-write-the-symptom-objectively">Step 1: Write the symptom objectively</h3>
+<p>Describe what was observed without inserting an unverified explanation.</p>
+<p>Poor statement: "PLC network card failed."</p>
+<p>Better statement: "PLC communication to remote I/O was lost at 14:32, and the controller diagnostic buffer recorded a communication fault."</p>
+<p>The second statement records evidence without prematurely naming the cause.</p>
+<h3 id="step-2-define-the-failed-function">Step 2: Define the failed function</h3>
+<p>State what the equipment could no longer do.</p>
+<p>Examples:</p>
+<ul>
+<li>CNC axis could not reach the commanded position.</li>
+<li>Conveyor could not transport a part.</li>
+<li>HMI stopped receiving live values.</li>
+<li>Robot could not establish the required safety-permissive state.</li>
+<li>Test bench could not complete the measurement cycle.</li>
+</ul>
+<p>This prevents the investigation from becoming a search for unrelated alarms.</p>
+<h3 id="step-3-identify-the-immediate-fault">Step 3: Identify the immediate fault</h3>
+<p>Determine the condition directly associated with the loss of function.</p>
+<p>Examples:</p>
+<ul>
+<li>Overload protection operated.</li>
+<li>Drive reported DC-bus undervoltage.</li>
+<li>PLC detected a remote I/O connection failure.</li>
+<li>Encoder feedback became invalid.</li>
+<li>Safety circuit did not achieve its required state.</li>
+</ul>
+<p>Use controller diagnostics, drive history, measurements, and approved test procedures to establish the immediate fault.</p>
+<h3 id="step-4-form-competing-hypotheses">Step 4: Form competing hypotheses</h3>
+<p>List plausible causes instead of selecting the first explanation.</p>
+<p>For a drive undervoltage fault, possible hypotheses include:</p>
+<ul>
+<li>Incoming supply voltage dropped.</li>
+<li>A fuse, terminal, or contactor connection became intermittent.</li>
+<li>The DC-bus charging circuit developed a fault.</li>
+<li>A supply disturbance occurred during a large load change.</li>
+<li>A drive component failed.</li>
+</ul>
+<p>The drive's exact diagnostic code, manual, and recorded measurements determine which hypotheses are relevant.</p>
+<h3 id="step-5-collect-discriminating-evidence">Step 5: Collect discriminating evidence</h3>
+<p>Choose tests that distinguish between the hypotheses.</p>
+<p>Examples:</p>
+<ul>
+<li>Compare the incoming supply voltage with the manufacturer's limits.</li>
+<li>Review the fault history and event timing.</li>
+<li>Inspect relevant connections under an approved isolation procedure.</li>
+<li>Compare the fault with other equipment on the same supply.</li>
+<li>Check whether the failure correlates with a specific operating condition.</li>
+</ul>
+<p>A useful test is one that helps reject or support a cause, not merely one that produces another measurement.</p>
+<h3 id="step-6-confirm-the-causal-mechanism">Step 6: Confirm the causal mechanism</h3>
+<p>Establish how the proposed cause produced the observed fault.</p>
+<p>For example:</p>
+<ul>
+<li>Observation: Encoder feedback is intermittent.</li>
+<li>Measurement: Feedback communication drops when the cable carrier reaches a particular position.</li>
+<li>Inspection: The encoder cable has damaged conductors at a repeated flex point.</li>
+<li>Mechanism: Cable movement interrupts feedback, causing the drive to lose valid position information.</li>
+</ul>
+<p>The combined evidence is much stronger than the observation that an encoder alarm occurred.</p>
+<h3 id="step-7-determine-the-recurrence-mechanism">Step 7: Determine the recurrence mechanism</h3>
+<p>Ask what allowed the condition to develop or remain undetected.</p>
+<p>Possible factors include:</p>
+<ul>
+<li>Incorrect cable routing.</li>
+<li>Inadequate component specification.</li>
+<li>Excessive mechanical stress.</li>
+<li>Missing inspection criteria.</li>
+<li>An ineffective preventive-maintenance interval.</li>
+<li>A design that makes routine inspection difficult.</li>
+<li>A repair method that does not address the original damage mechanism.</li>
+</ul>
+<p>Not every failure requires a large organizational explanation. Use the level of analysis justified by the evidence and the recurrence risk.</p>
+<h3 id="step-8-correct-and-verify">Step 8: Correct and verify</h3>
+<p>Repair the confirmed fault, then verify the required function under representative conditions.</p>
+<p>Where appropriate, confirm that:</p>
+<ul>
+<li>The original symptom has disappeared.</li>
+<li>The suspected mechanism has been removed.</li>
+<li>Related alarms and diagnostics are clear.</li>
+<li>The machine operates through a meaningful cycle.</li>
+<li>No safety function or protective setting has been compromised.</li>
+<li>The preventive action addresses the recurrence mechanism.</li>
+</ul>
+<h2 id="7-evidence-types-used-in-rca">7. Evidence Types Used in RCA</h2>
+<p>Different evidence types answer different questions.</p>
+<table>
+<thead>
+<tr>
+<th>Evidence type</th>
+<th>What it can establish</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Alarm history</td>
+<td>What the system reported and when</td>
+<td>VFD undervoltage at 14:32</td>
+</tr>
+<tr>
+<td>Physical inspection</td>
+<td>Visible damage or abnormal condition</td>
+<td>Cracked connector housing</td>
+</tr>
+<tr>
+<td>Electrical measurement</td>
+<td>Actual electrical conditions at the measurement point</td>
+<td>Supply voltage drops during a load event</td>
+</tr>
+<tr>
+<td>Online diagnostics</td>
+<td>Controller or device state</td>
+<td>Remote I/O connection fault</td>
+</tr>
+<tr>
+<td>Trend data</td>
+<td>Behavior over time</td>
+<td>Motor current rises before each trip</td>
+</tr>
+<tr>
+<td>Mechanical measurement</td>
+<td>Physical condition or alignment</td>
+<td>Excessive shaft misalignment</td>
+</tr>
+<tr>
+<td>Program and configuration comparison</td>
+<td>Differences between approved and current versions</td>
+<td>Changed tag address</td>
+</tr>
+<tr>
+<td>Maintenance history</td>
+<td>Repeated failures and prior interventions</td>
+<td>Same bearing replaced three times</td>
+</tr>
+<tr>
+<td>Operator observation</td>
+<td>Conditions surrounding the failure</td>
+<td>Fault occurs only at high production speed</td>
+</tr>
+<tr>
+<td>Controlled test</td>
+<td>Whether a hypothesis predicts the observed behavior</td>
+<td>Fault follows a specific cable position</td>
+</tr>
+</tbody>
+</table>
+<h3 id="evidence-quality">Evidence quality</h3>
+<ul>
+<li>Direct evidence: A measurement or observation closely tied to the proposed mechanism.</li>
+<li>Supporting evidence: Information consistent with the hypothesis but not sufficient alone.</li>
+<li>Circumstantial evidence: A correlation that suggests a possible connection.</li>
+<li>Contradictory evidence: Information inconsistent with the proposed cause.</li>
+</ul>
+<p>A credible RCA records contradictory evidence rather than hiding it. If the hypothesis cannot explain the observations, revise the hypothesis.</p>
+<h2 id="8-practical-examples-across-industrial-automation">8. Practical Examples Across Industrial Automation</h2>
+<h3 id="example-1-plc-communication-fault">Example 1: PLC communication fault</h3>
+<p>Symptom: Production stops, and the HMI displays a communication alarm.</p>
+<p>Possible immediate fault: PLC communication to remote I/O is lost.</p>
+<p>Possible underlying causes:</p>
+<ul>
+<li>Failed switch or port.</li>
+<li>Damaged cable.</li>
+<li>Duplicate IP address.</li>
+<li>Device identity mismatch.</li>
+<li>Failed communication module.</li>
+<li>Incorrect protocol configuration.</li>
+<li>Remote I/O power interruption.</li>
+</ul>
+<p>Evidence to collect: PLC diagnostics, switch-port status, device power indicators, relevant communication logs, addressing records, and event timestamps.</p>
+<p>RCA principle: A communication alarm is evidence of a communication problem, not proof that the PLC CPU or Ethernet module must be replaced.</p>
+<h3 id="example-2-cnc-spindle-overload">Example 2: CNC spindle overload</h3>
+<p>Symptom: CNC machining stops during cutting.</p>
+<p>Immediate fault: Spindle drive reports an overload condition.</p>
+<p>Possible causes:</p>
+<ul>
+<li>Excessive cutting load.</li>
+<li>Incorrect tool or machining parameters.</li>
+<li>Mechanical bearing or transmission friction.</li>
+<li>Motor or drive fault.</li>
+<li>Cooling or ventilation problem.</li>
+</ul>
+<p>Evidence to collect: Drive fault history, spindle load trends, machining program and tooling information, mechanical inspection, and relevant temperature or electrical measurements.</p>
+<p>RCA principle: Compare fault behavior under known operating conditions. Do not change machining parameters or drive settings without validating the intended process and manufacturer requirements.</p>
+<h3 id="example-3-robot-intermittently-loses-position">Example 3: Robot intermittently loses position</h3>
+<p>Symptom: Robot stops and requires recovery or mastering-related investigation.</p>
+<p>Immediate fault: Position feedback or motion-control validity is lost.</p>
+<p>Possible causes: Encoder cable damage, connector problems, encoder or drive faults, mechanical movement, battery-related issues on applicable systems, or configuration problems.</p>
+<p>Evidence to collect: Robot diagnostic history, position and encoder alarms, cable inspection, approved feedback checks, and recent maintenance records.</p>
+<p>RCA principle: Do not perform mastering or calibration merely to clear an alarm. First determine whether the actual reference or feedback information is incorrect.</p>
+<h3 id="example-4-hmi-displays-an-incorrect-analog-value">Example 4: HMI displays an incorrect analog value</h3>
+<p>Symptom: Temperature display is inconsistent with the expected process temperature.</p>
+<p>Immediate fault: The displayed engineering value is incorrect.</p>
+<p>Possible causes: Incorrect scaling, wrong tag mapping, data-type mismatch, sensor fault, analog input configuration, wiring error, or failed conversion logic.</p>
+<p>Evidence to collect: Independent process measurement where appropriate, raw PLC input, scaled PLC value, SCADA tag configuration, and display conversion.</p>
+<p>RCA principle: Compare values at each stage to find where the measurement first becomes incorrect.</p>
+<h3 id="example-5-repeated-sensor-failure">Example 5: Repeated sensor failure</h3>
+<p>Symptom: A proximity sensor is replaced repeatedly.</p>
+<p>Immediate fault: The sensor fails to detect the target reliably.</p>
+<p>Possible causes: Sensor damage, excessive sensing distance, vibration, metal debris, cable fatigue, incorrect mounting, electrical interference, or an unsuitable sensor specification.</p>
+<p>Evidence to collect: Sensor status, mounting dimensions, cable condition, supply voltage, switching behavior, environmental conditions, and failure history.</p>
+<p>RCA principle: Replacing the sensor restores the function temporarily. The RCA must determine why the sensor or its detection system repeatedly fails.</p>
+<h2 id="9-distinguishing-correlation-from-causation">9. Distinguishing Correlation from Causation</h2>
+<p>Two events occurring together do not automatically establish that one caused the other.</p>
+<p>Example: A PLC communication fault occurs shortly after a VFD starts. The timing suggests a relationship, but several explanations remain possible:</p>
+<ul>
+<li>Electrical interference affects the communication cable.</li>
+<li>The supply voltage drops during acceleration.</li>
+<li>Network traffic or device loading increases.</li>
+<li>The VFD start coincides with an unrelated network fault.</li>
+<li>A control sequence changes the network configuration or device state.</li>
+</ul>
+<p>To test the relationship:</p>
+<ol>
+<li>Record the sequence and timestamps.</li>
+<li>Identify the proposed mechanism linking the events.</li>
+<li>Review electrical and network evidence.</li>
+<li>Compare repeated events and normal operation.</li>
+<li>Perform controlled tests only when safe and authorized.</li>
+<li>Confirm whether the evidence supports the causal relationship.</li>
+</ol>
+<p>A recurring correlation is useful evidence, but it is not a substitute for a mechanism that explains the failure.</p>
+<h2 id="10-why-five-whys-must-be-used-carefully">10. Why "Five Whys" Must Be Used Carefully</h2>
+<p>The Five Whys technique repeatedly asks why an event occurred until the investigation reaches an actionable underlying cause.</p>
+<p>Example:</p>
+<ol>
+<li>Why did the conveyor stop? Because the motor overload tripped.</li>
+<li>Why did the overload trip? Because motor current exceeded the permitted threshold.</li>
+<li>Why did motor current rise? Because the conveyor required excessive torque.</li>
+<li>Why did it require excessive torque? Because a bearing was damaged.</li>
+<li>Why was the bearing damaged? Because lubrication was insufficient for the actual operating conditions.</li>
+</ol>
+<p>This provides a potential causal chain, not a verified conclusion.</p>
+<p>Further investigation may reveal an incorrect lubrication specification, contamination, a leaking seal, an unsuitable interval, or a different failure mechanism. Five questions do not guarantee that the root cause has been reached.</p>
+<h3 id="limitations-of-five-whys">Limitations of Five Whys</h3>
+<ul>
+<li>It may force a complex failure into a single causal chain.</li>
+<li>It can overlook interacting mechanical, electrical, and control faults.</li>
+<li>It can encourage unsupported assumptions.</li>
+<li>It may stop at operator error instead of investigating system conditions.</li>
+<li>It may fail when evidence is incomplete or the causal mechanism is unclear.</li>
+</ul>
+<p>Use Five Whys for straightforward problems, and use broader methods such as cause-and-effect analysis, fault-tree analysis, or failure-mode analysis when multiple interacting causes are plausible.</p>
+<h2 id="11-immediate-repair-vs-corrective-and-preventive-action">11. Immediate Repair vs. Corrective and Preventive Action</h2>
+<p>These actions have different objectives.</p>
+<table>
+<thead>
+<tr>
+<th>Action type</th>
+<th>Objective</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Containment</td>
+<td>Reduce immediate risk or impact</td>
+<td>Stop affected equipment and secure the area</td>
+</tr>
+<tr>
+<td>Temporary restoration</td>
+<td>Restore operation pending a permanent fix</td>
+<td>Replace a failed sensor with an approved equivalent</td>
+</tr>
+<tr>
+<td>Corrective action</td>
+<td>Eliminate the confirmed cause of the detected failure</td>
+<td>Repair the cable-routing defect</td>
+</tr>
+<tr>
+<td>Preventive action</td>
+<td>Reduce the likelihood of similar failures elsewhere</td>
+<td>Inspect comparable cable carriers on other machines</td>
+</tr>
+<tr>
+<td>Effectiveness verification</td>
+<td>Confirm that recurrence risk has been reduced</td>
+<td>Trend failures and inspect cable condition over an appropriate period</td>
+</tr>
+</tbody>
+</table>
+<p>The exact use of "corrective action" and "preventive action" varies between organizational systems and standards. Follow the site's established definitions and procedures.</p>
+<p>A repair is not automatically an RCA. A completed work order is not proof that the recurrence mechanism has been removed.</p>
+<h2 id="12-common-rca-mistakes">12. Common RCA Mistakes</h2>
+<table>
+<thead>
+<tr>
+<th>Mistake</th>
+<th>Why it is weak</th>
+<th>Better practice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Writing the alarm as the root cause</td>
+<td>Alarm identifies a condition, not necessarily the mechanism</td>
+<td>Determine what produced the alarm</td>
+</tr>
+<tr>
+<td>Replacing a component without testing</td>
+<td>May remove a healthy part without addressing the fault</td>
+<td>Verify the component and its operating conditions</td>
+</tr>
+<tr>
+<td>Assuming the first alarm caused all later alarms</td>
+<td>Later alarms may be consequences or independent faults</td>
+<td>Establish event order using reliable evidence</td>
+</tr>
+<tr>
+<td>Blaming the operator</td>
+<td>Often ignores interface, design, and procedural factors</td>
+<td>Investigate the full operating system</td>
+</tr>
+<tr>
+<td>Using "wear and tear" without evidence</td>
+<td>Describes a broad condition rather than a specific mechanism</td>
+<td>Identify the actual wear mechanism and contributing conditions</td>
+</tr>
+<tr>
+<td>Accepting temporary recovery as proof</td>
+<td>The repair may have disturbed another defective connection</td>
+<td>Identify exactly what changed and verify the mechanism</td>
+</tr>
+<tr>
+<td>Changing multiple settings simultaneously</td>
+<td>Makes cause-and-effect difficult to establish</td>
+<td>Make controlled, documented changes</td>
+</tr>
+<tr>
+<td>Ignoring prior breakdowns</td>
+<td>Loses evidence of recurring mechanisms</td>
+<td>Review failure and maintenance history</td>
+</tr>
+<tr>
+<td>Closing without verification</td>
+<td>The machine may fail again under normal load</td>
+<td>Define and complete effectiveness checks</td>
+</tr>
+<tr>
+<td>Forcing one root cause</td>
+<td>Some failures involve multiple interacting causes</td>
+<td>Document all substantiated causal contributors</td>
+</tr>
+</tbody>
+</table>
+<h2 id="13-rca-report-template">13. RCA Report Template</h2>
+<p>Use the following structure for a maintenance breakdown or recurring fault.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Breakdown reference</td>
+<td>Unique maintenance or incident ID</td>
+</tr>
+<tr>
+<td>Equipment</td>
+<td>Machine, line, subsystem, and component</td>
+</tr>
+<tr>
+<td>Symptom</td>
+<td>Objective description of what was observed</td>
+</tr>
+<tr>
+<td>Failed function</td>
+<td>Required machine function that was lost</td>
+</tr>
+<tr>
+<td>Immediate fault</td>
+<td>Directly observed fault or event</td>
+</tr>
+<tr>
+<td>Evidence</td>
+<td>Measurements, logs, photographs, diagnostics, and inspection findings</td>
+</tr>
+<tr>
+<td>Hypotheses</td>
+<td>Plausible explanations considered</td>
+</tr>
+<tr>
+<td>Tests performed</td>
+<td>Method, conditions, and results</td>
+</tr>
+<tr>
+<td>Confirmed mechanism</td>
+<td>How the proposed cause produced the fault</td>
+</tr>
+<tr>
+<td>Contributing factors</td>
+<td>Additional conditions supported by evidence</td>
+</tr>
+<tr>
+<td>Root cause</td>
+<td>Underlying actionable condition within the investigation scope</td>
+</tr>
+<tr>
+<td>Immediate action</td>
+<td>Containment and restoration</td>
+</tr>
+<tr>
+<td>Corrective action</td>
+<td>Action to eliminate the confirmed cause</td>
+</tr>
+<tr>
+<td>Preventive action</td>
+<td>Broader measures to reduce recurrence</td>
+</tr>
+<tr>
+<td>Verification criteria</td>
+<td>Conditions and measurements proving effectiveness</td>
+</tr>
+<tr>
+<td>Owner and due date</td>
+<td>Responsibility for completing actions</td>
+</tr>
+<tr>
+<td>Closure evidence</td>
+<td>Test results and approval according to site procedure</td>
+</tr>
+</tbody>
+</table>
+<h3 id="example-of-a-weak-and-strong-rca-statement">Example of a weak and strong RCA statement</h3>
+<p>Weak: "Robot stopped because of an encoder fault. Encoder replaced."</p>
+<p>Stronger: "Robot motion stopped after encoder feedback became intermittent. Diagnostic history and a controlled inspection identified intermittent continuity in the encoder cable at a repeated-flex location. The damaged cable was replaced, routing and bend-radius compliance were corrected, and the robot was tested through representative motion cycles. Follow-up monitoring was assigned to verify that the fault does not recur."</p>
+<p>The stronger statement identifies the symptom, evidence, mechanism, corrective action, and verification. It should only be used when those findings have actually been established.</p>
+<h2 id="14-interview-questions-and-answers">14. Interview Questions and Answers</h2>
+<h3 id="q1-what-is-the-difference-between-a-symptom-and-a-root-cause">Q1. What is the difference between a symptom and a root cause?</h3>
+<p>A symptom is an observable indication of a problem. A root cause is an underlying condition or mechanism whose correction prevents recurrence within the defined investigation scope.</p>
+<h3 id="q2-is-an-alarm-code-a-root-cause">Q2. Is an alarm code a root cause?</h3>
+<p>No. An alarm code usually identifies a detected condition or failed function. Additional evidence is needed to establish what produced it.</p>
+<h3 id="q3-what-is-the-difference-between-an-immediate-cause-and-a-root-cause">Q3. What is the difference between an immediate cause and a root cause?</h3>
+<p>The immediate cause is directly associated with the failure event. The root cause explains the underlying condition that allowed the failure mechanism to develop or recur.</p>
+<h3 id="q4-how-do-you-prove-a-root-cause">Q4. How do you prove a root cause?</h3>
+<p>Collect relevant evidence, establish a plausible physical or logical mechanism, test competing explanations, verify the corrective action, and check that the results match the predicted behavior.</p>
+<h3 id="q5-can-one-failure-have-multiple-root-causes">Q5. Can one failure have multiple root causes?</h3>
+<p>Yes. Failures may result from interacting factors such as mechanical wear, electrical disturbances, configuration errors, and inadequate inspection controls. Record each factor that is supported by evidence.</p>
+<h3 id="q6-what-is-the-difference-between-repair-and-rca">Q6. What is the difference between repair and RCA?</h3>
+<p>Repair restores the equipment's function. RCA investigates why the failure occurred and determines what actions are required to reduce recurrence.</p>
+<h3 id="q7-why-should-maintenance-history-be-reviewed">Q7. Why should maintenance history be reviewed?</h3>
+<p>Repeated failures can reveal patterns involving operating conditions, component life, environmental exposure, repair quality, or ineffective preventive maintenance. History provides useful evidence, though it does not establish causation by itself.</p>
+<h3 id="q8-what-if-the-root-cause-cannot-be-confirmed">Q8. What if the root cause cannot be confirmed?</h3>
+<p>Document the evidence, unresolved hypotheses, limitations, and remaining risks. Apply appropriate containment and continue investigation when justified. Do not invent a root cause merely to complete a report.</p>
+<h3 id="q9-how-do-you-know-the-corrective-action-is-effective">Q9. How do you know the corrective action is effective?</h3>
+<p>Define measurable verification criteria before closing the action. Confirm that the fault mechanism has been addressed and monitor the equipment under representative operating conditions for an appropriate period.</p>
+<h3 id="q10-what-is-the-most-important-principle-of-rca">Q10. What is the most important principle of RCA?</h3>
+<p>Separate what was observed from what is inferred, and support the causal explanation with evidence. A convincing explanation is not necessarily a correct explanation.</p>
+<h2 id="15-practical-exercise">15. Practical Exercise</h2>
+<p>A conveyor stops three times in one shift. Each time, the HMI displays "Motor Overload." Maintenance resets the overload and restarts the conveyor. The machine runs again, but the fault returns.</p>
+<p>Classify the available information.</p>
+<table>
+<thead>
+<tr>
+<th>Observation</th>
+<th>Classification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Conveyor stops</td>
+<td>Symptom</td>
+</tr>
+<tr>
+<td>HMI displays "Motor Overload"</td>
+<td>Alarm indication</td>
+</tr>
+<tr>
+<td>Overload protection trips</td>
+<td>Immediate fault or event</td>
+</tr>
+<tr>
+<td>Motor current rises above the relevant threshold</td>
+<td>Potential direct mechanism, requiring measurement or diagnostic confirmation</td>
+</tr>
+<tr>
+<td>Conveyor requires excessive torque</td>
+<td>Hypothesis requiring evidence</td>
+</tr>
+<tr>
+<td>Bearing friction, mechanical blockage, electrical fault, or incorrect protection settings</td>
+<td>Competing hypotheses</td>
+</tr>
+<tr>
+<td>Confirmed defective component or condition supported by testing</td>
+<td>Established cause</td>
+</tr>
+<tr>
+<td>Corrective work and successful verification</td>
+<td>Resolution evidence</td>
+</tr>
+</tbody>
+</table>
+<h3 id="investigation-plan">Investigation plan</h3>
+<ol>
+<li>Review the overload relay or drive's fault history and recorded current, where available.</li>
+<li>Inspect the conveyor and driven mechanism using the approved isolation procedure.</li>
+<li>Check the motor supply, phase condition, and relevant electrical measurements.</li>
+<li>Verify overload settings against the motor nameplate and approved design.</li>
+<li>Compare current behavior under relevant operating conditions.</li>
+<li>Identify the mechanism that explains all three events.</li>
+<li>Correct the confirmed fault and verify operation.</li>
+<li>Review whether the maintenance strategy needs modification to prevent recurrence.</li>
+</ol>
+<p>Do not assume that a recurring overload means a mechanical problem. Electrical, load-related, configuration, and protection faults remain possible until the evidence distinguishes them.</p>
+<h2 id="16-final-completion-checklist">16. Final Completion Checklist</h2>
+<ul>
+<li>Define the symptom without inserting an unverified cause.</li>
+<li>Identify the failed function and immediate fault.</li>
+<li>Separate facts, hypotheses, and conclusions.</li>
+<li>Generate competing causal explanations.</li>
+<li>Collect evidence that distinguishes between explanations.</li>
+<li>Establish the mechanism linking the cause to the failure.</li>
+<li>Investigate relevant contributing and systemic factors.</li>
+<li>Separate temporary restoration from permanent corrective action.</li>
+<li>Define verification criteria and confirm effectiveness.</li>
+<li>Document the findings so another technician can understand and reproduce the reasoning.</li>
+</ul>
+<p>The key skill is not asking "Why?" five times mechanically. It is knowing which evidence would prove or disprove each explanation, and refusing to confuse a plausible story with an established cause.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\20_RCA\02_Immediate_Cause - Immediate cause</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

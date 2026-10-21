@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01_Arch: HMI Architecture</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">01_Arch: HMI Architecture</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-basic-hmi-architecture">2. Basic HMI Architecture</a></li>
+<li><a href="#3-main-components-of-an-hmi-system">3. Main Components of an HMI System</a></li>
+<li><a href="#4-types-of-hmi-architecture">4. Types of HMI Architecture</a><ul>
+<li><a href="#41-basic-operator-panel">4.1 Basic Operator Panel</a></li>
+<li><a href="#42-pc-based-hmi">4.2 PC-Based HMI</a></li>
+<li><a href="#43-scada-based-architecture">4.3 SCADA-Based Architecture</a></li>
+<li><a href="#44-distributed-hmi-architecture">4.4 Distributed HMI Architecture</a></li>
+</ul>
+</li>
+<li><a href="#5-hmi-architecture-by-system-layer">5. HMI Architecture by System Layer</a></li>
+<li><a href="#6-hmi-communication-architecture">6. HMI Communication Architecture</a><ul>
+<li><a href="#61-direct-hmi-to-plc-communication">6.1 Direct HMI-to-PLC Communication</a></li>
+<li><a href="#62-hmi-to-scada-to-plc-architecture">6.2 HMI-to-SCADA-to-PLC Architecture</a></li>
+<li><a href="#63-hmi-to-database-architecture">6.3 HMI-to-Database Architecture</a></li>
+</ul>
+</li>
+<li><a href="#7-hmi-communication-protocols">7. HMI Communication Protocols</a></li>
+<li><a href="#8-hmi-project-architecture">8. HMI Project Architecture</a></li>
+<li><a href="#9-screen-architecture">9. Screen Architecture</a><ul>
+<li><a href="#common-screen-types">Common screen types</a></li>
+<li><a href="#screen-design-principles">Screen design principles</a></li>
+</ul>
+</li>
+<li><a href="#10-hmi-plc-and-scada-responsibilities">10. HMI, PLC and SCADA Responsibilities</a></li>
+<li><a href="#11-hmi-tags-an-introduction">11. HMI Tags: An Introduction</a></li>
+<li><a href="#12-hmi-alarms-and-events">12. HMI Alarms and Events</a><ul>
+<li><a href="#alarm-lifecycle">Alarm lifecycle</a></li>
+</ul>
+</li>
+<li><a href="#13-hmi-security-and-access-control">13. HMI Security and Access Control</a></li>
+<li><a href="#14-common-hmi-problems-and-troubleshooting">14. Common HMI Problems and Troubleshooting</a><ul>
+<li><a href="#recommended-troubleshooting-order">Recommended troubleshooting order</a></li>
+</ul>
+</li>
+<li><a href="#15-practical-example-automotive-production-station">15. Practical Example: Automotive Production Station</a></li>
+<li><a href="#16-interview-questions-and-answers">16. Interview Questions and Answers</a></li>
+<li><a href="#17-practical-study-exercises">17. Practical Study Exercises</a></li>
+<li><a href="#18-final-mental-model">18. Final Mental Model</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>HMI stands for Human-Machine Interface. It is the interface through which an operator observes machine conditions, issues permitted commands, acknowledges alarms, and interacts with an industrial control system.</p>
+<p>HMI architecture describes how the operator interface connects to the PLC, field devices, SCADA systems, industrial networks, and supporting infrastructure.</p>
+<p>In industrial automation, an HMI is not merely a screen displaying values. It is part of the operational interface between people and machines.</p>
+<p>Typical HMI functions include:</p>
+<ul>
+<li>Displaying machine status, process values, and production information.</li>
+<li>Providing Start, Stop, Reset, and mode-selection commands where permitted.</li>
+<li>Displaying alarms, warnings, and diagnostic information.</li>
+<li>Allowing authorized changes to setpoints and parameters.</li>
+<li>Displaying trends, counters, cycle times, and production summaries.</li>
+<li>Helping maintenance personnel identify the cause of a breakdown.</li>
+</ul>
+<p>For example, on an automotive production line, an HMI may show robot readiness, fixture status, conveyor conditions, cycle completion, interlock failures, and station alarms. The PLC normally executes the real-time control logic, while the HMI presents information and sends operator requests.</p>
+<h2 id="2-basic-hmi-architecture">2. Basic HMI Architecture</h2>
+<p><img loading="lazy" decoding="async" alt="Bestas | OEM Electronic Component Manufacturing" src="01_Arch_assets/img_001.jpg" /></p>
+<p><a href="https://hub.bestas.com.tr/">hub.bestas.com.tr</a></p>
+<p>A typical HMI system contains an operator interface, communication connection, PLC or controller, and field devices.</p>
+<pre><code>             OPERATOR
+                 |
+                 v
+          +-------------+
+          |     HMI     |
+          | Screens     |
+          | Commands    |
+          | Alarms      |
+          +-------------+
+                 |
+                 | Industrial communication
+                 |
+          +-------------+
+          |     PLC     |
+          | Control     |
+          | Logic       |
+          +-------------+
+                 |
+              I/O system
+                 |
+       +---------+----------+
+       |         |          |
+       v         v          v
+    Sensors    Drives    Actuators
+</code></pre>
+<p>The signal and command paths work in both directions.</p>
+<ul>
+<li>PLC to HMI: Machine states, sensor values, alarms, faults, counters, and process values.</li>
+<li>HMI to PLC: Operator requests, permitted setpoint changes, reset requests, and mode selections.</li>
+</ul>
+<p>The HMI should not be treated as a replacement for the PLC's control logic or the machine's safety system.</p>
+<h2 id="3-main-components-of-an-hmi-system">3. Main Components of an HMI System</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Operator panel</td>
+<td>Physical interface for the operator</td>
+<td>Industrial touchscreen</td>
+</tr>
+<tr>
+<td>HMI runtime</td>
+<td>Executes the HMI application</td>
+<td>Panel runtime or PC-based runtime</td>
+</tr>
+<tr>
+<td>HMI project</td>
+<td>Contains screens, tags, alarms, and configuration</td>
+<td>Engineering project</td>
+</tr>
+<tr>
+<td>PLC/controller</td>
+<td>Executes machine-control logic</td>
+<td>Siemens S7-1500 or Allen-Bradley ControlLogix</td>
+</tr>
+<tr>
+<td>Communication driver</td>
+<td>Exchanges data with the controller</td>
+<td>Supported PLC communication driver</td>
+</tr>
+<tr>
+<td>Industrial network</td>
+<td>Carries data between devices</td>
+<td>PROFINET or EtherNet/IP</td>
+</tr>
+<tr>
+<td>Alarm system</td>
+<td>Presents and records alarm conditions</td>
+<td>Drive fault or sensor timeout</td>
+</tr>
+<tr>
+<td>Historical storage</td>
+<td>Stores trends, events, or production data when supported</td>
+<td>Database or historian</td>
+</tr>
+<tr>
+<td>User management</td>
+<td>Controls access to protected functions</td>
+<td>Operator and maintenance roles</td>
+</tr>
+<tr>
+<td>Engineering computer</td>
+<td>Used to develop, download, and maintain the HMI</td>
+<td>HMI engineering workstation</td>
+</tr>
+</tbody>
+</table>
+<p>Not every HMI contains all these components. A basic machine panel may have no historian or external database, while a PC-based HMI system may contain extensive data collection and reporting functions.</p>
+<h2 id="4-types-of-hmi-architecture">4. Types of HMI Architecture</h2>
+<h3 id="41-basic-operator-panel">4.1 Basic Operator Panel</h3>
+<p><img loading="lazy" decoding="async" alt="Beetronics | Professional Monitors and Touchscreens" src="01_Arch_assets/img_002.jpg" /></p>
+<p><a href="https://www.beetronics.ca/">beetronics.ca</a></p>
+<p>A basic HMI panel is installed near the machine and communicates with its controller.</p>
+<p>Typical functions:</p>
+<ul>
+<li>Machine overview.</li>
+<li>Manual and automatic mode displays.</li>
+<li>Start and Stop requests.</li>
+<li>Fault and alarm display.</li>
+<li>Setpoint entry.</li>
+<li>Maintenance status.</li>
+</ul>
+<p>Advantages: Simple architecture, direct operator access, and relatively low system complexity.</p>
+<p>Limitations: Limited processing, storage, visualization, and multi-machine monitoring compared with a larger PC-based system. Actual capabilities depend on the panel.</p>
+<h3 id="42-pc-based-hmi">4.2 PC-Based HMI</h3>
+<p><img loading="lazy" decoding="async" alt="Panel PC" src="01_Arch_assets/img_003.jpg" /></p>
+<p><a href="https://www.gsrtechnology.com/panel-pc">gsrtechnology.com</a></p>
+<p>A PC-based HMI runs on an industrial computer or supported workstation.</p>
+<p>It may support:</p>
+<ul>
+<li>More complex visualization.</li>
+<li>Multiple equipment screens.</li>
+<li>Larger alarm and event databases.</li>
+<li>Data logging and reports.</li>
+<li>Integration with databases and other applications.</li>
+<li>Multiple communication drivers.</li>
+</ul>
+<p>The system requires suitable operating-system support, runtime licensing, backups, security controls, and maintenance.</p>
+<h3 id="43-scada-based-architecture">4.3 SCADA-Based Architecture</h3>
+<p>SCADA stands for Supervisory Control and Data Acquisition. SCADA systems typically supervise multiple controllers, processes, or production areas rather than just one machine.</p>
+<pre><code>       Operator / Supervisor
+                 |
+                 v
+        +------------------+
+        | SCADA Server or  |
+        | Supervisory HMI  |
+        +------------------+
+                 |
+          Industrial Network
+           /       |       \
+          v        v        v
+        PLC 1    PLC 2    PLC 3
+          |        |        |
+        Machine  Conveyor  Robot Cell
+</code></pre>
+<p>A SCADA architecture may provide centralized alarms, trends, reports, user management, and historical data.</p>
+<p>A single HMI panel and a SCADA system can overlap in functionality. The distinction is primarily the system's scope, architecture, and supervisory requirements, not merely the size of the screen.</p>
+<h3 id="44-distributed-hmi-architecture">4.4 Distributed HMI Architecture</h3>
+<p>A distributed architecture separates operator interfaces, servers, data storage, and controllers across multiple computers or devices.</p>
+<p>For example:</p>
+<ul>
+<li>Machine-level HMIs provide local operation.</li>
+<li>An HMI or SCADA server collects data from multiple PLCs.</li>
+<li>A historian stores process values and events.</li>
+<li>Engineering workstations maintain projects.</li>
+<li>Authorized clients view production status.</li>
+</ul>
+<p>This architecture can improve centralized monitoring and scalability, but introduces dependencies on networks, servers, accounts, software versions, and system availability.</p>
+<h2 id="5-hmi-architecture-by-system-layer">5. HMI Architecture by System Layer</h2>
+<p>An industrial HMI can be understood as part of a wider automation hierarchy.</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Main role</th>
+<th>Examples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Field layer</td>
+<td>Interacts with the physical process</td>
+<td>Sensors, switches, valves, motors</td>
+</tr>
+<tr>
+<td>Control layer</td>
+<td>Executes real-time control</td>
+<td>PLCs, motion controllers</td>
+</tr>
+<tr>
+<td>Operator-interface layer</td>
+<td>Allows human interaction</td>
+<td>HMI panels, machine terminals</td>
+</tr>
+<tr>
+<td>Supervisory layer</td>
+<td>Monitors multiple machines or processes</td>
+<td>SCADA</td>
+</tr>
+<tr>
+<td>Data and information layer</td>
+<td>Stores, analyzes, and reports information</td>
+<td>Historian, SQL database, production reports</td>
+</tr>
+<tr>
+<td>Enterprise layer</td>
+<td>Supports wider business operations</td>
+<td>MES, ERP and production planning systems</td>
+</tr>
+</tbody>
+</table>
+<p>This is a conceptual hierarchy. Actual deployments may combine layers, split them across systems, or omit some layers.</p>
+<p>An HMI generally sits between the operator and the control system. It may also communicate with supervisory and data systems, depending on its design.</p>
+<h2 id="6-hmi-communication-architecture">6. HMI Communication Architecture</h2>
+<p>The HMI must communicate with the PLC or other data sources to display live values and send operator requests.</p>
+<h3 id="61-direct-hmi-to-plc-communication">6.1 Direct HMI-to-PLC Communication</h3>
+<pre><code>HMI &lt;----&gt; PLC &lt;----&gt; I/O &lt;----&gt; Machine
+</code></pre>
+<p>The HMI communicates directly with the controller using a supported protocol or driver.</p>
+<p>Typical applications:</p>
+<ul>
+<li>Standalone machines.</li>
+<li>Individual assembly stations.</li>
+<li>Conveyors.</li>
+<li>Robot cells.</li>
+<li>Small production systems.</li>
+</ul>
+<p>Advantages include a straightforward architecture and fewer intermediary components.</p>
+<p>The main limitation is that each HMI's data access and capabilities depend on its configured connection and the controller's supported communication services.</p>
+<h3 id="62-hmi-to-scada-to-plc-architecture">6.2 HMI-to-SCADA-to-PLC Architecture</h3>
+<pre><code>HMI Client
+    |
+    v
+SCADA Server
+    |
+    v
+PLC Network
+    |
+    +---- PLC 1
+    +---- PLC 2
+    +---- PLC 3
+</code></pre>
+<p>In this arrangement, the SCADA system provides centralized supervision and may distribute information to multiple operator clients.</p>
+<p>Possible benefits include centralized alarm management, historical data, common user management, and multi-machine monitoring.</p>
+<p>However, the architecture introduces additional dependencies. A server failure may affect supervisory functions even when the PLCs continue controlling their machines.</p>
+<h3 id="63-hmi-to-database-architecture">6.3 HMI-to-Database Architecture</h3>
+<pre><code>PLC &lt;----&gt; HMI / SCADA &lt;----&gt; Database
+                  |
+                  v
+             Reports / Trends
+</code></pre>
+<p>The HMI or SCADA application collects selected information and stores it in a database or historian.</p>
+<p>Examples include:</p>
+<ul>
+<li>Production counts.</li>
+<li>Machine cycle times.</li>
+<li>Alarm histories.</li>
+<li>Fault durations.</li>
+<li>Quality measurements.</li>
+<li>Downtime records.</li>
+</ul>
+<p>A database is not normally required for every HMI function. Real-time machine control should remain appropriately separated from reporting and historical storage.</p>
+<h2 id="7-hmi-communication-protocols">7. HMI Communication Protocols</h2>
+<p>The communication protocol determines how the HMI exchanges information with a controller or other device.</p>
+<table>
+<thead>
+<tr>
+<th>Protocol or technology</th>
+<th>Typical application</th>
+<th>Important consideration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PROFINET</td>
+<td>Siemens PLC and industrial device communication</td>
+<td>Requires compatible devices and correct network configuration</td>
+</tr>
+<tr>
+<td>EtherNet/IP</td>
+<td>Allen-Bradley and compatible industrial devices</td>
+<td>Uses CIP over Ethernet</td>
+</tr>
+<tr>
+<td>Mitsubishi SLMP</td>
+<td>Communication with supported Mitsubishi PLCs</td>
+<td>Support depends on the CPU and configuration</td>
+</tr>
+<tr>
+<td>Modbus TCP</td>
+<td>Industrial communication over Ethernet</td>
+<td>Requires compatible data addressing and configuration</td>
+</tr>
+<tr>
+<td>Modbus RTU</td>
+<td>Serial communication</td>
+<td>Requires compatible serial settings and wiring</td>
+</tr>
+<tr>
+<td>OPC UA</td>
+<td>Structured data exchange between supported systems</td>
+<td>Requires appropriate server/client configuration and security</td>
+</tr>
+<tr>
+<td>Vendor-specific drivers</td>
+<td>Communication with supported PLCs</td>
+<td>Driver compatibility and addressing must be verified</td>
+</tr>
+</tbody>
+</table>
+<p>The presence of an Ethernet port does not guarantee that two devices can exchange PLC data. The protocol, driver, addressing, permissions, and device configuration must all be compatible.</p>
+<h2 id="8-hmi-project-architecture">8. HMI Project Architecture</h2>
+<p>An HMI engineering project commonly contains several interconnected elements.</p>
+<table>
+<thead>
+<tr>
+<th>Project element</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Screens</td>
+<td>Visual interface presented to operators</td>
+</tr>
+<tr>
+<td>Tags</td>
+<td>Variables displayed or used by the HMI</td>
+</tr>
+<tr>
+<td>Connections</td>
+<td>Communication settings for PLCs and other data sources</td>
+</tr>
+<tr>
+<td>Alarms</td>
+<td>Conditions, messages, priorities, and acknowledgements</td>
+</tr>
+<tr>
+<td>Trends</td>
+<td>Time-based display of selected values</td>
+</tr>
+<tr>
+<td>Navigation</td>
+<td>Movement between screens</td>
+</tr>
+<tr>
+<td>User roles</td>
+<td>Permissions for protected functions</td>
+</tr>
+<tr>
+<td>Scripts</td>
+<td>Supported calculations or application-specific behavior</td>
+</tr>
+<tr>
+<td>Recipes</td>
+<td>Groups of production parameters where supported</td>
+</tr>
+<tr>
+<td>Data logging</td>
+<td>Storage of selected process values and events</td>
+</tr>
+<tr>
+<td>Reports</td>
+<td>Production or diagnostic summaries</td>
+</tr>
+<tr>
+<td>Languages</td>
+<td>Localized text for supported applications</td>
+</tr>
+</tbody>
+</table>
+<p>A well-structured project separates reusable screen elements, equipment-specific data, alarm definitions, and communication settings. This makes later maintenance and expansion easier.</p>
+<h2 id="9-screen-architecture">9. Screen Architecture</h2>
+<p>A useful HMI screen hierarchy organizes information from general machine status to detailed diagnostics.</p>
+<pre><code>Main Overview
+    |
+    +-- Machine Overview
+    |      |
+    |      +-- Station Details
+    |      +-- Motor / Drive Details
+    |      +-- Robot Interface
+    |
+    +-- Manual Operation
+    |
+    +-- Alarms and Diagnostics
+    |
+    +-- Production Information
+    |
+    +-- Maintenance
+           |
+           +-- I/O Status
+           +-- Device Diagnostics
+           +-- Communication Status
+</code></pre>
+<h3 id="common-screen-types">Common screen types</h3>
+<p>Overview screen: Displays the main operating state, production status, active faults, and key process information.</p>
+<p>Equipment screen: Displays the status and permitted controls of an individual motor, cylinder, drive, robot interface, or station.</p>
+<p>Alarm screen: Lists active and historical alarms, timestamps, priorities, and acknowledgement status.</p>
+<p>Maintenance screen: Provides diagnostic values, I/O states, device health, and maintenance information for authorized users.</p>
+<p>Parameter screen: Allows authorized personnel to inspect or modify approved setpoints and configuration values.</p>
+<p>Trend screen: Displays the change in process values over time.</p>
+<h3 id="screen-design-principles">Screen design principles</h3>
+<ul>
+<li>Use consistent names and symbols.</li>
+<li>Make critical states easy to identify.</li>
+<li>Separate operator commands from diagnostic information.</li>
+<li>Display units and meaningful engineering ranges.</li>
+<li>Make alarm messages specific enough to guide troubleshooting.</li>
+<li>Avoid excessive colors, animations, and unnecessary graphics.</li>
+<li>Protect maintenance and engineering functions through appropriate access controls.</li>
+</ul>
+<p>An HMI should help an operator understand what the machine is doing and why it cannot proceed. A screen full of blinking objects is not a diagnostic strategy.</p>
+<h2 id="10-hmi-plc-and-scada-responsibilities">10. HMI, PLC and SCADA Responsibilities</h2>
+<p>These systems cooperate, but their roles are different.</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>PLC</th>
+<th>HMI</th>
+<th>SCADA</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Execute real-time machine logic</td>
+<td>Primary role</td>
+<td>No</td>
+<td>Usually supervisory, not the primary machine-control layer</td>
+</tr>
+<tr>
+<td>Read field I/O</td>
+<td>Through configured I/O</td>
+<td>Usually through PLC or supported device interfaces</td>
+<td>Usually through PLCs or communication services</td>
+</tr>
+<tr>
+<td>Display machine status</td>
+<td>Limited local indicators or supported display</td>
+<td>Primary role for local operation</td>
+<td>Primary role for broader supervision</td>
+</tr>
+<tr>
+<td>Accept operator commands</td>
+<td>Evaluates permitted commands</td>
+<td>Provides the operator interface</td>
+<td>May provide supervisory commands</td>
+</tr>
+<tr>
+<td>Execute safety functions</td>
+<td>Safety-rated controller where required</td>
+<td>Must not replace safety logic</td>
+<td>Must not replace safety logic</td>
+</tr>
+<tr>
+<td>Manage alarms</td>
+<td>Detects and exposes relevant conditions</td>
+<td>Displays and acknowledges supported alarms</td>
+<td>May centralize alarms across machines</td>
+</tr>
+<tr>
+<td>Store historical data</td>
+<td>Limited or application-dependent</td>
+<td>Possible on supported systems</td>
+<td>Common in larger systems</td>
+</tr>
+<tr>
+<td>Generate production reports</td>
+<td>Provides source data</td>
+<td>Possible</td>
+<td>Common in supervisory systems</td>
+</tr>
+</tbody>
+</table>
+<p>The exact allocation varies by application. Some HMI products contain substantial data-processing features, and some SCADA platforms execute supervisory logic. The essential requirement is to assign control, safety, visualization, and historical-data responsibilities deliberately.</p>
+<h2 id="11-hmi-tags-an-introduction">11. HMI Tags: An Introduction</h2>
+<p>Tags are named variables that represent values used by an HMI application.</p>
+<p>Examples include:</p>
+<pre><code>Motor_Run_Command
+Motor_Running_Feedback
+Drive_Ready
+Fault_Active
+Production_Count
+Cycle_Time
+Temperature_Value
+</code></pre>
+<p>A tag may refer to a PLC variable, an HMI-internal variable, or a value provided by another supported data source.</p>
+<p>For example, a motor-status indicator may read <code>Motor_Running_Feedback</code> from the PLC and display the current state as Running or Stopped.</p>
+<p>A numeric display may read <code>Temperature_Value</code> and present the value with the appropriate engineering unit.</p>
+<p>A Start button may write a request to a PLC tag. The PLC must then validate the request and determine whether the machine is permitted to start.</p>
+<p>Important distinction: An HMI tag is not necessarily a physical input or output. It is a data reference used by the HMI. Its underlying source may be a PLC tag, a memory location, an internal HMI variable, or another configured source.</p>
+<p>The detailed study of tag types, addressing, data types, naming conventions, scaling, and PLC mapping comes in the next topic.</p>
+<h2 id="12-hmi-alarms-and-events">12. HMI Alarms and Events</h2>
+<p>Alarms communicate abnormal conditions that require operator attention. Events record occurrences or actions, whether or not they require immediate intervention.</p>
+<p>Examples of alarms:</p>
+<ul>
+<li>Drive fault.</li>
+<li>Safety-system fault indication.</li>
+<li>Sensor timeout.</li>
+<li>PLC communication failure.</li>
+<li>High temperature.</li>
+<li>Low air pressure.</li>
+<li>Robot not ready.</li>
+<li>Production sequence timeout.</li>
+</ul>
+<p>Examples of events:</p>
+<ul>
+<li>Operator logged in.</li>
+<li>Machine changed from Manual to Auto.</li>
+<li>Recipe selected.</li>
+<li>Production batch started.</li>
+<li>Maintenance mode entered.</li>
+</ul>
+<h3 id="alarm-lifecycle">Alarm lifecycle</h3>
+<pre><code>Condition becomes active
+          |
+          v
+Alarm is generated
+          |
+          v
+Operator sees alarm
+          |
+          v
+Condition is investigated
+          |
+          v
+Fault condition clears
+          |
+          v
+Alarm clears according to configuration
+</code></pre>
+<p>Acknowledgement and clearing are different actions. Acknowledging an alarm generally records that it has been recognized. It does not necessarily mean the underlying fault has been corrected.</p>
+<p>The alarm design should identify the fault clearly and help the operator determine the appropriate response.</p>
+<h2 id="13-hmi-security-and-access-control">13. HMI Security and Access Control</h2>
+<p>HMI systems can expose commands and parameters that affect equipment behavior. Access control is therefore part of the architecture, not an optional decoration.</p>
+<p>Typical roles include:</p>
+<ul>
+<li>Operator: Normal production operation and permitted acknowledgements.</li>
+<li>Maintenance: Diagnostic screens and approved maintenance functions.</li>
+<li>Engineer: Configuration and commissioning functions.</li>
+<li>Administrator: User, security, and system configuration.</li>
+</ul>
+<p>These are illustrative roles. Actual permissions should reflect the plant's procedures.</p>
+<p>Important controls include:</p>
+<ul>
+<li>Unique user accounts where supported.</li>
+<li>Appropriate password policies.</li>
+<li>Restricted access to parameter changes.</li>
+<li>Controlled engineering connections.</li>
+<li>Backups and change records.</li>
+<li>Network segmentation and secure remote access.</li>
+<li>Approved procedures for USB media and software updates.</li>
+</ul>
+<p>HMI security should complement PLC access controls and industrial network security. A hidden screen or obscure button is not a reliable security boundary.</p>
+<h2 id="14-common-hmi-problems-and-troubleshooting">14. Common HMI Problems and Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>First checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HMI shows communication error</td>
+<td>PLC offline, network fault, incorrect driver or connection settings</td>
+<td>Check PLC status, network and HMI connection</td>
+</tr>
+<tr>
+<td>Values remain frozen</td>
+<td>Stale communication, wrong tag mapping or data source issue</td>
+<td>Compare HMI values with online PLC values</td>
+</tr>
+<tr>
+<td>Button press has no effect</td>
+<td>PLC permissive false, wrong command tag or access restriction</td>
+<td>Monitor the command and relevant interlocks</td>
+</tr>
+<tr>
+<td>Incorrect value displayed</td>
+<td>Wrong address, scaling, data type or engineering unit</td>
+<td>Compare raw PLC value with HMI conversion</td>
+</tr>
+<tr>
+<td>Alarm does not appear</td>
+<td>Alarm trigger configuration, wrong tag, disabled alarm or filtering</td>
+<td>Verify the trigger condition and alarm settings</td>
+</tr>
+<tr>
+<td>Alarm cannot be acknowledged</td>
+<td>User permissions or alarm configuration</td>
+<td>Check alarm state and user access</td>
+</tr>
+<tr>
+<td>Screen navigation fails</td>
+<td>Incorrect navigation action or project configuration</td>
+<td>Inspect the screen event and destination</td>
+</tr>
+<tr>
+<td>HMI runtime does not start</td>
+<td>Runtime configuration, licensing, operating-system or project issue</td>
+<td>Check runtime logs and compatibility</td>
+</tr>
+<tr>
+<td>HMI loses connection intermittently</td>
+<td>Network instability, device restart or resource issue</td>
+<td>Check network diagnostics and device logs</td>
+</tr>
+<tr>
+<td>HMI is slow</td>
+<td>Excessive communication polling, heavy graphics, scripts or logging</td>
+<td>Review communication load and runtime performance</td>
+</tr>
+</tbody>
+</table>
+<h3 id="recommended-troubleshooting-order">Recommended troubleshooting order</h3>
+<ol>
+<li>Determine whether the problem affects one screen, one tag, one PLC, or the whole HMI.</li>
+<li>Check the HMI runtime and communication status.</li>
+<li>Verify the PLC is operating and the correct project is loaded.</li>
+<li>Compare the HMI tag with the actual PLC value.</li>
+<li>Check addressing, data types, scaling, and access permissions.</li>
+<li>Review alarms, diagnostics, and communication logs.</li>
+<li>Apply the correction and verify normal behavior.</li>
+</ol>
+<h2 id="15-practical-example-automotive-production-station">15. Practical Example: Automotive Production Station</h2>
+<p>Consider an HMI for a robotic assembly station.</p>
+<p>The main overview screen displays:</p>
+<ul>
+<li>Station mode.</li>
+<li>Robot readiness.</li>
+<li>Fixture status.</li>
+<li>Part-present signals.</li>
+<li>Cycle state.</li>
+<li>Active alarms.</li>
+<li>Production count.</li>
+</ul>
+<p>The operator requests a cycle using the HMI. The PLC evaluates the request against the required permissives and coordinates the machine sequence.</p>
+<pre><code>Operator presses Cycle Start
+             |
+             v
+HMI writes start request
+             |
+             v
+PLC evaluates permissives
+             |
+       +-----+-----+
+       |           |
+   Permissives   Permissives
+     satisfied    not satisfied
+       |           |
+       v           v
+Execute cycle   Keep cycle inhibited
+       |           |
+       v           v
+Update status   Display relevant fault
+and feedback    or missing condition
+       |
+       v
+HMI displays cycle progress
+</code></pre>
+<p>This architecture keeps the PLC responsible for determining whether the cycle can proceed. The HMI requests an action and displays the result rather than independently deciding that the machine is safe to operate.</p>
+<h2 id="16-interview-questions-and-answers">16. Interview Questions and Answers</h2>
+<p>Q1. What is an HMI?</p>
+<p>An HMI is the interface through which operators monitor machine conditions and issue permitted commands to an industrial control system.</p>
+<p>Q2. What is the difference between HMI and SCADA?</p>
+<p>An HMI commonly provides local operator interaction with a machine or process. SCADA typically supervises multiple controllers or process areas and may provide centralized alarms, trends, historical data, and reports.</p>
+<p>Q3. Does the HMI control the machine directly?</p>
+<p>The HMI sends commands or requests through configured interfaces. The PLC or appropriate controller executes the control logic and validates the conditions required for operation.</p>
+<p>Q4. What is an HMI tag?</p>
+<p>An HMI tag is a named data reference used by the HMI. It may refer to a PLC variable, an internal HMI variable, or another configured data source.</p>
+<p>Q5. What is the difference between an alarm and an event?</p>
+<p>An alarm indicates an abnormal condition requiring attention. An event records an occurrence or action, which may or may not require immediate intervention.</p>
+<p>Q6. Why can an HMI show a wrong value while the PLC is operating correctly?</p>
+<p>Possible causes include incorrect tag mapping, scaling, data type, engineering units, communication configuration, or stale data.</p>
+<p>Q7. Why should the PLC validate HMI commands?</p>
+<p>An HMI request must not bypass the controller's operating conditions, interlocks, or applicable safety design. The PLC determines whether the requested action is permitted.</p>
+<p>Q8. What is the purpose of HMI user management?</p>
+<p>It restricts access to functions according to authorized responsibilities, particularly maintenance, engineering, parameter changes, and system configuration.</p>
+<p>Q9. What happens if the HMI communication fails?</p>
+<p>The operator may lose visibility or the ability to issue commands through that HMI. The PLC may continue executing its program, depending on the system design. The actual machine response must be established from the control architecture.</p>
+<p>Q10. Why are HMI backups important?</p>
+<p>They preserve the screens, tags, connections, alarm definitions, configuration, and other project components needed to restore or modify the operator interface.</p>
+<h2 id="17-practical-study-exercises">17. Practical Study Exercises</h2>
+<p>Use an approved training system or simulator.</p>
+<ol>
+<li>Identify the HMI panel or runtime and its engineering software.</li>
+<li>Determine which PLC the HMI communicates with.</li>
+<li>Draw the HMI-to-PLC-to-I/O architecture.</li>
+<li>Identify the main overview, manual operation, alarm, and maintenance screens.</li>
+<li>Trace one displayed value back to its source.</li>
+<li>Identify one HMI command and the PLC conditions that validate it.</li>
+<li>Inspect the alarm trigger, message, acknowledgement, and clearing behavior.</li>
+<li>Identify the configured communication driver and network.</li>
+<li>Review user roles and protected functions.</li>
+<li>Back up the HMI project and record its software and runtime versions.</li>
+</ol>
+<h2 id="18-final-mental-model">18. Final Mental Model</h2>
+<p>HMI architecture connects the operator interface to the control system and, where required, to supervisory and historical-data systems.</p>
+<p>The HMI presents information and accepts permitted requests. The PLC executes machine-control logic. The communication network transfers data between systems. SCADA and database layers provide broader supervision, historical records, and reporting when the application requires them.</p>
+<p>For troubleshooting, follow the path from the displayed screen to the HMI tag, from the tag to its data source, and from the PLC variable to the actual control logic and field equipment.</p>
+<p>Next topic: <code>02_Tags - Tags</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

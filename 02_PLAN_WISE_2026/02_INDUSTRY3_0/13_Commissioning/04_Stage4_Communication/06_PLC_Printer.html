@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLC-Printer Communication Commissioning</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">PLC-Printer Communication Commissioning</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-scope-and-objectives">2. Scope and Objectives</a></li>
+<li><a href="#3-identify-the-printer-type">3. Identify the Printer Type</a></li>
+<li><a href="#4-typical-plc-printer-architecture">4. Typical PLC-Printer Architecture</a></li>
+<li><a href="#5-printer-communication-interfaces">5. Printer Communication Interfaces</a></li>
+<li><a href="#6-pre-commissioning-requirements">6. Pre-Commissioning Requirements</a></li>
+<li><a href="#7-physical-installation-and-printer-setup">7. Physical Installation and Printer Setup</a><ul>
+<li><a href="#71-installation-checks">7.1 Installation checks</a></li>
+<li><a href="#72-print-parameters">7.2 Print parameters</a></li>
+</ul>
+</li>
+<li><a href="#8-network-and-communication-configuration">8. Network and Communication Configuration</a><ul>
+<li><a href="#81-ethernet-checks">8.1 Ethernet checks</a></li>
+<li><a href="#82-serial-communication-checks">8.2 Serial communication checks</a></li>
+</ul>
+</li>
+<li><a href="#9-plc-printer-signal-mapping">9. PLC-Printer Signal Mapping</a><ul>
+<li><a href="#91-mapping-verification-procedure">9.1 Mapping verification procedure</a></li>
+</ul>
+</li>
+<li><a href="#10-print-job-and-data-management">10. Print Job and Data Management</a><ul>
+<li><a href="#101-stored-job-approach">10.1 Stored-job approach</a></li>
+<li><a href="#102-complete-payload-approach">10.2 Complete-payload approach</a></li>
+</ul>
+</li>
+<li><a href="#11-print-trigger-and-handshake">11. Print Trigger and Handshake</a><ul>
+<li><a href="#111-handshake-requirements">11.1 Handshake requirements</a></li>
+</ul>
+</li>
+<li><a href="#12-timing-and-product-synchronization">12. Timing and Product Synchronization</a></li>
+<li><a href="#13-print-completion-versus-print-verification">13. Print Completion Versus Print Verification</a></li>
+<li><a href="#14-error-handling-and-recovery">14. Error Handling and Recovery</a><ul>
+<li><a href="#141-fault-response-design">14.1 Fault-response design</a></li>
+<li><a href="#142-recovery-sequence">14.2 Recovery sequence</a></li>
+</ul>
+</li>
+<li><a href="#15-traceability-and-production-data-integrity">15. Traceability and Production Data Integrity</a></li>
+<li><a href="#16-troubleshooting-guide">16. Troubleshooting Guide</a></li>
+<li><a href="#17-commissioning-procedure">17. Commissioning Procedure</a><ul>
+<li><a href="#phase-1-preparation">Phase 1: Preparation</a></li>
+<li><a href="#phase-2-physical-and-communication-setup">Phase 2: Physical and communication setup</a></li>
+<li><a href="#phase-3-data-and-handshake-validation">Phase 3: Data and handshake validation</a></li>
+<li><a href="#phase-4-machine-integration">Phase 4: Machine integration</a></li>
+<li><a href="#phase-5-acceptance-and-handover">Phase 5: Acceptance and handover</a></li>
+</ul>
+</li>
+<li><a href="#18-fat-and-sat">18. FAT and SAT</a></li>
+<li><a href="#19-acceptance-criteria">19. Acceptance Criteria</a></li>
+<li><a href="#20-practical-example-component-serial-number-printing">20. Practical Example: Component Serial Number Printing</a><ul>
+<li><a href="#example-fault-printer-reports-completion-but-the-code-cannot-be-read">Example fault: printer reports completion, but the code cannot be read</a></li>
+</ul>
+</li>
+<li><a href="#21-common-commissioning-mistakes">21. Common Commissioning Mistakes</a></li>
+<li><a href="#22-interview-questions-and-answers">22. Interview Questions and Answers</a></li>
+<li><a href="#23-final-commissioning-checklist">23. Final Commissioning Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>PLC-printer communication commissioning is the process of configuring, integrating, and validating the exchange of commands, status signals, and production data between a PLC-controlled machine and an industrial printer or marking system.</p>
+<p>In manufacturing, the printer may print product labels, serial numbers, barcodes, Data Matrix codes, QR codes, batch information, manufacturing dates, or traceability identifiers. The PLC coordinates when printing is required, what production data must be supplied, whether the printer is ready, and whether the printed result is accepted by the process.</p>
+<p>The objective is not simply to make the printer print. It is to ensure that the correct information is printed on the correct product at the correct time, and that printing faults cannot silently allow an incorrectly identified or unmarked product to continue.</p>
+<h2 id="2-scope-and-objectives">2. Scope and Objectives</h2>
+<p>PLC-printer commissioning typically includes:</p>
+<ul>
+<li>Verifying the printer type, installation, and communication interface.</li>
+<li>Configuring Ethernet, serial communication, digital I/O, or a supported industrial protocol.</li>
+<li>Mapping printer-ready, busy, print-complete, fault, and acknowledgement signals.</li>
+<li>Transferring print data, variable fields, recipes, and job selections.</li>
+<li>Validating data length, character format, barcode content, and message structure.</li>
+<li>Coordinating product detection, print triggering, and conveyor or machine sequence.</li>
+<li>Handling print failures, missing labels, communication loss, and recovery.</li>
+<li>Verifying print quality, positioning, readability, and traceability.</li>
+<li>Completing FAT/SAT, documentation, and acceptance testing.</li>
+</ul>
+<h2 id="3-identify-the-printer-type">3. Identify the Printer Type</h2>
+<p>Different printing technologies have different control interfaces, consumables, timing requirements, and failure modes.</p>
+<table>
+<thead>
+<tr>
+<th>Printer type</th>
+<th>Typical application</th>
+<th>Important commissioning concern</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Thermal transfer printer</td>
+<td>Labels, barcodes, product identification</td>
+<td>Ribbon, label media, printhead, and print positioning</td>
+</tr>
+<tr>
+<td>Direct thermal printer</td>
+<td>Heat-sensitive labels</td>
+<td>Media compatibility, temperature, and printhead condition</td>
+</tr>
+<tr>
+<td>Inkjet printer</td>
+<td>Product coding, dates, batch numbers, cartons</td>
+<td>Ink supply, printhead condition, product speed, and firing distance</td>
+</tr>
+<tr>
+<td>Continuous inkjet printer</td>
+<td>Coding moving products or production lines</td>
+<td>Ink system status, printhead maintenance, and line-speed synchronization</td>
+</tr>
+<tr>
+<td>Laser marking system</td>
+<td>Permanent marks on components</td>
+<td>Marking recipe, focus, motion synchronization, and safety enclosure</td>
+</tr>
+<tr>
+<td>Thermal inkjet printer</td>
+<td>Packaging and product coding</td>
+<td>Cartridge condition, trigger timing, and print data</td>
+</tr>
+<tr>
+<td>Industrial label printer with applicator</td>
+<td>Print-and-apply identification</td>
+<td>Label availability, application feedback, and product position</td>
+</tr>
+<tr>
+<td>Dot peen or marking controller</td>
+<td>Permanent part identification</td>
+<td>Marking program, workpiece position, and completion feedback</td>
+</tr>
+</tbody>
+</table>
+<p>A printer may be controlled by a dedicated print controller, a vendor-specific interface, or an integrated machine controller. The actual model and interface documentation determine the available commands.</p>
+<h2 id="4-typical-plc-printer-architecture">4. Typical PLC-Printer Architecture</h2>
+<p>A common industrial architecture is:</p>
+<pre><code>Production Order / MES / HMI
+             ↓
+PLC Production Sequence
+             ↓
+Print Data and Job Selection
+             ↓
+Printer Communication Interface
+             ↓
+Industrial Printer / Marking Controller
+             ↓
+Printed or Marked Product
+             ↓
+Verification Scanner / Vision System
+             ↓
+PLC Acceptance or Reject Decision
+</code></pre>
+<p>The printer produces the mark, while the PLC controls the machine sequence. Where product verification is required, a scanner or vision system checks the actual printed output.</p>
+<p>A printer's <code>PRINT_COMPLETE</code> status usually confirms a controller-defined event. It does not necessarily prove that the mark is readable, correctly positioned, or attached to the correct product.</p>
+<h2 id="5-printer-communication-interfaces">5. Printer Communication Interfaces</h2>
+<table>
+<thead>
+<tr>
+<th>Interface</th>
+<th>Typical application</th>
+<th>Commissioning checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Digital I/O</td>
+<td>Trigger, ready, busy, fault, print complete</td>
+<td>Wiring, polarity, voltage, pulse duration, and feedback</td>
+</tr>
+<tr>
+<td>RS-232</td>
+<td>Print commands and status messages</td>
+<td>Baud rate, parity, data bits, stop bits, and framing</td>
+</tr>
+<tr>
+<td>RS-485</td>
+<td>Serial communication on supported systems</td>
+<td>Wiring, termination, addressing, and protocol</td>
+</tr>
+<tr>
+<td>TCP/IP Ethernet</td>
+<td>Print data, job commands, status, and diagnostics</td>
+<td>IP configuration, connection handling, port, and message framing</td>
+</tr>
+<tr>
+<td>PROFINET</td>
+<td>Cyclic industrial data exchange</td>
+<td>Device configuration, device name, I/O mapping, and diagnostics</td>
+</tr>
+<tr>
+<td>EtherNet/IP</td>
+<td>Industrial control and data exchange</td>
+<td>Device configuration, connection parameters, and data mapping</td>
+</tr>
+<tr>
+<td>OPC UA</td>
+<td>Structured data exchange on supported equipment</td>
+<td>Endpoint, certificates, authentication, and data types</td>
+</tr>
+<tr>
+<td>Vendor-specific API or protocol</td>
+<td>Job management, advanced printer settings, and diagnostics</td>
+<td>Supported commands, software options, and response handling</td>
+</tr>
+</tbody>
+</table>
+<p>Some printers use Ethernet only for configuration or job management while receiving the actual print trigger through a digital input. Others receive the complete print payload over a network connection. These are different architectures and must be documented separately.</p>
+<h2 id="6-pre-commissioning-requirements">6. Pre-Commissioning Requirements</h2>
+<p>Before changing printer or PLC settings, collect:</p>
+<ul>
+<li>Printer manufacturer, model, serial number, and firmware.</li>
+<li>Printing technology and intended production application.</li>
+<li>PLC model, firmware, and engineering software version.</li>
+<li>Printer communication manual and protocol specification.</li>
+<li>Electrical drawings and verified I/O list.</li>
+<li>Network topology, IP addresses, and port assignments.</li>
+<li>Print format, template, and job-selection requirements.</li>
+<li>Production data source and field definitions.</li>
+<li>Product speed, trigger position, and required print cycle time.</li>
+<li>Media, ribbon, ink, or other consumable requirements.</li>
+<li>Print-quality and readability acceptance criteria.</li>
+<li>Existing configuration backup and recovery procedure.</li>
+</ul>
+<p>For production traceability, also identify which system owns the authoritative product identifier. The PLC should not silently invent or reuse identifiers when production data is missing.</p>
+<h2 id="7-physical-installation-and-printer-setup">7. Physical Installation and Printer Setup</h2>
+<h3 id="71-installation-checks">7.1 Installation checks</h3>
+<p>Verify the following:</p>
+<ul>
+<li>Printer mounting is rigid and correctly aligned.</li>
+<li>The printhead or marking unit is positioned within the manufacturer's specified range.</li>
+<li>Product orientation and trigger position are correct.</li>
+<li>Cables are protected from moving equipment, heat, coolant, and abrasion.</li>
+<li>Electrical grounding and shielding follow the manufacturer's instructions.</li>
+<li>Consumables are installed correctly.</li>
+<li>The printer is configured for the correct media and print technology.</li>
+<li>The printer can perform a local test print where the manufacturer's procedure supports it.</li>
+</ul>
+<p>For laser marking systems, verify the approved enclosure, interlocks, beam-control arrangements, and other applicable safety requirements before operation.</p>
+<h3 id="72-print-parameters">7.2 Print parameters</h3>
+<p>Depending on the technology, relevant parameters may include:</p>
+<ul>
+<li>Print resolution.</li>
+<li>Print speed.</li>
+<li>Printhead temperature.</li>
+<li>Ink or laser power settings.</li>
+<li>Label size and orientation.</li>
+<li>Print position and offset.</li>
+<li>Font, character size, and spacing.</li>
+<li>Barcode symbology and dimensions.</li>
+<li>Print contrast or darkness.</li>
+<li>Product tracking or encoder settings.</li>
+</ul>
+<p>Parameters must be selected according to the printer and product requirements. Excessive print speed, incorrect focus, unsuitable media, or incorrect trigger timing can create unreadable marks even when communication is working correctly.</p>
+<h2 id="8-network-and-communication-configuration">8. Network and Communication Configuration</h2>
+<h3 id="81-ethernet-checks">8.1 Ethernet checks</h3>
+<p>Verify:</p>
+<ul>
+<li>Correct printer IP address and subnet configuration.</li>
+<li>Unique network addressing.</li>
+<li>Correct switch port and cable.</li>
+<li>Correct PLC communication method.</li>
+<li>Correct TCP port or protocol configuration where applicable.</li>
+<li>Correct device identity and cyclic I/O configuration where required.</li>
+<li>Stable communication during normal machine operation.</li>
+<li>Correct behavior after printer or PLC power cycling.</li>
+</ul>
+<p>A successful ping proves only basic network reachability. It does not prove that the printer application accepts print jobs or that the PLC is exchanging valid production data.</p>
+<h3 id="82-serial-communication-checks">8.2 Serial communication checks</h3>
+<p>For a serial interface, verify:</p>
+<ul>
+<li>Baud rate.</li>
+<li>Data bits.</li>
+<li>Parity.</li>
+<li>Stop bits.</li>
+<li>Electrical interface type.</li>
+<li>Cable pinout and signal reference.</li>
+<li>Message delimiters and terminators.</li>
+<li>Flow control, if used.</li>
+<li>Command-response timing.</li>
+<li>Timeout and retry behavior.</li>
+</ul>
+<p>A mismatch in even one serial setting can cause corrupted or missing data. If the printer accepts only a defined command format, the exact message structure must also be verified.</p>
+<h2 id="9-plc-printer-signal-mapping">9. PLC-Printer Signal Mapping</h2>
+<p>A signal map documents the direction, meaning, and behavior of each printer-interface signal.</p>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Typical direction</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Printer ready</td>
+<td>Printer to PLC</td>
+<td>Indicates readiness according to the interface definition</td>
+</tr>
+<tr>
+<td>Print request or trigger</td>
+<td>PLC to printer</td>
+<td>Requests a print operation</td>
+</tr>
+<tr>
+<td>Printer busy</td>
+<td>Printer to PLC</td>
+<td>Indicates a printing or processing operation is underway</td>
+</tr>
+<tr>
+<td>Print complete</td>
+<td>Printer to PLC</td>
+<td>Indicates the defined print operation has completed</td>
+</tr>
+<tr>
+<td>Printer fault</td>
+<td>Printer to PLC</td>
+<td>Indicates a printer fault</td>
+</tr>
+<tr>
+<td>Job select</td>
+<td>PLC to printer</td>
+<td>Selects a stored print job where supported</td>
+</tr>
+<tr>
+<td>Print data</td>
+<td>PLC to printer</td>
+<td>Supplies variable text or code data</td>
+</tr>
+<tr>
+<td>Data accepted</td>
+<td>Printer to PLC</td>
+<td>Confirms that data was received or accepted, if supported</td>
+</tr>
+<tr>
+<td>Result acknowledgement</td>
+<td>PLC to printer</td>
+<td>Acknowledges or clears a result where required</td>
+</tr>
+<tr>
+<td>Low consumable</td>
+<td>Printer to PLC</td>
+<td>Indicates low ink, ribbon, labels, or another consumable where supported</td>
+</tr>
+<tr>
+<td>Product-present trigger</td>
+<td>Sensor to PLC or printer</td>
+<td>Indicates a product is in the expected print position</td>
+</tr>
+<tr>
+<td>Verification result</td>
+<td>Scanner or vision system to PLC</td>
+<td>Indicates whether the printed output passes inspection</td>
+</tr>
+</tbody>
+</table>
+<p>Signal names and meanings vary between printer manufacturers. A <code>PRINT_COMPLETE</code> output might indicate completion of the print engine's operation, not that the product has passed a quality check.</p>
+<h3 id="91-mapping-verification-procedure">9.1 Mapping verification procedure</h3>
+<ol>
+<li>Identify each signal's source and destination.</li>
+<li>Confirm its electrical address or communication-data location.</li>
+<li>Verify active state and normal state.</li>
+<li>Monitor the raw interface value.</li>
+<li>Compare it with the PLC variable.</li>
+<li>Execute a controlled test command.</li>
+<li>Confirm the correct response from the printer.</li>
+<li>Check the signal's reset and acknowledgement behavior.</li>
+<li>Record expected and actual results.</li>
+</ol>
+<p>For structured data, also verify field length, encoding, delimiter handling, byte order, and data validity.</p>
+<h2 id="10-print-job-and-data-management">10. Print Job and Data Management</h2>
+<p>The PLC may send a complete print payload, select a stored job, or combine job selection with variable data.</p>
+<p>Typical print fields include:</p>
+<ul>
+<li>Product identifier.</li>
+<li>Serial number.</li>
+<li>Part number.</li>
+<li>Batch or lot number.</li>
+<li>Manufacturing date or time.</li>
+<li>Revision or variant.</li>
+<li>Operator or station identifier.</li>
+<li>Barcode or Data Matrix content.</li>
+<li>Quality or inspection status where required.</li>
+</ul>
+<h3 id="101-stored-job-approach">10.1 Stored-job approach</h3>
+<p>The printer stores a print template, and the PLC selects the required job and supplies variable values.</p>
+<p>Advantages include:</p>
+<ul>
+<li>Reduced communication payload.</li>
+<li>Centralized print-format control at the printer.</li>
+<li>Faster job changes when properly configured.</li>
+</ul>
+<p>Risks include:</p>
+<ul>
+<li>Incorrect job-to-product mapping.</li>
+<li>Missing or outdated templates.</li>
+<li>Incorrect variable-field assignment.</li>
+<li>Printer configuration differences between machines.</li>
+</ul>
+<h3 id="102-complete-payload-approach">10.2 Complete-payload approach</h3>
+<p>The PLC or an upstream system sends the complete print data or a formatted print command.</p>
+<p>Advantages include flexible dynamic content and centralized data generation.</p>
+<p>Risks include:</p>
+<ul>
+<li>Incorrect message formatting.</li>
+<li>Buffer-length limitations.</li>
+<li>Unsupported characters.</li>
+<li>Escaping or delimiter problems.</li>
+<li>Partial or duplicate job submission.</li>
+<li>Data-source and printer-template mismatches.</li>
+</ul>
+<p>The selected approach should have a documented interface contract covering the job identifier, data fields, required response, timeout, and error handling.</p>
+<h2 id="11-print-trigger-and-handshake">11. Print Trigger and Handshake</h2>
+<p>A print trigger initiates a printing operation. It may be generated by the PLC, a product sensor, a conveyor encoder, or a printer-specific command.</p>
+<p>A typical sequence is:</p>
+<pre><code>PLC confirms product identity and print data
+             ↓
+PLC verifies printer ready
+             ↓
+PLC selects the correct job and transfers variable data
+             ↓
+Printer confirms data acceptance, where supported
+             ↓
+PLC verifies product position and trigger conditions
+             ↓
+PLC issues print trigger
+             ↓
+Printer reports busy or printing status
+             ↓
+Printer reports operation complete or fault
+             ↓
+PLC verifies the result and permits the next sequence step
+</code></pre>
+<p>The sequence depends on the printer architecture. Some printers require data before the trigger; others accept data and trigger in a single command.</p>
+<h3 id="111-handshake-requirements">11.1 Handshake requirements</h3>
+<p>Document:</p>
+<ul>
+<li>Whether the trigger is a pulse, maintained signal, or command message.</li>
+<li>Whether the trigger is edge-sensitive.</li>
+<li>How the printer confirms readiness.</li>
+<li>Whether data acceptance is acknowledged separately from print completion.</li>
+<li>How long the PLC waits for each response.</li>
+<li>When the trigger or request is reset.</li>
+<li>Whether a new job can be accepted while the printer is busy.</li>
+<li>How the printer reports a failed print.</li>
+<li>How repeated triggers and duplicate print jobs are prevented.</li>
+<li>What happens if the PLC or printer restarts mid-transaction.</li>
+</ul>
+<p>Do not assume that a printer is ready merely because its Ethernet connection is active. Application readiness and network connectivity are separate states.</p>
+<h2 id="12-timing-and-product-synchronization">12. Timing and Product Synchronization</h2>
+<p>The print operation must occur at the correct physical location and time.</p>
+<p>For a stationary product, the trigger may be based on a product-present sensor and a positioning interlock.</p>
+<p>For a moving conveyor, the system may require encoder tracking, a position window, or a printer-specific product-tracking function.</p>
+<p>Important checks include:</p>
+<ul>
+<li>Sensor-to-printhead distance.</li>
+<li>Conveyor speed and speed variation.</li>
+<li>Trigger latency.</li>
+<li>Printer processing time.</li>
+<li>Printhead firing or marking delay.</li>
+<li>Product spacing.</li>
+<li>Encoder scaling and direction.</li>
+<li>Print-position offset.</li>
+<li>Behavior during conveyor stops and restarts.</li>
+</ul>
+<p>For a moving product, a simplified timing relationship is:</p>
+<div class="math-display">\[ t = \frac{d}{v} \]</div>
+<p>where <span class="math-inline">\(t\)</span> is travel time, <span class="math-inline">\(d\)</span> is the distance between the reference point and the print position, and <span class="math-inline">\(v\)</span> is the product's linear speed. This calculation assumes constant speed and does not include controller or printer delays.</p>
+<p>The actual trigger position must account for sensor response, communication latency, printer processing, and machine-specific timing.</p>
+<h2 id="13-print-completion-versus-print-verification">13. Print Completion Versus Print Verification</h2>
+<p>This distinction is essential.</p>
+<p>Print completion indicates that the printer has completed the operation defined by its interface.</p>
+<p>Print verification checks the actual mark or label to determine whether it is correct and readable.</p>
+<p>Verification may use:</p>
+<ul>
+<li>Barcode scanner.</li>
+<li>Data Matrix reader.</li>
+<li>Vision inspection.</li>
+<li>Optical character recognition.</li>
+<li>Label-presence sensor.</li>
+<li>Marking-quality inspection equipment.</li>
+</ul>
+<p>A robust process can compare the expected data with the decoded printed data. For example, if the PLC expects serial number <code>ABC12345</code>, the verification reader should confirm that the physical mark contains the expected identifier rather than merely reporting that a code was found.</p>
+<p>Where product identification is safety-critical or quality-critical, define the required verification method and acceptance criteria explicitly.</p>
+<h2 id="14-error-handling-and-recovery">14. Error Handling and Recovery</h2>
+<p>Common printer faults include:</p>
+<ul>
+<li>Printer not ready.</li>
+<li>Print job rejected.</li>
+<li>Invalid or missing print data.</li>
+<li>Print buffer full.</li>
+<li>Communication timeout.</li>
+<li>Media, ribbon, or ink fault.</li>
+<li>Printhead fault.</li>
+<li>Label missing.</li>
+<li>Marking process incomplete.</li>
+<li>Verification failure.</li>
+<li>Printer restarted during an active transaction.</li>
+</ul>
+<h3 id="141-fault-response-design">14.1 Fault-response design</h3>
+<p>For each fault, define:</p>
+<ul>
+<li>Detection condition.</li>
+<li>PLC response.</li>
+<li>Whether the current product must be held or rejected.</li>
+<li>Whether retry is permitted.</li>
+<li>Maximum retry count.</li>
+<li>Whether the job can be safely resubmitted.</li>
+<li>Required operator action.</li>
+<li>Reset conditions.</li>
+<li>Whether production data must be revalidated.</li>
+</ul>
+<p>A print timeout does not prove that nothing was printed. The printer may have completed the physical operation while its acknowledgement was lost. Blindly resending the same job can therefore produce duplicate marks or labels.</p>
+<h3 id="142-recovery-sequence">14.2 Recovery sequence</h3>
+<pre><code>Print fault or timeout detected
+             ↓
+Hold or classify the affected product according to process rules
+             ↓
+Capture printer status and transaction information
+             ↓
+Determine whether printing may have occurred
+             ↓
+Correct the printer, data, or communication fault
+             ↓
+Reconcile the job and product identity
+             ↓
+Retry only when the retry conditions are satisfied
+             ↓
+Verify the result before releasing the product
+</code></pre>
+<p>For serial-numbered products, transaction recovery must preserve traceability. The same identifier must not be accidentally assigned to a different product, and an uncertain print must not be treated as a confirmed success.</p>
+<h2 id="15-traceability-and-production-data-integrity">15. Traceability and Production Data Integrity</h2>
+<p>Industrial printing often connects physical products to production records. A communication fault can therefore create a traceability failure even when the machine continues running.</p>
+<p>Important controls include:</p>
+<ul>
+<li>One authoritative source for each identifier.</li>
+<li>Defined ownership of serial-number generation.</li>
+<li>Validated mapping between product type and print template.</li>
+<li>Protection against stale production data.</li>
+<li>Duplicate-identifier checks where required.</li>
+<li>Transaction acknowledgement and result recording.</li>
+<li>Defined behavior when upstream MES or production data is unavailable.</li>
+<li>Reconciliation of uncertain print attempts.</li>
+<li>Audit records for job changes and configuration changes.</li>
+</ul>
+<p>A PLC should not generate replacement serial numbers independently unless the approved traceability architecture explicitly assigns it that responsibility.</p>
+<h2 id="16-troubleshooting-guide">16. Troubleshooting Guide</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Printer never reports ready</td>
+<td>Active printer fault, initialization incomplete, or missing permissive</td>
+<td>Inspect printer status and fault diagnostics</td>
+</tr>
+<tr>
+<td>Trigger is issued but nothing prints</td>
+<td>Incorrect trigger mapping, missing job data, or invalid printer state</td>
+<td>Trace the trigger, data transfer, and printer acceptance status</td>
+</tr>
+<tr>
+<td>Correct job prints the wrong product data</td>
+<td>Incorrect job mapping or stale PLC data</td>
+<td>Compare the expected product record with the actual transmitted payload</td>
+</tr>
+<tr>
+<td>Print is duplicated</td>
+<td>Repeated trigger, retry after lost acknowledgement, or incorrect handshake reset</td>
+<td>Trace trigger edges and transaction history</td>
+</tr>
+<tr>
+<td>Print is truncated</td>
+<td>Incorrect payload length, buffer size, or message termination</td>
+<td>Compare the transmitted and received data</td>
+</tr>
+<tr>
+<td>Text contains unexpected characters</td>
+<td>Encoding, delimiter, or serial configuration mismatch</td>
+<td>Inspect raw transmitted bytes and printer parsing</td>
+</tr>
+<tr>
+<td>Barcode is unreadable</td>
+<td>Incorrect print settings, poor media, contamination, or poor positioning</td>
+<td>Verify print quality and decode the physical mark</td>
+</tr>
+<tr>
+<td>Label is printed in the wrong position</td>
+<td>Sensor offset, conveyor speed, encoder configuration, or trigger delay</td>
+<td>Measure product position and compare timing values</td>
+</tr>
+<tr>
+<td>Printer communicates but rejects jobs</td>
+<td>Application protocol or job-format mismatch</td>
+<td>Inspect printer application diagnostics and job-response messages</td>
+</tr>
+<tr>
+<td>Printer reports complete but product has no visible mark</td>
+<td>Completion signal has a different meaning, or physical printing failed</td>
+<td>Inspect the product and use the required verification device</td>
+</tr>
+<tr>
+<td>Printer faults after power cycling</td>
+<td>Configuration persistence or startup sequencing problem</td>
+<td>Verify saved settings and startup behavior</td>
+</tr>
+<tr>
+<td>Print data changes during transfer</td>
+<td>PLC buffer overwritten or unsynchronized data update</td>
+<td>Check data-buffer ownership and transfer timing</td>
+</tr>
+<tr>
+<td>Production runs with missing labels</td>
+<td>Fault response does not inhibit or classify the affected product</td>
+<td>Verify fault interlocks and product disposition logic</td>
+</tr>
+</tbody>
+</table>
+<h2 id="17-commissioning-procedure">17. Commissioning Procedure</h2>
+<h3 id="phase-1-preparation">Phase 1: Preparation</h3>
+<ul>
+<li>Confirm printer type, model, firmware, and intended application.</li>
+<li>Obtain the communication manual and interface specification.</li>
+<li>Back up the PLC program and printer configuration.</li>
+<li>Verify electrical drawings and the signal map.</li>
+<li>Identify the authoritative source for print data.</li>
+<li>Define the print-quality and traceability acceptance criteria.</li>
+</ul>
+<h3 id="phase-2-physical-and-communication-setup">Phase 2: Physical and communication setup</h3>
+<ul>
+<li>Verify mounting, alignment, media, consumables, and environmental conditions.</li>
+<li>Verify the intended communication interface.</li>
+<li>Check network or serial configuration.</li>
+<li>Confirm device identity and data mapping.</li>
+<li>Verify that the printer accepts the expected command or payload.</li>
+<li>Perform a local test print where applicable.</li>
+</ul>
+<h3 id="phase-3-data-and-handshake-validation">Phase 3: Data and handshake validation</h3>
+<ul>
+<li>Verify job selection.</li>
+<li>Verify variable-data transfer.</li>
+<li>Confirm data acceptance and print-trigger behavior.</li>
+<li>Verify ready, busy, complete, and fault indications where supported.</li>
+<li>Test valid and invalid data.</li>
+<li>Verify timeouts and acknowledgement behavior.</li>
+<li>Confirm that one intended transaction produces the intended print operation.</li>
+</ul>
+<h3 id="phase-4-machine-integration">Phase 4: Machine integration</h3>
+<ul>
+<li>Verify product-present and print-position conditions.</li>
+<li>Confirm correct product-to-template mapping.</li>
+<li>Test operation at representative production speed.</li>
+<li>Verify handling of printer-busy conditions.</li>
+<li>Verify fault response and product disposition.</li>
+<li>Test communication interruption and approved recovery behavior.</li>
+<li>Verify physical print quality and readability.</li>
+</ul>
+<h3 id="phase-5-acceptance-and-handover">Phase 5: Acceptance and handover</h3>
+<ul>
+<li>Execute the agreed FAT/SAT test cases.</li>
+<li>Confirm traceability data integrity.</li>
+<li>Verify cycle-time performance.</li>
+<li>Resolve critical defects.</li>
+<li>Save the final PLC and printer configurations.</li>
+<li>Record the verified signal mapping and communication settings.</li>
+<li>Hand over troubleshooting and recovery instructions.</li>
+</ul>
+<h2 id="18-fat-and-sat">18. FAT and SAT</h2>
+<table>
+<thead>
+<tr>
+<th>Test item</th>
+<th>FAT focus</th>
+<th>SAT focus</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Printer configuration</td>
+<td>Verify job templates and interface settings</td>
+<td>Verify final installed configuration</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>Verify protocol and data exchange</td>
+<td>Verify installed cabling, network, and PLC integration</td>
+</tr>
+<tr>
+<td>Print data</td>
+<td>Test representative identifiers and formats</td>
+<td>Verify actual production data and product mapping</td>
+</tr>
+<tr>
+<td>Trigger timing</td>
+<td>Verify trigger and acknowledgement logic</td>
+<td>Verify physical print position and production speed</td>
+</tr>
+<tr>
+<td>Print quality</td>
+<td>Test representative print samples</td>
+<td>Verify real media, product surface, and operating conditions</td>
+</tr>
+<tr>
+<td>Fault handling</td>
+<td>Verify timeouts, rejection, and retry logic</td>
+<td>Verify real fault recovery and product disposition</td>
+</tr>
+<tr>
+<td>Traceability</td>
+<td>Verify identifier handling and transaction logic</td>
+<td>Verify production records and physical product association</td>
+</tr>
+<tr>
+<td>Performance</td>
+<td>Verify response and cycle-time requirements</td>
+<td>Verify sustained operation under production conditions</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Review test records and configuration backups</td>
+<td>Confirm as-built records and final handover</td>
+</tr>
+</tbody>
+</table>
+<h2 id="19-acceptance-criteria">19. Acceptance Criteria</h2>
+<p>Typical acceptance criteria include:</p>
+<ul>
+<li>Correct printer and interface configuration.</li>
+<li>Correct job selection and data transfer.</li>
+<li>Correct interpretation of readiness, busy, completion, and fault states.</li>
+<li>Correct trigger timing and product synchronization.</li>
+<li>No unintended duplicate print operations.</li>
+<li>No acceptance of stale or incorrect production data.</li>
+<li>Correct handling of no-print, rejected-job, and uncertain-result conditions.</li>
+<li>Required printed content is readable and correctly positioned.</li>
+<li>Barcode or Data Matrix content matches the expected identifier where verification is required.</li>
+<li>Communication faults are detected and handled correctly.</li>
+<li>Traceability records match the physical product.</li>
+<li>Cycle time meets the agreed requirement.</li>
+<li>Critical defects are closed and final configuration records are complete.</li>
+</ul>
+<p>Print readability, positional tolerance, barcode grade, response time, and acceptable failure rate must be defined for the actual product and process. There is no single universal acceptance limit for all industrial printers.</p>
+<h2 id="20-practical-example-component-serial-number-printing">20. Practical Example: Component Serial Number Printing</h2>
+<p>Consider a production station that prints a Data Matrix code on a machined component before the component moves to the next station.</p>
+<p>The PLC receives the component identifier from the production system and controls the print operation.</p>
+<pre><code>Component enters the station
+             ↓
+PLC confirms part presence and station identity
+             ↓
+PLC retrieves or validates the component serial number
+             ↓
+PLC selects the correct print template
+             ↓
+PLC transfers the serial number to the printer
+             ↓
+Printer accepts the data
+             ↓
+PLC triggers printing at the correct position
+             ↓
+Printer reports operation complete
+             ↓
+Scanner reads the physical Data Matrix code
+             ↓
+PLC compares decoded data with expected serial number
+             ↓
+Pass → Permit the next operation
+Fail → Hold or reject the component according to process rules
+</code></pre>
+<h3 id="example-fault-printer-reports-completion-but-the-code-cannot-be-read">Example fault: printer reports completion, but the code cannot be read</h3>
+<p>A disciplined investigation checks:</p>
+<ol>
+<li>Does the printer's completion status mean the print command finished, or does it represent a stronger verification result?</li>
+<li>Was the correct serial number transferred?</li>
+<li>Was the correct print template selected?</li>
+<li>Was the component at the correct print position?</li>
+<li>Were the print settings, focus, contrast, and surface conditions appropriate?</li>
+<li>Does the code meet the required size and quality criteria?</li>
+<li>Does the verification scanner decode the code reliably?</li>
+<li>Does the PLC compare the decoded value with the correct expected serial number?</li>
+<li>Is the affected component held from further processing until its status is resolved?</li>
+<li>Is the result recorded accurately for traceability?</li>
+</ol>
+<p>This separates a communication problem from a data problem, a physical printing problem, and a verification problem.</p>
+<h2 id="21-common-commissioning-mistakes">21. Common Commissioning Mistakes</h2>
+<ul>
+<li>Treating printer-ready status as proof that a print job will succeed.</li>
+<li>Assuming every printer uses the same trigger and acknowledgement sequence.</li>
+<li>Sending data before the printer is ready to accept it.</li>
+<li>Ignoring buffer lengths, terminators, encoding, or protocol framing.</li>
+<li>Using an incorrect print template for a product variant.</li>
+<li>Reusing stale serial numbers or production data.</li>
+<li>Repeating print commands automatically after an uncertain timeout.</li>
+<li>Treating print completion as proof of readability.</li>
+<li>Ignoring conveyor speed, encoder scaling, and trigger position.</li>
+<li>Allowing production to continue without a defined response to print failure.</li>
+<li>Failing to reconcile an uncertain print with the physical product.</li>
+<li>Changing printer parameters without backing up the existing configuration.</li>
+<li>Failing to record the final job templates, data mapping, and recovery procedure.</li>
+</ul>
+<h2 id="22-interview-questions-and-answers">22. Interview Questions and Answers</h2>
+<p>1. What is PLC-printer communication commissioning?</p>
+<p>It is the configuration and validation of communication, job selection, print data, triggering, status feedback, fault handling, and machine integration between a PLC and an industrial printer.</p>
+<p>2. What is the difference between print complete and print verified?</p>
+<p>Print complete indicates that the printer has completed its defined operation. Print verified means the physical printed output has been checked against the required content or quality criteria.</p>
+<p>3. Why is data validation important before printing?</p>
+<p>Incorrect or stale data can create product-identification and traceability failures even when the printer operates correctly.</p>
+<p>4. Why might a printer print the same label twice?</p>
+<p>Repeated trigger edges, incorrect handshake resets, automatic retries after lost acknowledgements, or duplicate job submissions can cause repeated printing.</p>
+<p>5. What should happen if communication fails during a print operation?</p>
+<p>The PLC should apply the defined fault response, preserve transaction information, determine whether printing may have occurred, and reconcile the product and print job before retrying.</p>
+<p>6. Why might Ethernet connectivity exist while printing fails?</p>
+<p>The network may be reachable while the printer application rejects the command, the wrong protocol is configured, the job format is invalid, or the printer is not ready.</p>
+<p>7. How can print position be corrected on a moving conveyor?</p>
+<p>Verify product detection, encoder scaling, sensor-to-printhead distance, trigger offset, line speed, and the printer's timing configuration.</p>
+<p>8. How can traceability be protected during printer faults?</p>
+<p>Maintain one authoritative identifier source, validate product-to-job mapping, record print transactions, reject stale data, and reconcile uncertain print attempts before releasing the product.</p>
+<p>9. What is the difference between a printer fault and a print-verification fault?</p>
+<p>A printer fault concerns the printer or its operation. A print-verification fault means the resulting mark or label did not pass the defined content or quality check. The two can occur independently.</p>
+<p>10. What proves successful PLC-printer commissioning?</p>
+<p>Verified communication and data mapping, correct job and trigger behavior, acceptable print quality, tested fault recovery, valid traceability, measured performance, and complete handover records.</p>
+<h2 id="23-final-commissioning-checklist">23. Final Commissioning Checklist</h2>
+<ul>
+<li>Printer type, model, and application confirmed.</li>
+<li>Physical installation and print parameters verified.</li>
+<li>Communication interface and network or serial settings verified.</li>
+<li>Signal mapping and data formats validated.</li>
+<li>Correct print job and variable data confirmed.</li>
+<li>Trigger, acknowledgement, and completion sequence tested.</li>
+<li>Product position and timing verified.</li>
+<li>Print quality and readability checked.</li>
+<li>Verification data compared with expected production data where required.</li>
+<li>Duplicate, stale, and uncertain print transactions handled correctly.</li>
+<li>Fault, timeout, and communication-loss recovery tested.</li>
+<li>Product disposition and traceability validated.</li>
+<li>FAT/SAT records completed.</li>
+<li>Final PLC backup, printer configuration, and handover documents saved.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\13_Commissioning\04_Stage4_Communication\07_Network_Diagnostics - Network diagnostics</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

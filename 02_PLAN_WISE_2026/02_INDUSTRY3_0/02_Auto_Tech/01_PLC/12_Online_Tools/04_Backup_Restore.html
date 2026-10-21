@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>04_Backup_Restore: Backup &amp; Restore, Save Project and Restore CPU</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">04_Backup_Restore: Backup &amp; Restore, Save Project and Restore CPU</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-why-plc-backup-and-restore-matter">2. Why PLC Backup and Restore Matter</a></li>
+<li><a href="#3-backup-vs-upload-vs-save-vs-restore">3. Backup vs Upload vs Save vs Restore</a></li>
+<li><a href="#4-what-should-be-backed-up">4. What Should Be Backed Up?</a></li>
+<li><a href="#5-types-of-backup">5. Types of Backup</a><ul>
+<li><a href="#51-engineering-project-backup">5.1 Engineering project backup</a></li>
+<li><a href="#52-controller-resident-backup">5.2 Controller-resident backup</a></li>
+<li><a href="#53-full-engineering-recovery-package">5.3 Full engineering recovery package</a></li>
+<li><a href="#54-full-system-backup">5.4 Full-system backup</a></li>
+</ul>
+</li>
+<li><a href="#6-what-makes-a-backup-reliable">6. What Makes a Backup Reliable?</a></li>
+<li><a href="#7-recommended-backup-workflow">7. Recommended Backup Workflow</a><ul>
+<li><a href="#step-1-identify-the-equipment">Step 1: Identify the equipment</a></li>
+<li><a href="#step-2-establish-the-authoritative-project">Step 2: Establish the authoritative project</a></li>
+<li><a href="#step-3-save-the-project">Step 3: Save the project</a></li>
+<li><a href="#step-4-capture-supporting-configuration">Step 4: Capture supporting configuration</a></li>
+<li><a href="#step-5-record-controller-information">Step 5: Record controller information</a></li>
+<li><a href="#step-6-validate-the-backup">Step 6: Validate the backup</a></li>
+<li><a href="#step-7-store-the-backup-securely">Step 7: Store the backup securely</a></li>
+<li><a href="#step-8-record-the-restore-procedure">Step 8: Record the restore procedure</a></li>
+<li><a href="#step-9-test-recoverability">Step 9: Test recoverability</a></li>
+</ul>
+</li>
+<li><a href="#8-backup-frequency-and-triggers">8. Backup Frequency and Triggers</a></li>
+<li><a href="#9-restore-cpu-general-workflow">9. Restore CPU: General Workflow</a></li>
+<li><a href="#10-before-replacing-a-cpu">10. Before Replacing a CPU</a></li>
+<li><a href="#11-cpu-replacement-compatibility">11. CPU Replacement Compatibility</a></li>
+<li><a href="#12-program-restore-vs-data-restore">12. Program Restore vs Data Restore</a><ul>
+<li><a href="#program-restore">Program restore</a></li>
+<li><a href="#data-restore">Data restore</a></li>
+</ul>
+</li>
+<li><a href="#13-memory-cards-and-nonvolatile-storage">13. Memory Cards and Nonvolatile Storage</a></li>
+<li><a href="#14-safety-during-restoration">14. Safety During Restoration</a></li>
+<li><a href="#15-vendor-specific-backup-and-restore-awareness">15. Vendor-Specific Backup and Restore Awareness</a><ul>
+<li><a href="#151-rockwell-automation-studio-5000-logix-designer">15.1 Rockwell Automation: Studio 5000 Logix Designer</a></li>
+<li><a href="#152-siemens-step-7-and-tia-portal">15.2 Siemens: STEP 7 and TIA Portal</a></li>
+<li><a href="#153-mitsubishi-gx-works2-and-gx-works3">15.3 Mitsubishi: GX Works2 and GX Works3</a></li>
+</ul>
+</li>
+<li><a href="#16-common-backup-and-restore-failures">16. Common Backup and Restore Failures</a></li>
+<li><a href="#17-backup-integrity-and-recovery-testing">17. Backup Integrity and Recovery Testing</a></li>
+<li><a href="#18-example-building-a-recovery-package-for-an-automated-line">18. Example: Building a Recovery Package for an Automated Line</a></li>
+<li><a href="#19-example-recovery-record">19. Example Recovery Record</a></li>
+<li><a href="#20-interview-questions-and-answers">20. Interview Questions and Answers</a></li>
+<li><a href="#21-practical-exercises">21. Practical Exercises</a></li>
+<li><a href="#22-final-mental-model">22. Final Mental Model</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>PLC backup and restoration is the process of preserving the information required to recover a control system after hardware failure, program corruption, accidental changes, project loss or controller replacement.</p>
+<p>A backup is a recoverable copy of the engineering project, controller program and other required configuration information. Restoration is the controlled process of returning the controller and associated system to an approved working state.</p>
+<p>The objective is not merely to save a PLC program. It is to preserve enough verified information to recover the intended machine behavior.</p>
+<p>For industrial maintenance, this is essential because a replacement CPU may be available immediately, while the correct program, firmware, configuration and commissioning records may not be.</p>
+<h2 id="2-why-plc-backup-and-restore-matter">2. Why PLC Backup and Restore Matter</h2>
+<p>Common situations requiring backup or restoration include:</p>
+<ul>
+<li>PLC CPU failure.</li>
+<li>Memory-card or storage failure.</li>
+<li>Accidental program deletion or overwrite.</li>
+<li>Incorrect download or online modification.</li>
+<li>Corrupted engineering project.</li>
+<li>Controller replacement during maintenance.</li>
+<li>Firmware upgrade or hardware migration.</li>
+<li>Recovery after an electrical event or other equipment failure.</li>
+<li>Vendor changes that were not incorporated into the master project.</li>
+<li>Loss of the engineering computer or original project files.</li>
+</ul>
+<p>A controller may be replaceable in a few hours, but recovery can take much longer if the correct project and configuration are unavailable.</p>
+<p>Maintenance principle: The real asset is not only the PLC hardware. It is the verified, documented and recoverable control-system configuration.</p>
+<h2 id="3-backup-vs-upload-vs-save-vs-restore">3. Backup vs Upload vs Save vs Restore</h2>
+<p>These operations are related but different.</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Meaning</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Save project</td>
+<td>Save the engineering project to storage.</td>
+<td>Preserve the current local engineering work.</td>
+</tr>
+<tr>
+<td>Upload</td>
+<td>Retrieve supported information from the PLC to the engineering computer.</td>
+<td>Recover or inspect controller contents.</td>
+</tr>
+<tr>
+<td>Backup</td>
+<td>Preserve a recoverable copy of the required project and configuration.</td>
+<td>Enable recovery after loss or failure.</td>
+</tr>
+<tr>
+<td>Restore</td>
+<td>Use a suitable backup or approved source to recover the system.</td>
+<td>Return the controller or system to an approved state.</td>
+</tr>
+<tr>
+<td>Download</td>
+<td>Transfer an engineering project or supported configuration to the PLC.</td>
+<td>Deploy the selected project.</td>
+</tr>
+<tr>
+<td>Compare</td>
+<td>Check supported differences between versions.</td>
+<td>Confirm which version is present and identify changes.</td>
+</tr>
+<tr>
+<td>Archive</td>
+<td>Store a controlled, identifiable snapshot of project information.</td>
+<td>Maintain traceability and historical revisions.</td>
+</tr>
+</tbody>
+</table>
+<p>Saving a file is not necessarily a complete backup. Uploading from the PLC does not necessarily recover all source documentation. Downloading a backup does not automatically restore every part of the physical control system.</p>
+<h2 id="4-what-should-be-backed-up">4. What Should Be Backed Up?</h2>
+<p>A complete recovery package depends on the controller family and the machine's architecture. The following categories should be assessed.</p>
+<table>
+<thead>
+<tr>
+<th>Backup item</th>
+<th>What it preserves</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Engineering project</td>
+<td>Program, tags, routines and supported project structure.</td>
+<td>Reconstructs the intended control logic.</td>
+</tr>
+<tr>
+<td>Hardware configuration</td>
+<td>CPU, rack, I/O modules and device configuration.</td>
+<td>Helps recreate the expected hardware arrangement.</td>
+</tr>
+<tr>
+<td>Controller parameters</td>
+<td>Supported CPU and application parameters.</td>
+<td>May be required to restore the intended behavior.</td>
+</tr>
+<tr>
+<td>Firmware information</td>
+<td>Installed firmware and compatibility details.</td>
+<td>Helps select a compatible replacement or engineering environment.</td>
+</tr>
+<tr>
+<td>Network configuration</td>
+<td>IP addresses, communication paths and device addressing.</td>
+<td>Restores communication with connected systems.</td>
+</tr>
+<tr>
+<td>Drive configuration</td>
+<td>Drive parameters and approved configuration files, where applicable.</td>
+<td>Helps restore motor-control behavior.</td>
+</tr>
+<tr>
+<td>Robot configuration</td>
+<td>Relevant controller programs and configuration, where applicable.</td>
+<td>Supports recovery of integrated robotic systems.</td>
+</tr>
+<tr>
+<td>HMI / SCADA project</td>
+<td>Operator screens, tags, alarms and communication configuration.</td>
+<td>Restores operator interaction and supervisory monitoring.</td>
+</tr>
+<tr>
+<td>Safety-related project and records</td>
+<td>Supported safety project data, signatures or validation information as applicable.</td>
+<td>Supports controlled restoration and required safety validation.</td>
+</tr>
+<tr>
+<td>Libraries and dependencies</td>
+<td>External libraries, add-ons and required engineering assets.</td>
+<td>Avoids missing dependencies during recovery.</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>I/O lists, tag descriptions, network diagrams and change records.</td>
+<td>Helps engineers verify and maintain the restored system.</td>
+</tr>
+<tr>
+<td>Version history</td>
+<td>Approved revisions and descriptions of changes.</td>
+<td>Establishes which project is authoritative.</td>
+</tr>
+</tbody>
+</table>
+<p>A machine with PLCs, robots, drives, HMIs, remote I/O and SCADA may need multiple coordinated backups. A PLC project alone may not restore the complete machine.</p>
+<h2 id="5-types-of-backup">5. Types of Backup</h2>
+<h3 id="51-engineering-project-backup">5.1 Engineering project backup</h3>
+<p>This is the native project file saved by the engineering software.</p>
+<p>Examples include:</p>
+<ul>
+<li>Rockwell Studio 5000 Logix Designer project files.</li>
+<li>Siemens STEP 7 or TIA Portal project files.</li>
+<li>Mitsubishi GX Works2 or GX Works3 project files.</li>
+</ul>
+<p>The native project is generally the primary engineering artifact because it can preserve source-level information that may not be recoverable from the controller alone.</p>
+<h3 id="52-controller-resident-backup">5.2 Controller-resident backup</h3>
+<p>Some controllers support memory cards, removable storage, nonvolatile memory or other mechanisms for retaining programs and configuration.</p>
+<p>The stored contents and recovery behavior vary by controller family. A memory card is not automatically a complete, current backup of every engineering asset.</p>
+<h3 id="53-full-engineering-recovery-package">5.3 Full engineering recovery package</h3>
+<p>A recovery package combines the native project with the supporting information needed to restore the intended system.</p>
+<p>For example:</p>
+<pre><code>FR1010_PLC_RECOVERY/
+    Engineering_Project/
+    Firmware_And_Versions/
+    Hardware_Configuration/
+    Network_Configuration/
+    I_O_And_Tag_Lists/
+    HMI_And_SCADA/
+    Drive_And_Robot_Assets/
+    Safety_Records/
+    Change_History/
+    Restore_Procedure/
+    Validation_Records/
+</code></pre>
+<p>This is an illustrative folder structure. The actual contents should match the machine's architecture and site requirements.</p>
+<h3 id="54-full-system-backup">5.4 Full-system backup</h3>
+<p>For a complex production line, the backup scope may extend beyond the PLC to include:</p>
+<ul>
+<li>Engineering workstations and software versions.</li>
+<li>HMI and SCADA computers.</li>
+<li>Industrial PCs.</li>
+<li>Databases and relevant application configurations.</li>
+<li>Network and switch configurations.</li>
+<li>Robot controllers.</li>
+<li>CNC systems.</li>
+<li>Drives and motion controllers.</li>
+<li>License information and required installation media.</li>
+</ul>
+<p>Not every item should be copied in the same way. Databases, software licenses, encrypted configurations and safety-related assets may require their own supported backup procedures.</p>
+<h2 id="6-what-makes-a-backup-reliable">6. What Makes a Backup Reliable?</h2>
+<p>A backup is useful only if it is identifiable, complete enough for its intended purpose and recoverable.</p>
+<p>A reliable backup should have the following properties.</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Correct identity</td>
+<td>Machine and controller are clearly identified.</td>
+</tr>
+<tr>
+<td>Known revision</td>
+<td>Project version and backup date are recorded.</td>
+</tr>
+<tr>
+<td>Compatibility</td>
+<td>Controller model, firmware and engineering-software requirements are documented.</td>
+</tr>
+<tr>
+<td>Completeness</td>
+<td>Required programs, configuration and dependencies are included.</td>
+</tr>
+<tr>
+<td>Integrity</td>
+<td>The stored files can be opened or otherwise validated using the supported method.</td>
+</tr>
+<tr>
+<td>Traceability</td>
+<td>Author, reason for change and approval information are recorded.</td>
+</tr>
+<tr>
+<td>Security</td>
+<td>Access is controlled, and sensitive configuration is protected.</td>
+</tr>
+<tr>
+<td>Separation</td>
+<td>Backup is stored independently of the equipment it protects.</td>
+</tr>
+<tr>
+<td>Recoverability</td>
+<td>The restore procedure is known and can be tested safely.</td>
+</tr>
+<tr>
+<td>Verification</td>
+<td>The backup has been checked according to the site's recovery requirements.</td>
+</tr>
+</tbody>
+</table>
+<p>A folder containing a file named <code>FINAL_PLC_PROJECT_NEW</code> is not evidence of a reliable backup. Humans have an impressive ability to create filenames that communicate absolutely nothing.</p>
+<h2 id="7-recommended-backup-workflow">7. Recommended Backup Workflow</h2>
+<h3 id="step-1-identify-the-equipment">Step 1: Identify the equipment</h3>
+<p>Record the machine, line, controller model, controller identity, firmware, software version and relevant network information.</p>
+<h3 id="step-2-establish-the-authoritative-project">Step 2: Establish the authoritative project</h3>
+<p>Confirm which project corresponds to the approved controller program. If the local project and PLC differ, investigate the difference before overwriting either copy.</p>
+<h3 id="step-3-save-the-project">Step 3: Save the project</h3>
+<p>Save the native engineering project and create a separate revision for the backup. Avoid replacing the only known-good file.</p>
+<h3 id="step-4-capture-supporting-configuration">Step 4: Capture supporting configuration</h3>
+<p>Preserve the required hardware configuration, network settings, I/O mapping, device parameters, HMI or SCADA assets and other dependencies.</p>
+<p>Use manufacturer-supported export or backup mechanisms where available.</p>
+<h3 id="step-5-record-controller-information">Step 5: Record controller information</h3>
+<p>Record the CPU model, firmware, operating mode, fault state and any relevant memory-card or nonvolatile-storage configuration.</p>
+<h3 id="step-6-validate-the-backup">Step 6: Validate the backup</h3>
+<p>Check that the files are present and readable. Open the project in a compatible engineering environment where practical. Review any warnings or missing dependencies.</p>
+<p>A project opening successfully does not prove that every component of the machine can be restored, but it is a useful verification step.</p>
+<h3 id="step-7-store-the-backup-securely">Step 7: Store the backup securely</h3>
+<p>Store the backup in an approved location independent of the controller and its local engineering computer.</p>
+<p>Maintain appropriate access controls and additional copies according to site policy.</p>
+<h3 id="step-8-record-the-restore-procedure">Step 8: Record the restore procedure</h3>
+<p>Document the steps, required software, compatible hardware, dependencies, safety precautions and validation checks needed for recovery.</p>
+<h3 id="step-9-test-recoverability">Step 9: Test recoverability</h3>
+<p>Where practical, test the recovery process using a simulator, spare controller or approved test environment. Do not experiment with the only production controller.</p>
+<h2 id="8-backup-frequency-and-triggers">8. Backup Frequency and Triggers</h2>
+<p>There is no single frequency suitable for every PLC system. The schedule should reflect the consequences of failure, how often changes occur and how difficult the system is to reconstruct.</p>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>Recommended backup action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Initial commissioning</td>
+<td>Create and verify the approved baseline backup.</td>
+</tr>
+<tr>
+<td>Approved program change</td>
+<td>Save a new revision and update the relevant recovery package.</td>
+</tr>
+<tr>
+<td>Major configuration change</td>
+<td>Back up affected program and configuration items.</td>
+</tr>
+<tr>
+<td>Firmware change</td>
+<td>Preserve the original project and document the new firmware and compatibility state.</td>
+</tr>
+<tr>
+<td>Controller replacement</td>
+<td>Preserve the known-good source and record the restored configuration.</td>
+</tr>
+<tr>
+<td>Vendor intervention</td>
+<td>Obtain and review the updated source project and change records.</td>
+</tr>
+<tr>
+<td>Periodic maintenance review</td>
+<td>Confirm that backups remain accessible, current and recoverable.</td>
+</tr>
+<tr>
+<td>Before a risky maintenance operation</td>
+<td>Create or verify an appropriate recovery point.</td>
+</tr>
+<tr>
+<td>After successful restoration</td>
+<td>Save and document the verified restored state.</td>
+</tr>
+</tbody>
+</table>
+<p>For frequently modified systems, event-based backups after approved changes are especially important. A periodic schedule alone may miss a critical change made the previous day.</p>
+<h2 id="9-restore-cpu-general-workflow">9. Restore CPU: General Workflow</h2>
+<p>Restoring a CPU means returning it to the required program and configuration state after failure, replacement, corruption or another recovery event.</p>
+<p>The exact procedure varies substantially between controller families. The general workflow is:</p>
+<pre><code>Identify the Failed or Target CPU
+              |
+              v
+Locate the Approved Recovery Package
+              |
+              v
+Verify Hardware and Firmware Compatibility
+              |
+              v
+Review Network, I/O and Device Configuration
+              |
+              v
+Prepare the Replacement or Recovered CPU
+              |
+              v
+Load the Approved Program and Configuration
+              |
+              v
+Verify Controller Identity, Mode and Diagnostics
+              |
+              v
+Verify I/O, Communications and Device Integration
+              |
+              v
+Perform Approved Functional and Safety Validation
+              |
+              v
+Document the Restored State
+</code></pre>
+<p>Before starting, establish whether the CPU is truly failed or whether the problem is caused by power, network communication, a faulted module, an incorrect mode, memory configuration or another issue. Replacing a healthy CPU will not fix a failed power supply or network connection.</p>
+<h2 id="10-before-replacing-a-cpu">10. Before Replacing a CPU</h2>
+<p>A controller replacement should begin with diagnosis and compatibility checks, not with the assumption that the CPU is defective.</p>
+<p>Check:</p>
+<ul>
+<li>CPU power and status indicators.</li>
+<li>Power supply and chassis condition, where applicable.</li>
+<li>Controller fault and diagnostic information.</li>
+<li>Network link and communication status.</li>
+<li>I/O module and remote-device status.</li>
+<li>Controller operating mode.</li>
+<li>Memory card or nonvolatile-storage status.</li>
+<li>Firmware and hardware identity.</li>
+<li>Whether a known-good backup exists.</li>
+<li>Whether the suspected fault could be caused by another component.</li>
+</ul>
+<p>For modular systems, verify the chassis, power supply, communication modules and I/O configuration. For compact PLCs, check the integrated I/O, expansion modules and device-specific configuration.</p>
+<p>Follow the manufacturer's electrical safety and replacement instructions. Never remove or replace a module under power unless the hardware explicitly supports that operation and the approved procedure permits it.</p>
+<h2 id="11-cpu-replacement-compatibility">11. CPU Replacement Compatibility</h2>
+<p>A physically similar CPU is not necessarily a compatible replacement.</p>
+<table>
+<thead>
+<tr>
+<th>Compatibility factor</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CPU family and model</td>
+<td>Determines supported instructions, memory, features and project compatibility.</td>
+</tr>
+<tr>
+<td>Firmware version</td>
+<td>Affects supported functionality and project requirements.</td>
+</tr>
+<tr>
+<td>Engineering-software version</td>
+<td>May be required to open, convert or deploy the project.</td>
+</tr>
+<tr>
+<td>Memory capacity</td>
+<td>The replacement must support the program and required data.</td>
+</tr>
+<tr>
+<td>Hardware configuration</td>
+<td>The project must match the actual chassis, modules or integrated I/O.</td>
+</tr>
+<tr>
+<td>Network identity</td>
+<td>IP address, device name and communication settings may need restoration.</td>
+</tr>
+<tr>
+<td>Retentive data</td>
+<td>Values such as counters, recipes or production states may require separate handling.</td>
+</tr>
+<tr>
+<td>Safety configuration</td>
+<td>Safety-related systems can require additional compatibility checks and validation.</td>
+</tr>
+<tr>
+<td>Motion or technology configuration</td>
+<td>May require specific hardware, firmware, parameters or commissioning.</td>
+</tr>
+<tr>
+<td>Licensing and dependencies</td>
+<td>Some engineering or integrated systems require additional licensed components or external assets.</td>
+</tr>
+</tbody>
+</table>
+<p>A replacement CPU may have a different firmware version or memory configuration. Confirm compatibility before transferring a project.</p>
+<h2 id="12-program-restore-vs-data-restore">12. Program Restore vs Data Restore</h2>
+<p>A particularly important distinction is the difference between restoring the program and restoring the data.</p>
+<h3 id="program-restore">Program restore</h3>
+<p>Recovers the supported control logic and associated configuration required to execute the intended application.</p>
+<h3 id="data-restore">Data restore</h3>
+<p>Recovers application data such as:</p>
+<ul>
+<li>Recipe values.</li>
+<li>Setpoints.</li>
+<li>Retentive counters.</li>
+<li>Production parameters.</li>
+<li>Calibration values.</li>
+<li>Machine-specific configuration.</li>
+<li>Certain retained states.</li>
+</ul>
+<p>The exact data that can be retained, backed up or restored depends on the PLC and application.</p>
+<p>A program can be restored correctly while important production data remains missing or outdated.</p>
+<p>For example, a machine may have its original ladder logic but lack approved recipe values or calibration data. The PLC may enter RUN mode, yet the process may not produce acceptable results.</p>
+<p>Before restoration, identify which data must be preserved, which should be reinitialized and which must be recovered from an approved source.</p>
+<h2 id="13-memory-cards-and-nonvolatile-storage">13. Memory Cards and Nonvolatile Storage</h2>
+<p>Some PLC families use memory cards or nonvolatile storage to preserve programs, configuration or other supported information.</p>
+<p>These mechanisms can simplify recovery, but they must not be treated as universally interchangeable backups.</p>
+<p>Important checks include:</p>
+<ul>
+<li>Whether the card is compatible with the target CPU.</li>
+<li>Whether the stored image matches the intended hardware and firmware.</li>
+<li>Whether the stored program is current.</li>
+<li>Whether automatic loading is configured and under what conditions.</li>
+<li>Whether retained data is included.</li>
+<li>Whether the card contains the expected program and configuration.</li>
+<li>Whether using it could overwrite a valid controller state.</li>
+<li>Whether the manufacturer requires specific procedures for recovery.</li>
+</ul>
+<p>Do not insert a card or initiate an automatic restore without understanding what it contains and what the controller is configured to do with it.</p>
+<h2 id="14-safety-during-restoration">14. Safety During Restoration</h2>
+<p>A successful restoration must not create an uncontrolled machine restart or unsafe sequence.</p>
+<p>Before restoration:</p>
+<ul>
+<li>Establish the machine's safe state.</li>
+<li>Follow the approved isolation and lockout/tagout requirements where applicable.</li>
+<li>Prevent unexpected motion or energization.</li>
+<li>Coordinate with production, maintenance and relevant engineering personnel.</li>
+<li>Confirm that the approved project and configuration are being used.</li>
+<li>Follow special procedures for safety PLCs, robots, motion systems and hazardous processes.</li>
+</ul>
+<p>After restoration:</p>
+<ul>
+<li>Confirm the controller's operating mode.</li>
+<li>Verify the program and configuration.</li>
+<li>Check I/O and communication faults.</li>
+<li>Confirm relevant permissives and interlocks.</li>
+<li>Test the required sequence under controlled conditions.</li>
+<li>Validate safety-related functions according to the approved process.</li>
+<li>Confirm that the machine cannot restart unexpectedly.</li>
+<li>Obtain the required approval before returning the equipment to production.</li>
+</ul>
+<p>Never treat “CPU is in RUN” as proof that the machine is safe or ready for production.</p>
+<h2 id="15-vendor-specific-backup-and-restore-awareness">15. Vendor-Specific Backup and Restore Awareness</h2>
+<h3 id="151-rockwell-automation-studio-5000-logix-designer">15.1 Rockwell Automation: Studio 5000 Logix Designer</h3>
+<p>Typical considerations for ControlLogix and CompactLogix systems include:</p>
+<ul>
+<li>Preserve the native Logix project and associated documentation.</li>
+<li>Record the controller catalog number and firmware revision.</li>
+<li>Record the chassis and module configuration where applicable.</li>
+<li>Preserve relevant communication paths and network settings.</li>
+<li>Check controller-resident nonvolatile-memory features if supported.</li>
+<li>Understand the implications of uploading, downloading and restoring controller contents.</li>
+<li>Use appropriate safety procedures for GuardLogix systems.</li>
+</ul>
+<p>A project download and a controller memory restore are not necessarily equivalent operations. The supported behavior depends on the controller family, firmware, memory features and selected operation.</p>
+<h3 id="152-siemens-step-7-and-tia-portal">15.2 Siemens: STEP 7 and TIA Portal</h3>
+<p>Typical considerations include:</p>
+<ul>
+<li>Preserve the native engineering project.</li>
+<li>Record the CPU model and firmware.</li>
+<li>Preserve hardware configuration, device names, addressing and relevant network configuration.</li>
+<li>Record required engineering-software versions and dependencies.</li>
+<li>Understand the specific CPU's memory-card and load-memory behavior.</li>
+<li>Use supported backup or retrieval methods for the target CPU.</li>
+<li>Perform required safety and functional validation after restoration.</li>
+</ul>
+<p>The recovery capabilities of an S7-300, S7-400, S7-1200 and S7-1500 are not identical. Memory architecture, project workflow, firmware and available recovery mechanisms vary.</p>
+<h3 id="153-mitsubishi-gx-works2-and-gx-works3">15.3 Mitsubishi: GX Works2 and GX Works3</h3>
+<p>Typical considerations include:</p>
+<ul>
+<li>Preserve the correct native project.</li>
+<li>Record the PLC series, CPU model and firmware where applicable.</li>
+<li>Back up required programs, parameters and supported device data.</li>
+<li>Verify communication settings and hardware configuration.</li>
+<li>Follow the controller-specific procedure for reading, writing or restoring stored data.</li>
+<li>Validate device behavior and machine sequences after recovery.</li>
+</ul>
+<p>The exact backup scope and recovery operations depend on the Mitsubishi PLC family and engineering-software version.</p>
+<h2 id="16-common-backup-and-restore-failures">16. Common Backup and Restore Failures</h2>
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Possible cause</th>
+<th>Recommended action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Project file is missing</td>
+<td>Backup was not stored or was saved to an unknown location.</td>
+<td>Search approved engineering storage and recovery locations.</td>
+</tr>
+<tr>
+<td>Project opens with errors</td>
+<td>Wrong software version, corrupted file or missing dependencies.</td>
+<td>Preserve the original file and investigate compatibility and integrity.</td>
+</tr>
+<tr>
+<td>Uploaded program lacks documentation</td>
+<td>Original source information was not stored in recoverable controller contents.</td>
+<td>Locate the original project, external documentation or revision history.</td>
+</tr>
+<tr>
+<td>Replacement CPU rejects the project</td>
+<td>Model or firmware incompatibility.</td>
+<td>Verify hardware compatibility and the supported conversion or deployment procedure.</td>
+</tr>
+<tr>
+<td>CPU starts but devices do not communicate</td>
+<td>Network settings, device configuration, firmware or addressing differs.</td>
+<td>Check the configuration and device diagnostics.</td>
+</tr>
+<tr>
+<td>Program runs but machine behavior differs</td>
+<td>Data, parameters, hardware configuration or program revision is incorrect.</td>
+<td>Compare the restored state with the approved baseline.</td>
+</tr>
+<tr>
+<td>Retentive values are missing</td>
+<td>Data was not included in the backup or is not retained by the replacement.</td>
+<td>Restore approved data separately where supported.</td>
+</tr>
+<tr>
+<td>Memory card does not restore expected contents</td>
+<td>Card mismatch, stale image, incorrect configuration or unsupported operation.</td>
+<td>Verify card identity, stored contents and the manufacturer's procedure.</td>
+</tr>
+<tr>
+<td>Safety-related system does not accept the restored configuration</td>
+<td>Safety configuration or validation requirements are unmet.</td>
+<td>Follow the specific safety-system recovery and validation process.</td>
+</tr>
+<tr>
+<td>Restore appears successful but a fault remains</td>
+<td>The original fault may involve hardware, network, power or field devices rather than the program.</td>
+<td>Diagnose the complete system instead of repeating the same restore.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="17-backup-integrity-and-recovery-testing">17. Backup Integrity and Recovery Testing</h2>
+<p>A backup that has never been checked is an assumption, not a dependable recovery asset.</p>
+<p>Useful verification methods include:</p>
+<ul>
+<li>Confirming that all expected files are present.</li>
+<li>Opening the project in a compatible engineering environment.</li>
+<li>Checking the recorded CPU model and firmware.</li>
+<li>Reviewing dependencies and hardware configuration.</li>
+<li>Confirming that the revision and backup date are documented.</li>
+<li>Comparing the backup against the approved project record.</li>
+<li>Testing restoration using a simulator or spare controller when practical.</li>
+<li>Documenting any components that could not be recovered or validated.</li>
+</ul>
+<p>A checksum can help detect accidental file changes, but it does not prove that a PLC project is correct or that the machine can be restored successfully.</p>
+<p>Recovery testing should be planned according to the criticality of the machine and the site's requirements.</p>
+<h2 id="18-example-building-a-recovery-package-for-an-automated-line">18. Example: Building a Recovery Package for an Automated Line</h2>
+<p>Suppose a production line contains:</p>
+<ul>
+<li>One PLC.</li>
+<li>Remote I/O.</li>
+<li>Multiple drives.</li>
+<li>Robot controllers.</li>
+<li>An HMI.</li>
+<li>A local SCADA or data-collection computer.</li>
+</ul>
+<p>A PLC-only backup may recover the primary logic but still leave the line unable to operate because a robot program, drive parameter set or HMI configuration is missing.</p>
+<p>A more complete recovery inventory could look like this:</p>
+<table>
+<thead>
+<tr>
+<th>System</th>
+<th>Required recovery information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC</td>
+<td>Native project, controller model, firmware and relevant configuration.</td>
+</tr>
+<tr>
+<td>Remote I/O</td>
+<td>Module configuration, addressing and communication details.</td>
+</tr>
+<tr>
+<td>Drives</td>
+<td>Approved parameter backup, model and firmware information.</td>
+</tr>
+<tr>
+<td>Robots</td>
+<td>Controller-specific programs, configuration and required recovery records.</td>
+</tr>
+<tr>
+<td>HMI</td>
+<td>Native project, runtime dependencies and communication settings.</td>
+</tr>
+<tr>
+<td>SCADA / industrial PC</td>
+<td>Application configuration, required software versions and approved data backup.</td>
+</tr>
+<tr>
+<td>Network</td>
+<td>IP plan, device names and relevant managed-network configuration.</td>
+</tr>
+<tr>
+<td>Safety system</td>
+<td>Approved safety project, configuration and validation records.</td>
+</tr>
+<tr>
+<td>Engineering environment</td>
+<td>Required software versions, libraries, dependencies and licensing information.</td>
+</tr>
+</tbody>
+</table>
+<p>The recovery package should identify the correct revision for each component. Independently restoring the latest available file for every device may produce incompatible versions across the line.</p>
+<h2 id="19-example-recovery-record">19. Example Recovery Record</h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Example entry</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine / line</td>
+<td>FR1010</td>
+</tr>
+<tr>
+<td>Controller</td>
+<td>Verified CPU model and identity</td>
+</tr>
+<tr>
+<td>Firmware</td>
+<td>Recorded version</td>
+</tr>
+<tr>
+<td>Engineering software</td>
+<td>Vendor software and version</td>
+</tr>
+<tr>
+<td>Approved project</td>
+<td>Revision identifier</td>
+</tr>
+<tr>
+<td>Backup date</td>
+<td>Recorded date and time</td>
+</tr>
+<tr>
+<td>Backup location</td>
+<td>Approved storage location</td>
+</tr>
+<tr>
+<td>Backup scope</td>
+<td>Program, configuration, data and supporting assets included</td>
+</tr>
+<tr>
+<td>Recovery trigger</td>
+<td>CPU failure, corruption or planned replacement</td>
+</tr>
+<tr>
+<td>Replacement compatibility</td>
+<td>Verified model and firmware requirements</td>
+</tr>
+<tr>
+<td>Restore method</td>
+<td>Manufacturer-supported procedure</td>
+</tr>
+<tr>
+<td>Transfer result</td>
+<td>Completed, failed or incomplete</td>
+</tr>
+<tr>
+<td>Post-restore diagnostics</td>
+<td>Recorded controller and module status</td>
+</tr>
+<tr>
+<td>Functional validation</td>
+<td>Test results</td>
+</tr>
+<tr>
+<td>Safety validation</td>
+<td>Required validation record</td>
+</tr>
+<tr>
+<td>Final approved state</td>
+<td>Revision and return-to-service approval</td>
+</tr>
+</tbody>
+</table>
+<h2 id="20-interview-questions-and-answers">20. Interview Questions and Answers</h2>
+<p>Q1. What is the difference between a backup and an upload?</p>
+<p>An upload retrieves supported controller contents. A backup is a deliberately preserved recovery package that should include the project and any required configuration or supporting information.</p>
+<p>Q2. Why is saving the PLC project not always enough?</p>
+<p>The project may not contain the necessary data, firmware information, device configuration, external assets or restoration instructions required to recover the complete system.</p>
+<p>Q3. What should be checked before restoring a replacement CPU?</p>
+<p>Controller compatibility, firmware, project revision, hardware configuration, network settings, required data, safety requirements and the recovery procedure.</p>
+<p>Q4. Why can a restored CPU run while the machine still fails?</p>
+<p>The program may be running while communication, I/O, device parameters, retained data, sequence conditions or physical equipment remain incorrect.</p>
+<p>Q5. What is the difference between program restore and data restore?</p>
+<p>Program restore recovers supported logic and configuration. Data restore recovers application values such as recipes, setpoints and other required data.</p>
+<p>Q6. Why should a backup be tested?</p>
+<p>To establish that it is readable, sufficiently complete and usable under the intended recovery process.</p>
+<p>Q7. Can a memory card be treated as a complete backup?</p>
+<p>Not automatically. Its contents, compatibility, freshness and supported restore behavior must be verified for the specific controller.</p>
+<p>Q8. What should happen after a successful CPU restoration?</p>
+<p>Verify controller identity, program revision, diagnostics, communications, I/O behavior, required functional tests and safety validation before returning the machine to service.</p>
+<p>Q9. Why should the previous known-good project be preserved?</p>
+<p>It provides a reference and potential recovery path if a later change or restoration introduces a problem.</p>
+<p>Q10. What is the biggest mistake in PLC recovery planning?</p>
+<p>Assuming that the controller program alone is enough to restore the entire machine.</p>
+<h2 id="21-practical-exercises">21. Practical Exercises</h2>
+<p>Use a training project, simulator or approved test environment.</p>
+<ol>
+<li>Save a PLC project under a clearly identified revision.</li>
+<li>Create a separate recovery folder containing the project and a controller-information record.</li>
+<li>Document the CPU model, firmware and required engineering-software version.</li>
+<li>List which supporting files are needed to restore the machine.</li>
+<li>Create a backup inventory for a hypothetical line with PLC, HMI, drives and robots.</li>
+<li>Compare two test revisions and record the differences.</li>
+<li>Practise opening and verifying a stored project in a compatible environment.</li>
+<li>Write a recovery checklist for a replacement CPU.</li>
+<li>Identify which application data must be restored separately from the program.</li>
+<li>Define the functional and safety checks that would be required before production restart.</li>
+</ol>
+<p>Do not practise controller replacement, memory-card restoration or production downloads on live equipment without an approved procedure.</p>
+<h2 id="22-final-mental-model">22. Final Mental Model</h2>
+<pre><code>Identify the System
+        |
+        v
+Establish the Authoritative Project
+        |
+        v
+Preserve Program, Configuration and Required Data
+        |
+        v
+Verify Backup Integrity and Compatibility
+        |
+        v
+Store the Recovery Package Independently
+        |
+        v
+Diagnose the Failure
+        |
+        v
+Prepare the Compatible Replacement or CPU
+        |
+        v
+Restore Using the Supported Procedure
+        |
+        v
+Validate Program, I/O, Devices and Safety
+        |
+        v
+Document the Final Approved State
+</code></pre>
+<p>Remember: A PLC backup is not just a file, and CPU restoration is not just a download. Reliable recovery requires the correct project, compatible hardware and firmware, necessary configuration and data, a controlled restoration procedure, and verified machine behavior.</p>
+<p>Next study section: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\02_Auto_Tech\01_PLC\13_Manufacturer_Awareness\01_Siemens</code></p>
+<p>Next topic: <code>01_Siemens | Siemens: S7-300/400/1200/1500, STEP 7, TIA Portal</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

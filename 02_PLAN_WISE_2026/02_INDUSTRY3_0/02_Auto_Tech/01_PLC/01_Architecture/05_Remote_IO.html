@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>05. Remote I/O: Distributed Racks over a Network</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">05. Remote I/O: Distributed Racks over a Network</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-why-remote-io-is-used">2. Why remote I/O is used</a><ul>
+<li><a href="#main-benefits">Main benefits</a></li>
+<li><a href="#trade-offs">Trade-offs</a></li>
+</ul>
+</li>
+<li><a href="#3-main-components-of-a-remote-io-system">3. Main components of a remote I/O system</a></li>
+<li><a href="#4-local-io-versus-remote-io">4. Local I/O versus remote I/O</a></li>
+<li><a href="#5-how-remote-io-communicates-with-the-plc">5. How remote I/O communicates with the PLC</a></li>
+<li><a href="#6-industrial-networks-used-for-remote-io">6. Industrial networks used for remote I/O</a><ul>
+<li><a href="#example-rockwell-ethernetip">Example: Rockwell EtherNet/IP</a></li>
+<li><a href="#example-siemens-profinet">Example: Siemens PROFINET</a></li>
+</ul>
+</li>
+<li><a href="#7-remote-io-addressing-and-configuration">7. Remote I/O addressing and configuration</a></li>
+<li><a href="#8-network-address-station-identity-and-io-address">8. Network address, station identity, and I/O address</a></li>
+<li><a href="#9-update-time-network-delay-and-control-response">9. Update time, network delay, and control response</a><ul>
+<li><a href="#important-terminology">Important terminology</a></li>
+</ul>
+</li>
+<li><a href="#10-what-happens-if-communication-fails">10. What happens if communication fails?</a></li>
+<li><a href="#11-remote-io-and-machine-safety">11. Remote I/O and machine safety</a></li>
+<li><a href="#12-troubleshooting-remote-io">12. Troubleshooting remote I/O</a></li>
+<li><a href="#13-practical-example-robotic-fixture-station">13. Practical example: robotic fixture station</a></li>
+<li><a href="#14-remote-io-during-a-retrofit-or-module-replacement">14. Remote I/O during a retrofit or module replacement</a></li>
+<li><a href="#15-interview-questions">15. Interview questions</a></li>
+<li><a href="#final-mental-model">Final mental model</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>Remote I/O is an arrangement in which input and output modules are installed away from the main PLC CPU and exchange I/O data with the controller over an industrial communication network.</p>
+<p>Instead of routing every field-device wire back to one central control panel, sensors and actuators can be wired to I/O modules installed near the machine or production equipment.</p>
+<p>The PLC CPU continues to execute the control program. A remote I/O station collects input signals and receives output commands through the network.</p>
+<p>For example, an automotive robotic line may have a central PLC panel and separate remote I/O stations near robot fixtures, conveyors, clamp assemblies, and welding equipment.</p>
+<p>Remote I/O reduces long field-wiring runs, but it introduces network connections, remote-station configuration, and communication diagnostics that must be understood during maintenance.</p>
+<h2 id="2-why-remote-io-is-used">2. Why remote I/O is used</h2>
+<p>Consider a production line with multiple stations distributed across a large factory area.</p>
+<p>With centralized I/O, many individual sensor and actuator wires must travel from the field devices to the central PLC panel.</p>
+<p>With remote I/O, field devices connect to a nearby I/O station, and that station exchanges data with the PLC over a network.</p>
+<pre><code>CENTRALIZED I/O
+
+Field sensors and actuators
+     |  |  |  |  |  |
+     |  |  |  |  |  |
+     v  v  v  v  v  v
+Central PLC panel
+[CPU + all I/O modules]
+
+REMOTE I/O
+
+Field devices at Station A
+     |
+     v
+[Remote I/O A] --------\
+                        \
+Field devices at Station B \
+     |                      \
+     v                       v
+[Remote I/O B] -------- Industrial network
+                                |
+                                v
+                           [PLC CPU]
+</code></pre>
+<p>The second arrangement distributes the field connections. The PLC program can still coordinate the entire machine or production line.</p>
+<h3 id="main-benefits">Main benefits</h3>
+<ul>
+<li>Reduced field wiring: Shorter wiring runs from field devices to nearby I/O stations.</li>
+<li>Simpler expansion: Additional stations may be integrated through the supported network and hardware architecture.</li>
+<li>Better physical organization: I/O can be arranged around machine zones or equipment groups.</li>
+<li>Easier signal grouping: Signals from a fixture, conveyor, or robot station can be organized together.</li>
+<li>Improved maintainability: When correctly documented, station-level diagnostics help identify where a problem originates.</li>
+</ul>
+<h3 id="trade-offs">Trade-offs</h3>
+<ul>
+<li>Additional network hardware and configuration.</li>
+<li>Dependence on communication availability.</li>
+<li>Remote station power-supply requirements.</li>
+<li>Potential network and adapter faults affecting multiple signals.</li>
+<li>Need to manage device names, IP addresses, firmware, and configuration compatibility.</li>
+<li>Additional communication delay and data-update considerations.</li>
+</ul>
+<p>Remote I/O does not automatically make a system faster, safer, or more reliable. Those outcomes depend on the design and implementation.</p>
+<h2 id="3-main-components-of-a-remote-io-system">3. Main components of a remote I/O system</h2>
+<p>A typical remote I/O arrangement contains the following components.</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC CPU</td>
+<td>Executes the control program and coordinates machine operation</td>
+</tr>
+<tr>
+<td>Industrial network</td>
+<td>Carries I/O data and, where supported, diagnostic and configuration information</td>
+</tr>
+<tr>
+<td>Remote I/O adapter or head station</td>
+<td>Connects the remote I/O station to the network and exchanges data with the controller</td>
+</tr>
+<tr>
+<td>Digital input module</td>
+<td>Collects discrete input signals</td>
+</tr>
+<tr>
+<td>Digital output module</td>
+<td>Controls discrete output circuits</td>
+</tr>
+<tr>
+<td>Analog input module</td>
+<td>Acquires analog measurement signals</td>
+</tr>
+<tr>
+<td>Analog output module</td>
+<td>Produces analog control signals</td>
+</tr>
+<tr>
+<td>Field power supply</td>
+<td>Supplies the remote station and/or field circuits as designed</td>
+</tr>
+<tr>
+<td>Network switch, where used</td>
+<td>Connects network devices according to the network topology</td>
+</tr>
+<tr>
+<td>Field terminals and wiring</td>
+<td>Connects sensors and actuators to the appropriate I/O channels</td>
+</tr>
+</tbody>
+</table>
+<p>The adapter or head station is the communication interface for the remote I/O assembly. It is not necessarily a second PLC CPU and does not normally execute the main machine-control program.</p>
+<p>Some systems integrate the network interface and I/O electronics differently, so the exact hardware arrangement varies by platform.</p>
+<h2 id="4-local-io-versus-remote-io">4. Local I/O versus remote I/O</h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Local I/O</th>
+<th>Remote I/O</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Physical location</td>
+<td>In or near the PLC's local rack</td>
+<td>At a separate machine or field location</td>
+</tr>
+<tr>
+<td>Communication path</td>
+<td>Typically through the local backplane or supported expansion interface</td>
+<td>Through an industrial network and remote adapter</td>
+</tr>
+<tr>
+<td>Field wiring</td>
+<td>Often runs toward the central panel</td>
+<td>Can terminate at a nearby remote station</td>
+</tr>
+<tr>
+<td>Network dependency</td>
+<td>No separate remote I/O network connection for the local module</td>
+<td>Requires the configured communication path</td>
+</tr>
+<tr>
+<td>Typical diagnostics</td>
+<td>CPU, rack, and module diagnostics</td>
+<td>CPU, network, adapter, and module diagnostics</td>
+</tr>
+<tr>
+<td>Common failure scope</td>
+<td>May affect a module, rack, or local system</td>
+<td>A network or adapter failure may affect many remote I/O points</td>
+</tr>
+</tbody>
+</table>
+<p>The word remote describes the station's relationship to the controller, not necessarily its physical distance. A remote station might be only a few metres away or located across a large production line.</p>
+<h2 id="5-how-remote-io-communicates-with-the-plc">5. How remote I/O communicates with the PLC</h2>
+<p>A simplified input-data path is:</p>
+<pre><code>Field sensor
+    |
+    v
+Remote DI module
+    |
+    v
+Remote I/O adapter
+    |
+    v
+Industrial network
+    |
+    v
+PLC communication interface
+    |
+    v
+PLC input data / tag
+    |
+    v
+Control program
+</code></pre>
+<p>For an output, the direction is reversed:</p>
+<pre><code>PLC control program
+    |
+    v
+Output command data
+    |
+    v
+Industrial network
+    |
+    v
+Remote I/O adapter
+    |
+    v
+Remote DO module
+    |
+    v
+Field actuator
+</code></pre>
+<p>In a cyclic I/O system, the controller and remote station exchange updated data repeatedly. Depending on the platform, this may involve scheduled or cyclic communication, connection parameters, and a configured update interval.</p>
+<p>The PLC does not necessarily send a separate request for every individual input bit each time the program reads it. The network and controller architecture determine how the data is exchanged and presented to the program.</p>
+<h2 id="6-industrial-networks-used-for-remote-io">6. Industrial networks used for remote I/O</h2>
+<p>Different PLC manufacturers and applications use different industrial networks.</p>
+<table>
+<thead>
+<tr>
+<th>Network</th>
+<th>Common ecosystem or application</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EtherNet/IP</td>
+<td>Widely used with Rockwell Automation systems and compatible devices</td>
+</tr>
+<tr>
+<td>PROFINET</td>
+<td>Widely used with Siemens and other compatible industrial automation equipment</td>
+</tr>
+<tr>
+<td>CC-Link IE</td>
+<td>Used in supported Mitsubishi and other industrial automation architectures</td>
+</tr>
+<tr>
+<td>EtherCAT</td>
+<td>Common in supported motion-control and distributed I/O systems</td>
+</tr>
+<tr>
+<td>PROFIBUS DP</td>
+<td>Established fieldbus technology used in many installed industrial systems</td>
+</tr>
+</tbody>
+</table>
+<p>These technologies are not interchangeable merely because some of them use Ethernet physical infrastructure. Their communication models, configuration methods, device requirements, and engineering tools differ.</p>
+<h3 id="example-rockwell-ethernetip">Example: Rockwell EtherNet/IP</h3>
+<p>A ControlLogix controller may communicate with a remote I/O adapter over EtherNet/IP. The project must define the compatible adapter and its associated I/O modules, connection settings, and data structures.</p>
+<h3 id="example-siemens-profinet">Example: Siemens PROFINET</h3>
+<p>A Siemens controller may exchange I/O data with a configured PROFINET remote station. The project must contain the appropriate device configuration and match the real station's identity and module arrangement.</p>
+<p>The exact commissioning steps depend on the PLC family, engineering software, firmware, and network design.</p>
+<h2 id="7-remote-io-addressing-and-configuration">7. Remote I/O addressing and configuration</h2>
+<p>Remote I/O does not remove the need for I/O addressing. It changes how the I/O hardware is located and connected within the control system.</p>
+<p>A typical configuration identifies:</p>
+<ul>
+<li>The remote station or adapter.</li>
+<li>Its network identity or address.</li>
+<li>The communication protocol and connection settings.</li>
+<li>The installed module types and channel configuration.</li>
+<li>The data exchanged with the controller.</li>
+<li>The tags or addresses used by the PLC program.</li>
+</ul>
+<p>An illustrative configuration might look like this:</p>
+<pre><code>PLC Controller
+    |
+    +-- Remote Station: ROBOT_ZONE_1
+    |       |
+    |       +-- DI module
+    |       +-- DO module
+    |       +-- AI module
+    |
+    +-- Remote Station: CONVEYOR_ZONE_2
+            |
+            +-- DI module
+            +-- DO module
+</code></pre>
+<p><code>ROBOT_ZONE_1</code> and <code>CONVEYOR_ZONE_2</code> are example station names, not mandatory naming conventions.</p>
+<p>In a symbolic-tag-based system, a program might use tags such as <code>ROBOT_GUARD_CLOSED</code> or <code>CONVEYOR_MOTOR_READY</code>. The hardware configuration maps the relevant I/O data into the controller's data model.</p>
+<p>A tag name alone does not prove that the correct physical channel has been configured. The tag, hardware configuration, I/O list, and field wiring must agree.</p>
+<h2 id="8-network-address-station-identity-and-io-address">8. Network address, station identity, and I/O address</h2>
+<p>These three concepts must not be confused.</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>What it identifies</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Network address</td>
+<td>A device's communication address on the network</td>
+<td>An IP address, where applicable</td>
+</tr>
+<tr>
+<td>Station identity</td>
+<td>The configured remote I/O device or node</td>
+<td><code>ROBOT_ZONE_1</code></td>
+</tr>
+<tr>
+<td>I/O channel address or tag</td>
+<td>A specific input or output data point</td>
+<td><code>GUARD_CLOSED</code></td>
+</tr>
+</tbody>
+</table>
+<p>A device may have correct field wiring but the wrong network configuration. It may be reachable on the network yet have an incorrectly configured module layout. It may also communicate successfully while the PLC program references the wrong I/O point.</p>
+<p>Consequently, network reachability alone does not prove that the complete I/O configuration is correct.</p>
+<h2 id="9-update-time-network-delay-and-control-response">9. Update time, network delay, and control response</h2>
+<p>Remote I/O data is not necessarily refreshed at the exact instant a physical signal changes.</p>
+<p>The total response can depend on several stages:</p>
+<ol>
+<li>Field device response.</li>
+<li>Input-module filtering and sampling.</li>
+<li>Remote I/O data update.</li>
+<li>Network communication and scheduling.</li>
+<li>PLC input-data availability and program execution.</li>
+<li>Output-data update and network communication.</li>
+<li>Output-module switching and actuator response.</li>
+</ol>
+<p>An illustrative timing path is:</p>
+<pre><code>Sensor changes
+      |
+      v
+Input module detects change
+      |
+      v
+Remote station updates its data
+      |
+      v
+Network transfers the data
+      |
+      v
+PLC program processes the state
+      |
+      v
+Output command is generated
+      |
+      v
+Output reaches remote station
+      |
+      v
+Actuator responds
+</code></pre>
+<p>The actual sequence and timing depend on the system architecture.</p>
+<h3 id="important-terminology">Important terminology</h3>
+<ul>
+<li>Update time: The configured or effective interval at which relevant I/O data is updated.</li>
+<li>Network latency: The delay associated with transferring information.</li>
+<li>PLC scan time: The time associated with executing a program scan, where that execution model applies.</li>
+<li>End-to-end response time: The elapsed time from a physical event to the resulting system response.</li>
+</ul>
+<p>These values are related but are not the same measurement. A network's configured update interval is not a guarantee of the complete machine response time.</p>
+<p>For high-speed counting, motion control, or time-critical interlocks, verify that the selected architecture and timing specifications satisfy the application requirements.</p>
+<h2 id="10-what-happens-if-communication-fails">10. What happens if communication fails?</h2>
+<p>A remote I/O station depends on a functioning communication path. If the connection fails, the controller may no longer receive fresh input data or deliver new output commands to that station.</p>
+<p>The system's response depends on the PLC platform, module type, configuration, and application logic.</p>
+<p>Possible behaviors include:</p>
+<ul>
+<li>A communication fault is reported.</li>
+<li>Input data becomes marked as invalid, unavailable, or otherwise faulted.</li>
+<li>The controller retains the last reported value for some data under certain configurations.</li>
+<li>Outputs transition to configured fault states.</li>
+<li>Outputs retain their last state under some configurations.</li>
+<li>The controller or application initiates a controlled stop.</li>
+</ul>
+<p>There is no universal rule that remote outputs always turn OFF when communication is lost. The actual fault behavior must be confirmed from the relevant controller, adapter, module documentation, and project configuration.</p>
+<p>For production machinery, fault behavior must be designed and validated rather than assumed.</p>
+<h2 id="11-remote-io-and-machine-safety">11. Remote I/O and machine safety</h2>
+<p>Standard remote I/O and safety-rated remote I/O serve different purposes.</p>
+<p>A standard input module may monitor a guard-position sensor for ordinary sequence logic. A safety function that protects personnel requires an appropriately designed and validated safety architecture.</p>
+<p>Depending on the application, that architecture may require safety-rated sensors, safety I/O, a safety PLC or relay, and a supported safety communication system.</p>
+<p>Do not treat a normal PLC input tag as a substitute for a safety function. Do not assume that a standard remote I/O network provides safety-rated behavior.</p>
+<p>Changes to safety-related equipment must follow the approved safety procedures and engineering controls.</p>
+<h2 id="12-troubleshooting-remote-io">12. Troubleshooting remote I/O</h2>
+<p>Remote I/O faults are easier to isolate when troubleshooting proceeds from the station and network toward the individual I/O channels.</p>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible causes</th>
+<th>Checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Entire remote station is unavailable</td>
+<td>Station power loss, network disconnection, adapter fault, wrong configuration</td>
+<td>Check power, station indicators, network link, adapter diagnostics</td>
+</tr>
+<tr>
+<td>PLC reports a communication fault</td>
+<td>Incorrect address or identity, network issue, incompatible configuration, connection failure</td>
+<td>Review controller diagnostics, device identity, network settings, and connection status</td>
+</tr>
+<tr>
+<td>Several inputs fail together</td>
+<td>Remote station power problem, adapter failure, network fault, common supply issue</td>
+<td>Check station power, network status, adapter health, shared field supply</td>
+</tr>
+<tr>
+<td>One input fails while others work</td>
+<td>Sensor, wiring, terminal, individual channel, or mapping problem</td>
+<td>Check field signal, channel LED, channel configuration, and PLC tag</td>
+</tr>
+<tr>
+<td>PLC output command changes but remote output does not</td>
+<td>Output data not updating, module fault, mapping error, channel fault</td>
+<td>Check connection status, output data, module diagnostics, and channel indication</td>
+</tr>
+<tr>
+<td>Remote output LED is ON but the actuator does not operate</td>
+<td>Missing field power, fuse, broken wire, faulty load, or external interlock</td>
+<td>Check the output circuit and actuator using approved procedures</td>
+</tr>
+<tr>
+<td>Communication repeatedly drops</td>
+<td>Cable or connector issue, network configuration, power instability, or network loading</td>
+<td>Inspect diagnostics, cable connections, device configuration, and network health</td>
+</tr>
+</tbody>
+</table>
+<p>A network issue can affect many signals simultaneously. A single-channel problem is more likely to require examination of that channel's field circuit, although a shared configuration issue can also affect an individual point.</p>
+<p>These are troubleshooting hypotheses, not guaranteed causes.</p>
+<h2 id="13-practical-example-robotic-fixture-station">13. Practical example: robotic fixture station</h2>
+<p>Consider a robotic welding line with a central PLC and a remote I/O station near a fixture.</p>
+<p>The remote station collects:</p>
+<ul>
+<li>Clamp-closed sensor states.</li>
+<li>Part-present sensor states.</li>
+<li>Fixture pressure measurements.</li>
+<li>Solenoid-valve output commands.</li>
+<li>Local machine-status signals.</li>
+</ul>
+<p>The PLC coordinates the station with the robot, conveyor, and other equipment.</p>
+<pre><code>FIXTURE FIELD DEVICES
+    |
+    v
+REMOTE I/O STATION
+    |
+    | Industrial network
+    |
+    v
+CENTRAL PLC
+    |
+    +--&gt; Sequence logic
+    +--&gt; Interlocks and permissives
+    +--&gt; Robot and conveyor coordination
+    |
+    v
+OUTPUT DATA TO REMOTE I/O
+    |
+    v
+FIXTURE VALVES AND OTHER ACTUATORS
+</code></pre>
+<p>Suppose all fixture inputs suddenly become unavailable.</p>
+<p>A sensible investigation would begin by checking the remote station's power, adapter status, network connection, and controller diagnostics before inspecting every sensor individually.</p>
+<p>If only one clamp-closed input fails while other signals at the same station remain healthy, investigate that sensor's supply, wiring, input channel, address mapping, and diagnostics.</p>
+<p>This distinction can save considerable breakdown time. One common communication fault should not trigger a pointless tour of every sensor on the fixture.</p>
+<h2 id="14-remote-io-during-a-retrofit-or-module-replacement">14. Remote I/O during a retrofit or module replacement</h2>
+<p>When modifying an existing system, record the complete remote I/O configuration before making changes.</p>
+<p>Check:</p>
+<ul>
+<li>PLC model and firmware.</li>
+<li>Remote adapter model and firmware.</li>
+<li>Network protocol and device identity.</li>
+<li>IP address or other applicable network settings.</li>
+<li>Installed modules and their order.</li>
+<li>Channel assignments and electrical signal types.</li>
+<li>Controller connection settings and update intervals.</li>
+<li>PLC tag mapping and program references.</li>
+<li>Fault-state behavior and recovery requirements.</li>
+<li>Electrical drawings, I/O list, backups, and commissioning records.</li>
+</ul>
+<p>A replacement adapter or module may require configuration changes even when it physically fits the existing assembly.</p>
+<p>Before returning equipment to production, verify communication health, channel operation, diagnostics, and the relevant machine sequence using the approved commissioning procedure.</p>
+<h2 id="15-interview-questions">15. Interview questions</h2>
+<p>Q1. What is remote I/O?</p>
+<p>Remote I/O consists of input and output modules located away from the main PLC controller that exchange I/O data through an industrial communication network.</p>
+<p>Q2. Why is remote I/O used in manufacturing?</p>
+<p>It reduces long field-wiring runs, organizes signals near equipment, and supports distributed machine architectures.</p>
+<p>Q3. What is the function of a remote I/O adapter?</p>
+<p>It connects the remote station to the industrial network and manages the exchange of I/O data with the controller, according to the supported architecture.</p>
+<p>Q4. Does remote I/O execute the main PLC program?</p>
+<p>Ordinary remote I/O generally interfaces signals and exchanges data rather than executing the main machine-control program. Special hardware can have additional capabilities, so the exact device documentation matters.</p>
+<p>Q5. What happens if the remote I/O network fails?</p>
+<p>The controller may report a communication fault and lose access to fresh I/O data. Input and output behavior depends on the platform, configuration, and application design.</p>
+<p>Q6. If a remote station is reachable over the network, does that prove all I/O points are working?</p>
+<p>No. Network reachability does not prove that the module configuration, field wiring, channel mapping, sensor, or actuator is correct.</p>
+<p>Q7. What is the difference between network address and I/O address?</p>
+<p>The network address identifies a communicating device. The I/O address or tag identifies a specific input or output data point within the control system.</p>
+<p>Q8. Why must communication timing be considered in remote I/O systems?</p>
+<p>Data transfer, module processing, PLC execution, and actuator response all contribute to the time between a physical event and the system's reaction.</p>
+<h2 id="final-mental-model">Final mental model</h2>
+<pre><code>FIELD DEVICES
+     |
+     v
+REMOTE I/O MODULES
+     |
+     v
+REMOTE I/O ADAPTER
+     |
+     v
+INDUSTRIAL NETWORK
+     |
+     v
+PLC CPU AND CONTROL PROGRAM
+     |
+     v
+INDUSTRIAL NETWORK
+     |
+     v
+REMOTE OUTPUT MODULES
+     |
+     v
+FIELD ACTUATORS
+</code></pre>
+<p>Remember these five principles:</p>
+<ol>
+<li>Remote I/O moves the field interface closer to the equipment, not the main control logic by default.</li>
+<li>The network, adapter, module configuration, and field wiring are separate potential failure points.</li>
+<li>A communication fault can affect multiple I/O points at once.</li>
+<li>Network status alone does not prove that individual I/O channels work correctly.</li>
+<li>Output behavior during communication loss must be verified from the actual system configuration.</li>
+</ol>
+<p>The next topic is <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\02_Auto_Tech\01_PLC\02_Scan_Cycle\01_Input_Read</code>, Input read: Inputs copied to image table.</p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

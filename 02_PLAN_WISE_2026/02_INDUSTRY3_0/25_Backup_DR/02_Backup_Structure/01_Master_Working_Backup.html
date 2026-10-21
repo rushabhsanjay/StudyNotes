@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Master Backup vs Working Backup</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Master Backup vs Working Backup</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and Scope</a></li>
+<li><a href="#2-master-backup">2. Master Backup</a><ul>
+<li><a href="#21-characteristics-of-a-master-backup">2.1 Characteristics of a Master Backup</a></li>
+<li><a href="#22-example">2.2 Example</a></li>
+</ul>
+</li>
+<li><a href="#3-working-backup">3. Working Backup</a><ul>
+<li><a href="#31-characteristics-of-a-working-backup">3.1 Characteristics of a Working Backup</a></li>
+</ul>
+</li>
+<li><a href="#4-master-vs-working-backup">4. Master vs Working Backup</a></li>
+<li><a href="#5-relationship-between-the-copies">5. Relationship Between the Copies</a></li>
+<li><a href="#6-why-both-copies-are-necessary">6. Why Both Copies Are Necessary</a></li>
+<li><a href="#7-master-backup-creation-procedure">7. Master Backup Creation Procedure</a><ul>
+<li><a href="#step-1-identify-the-asset">Step 1: Identify the Asset</a></li>
+<li><a href="#step-2-capture-the-actual-state">Step 2: Capture the Actual State</a></li>
+<li><a href="#step-3-validate-the-configuration">Step 3: Validate the Configuration</a></li>
+<li><a href="#step-4-approve-and-identify">Step 4: Approve and Identify</a></li>
+<li><a href="#step-5-protect-the-master">Step 5: Protect the Master</a></li>
+<li><a href="#step-6-test-recoverability">Step 6: Test Recoverability</a></li>
+</ul>
+</li>
+<li><a href="#8-working-backup-creation-procedure">8. Working Backup Creation Procedure</a></li>
+<li><a href="#9-example-folder-structure">9. Example Folder Structure</a></li>
+<li><a href="#10-naming-convention">10. Naming Convention</a></li>
+<li><a href="#11-version-and-revision-management">11. Version and Revision Management</a></li>
+<li><a href="#12-change-control-and-release-process">12. Change Control and Release Process</a></li>
+<li><a href="#13-rollback-procedure">13. Rollback Procedure</a></li>
+<li><a href="#14-handling-emergency-changes">14. Handling Emergency Changes</a></li>
+<li><a href="#15-special-considerations-by-device-type">15. Special Considerations by Device Type</a></li>
+<li><a href="#16-security-and-access-control">16. Security and Access Control</a></li>
+<li><a href="#17-common-mistakes">17. Common Mistakes</a></li>
+<li><a href="#18-practical-industrial-example">18. Practical Industrial Example</a></li>
+<li><a href="#19-master-vs-working-backup-audit-checklist">19. Master vs Working Backup Audit Checklist</a></li>
+<li><a href="#20-interview-questions-and-answers">20. Interview Questions and Answers</a></li>
+<li><a href="#21-final-principles">21. Final Principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-and-scope">1. Purpose and Scope</h2>
+<p>In industrial maintenance, automation, and disaster recovery, Master Backup vs Working Backup is the practice of separating an approved, protected reference copy from the copy used for routine engineering, troubleshooting, testing, and operational changes.</p>
+<p>This distinction is important for PLCs, HMIs, SCADA systems, CNC machines, robots, vision systems, industrial PCs, network devices, drives, test benches, and other programmable equipment.</p>
+<p>The core principle is simple:</p>
+<ul>
+<li>Master Backup: The controlled, approved reference version that can be used to recover a known-good system.</li>
+<li>Working Backup: A copy used for ongoing work, investigation, testing, or modification. It may contain changes that have not yet been approved.</li>
+</ul>
+<p>The terms are not universal industry standards. An organization may use names such as golden copy, baseline, released version, engineering copy, or working project. The important thing is to define the purpose, status, ownership, and permissions for each copy.</p>
+<h2 id="2-master-backup">2. Master Backup</h2>
+<p>A Master Backup is the protected reference copy of an asset's approved configuration at a known point in time.</p>
+<p>It should represent a configuration that has been validated and accepted for the intended application.</p>
+<p>Examples include:</p>
+<ul>
+<li>Approved PLC program and hardware configuration.</li>
+<li>Released HMI project and runtime configuration.</li>
+<li>Validated SCADA application and tag configuration.</li>
+<li>Approved robot program and machine parameters.</li>
+<li>Released CNC configuration and supported parameter exports.</li>
+<li>Validated vision inspection jobs and calibration records.</li>
+<li>Approved industrial PC system image.</li>
+<li>Approved network switch or firewall configuration.</li>
+<li>Validated drive parameters and application settings.</li>
+<li>Approved test-bench software, test sequences, and limits.</li>
+</ul>
+<h3 id="21-characteristics-of-a-master-backup">2.1 Characteristics of a Master Backup</h3>
+<ul>
+<li>Approved by the designated authority.</li>
+<li>Identified by a revision or release number.</li>
+<li>Linked to the correct machine or asset.</li>
+<li>Protected against unauthorized modification and deletion.</li>
+<li>Stored in a controlled repository.</li>
+<li>Supported by a known restore procedure.</li>
+<li>Associated with validation or acceptance evidence.</li>
+<li>Retained according to the organization's backup and change-control policy.</li>
+</ul>
+<p>A Master Backup is not necessarily the newest file. It is the latest approved reference version, or another specifically designated release.</p>
+<h3 id="22-example">2.2 Example</h3>
+<p>A PLC program controls a production test bench. An engineer changes a timer during troubleshooting and saves the project.</p>
+<p>The modified project is not automatically the new Master Backup. It becomes a new master only after the change is reviewed, tested, approved, and released under the applicable procedure.</p>
+<h2 id="3-working-backup">3. Working Backup</h2>
+<p>A Working Backup is a copy used during engineering, troubleshooting, modification, testing, or analysis.</p>
+<p>It may be based on the Master Backup, a verified upload from the actual machine, or another documented starting point.</p>
+<p>Examples include:</p>
+<ul>
+<li>A PLC project being modified to correct a sequence.</li>
+<li>A copy of an HMI project being updated for a new alarm.</li>
+<li>A SCADA project being tested with new tags.</li>
+<li>A robot program being evaluated offline.</li>
+<li>A vision job being adjusted to investigate false rejects.</li>
+<li>A network configuration being tested before an approved change.</li>
+<li>A CNC parameter export used during a controlled diagnostic activity.</li>
+</ul>
+<h3 id="31-characteristics-of-a-working-backup">3.1 Characteristics of a Working Backup</h3>
+<ul>
+<li>May change frequently.</li>
+<li>May contain unapproved changes.</li>
+<li>Can be used for experimentation within authorized boundaries.</li>
+<li>Should be identifiable by owner, date, and purpose.</li>
+<li>Should not silently replace the approved master.</li>
+<li>Should be stored separately from protected master copies.</li>
+<li>Should have a documented route for approval and release.</li>
+</ul>
+<p>A Working Backup is not automatically safe to deploy. Its status must be clear, especially when several engineers or vendors are involved.</p>
+<h2 id="4-master-vs-working-backup">4. Master vs Working Backup</h2>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Master Backup</th>
+<th>Working Backup</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Purpose</td>
+<td>Approved recovery reference</td>
+<td>Engineering and troubleshooting</td>
+</tr>
+<tr>
+<td>Approval</td>
+<td>Formally approved or designated as released</td>
+<td>May be unapproved</td>
+</tr>
+<tr>
+<td>Modification</td>
+<td>Restricted</td>
+<td>Permitted within assigned authority</td>
+</tr>
+<tr>
+<td>Stability</td>
+<td>Intended to remain unchanged</td>
+<td>May change frequently</td>
+</tr>
+<tr>
+<td>Version control</td>
+<td>Controlled release revision</td>
+<td>Working revision or change identifier</td>
+</tr>
+<tr>
+<td>Access</td>
+<td>Restricted write access</td>
+<td>Access based on engineering task</td>
+</tr>
+<tr>
+<td>Use in production recovery</td>
+<td>Preferred when appropriate and compatible</td>
+<td>Only after verification and approval</td>
+</tr>
+<tr>
+<td>Validation</td>
+<td>Required for its approved status</td>
+<td>Depends on the work stage</td>
+</tr>
+<tr>
+<td>Storage</td>
+<td>Protected, controlled repository</td>
+<td>Engineering workspace or controlled working area</td>
+</tr>
+<tr>
+<td>Replacement</td>
+<td>Only through an authorized release process</td>
+<td>Can be superseded by newer working copies</td>
+</tr>
+<tr>
+<td>Auditability</td>
+<td>Must be traceable</td>
+<td>Should be traceable where changes affect the asset</td>
+</tr>
+<tr>
+<td>Risk</td>
+<td>Can become outdated if not maintained</td>
+<td>Can contain incomplete or incorrect changes</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-relationship-between-the-copies">5. Relationship Between the Copies</h2>
+<pre><code>Approved Existing Configuration
+        ↓
+Create Verified Working Copy
+        ↓
+Engineering / Troubleshooting / Modification
+        ↓
+Offline Review and Testing
+        ↓
+Controlled Deployment, Where Required
+        ↓
+Functional Validation on Actual Equipment
+        ↓
+Review and Formal Approval
+        ↓
+Release New Master Backup
+        ↓
+Retain Previous Master According to Policy
+</code></pre>
+<p>This is a general lifecycle, not a requirement that every change must follow precisely the same sequence. Emergency work, safety-related changes, and vendor-controlled equipment may require special procedures.</p>
+<p>Important: The Master Backup and the actual running configuration can differ. Before restoring or changing a machine, determine what is actually installed and running, whether that state is approved, and whether a more recent valid configuration exists.</p>
+<h2 id="6-why-both-copies-are-necessary">6. Why Both Copies Are Necessary</h2>
+<p>Keeping only a Master Backup can make engineering work inconvenient or encourage engineers to modify the protected reference directly.</p>
+<p>Keeping only a Working Backup creates a different problem: nobody can confidently identify which version is approved and safe to restore.</p>
+<p>Separating the two supports:</p>
+<ul>
+<li>Recovery from failed modifications.</li>
+<li>Comparison between approved and actual configurations.</li>
+<li>Controlled software development.</li>
+<li>Easier investigation of intermittent faults.</li>
+<li>Vendor and maintenance collaboration.</li>
+<li>Traceability of production changes.</li>
+<li>Prevention of accidental overwriting.</li>
+<li>Safer rollback after unsuccessful updates.</li>
+<li>Better audit and change-management evidence.</li>
+</ul>
+<p>The two-copy approach is a configuration-control practice. It does not replace independent backup copies, off-site or offline protection, or a complete disaster recovery strategy.</p>
+<h2 id="7-master-backup-creation-procedure">7. Master Backup Creation Procedure</h2>
+<h3 id="step-1-identify-the-asset">Step 1: Identify the Asset</h3>
+<p>Record:</p>
+<ul>
+<li>Plant asset ID.</li>
+<li>Machine or line.</li>
+<li>Controller or device model.</li>
+<li>Hardware revision.</li>
+<li>Firmware version.</li>
+<li>Software version.</li>
+<li>Network identity where applicable.</li>
+<li>Relevant project or configuration name.</li>
+</ul>
+<h3 id="step-2-capture-the-actual-state">Step 2: Capture the Actual State</h3>
+<p>Determine whether the backup is being created from:</p>
+<ul>
+<li>The current project used by engineering.</li>
+<li>An upload or export from the physical device.</li>
+<li>An approved existing release.</li>
+<li>A restored and validated system image.</li>
+</ul>
+<p>These sources are not automatically equivalent.</p>
+<p>For example, a PLC project on an engineering laptop may differ from the program currently running in the PLC. Where supported, compare the project with the controller's actual program and configuration before designating it as the master.</p>
+<h3 id="step-3-validate-the-configuration">Step 3: Validate the Configuration</h3>
+<p>Verify the relevant behavior for the asset.</p>
+<p>For a PLC, this may include:</p>
+<ul>
+<li>Program and hardware configuration.</li>
+<li>I/O mapping.</li>
+<li>Communication settings.</li>
+<li>Safety-related configuration, where applicable.</li>
+<li>Required data and retentive-value handling.</li>
+<li>Version and compatibility checks.</li>
+</ul>
+<p>For a network switch, it may include:</p>
+<ul>
+<li>VLAN and port configuration.</li>
+<li>Routing and redundancy.</li>
+<li>Security settings.</li>
+<li>Connectivity and network stability.</li>
+</ul>
+<p>For a vision system, it may include:</p>
+<ul>
+<li>Inspection job.</li>
+<li>Camera configuration.</li>
+<li>Calibration.</li>
+<li>Inspection limits.</li>
+<li>Reference samples and validation results.</li>
+</ul>
+<h3 id="step-4-approve-and-identify">Step 4: Approve and Identify</h3>
+<p>Assign a controlled revision and status.</p>
+<p>Example:</p>
+<pre><code>Asset_ID: TB-PLC-014
+System: End-of-Line Test Bench
+Backup_Type: MASTER
+Revision: R003
+Status: APPROVED
+Source: Verified controller project
+Software_Version: Recorded in asset register
+Approval_Record: Linked work order or change record
+Created_On: YYYY-MM-DD
+</code></pre>
+<p>These fields are an example template. Replace them with the organization's actual asset and document-control identifiers.</p>
+<h3 id="step-5-protect-the-master">Step 5: Protect the Master</h3>
+<ul>
+<li>Store it in the approved repository.</li>
+<li>Restrict write access.</li>
+<li>Preserve earlier approved versions according to retention policy.</li>
+<li>Record integrity information where appropriate.</li>
+<li>Keep required recovery documentation with the backup.</li>
+<li>Ensure that recovery access is available to authorized personnel.</li>
+</ul>
+<h3 id="step-6-test-recoverability">Step 6: Test Recoverability</h3>
+<p>Confirm that the backup can be opened or restored using the supported tools and process. Where practical, test restoration on a suitable spare device, test environment, or isolated system.</p>
+<p>Do not experiment by restoring an unverified backup onto a live production controller.</p>
+<h2 id="8-working-backup-creation-procedure">8. Working Backup Creation Procedure</h2>
+<ol>
+<li>Select the correct approved master or verified actual-state capture.</li>
+<li>Copy it into the controlled working area.</li>
+<li>Record the source revision and asset identity.</li>
+<li>Assign an owner and change purpose.</li>
+<li>Make authorized changes in the working copy.</li>
+<li>Save meaningful intermediate versions.</li>
+<li>Test changes using the appropriate offline or controlled environment.</li>
+<li>Document differences from the source.</li>
+<li>Follow the approved deployment procedure if the change must reach production.</li>
+<li>Submit the completed change for review and release.</li>
+</ol>
+<p>A working copy should not be named merely <code>latest</code>, <code>final</code>, or <code>new_final</code>. Those names describe the engineer's emotional relationship with the file, not its technical status.</p>
+<h2 id="9-example-folder-structure">9. Example Folder Structure</h2>
+<pre><code>BACKUP_REPOSITORY/
+    Asset_ID/
+        01_MASTER/
+            R001/
+            R002/
+            R003/
+        02_WORKING/
+            Engineer_or_Team/
+                Change_ID/
+        03_ACTUAL_STATE_CAPTURE/
+            Date_Time/
+        04_VALIDATION/
+            Test_Results/
+            Approval_Records/
+        05_CHANGE_HISTORY/
+            Change_Requests/
+            Configuration_Differences/
+        06_RECOVERY/
+            Restore_Procedure/
+            Required_Software/
+            Hardware_Compatibility/
+</code></pre>
+<p>The <code>ACTUAL_STATE_CAPTURE</code> folder is useful because the configuration found on the machine may not match the approved master. Preserving that state can support troubleshooting and incident investigation.</p>
+<p>Access control should distinguish between reading a master, proposing a change, approving a release, and modifying protected repository contents.</p>
+<h2 id="10-naming-convention">10. Naming Convention</h2>
+<p>A useful filename should identify the asset, configuration type, revision, status, and capture date where relevant.</p>
+<p>Example:</p>
+<pre><code>TB-PLC-014_PLC_MASTER_R003_APPROVED_2026-10-17.project
+TB-PLC-014_PLC_WORKING_CHG042_2026-10-18.project
+TB-PLC-014_PLC_ACTUAL_STATE_2026-10-18.project
+</code></pre>
+<p>Use the actual extension required by the software. Do not rename proprietary files to extensions that imply a different file format.</p>
+<p>A filename is not a substitute for access control, approval records, or version history. Anyone can type <code>APPROVED</code> into a filename; the repository must establish whether the release really is approved.</p>
+<h2 id="11-version-and-revision-management">11. Version and Revision Management</h2>
+<p>A practical approach distinguishes three concepts:</p>
+<ul>
+<li>Revision: The controlled identifier for a released configuration.</li>
+<li>Working version: An intermediate engineering state that may change repeatedly.</li>
+<li>Actual-state capture: A documented copy or export representing what was present on the physical device at a specific time.</li>
+</ul>
+<p>Example:</p>
+<table>
+<thead>
+<tr>
+<th>Version</th>
+<th>Description</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R001</td>
+<td>Initial approved PLC project</td>
+<td>Master</td>
+</tr>
+<tr>
+<td>CHG042-W01</td>
+<td>First working copy for timer modification</td>
+<td>Working</td>
+</tr>
+<tr>
+<td>CHG042-W02</td>
+<td>Revised logic after offline testing</td>
+<td>Working</td>
+</tr>
+<tr>
+<td>R002</td>
+<td>Approved timer modification after validation</td>
+<td>Master</td>
+</tr>
+<tr>
+<td>ACT-20261018</td>
+<td>Capture from controller during a later investigation</td>
+<td>Actual-state capture</td>
+</tr>
+</tbody>
+</table>
+<p>The actual-state capture is not automatically approved just because it was uploaded from the device. It records what was present, which may include unauthorized or unintended changes.</p>
+<h2 id="12-change-control-and-release-process">12. Change Control and Release Process</h2>
+<p>A new Master Backup should be released only when the applicable change-control requirements are satisfied.</p>
+<p>Typical stages include:</p>
+<ol>
+<li>Raise or reference an approved change request.</li>
+<li>Identify the current master and actual device state.</li>
+<li>Create and modify a working copy.</li>
+<li>Perform offline checks and risk assessment.</li>
+<li>Review the changes.</li>
+<li>Obtain required approvals.</li>
+<li>Deploy under the authorized maintenance or commissioning procedure.</li>
+<li>Validate the actual machine or system.</li>
+<li>Capture the resulting approved configuration.</li>
+<li>Release the new master and retain the previous master as required.</li>
+<li>Update the revision register and recovery instructions.</li>
+</ol>
+<p>Not every routine action requires the same level of approval. The process should be proportional to risk, with stronger controls for safety systems, production-critical controls, cybersecurity boundaries, and changes that affect product quality.</p>
+<h2 id="13-rollback-procedure">13. Rollback Procedure</h2>
+<p>Rollback returns the system to a previously approved and compatible state after a change fails or produces unacceptable behavior.</p>
+<p>Before rollback:</p>
+<ul>
+<li>Identify the change that caused the problem.</li>
+<li>Determine whether the previous master is compatible with the current hardware and firmware.</li>
+<li>Consider whether database or process data changed after the backup.</li>
+<li>Check whether rollback would overwrite valid new data.</li>
+<li>Obtain the required authorization.</li>
+<li>Preserve the failed state and diagnostic evidence where practical.</li>
+</ul>
+<p>Then:</p>
+<ol>
+<li>Place the equipment into the approved safe state.</li>
+<li>Capture the current state if it is safe and technically possible.</li>
+<li>Select the correct previous master.</li>
+<li>Restore it using the approved method.</li>
+<li>Validate system behavior and communication.</li>
+<li>Confirm any required parameter, recipe, or data recovery.</li>
+<li>Document the rollback and its outcome.</li>
+</ol>
+<p>Rollback is not always a simple file replacement. A PLC program, robot program, database schema, or CNC configuration may depend on other versions or data. Compatibility must be checked before restoration.</p>
+<h2 id="14-handling-emergency-changes">14. Handling Emergency Changes</h2>
+<p>During a breakdown, a technician may need to make an urgent change to restore production.</p>
+<p>Emergency work should not eliminate configuration control.</p>
+<p>Recommended practice:</p>
+<ul>
+<li>Record the reason for the emergency change.</li>
+<li>Capture the pre-change state where feasible.</li>
+<li>Preserve the working version.</li>
+<li>Document the exact change and affected asset.</li>
+<li>Validate the result under the applicable safety and production procedure.</li>
+<li>Obtain retrospective review or approval where the emergency process permits it.</li>
+<li>Release a new master only after the required verification and authorization.</li>
+</ul>
+<p>An emergency working copy must not become the permanent master merely because production restarted. Restored availability and approved configuration are related, but they are not identical.</p>
+<h2 id="15-special-considerations-by-device-type">15. Special Considerations by Device Type</h2>
+<table>
+<thead>
+<tr>
+<th>Device</th>
+<th>Master Backup contents</th>
+<th>Working Backup use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC</td>
+<td>Approved program, hardware configuration, required project files</td>
+<td>Logic modification and troubleshooting</td>
+</tr>
+<tr>
+<td>HMI</td>
+<td>Released project, screens, alarms, recipes, communication settings</td>
+<td>Screen and alarm changes</td>
+</tr>
+<tr>
+<td>SCADA</td>
+<td>Approved project, tag configuration, scripts, supported exports</td>
+<td>Application updates and testing</td>
+</tr>
+<tr>
+<td>CNC</td>
+<td>Approved configuration exports and supported parameter records</td>
+<td>Controlled parameter or configuration work</td>
+</tr>
+<tr>
+<td>Robot</td>
+<td>Approved programs, configuration, supported system backups</td>
+<td>Program development and offline testing</td>
+</tr>
+<tr>
+<td>Vision system</td>
+<td>Released jobs, calibration, camera settings, inspection limits</td>
+<td>False-reject investigation and job tuning</td>
+</tr>
+<tr>
+<td>VFD</td>
+<td>Approved parameter backup and relevant configuration</td>
+<td>Parameter adjustment and fault investigation</td>
+</tr>
+<tr>
+<td>Industrial PC</td>
+<td>Approved image and application/data recovery packages</td>
+<td>OS or application changes in a controlled workspace</td>
+</tr>
+<tr>
+<td>Network switch</td>
+<td>Approved configuration and port/topology records</td>
+<td>VLAN, port, and redundancy changes</td>
+</tr>
+<tr>
+<td>Firewall</td>
+<td>Approved configuration, policy records, and secure recovery dependencies</td>
+<td>Controlled rule development and validation</td>
+</tr>
+</tbody>
+</table>
+<p>Some devices contain safety-related or vendor-protected configuration. Use the manufacturer's supported backup and restoration methods and the plant's authorization procedures.</p>
+<h2 id="16-security-and-access-control">16. Security and Access Control</h2>
+<p>Master and Working Backups have different permissions because they have different roles.</p>
+<p>A useful access model is:</p>
+<ul>
+<li>Read access: Personnel who need to inspect an approved master.</li>
+<li>Working-copy write access: Authorized engineers performing assigned tasks.</li>
+<li>Release approval: Designated reviewers or authorities.</li>
+<li>Master-repository write access: Restricted to the release process or authorized custodians.</li>
+<li>Repository administration: Separately controlled where practical.</li>
+</ul>
+<p>Additional controls include:</p>
+<ul>
+<li>Authentication and audit logging.</li>
+<li>Protected storage and independent backup copies.</li>
+<li>Encryption for sensitive files.</li>
+<li>Integrity verification.</li>
+<li>Retention of previous approved versions.</li>
+<li>Secure storage of credentials, certificates, and recovery keys.</li>
+</ul>
+<p>A master file should be difficult to alter accidentally and possible to recover if the repository itself is damaged.</p>
+<h2 id="17-common-mistakes">17. Common Mistakes</h2>
+<ol>
+<li>Editing the master directly during troubleshooting.</li>
+<li>Treating the latest modified file as the approved version.</li>
+<li>Assuming a project on the engineering PC matches the controller.</li>
+<li>Overwriting the master before validation is complete.</li>
+<li>Keeping the only master on a laptop or USB drive.</li>
+<li>Failing to retain a previous approved revision.</li>
+<li>Confusing an actual-state capture with an approved master.</li>
+<li>Restoring an older version without checking compatibility.</li>
+<li>Failing to record the change that led to a new release.</li>
+<li>Using unclear filenames and undocumented folder structures.</li>
+<li>Allowing working copies to be deployed without review.</li>
+<li>Failing to test the backup restoration procedure.</li>
+</ol>
+<h2 id="18-practical-industrial-example">18. Practical Industrial Example</h2>
+<p>A production test bench uses a PLC and HMI. The approved master PLC program is revision R006.</p>
+<p>A recurring timeout fault occurs. The maintenance engineer copies R006 into the working area and changes a timer for diagnostic purposes.</p>
+<p>The engineer tests the change and temporarily deploys it under the approved procedure. The fault frequency decreases, but the change has not yet completed its validation.</p>
+<p>The correct configuration status is:</p>
+<ul>
+<li><code>R006</code>: Previous approved master.</li>
+<li><code>CHG057-W01</code>: Working copy containing the timer modification.</li>
+<li>Actual PLC state: The configuration currently running on the physical controller, which must be captured or compared where supported.</li>
+</ul>
+<p>After further testing, engineering determines the correct timer and updates the working copy. The required review, functional testing, and approvals are completed. The new release becomes <code>R007</code>.</p>
+<p>The previous master remains available according to the retention policy, while R007 becomes the current approved master.</p>
+<p>This preserves the ability to investigate the original problem, reproduce the modification, and roll back if necessary.</p>
+<h2 id="19-master-vs-working-backup-audit-checklist">19. Master vs Working Backup Audit Checklist</h2>
+<ul>
+<li>Each critical asset has a clearly identified master.</li>
+<li>Master revisions have approval or release evidence.</li>
+<li>Master copies are protected against unauthorized modification.</li>
+<li>Working copies identify their source revision.</li>
+<li>Actual-state captures are distinguishable from approved masters.</li>
+<li>Filenames and repository structure are consistent.</li>
+<li>Changes have a traceable owner and purpose.</li>
+<li>Production deployment follows the approved change process.</li>
+<li>Previous approved versions are retained according to policy.</li>
+<li>Backup integrity and recoverability are tested.</li>
+<li>Recovery instructions identify software, hardware, and compatibility requirements.</li>
+<li>Repository access and sensitive information are controlled.</li>
+</ul>
+<h2 id="20-interview-questions-and-answers">20. Interview Questions and Answers</h2>
+<p>Q1. What is a Master Backup?</p>
+<p>A protected, approved reference copy of a system configuration used for controlled recovery and as a baseline for future changes.</p>
+<p>Q2. What is a Working Backup?</p>
+<p>A copy used for engineering, testing, troubleshooting, or modification that may contain changes not yet approved for release.</p>
+<p>Q3. Why should the master not be edited directly?</p>
+<p>Direct editing can destroy the known-good reference and make rollback, comparison, and auditability difficult.</p>
+<p>Q4. Is the latest backup always the master?</p>
+<p>No. The latest file may be an untested working copy or an unapproved capture from the actual device.</p>
+<p>Q5. What is an actual-state capture?</p>
+<p>A record or copy of the configuration present on a physical device at a particular time. It is not automatically approved.</p>
+<p>Q6. When does a working backup become a master?</p>
+<p>When the applicable review, testing, approval, and release requirements have been completed.</p>
+<p>Q7. Why retain previous master revisions?</p>
+<p>They provide recovery and comparison options if a newer release causes problems or an investigation requires an earlier known-good state.</p>
+<p>Q8. Can a master backup replace a disaster recovery plan?</p>
+<p>No. A master is one controlled reference copy. Disaster recovery also requires independent backup protection, compatible hardware or recovery tools, documented procedures, and tested restoration.</p>
+<p>Q9. What is configuration drift in this context?</p>
+<p>A difference between the actual running configuration and the approved master or other designated baseline.</p>
+<p>Q10. What is the key principle of master-working separation?</p>
+<p>Protect the approved reference while allowing controlled engineering work to proceed independently, then promote changes through a traceable release process.</p>
+<h2 id="21-final-principles">21. Final Principles</h2>
+<ul>
+<li>Maintain a protected, approved Master Backup for each critical asset.</li>
+<li>Perform modifications in controlled Working Backups.</li>
+<li>Distinguish approved master, working copy, and actual-state capture.</li>
+<li>Record source revision, owner, purpose, and change history.</li>
+<li>Validate changes before releasing a new master.</li>
+<li>Preserve previous approved versions according to retention policy.</li>
+<li>Protect the repository and test the recovery process.</li>
+<li>Treat backup status as a controlled engineering decision, not a filename.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\25_Backup_DR\02_Backup_Structure\02_Historical_Versions\01_Date - Date</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

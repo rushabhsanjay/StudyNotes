@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S7-300 to S7-1500 Migration: Hardware Differences</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">S7-300 to S7-1500 Migration: Hardware Differences</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and Scope</a><ul>
+<li><a href="#11-what-this-topic-covers">1.1 What this topic covers</a></li>
+</ul>
+</li>
+<li><a href="#2-understanding-the-two-plc-platforms">2. Understanding the Two PLC Platforms</a><ul>
+<li><a href="#21-s7-300-architecture">2.1 S7-300 architecture</a></li>
+<li><a href="#22-s7-1500-architecture">2.2 S7-1500 architecture</a></li>
+</ul>
+</li>
+<li><a href="#3-high-level-hardware-comparison">3. High-Level Hardware Comparison</a></li>
+<li><a href="#4-cpu-differences">4. CPU Differences</a><ul>
+<li><a href="#41-cpu-selection-is-not-a-one-to-one-substitution">4.1 CPU selection is not a one-to-one substitution</a></li>
+<li><a href="#42-cpu-selection-criteria">4.2 CPU selection criteria</a></li>
+<li><a href="#43-processing-performance-and-machine-timing">4.3 Processing performance and machine timing</a></li>
+</ul>
+</li>
+<li><a href="#5-rack-mounting-rail-and-backplane-differences">5. Rack, Mounting Rail, and Backplane Differences</a><ul>
+<li><a href="#51-mechanical-compatibility">5.1 Mechanical compatibility</a></li>
+<li><a href="#52-backplane-and-module-arrangement">5.2 Backplane and module arrangement</a></li>
+<li><a href="#53-cabinet-layout-assessment">5.3 Cabinet layout assessment</a></li>
+</ul>
+</li>
+<li><a href="#6-digital-and-analog-io-module-differences">6. Digital and Analog I/O Module Differences</a><ul>
+<li><a href="#61-signal-modules">6.1 Signal modules</a></li>
+<li><a href="#62-digital-input-module-checks">6.2 Digital input module checks</a></li>
+<li><a href="#63-digital-output-module-checks">6.3 Digital output module checks</a></li>
+<li><a href="#64-analog-input-module-checks">6.4 Analog input module checks</a></li>
+<li><a href="#65-io-address-and-channel-mapping">6.5 I/O address and channel mapping</a></li>
+</ul>
+</li>
+<li><a href="#7-power-supply-differences">7. Power Supply Differences</a><ul>
+<li><a href="#71-three-separate-power-considerations">7.1 Three separate power considerations</a></li>
+<li><a href="#72-s7-300-versus-s7-1500-power-assessment">7.2 S7-300 versus S7-1500 power assessment</a></li>
+<li><a href="#73-power-calculation">7.3 Power calculation</a></li>
+</ul>
+</li>
+<li><a href="#8-communication-interfaces-and-network-hardware">8. Communication Interfaces and Network Hardware</a><ul>
+<li><a href="#81-integrated-interfaces">8.1 Integrated interfaces</a></li>
+<li><a href="#82-network-migration-checklist">8.2 Network migration checklist</a></li>
+<li><a href="#83-legacy-mpi-and-profibus-equipment">8.3 Legacy MPI and PROFIBUS equipment</a></li>
+<li><a href="#84-point-to-point-communication">8.4 Point-to-point communication</a></li>
+</ul>
+</li>
+<li><a href="#9-distributed-io-and-remote-stations">9. Distributed I/O and Remote Stations</a><ul>
+<li><a href="#91-central-io-versus-distributed-io">9.1 Central I/O versus distributed I/O</a></li>
+<li><a href="#92-et-200m-and-et-200mp-considerations">9.2 ET 200M and ET 200MP considerations</a></li>
+<li><a href="#93-distributed-io-migration-checklist">9.3 Distributed I/O migration checklist</a></li>
+</ul>
+</li>
+<li><a href="#10-technology-and-special-purpose-modules">10. Technology and Special-Purpose Modules</a><ul>
+<li><a href="#101-example-high-speed-counting">10.1 Example: High-speed counting</a></li>
+<li><a href="#102-example-serial-interface-module">10.2 Example: Serial interface module</a></li>
+</ul>
+</li>
+<li><a href="#11-memory-cards-and-data-retention">11. Memory Cards and Data Retention</a><ul>
+<li><a href="#111-memory-media">11.1 Memory media</a></li>
+<li><a href="#112-migration-requirements">11.2 Migration requirements</a></li>
+</ul>
+</li>
+<li><a href="#12-front-connectors-and-field-wiring">12. Front Connectors and Field Wiring</a><ul>
+<li><a href="#121-connector-compatibility">12.1 Connector compatibility</a></li>
+<li><a href="#122-wire-identification">12.2 Wire identification</a></li>
+</ul>
+</li>
+<li><a href="#13-safety-related-hardware">13. Safety-Related Hardware</a></li>
+<li><a href="#14-practical-example-production-test-bench-migration">14. Practical Example: Production Test Bench Migration</a><ul>
+<li><a href="#141-recommended-migration-sequence">14.1 Recommended migration sequence</a></li>
+</ul>
+</li>
+<li><a href="#15-common-hardware-migration-mistakes">15. Common Hardware Migration Mistakes</a></li>
+<li><a href="#16-hardware-migration-checklist">16. Hardware Migration Checklist</a><ul>
+<li><a href="#existing-system-documentation">Existing-system documentation</a></li>
+<li><a href="#proposed-system-verification">Proposed-system verification</a></li>
+<li><a href="#commissioning-and-release">Commissioning and release</a></li>
+</ul>
+</li>
+<li><a href="#17-interview-and-practical-competency-questions">17. Interview and Practical Competency Questions</a></li>
+<li><a href="#18-final-engineering-principle">18. Final Engineering Principle</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\24_Obsolescence\07_Examples\01_S7_300_to_1500\01_Hardware</code></p>
+<h2 id="1-purpose-and-scope">1. Purpose and Scope</h2>
+<p>Migrating a Siemens SIMATIC S7-300 PLC system to an S7-1500 is a controlled engineering change involving the CPU, rack and mounting arrangement, I/O modules, power supplies, communications, field wiring, diagnostics, and installed equipment compatibility.</p>
+<p>It is not a direct CPU replacement. Even if the old PLC program performs the same control sequence after migration, differences in physical hardware, electrical characteristics, addressing, communication interfaces, and timing can prevent the new system from operating correctly.</p>
+<p>The primary objective is to identify which components can be retained, which must be replaced, which require redesign, and which require validation before production release.</p>
+<h3 id="11-what-this-topic-covers">1.1 What this topic covers</h3>
+<ul>
+<li>CPU architecture and capability differences.</li>
+<li>Rack, mounting rail, and backplane differences.</li>
+<li>Digital and analog I/O modules.</li>
+<li>System power, load power, and field power.</li>
+<li>Communication interfaces and distributed I/O.</li>
+<li>Memory cards, front connectors, wiring, and panel modifications.</li>
+<li>Hardware assessment, migration planning, commissioning, and common failure modes.</li>
+</ul>
+<p>Software conversion from STEP 7 to TIA Portal is treated separately in the next topic.</p>
+<h2 id="2-understanding-the-two-plc-platforms">2. Understanding the Two PLC Platforms</h2>
+<h3 id="21-s7-300-architecture">2.1 S7-300 architecture</h3>
+<p>The S7-300 is a modular PLC family commonly found in older production machines, test benches, material-handling systems, and conventional automation panels.</p>
+<p>A typical installation contains:</p>
+<ul>
+<li>A CPU that executes the control program.</li>
+<li>A mounting rail and backplane bus arrangement for supported central modules.</li>
+<li>Signal modules for digital and analog I/O.</li>
+<li>A power supply where required by the configuration.</li>
+<li>Communication processors or interface modules where required.</li>
+<li>Field wiring, sensors, actuators, drives, HMIs, and remote I/O.</li>
+</ul>
+<p>A simplified arrangement is:</p>
+<pre><code>Industrial supply
+    ↓
+PLC power arrangement
+    ↓
+S7-300 CPU + central I/O modules
+    ↓
+Communication interface or processor
+    ↓
+Distributed I/O / HMI / drives / other controllers
+    ↓
+Sensors, actuators and machine processes
+</code></pre>
+<p>The exact arrangement depends on the CPU model, rack configuration, module family, and network design. Not every S7-300 station has the same modules or communication options.</p>
+<h3 id="22-s7-1500-architecture">2.2 S7-1500 architecture</h3>
+<p>The S7-1500 is a newer modular PLC family with enhanced processing capabilities and diagnostics. Many CPU models provide integrated PROFINET interfaces and a front display, but these features vary by model.</p>
+<p>A typical installation contains:</p>
+<ul>
+<li>An S7-1500 CPU.</li>
+<li>Compatible S7-1500 signal modules.</li>
+<li>Suitable system power and load power arrangements.</li>
+<li>Communication or technology modules where required.</li>
+<li>Distributed I/O and networked field devices.</li>
+<li>SIMATIC Memory Card support for the applicable CPU and functions.</li>
+</ul>
+<pre><code>Industrial supply
+    ↓
+Suitable system and load power arrangement
+    ↓
+S7-1500 CPU + compatible central modules
+    ↓
+Integrated or additional communication interfaces
+    ↓
+Distributed I/O / HMI / drives / other controllers
+    ↓
+Sensors, actuators and machine processes
+</code></pre>
+<p>The newer platform does not eliminate the need for careful design. It changes the available capabilities and the rules governing hardware selection.</p>
+<h2 id="3-high-level-hardware-comparison">3. High-Level Hardware Comparison</h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>S7-300</th>
+<th>S7-1500</th>
+<th>Migration implication</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CPU family</td>
+<td>Legacy modular CPU family</td>
+<td>Newer modular CPU family</td>
+<td>Select by requirements, not name alone</td>
+</tr>
+<tr>
+<td>Mounting arrangement</td>
+<td>S7-300-compatible rail and central rack configuration</td>
+<td>S7-1500-compatible mounting rail and module arrangement</td>
+<td>Verify mechanical compatibility; do not assume the rail or rack can be reused</td>
+</tr>
+<tr>
+<td>Central I/O</td>
+<td>S7-300-compatible signal modules</td>
+<td>S7-1500-compatible signal modules</td>
+<td>Plan replacement and rewiring</td>
+</tr>
+<tr>
+<td>CPU interfaces</td>
+<td>Vary by CPU and installed communication processors</td>
+<td>Many CPUs include integrated PROFINET interfaces; capabilities vary</td>
+<td>Reassess network topology and ports</td>
+</tr>
+<tr>
+<td>Diagnostics</td>
+<td>Available features depend on CPU and modules</td>
+<td>Enhanced diagnostic capabilities are available on the platform, with model-dependent details</td>
+<td>Review fault reporting and maintenance procedures</td>
+</tr>
+<tr>
+<td>Memory support</td>
+<td>CPU-dependent memory and memory-card arrangements, commonly MMC on applicable models</td>
+<td>SIMATIC Memory Card for applicable CPU functions</td>
+<td>Do not treat cards as interchangeable</td>
+</tr>
+<tr>
+<td>Front connectors</td>
+<td>S7-300 module-specific connector arrangements</td>
+<td>S7-1500 module-specific connector arrangements</td>
+<td>Verify connector type, pinout, and wiring</td>
+</tr>
+<tr>
+<td>Power arrangement</td>
+<td>Depends on CPU, PS, and load-supply configuration</td>
+<td>System power and load power roles depend on the chosen configuration</td>
+<td>Recalculate power requirements</td>
+</tr>
+<tr>
+<td>Technology functions</td>
+<td>CPU and module dependent</td>
+<td>CPU and module dependent</td>
+<td>Verify motion, counting, measurement, and communication requirements</td>
+</tr>
+<tr>
+<td>Safety</td>
+<td>Standard or fail-safe configurations, depending on installed equipment</td>
+<td>Standard or fail-safe configurations, depending on selected equipment</td>
+<td>Safety migration requires separate validation</td>
+</tr>
+</tbody>
+</table>
+<p>This table describes family-level differences. Exact order numbers and manuals determine actual compatibility.</p>
+<h2 id="4-cpu-differences">4. CPU Differences</h2>
+<p>The CPU is the central decision point in the migration. It determines execution performance, available memory, communication resources, supported functions, and compatibility with the selected hardware and engineering software.</p>
+<h3 id="41-cpu-selection-is-not-a-one-to-one-substitution">4.1 CPU selection is not a one-to-one substitution</h3>
+<p>Examples of S7-300 CPUs include the CPU 315, CPU 317, and CPU 319 families. S7-1500 options include CPU 1511, 1513, 1515, 1516, 1517, and 1518 families, with specific variants within these ranges.</p>
+<p>These model numbers do not establish direct equivalence. For example, an S7-300 CPU 315 installation cannot automatically be mapped to a CPU 1511 simply because it appears to be an entry-level-to-entry-level upgrade.</p>
+<p>The replacement CPU must be selected against the actual workload and system requirements.</p>
+<h3 id="42-cpu-selection-criteria">4.2 CPU selection criteria</h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>What to check</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Order number</td>
+<td>Exact existing and proposed CPU part numbers</td>
+<td>Establishes the actual hardware variant</td>
+</tr>
+<tr>
+<td>Execution performance</td>
+<td>Scan time, cycle load, interrupt workload, communication load</td>
+<td>Prevents overload or changed response timing</td>
+</tr>
+<tr>
+<td>Work memory</td>
+<td>Program and data memory requirements</td>
+<td>Ensures sufficient capacity for the migrated application</td>
+</tr>
+<tr>
+<td>Retentive data</td>
+<td>Required retained tags, counters, recipes, and machine states</td>
+<td>Prevents loss of necessary data after power interruption</td>
+</tr>
+<tr>
+<td>Integrated interfaces</td>
+<td>Ethernet, PROFINET, serial, or other available interfaces</td>
+<td>Determines which connections can be made directly</td>
+</tr>
+<tr>
+<td>Communication capacity</td>
+<td>Supported connections, protocols, and device count</td>
+<td>Prevents connection shortages</td>
+</tr>
+<tr>
+<td>Motion and technology</td>
+<td>Counting, positioning, motion-control, and technology-object requirements</td>
+<td>Ensures the required functions are supported</td>
+</tr>
+<tr>
+<td>Diagnostics</td>
+<td>Diagnostic buffer, module diagnostics, and maintenance requirements</td>
+<td>Determines fault-finding capability</td>
+</tr>
+<tr>
+<td>Security</td>
+<td>Supported access protection and security features</td>
+<td>Affects machine access and network-security design</td>
+</tr>
+<tr>
+<td>Firmware</td>
+<td>Supported firmware versions and project compatibility</td>
+<td>Affects hardware configuration and commissioning</td>
+</tr>
+</tbody>
+</table>
+<h3 id="43-processing-performance-and-machine-timing">4.3 Processing performance and machine timing</h3>
+<p>A faster CPU does not guarantee identical machine behavior. Differences in scan time, process-image handling, communication scheduling, interrupt execution, and module update timing can affect control behavior.</p>
+<p>Consider a test bench where a PLC reads a sensor, commands a pneumatic clamp, waits for a confirmation input, and triggers a measurement cycle. If the migrated system handles an edge, timeout, or communication update differently, the observed sequence may change even though the intended logic is unchanged.</p>
+<p>Before migration, record important timing requirements:</p>
+<ul>
+<li>Maximum acceptable input-to-output response time.</li>
+<li>Timer presets and timeout limits.</li>
+<li>High-speed input or counting requirements.</li>
+<li>Interrupt and event-processing requirements.</li>
+<li>Drive or robot communication timing.</li>
+<li>Measurement acquisition and result-trigger timing.</li>
+</ul>
+<p>Maintenance rule: Use actual machine requirements and measured behavior to validate CPU selection. Do not choose a CPU based solely on the old CPU's model number.</p>
+<h2 id="5-rack-mounting-rail-and-backplane-differences">5. Rack, Mounting Rail, and Backplane Differences</h2>
+<h3 id="51-mechanical-compatibility">5.1 Mechanical compatibility</h3>
+<p>The S7-300 and S7-1500 use different system-specific module mounting and backplane arrangements. An S7-300 rack or rail must not be assumed to accept S7-1500 modules.</p>
+<p>Before replacing the PLC assembly, check:</p>
+<ul>
+<li>Rail type and dimensions.</li>
+<li>Module width, height, and installation clearances.</li>
+<li>Required module sequence and permitted slot positions.</li>
+<li>Cable duct space and bend radius.</li>
+<li>Accessibility of front connectors and status indicators.</li>
+<li>Cabinet ventilation and heat dissipation.</li>
+<li>Protective earth, equipotential bonding, and shield termination.</li>
+<li>Space for additional communication modules or power supplies.</li>
+</ul>
+<p>A replacement CPU may occupy a different amount of panel space, and a revised module arrangement may change the cable duct requirements.</p>
+<h3 id="52-backplane-and-module-arrangement">5.2 Backplane and module arrangement</h3>
+<p>The backplane bus carries internal communication and power between compatible modules. It is part of the PLC system design, not merely a physical support.</p>
+<p>The S7-1500 has a different backplane architecture from the S7-300. Therefore, existing S7-300 central signal modules cannot simply be installed beside an S7-1500 CPU and expected to work. The new station must be configured using supported S7-1500 components. Siemens' migration guide describes the platform differences and the need to select compatible components.&#x20;</p>
+<p><a href="https://www.google.com/s2/favicons?domain=https://support.industry.siemens.com\&amp;sz=32">image</a></p>
+<p>05/2017Guide for Migrating SIMATIC</p>
+<p>+1</p>
+<h3 id="53-cabinet-layout-assessment">5.3 Cabinet layout assessment</h3>
+<p>For an existing machine cabinet, document the original and proposed layout before dismantling.</p>
+<table>
+<thead>
+<tr>
+<th>Inspection item</th>
+<th>Existing S7-300 installation</th>
+<th>Proposed S7-1500 installation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rail</td>
+<td>Record type and usable length</td>
+<td>Confirm compatible mounting rail and dimensions</td>
+</tr>
+<tr>
+<td>CPU position</td>
+<td>Record location and cable access</td>
+<td>Check display access, connectors, and service access</td>
+</tr>
+<tr>
+<td>I/O positions</td>
+<td>Record module order and slot assignment</td>
+<td>Design a supported module sequence</td>
+</tr>
+<tr>
+<td>Cable ducts</td>
+<td>Record entry and exit routes</td>
+<td>Verify space for rerouted wiring</td>
+</tr>
+<tr>
+<td>Heat dissipation</td>
+<td>Record cabinet temperature and existing load</td>
+<td>Reassess heat generation and ventilation</td>
+</tr>
+<tr>
+<td>Earthing</td>
+<td>Record PE and shield connections</td>
+<td>Verify connections against the new hardware instructions</td>
+</tr>
+<tr>
+<td>Spare space</td>
+<td>Record unused rail and cabinet area</td>
+<td>Reserve space for required modules and future servicing</td>
+</tr>
+</tbody>
+</table>
+<p>Maintenance rule: Never order a replacement CPU before verifying that the complete proposed station can be installed in the existing cabinet.</p>
+<h2 id="6-digital-and-analog-io-module-differences">6. Digital and Analog I/O Module Differences</h2>
+<h3 id="61-signal-modules">6.1 Signal modules</h3>
+<p>The S7-300 and S7-1500 both support modular digital and analog I/O, but the modules belong to different hardware families. Similar labels or channel counts do not establish electrical or functional equivalence.</p>
+<p>An S7-300 digital input module with 16 channels, for example, is not automatically equivalent to an S7-1500 16-channel input module. Voltage range, input characteristics, isolation, diagnostics, wiring arrangement, and supported configuration must all be checked.</p>
+<h3 id="62-digital-input-module-checks">6.2 Digital input module checks</h3>
+<p>For each digital input module, record:</p>
+<ul>
+<li>Number of channels.</li>
+<li>Rated input voltage and permitted voltage range.</li>
+<li>Input current and switching threshold.</li>
+<li>Sensor wiring type, including PNP or NPN where relevant.</li>
+<li>Common-terminal arrangement and channel grouping.</li>
+<li>Electrical isolation between channels or groups.</li>
+<li>Input filtering and response time.</li>
+<li>Wire-break or short-circuit diagnostics, if supported.</li>
+<li>Terminal-block type and pin assignment.</li>
+</ul>
+<p>Example: a three-wire PNP proximity sensor may provide a positive switching signal when active. The replacement input must support the sensor's electrical arrangement and the common-terminal wiring used in the cabinet.</p>
+<p>Do not change the sensor wiring based only on the new module's terminal numbering. Verify the circuit diagram and the module's electrical data.</p>
+<h3 id="63-digital-output-module-checks">6.3 Digital output module checks</h3>
+<p>For each digital output module, record:</p>
+<ul>
+<li>Output type, such as transistor or relay.</li>
+<li>Rated output voltage and current.</li>
+<li>Maximum current per channel and per group.</li>
+<li>Permitted simultaneous channel loading.</li>
+<li>Short-circuit and overload behavior.</li>
+<li>Inductive-load suppression requirements.</li>
+<li>Group supply and common-terminal arrangement.</li>
+<li>Output delay and diagnostic capabilities.</li>
+<li>Load characteristics, including solenoid valves, contactors, and relay coils.</li>
+</ul>
+<p>A replacement output module must safely drive the connected load. If a new output module has a lower permitted current or different switching characteristics, a circuit that worked on the old PLC may require an interposing relay or a different interface design.</p>
+<h3 id="64-analog-input-module-checks">6.4 Analog input module checks</h3>
+<p>Analog inputs are particularly important in test benches and process-monitoring systems because an electrical mismatch can produce plausible but incorrect measurements.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Verification requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Signal type</td>
+<td>Confirm voltage, current, resistance, thermocouple, or RTD support</td>
+</tr>
+<tr>
+<td>Measurement range</td>
+<td>Confirm the exact range, such as 0–10 V or 4–20 mA</td>
+</tr>
+<tr>
+<td>Resolution</td>
+<td>Check usable measurement resolution</td>
+</tr>
+<tr>
+<td>Accuracy</td>
+<td>Compare the complete module accuracy specification</td>
+</tr>
+<tr>
+<td>Channel isolation</td>
+<td>Verify isolation between channels and groups</td>
+</tr>
+<tr>
+<td>Diagnostics</td>
+<td>Check wire-break, overflow, underflow, and fault reporting</td>
+</tr>
+<tr>
+<td>Integration time</td>
+<td>Verify filtering and conversion timing</td>
+</tr>
+<tr>
+<td>Wiring</td>
+<td>Check polarity, terminals, shield connection, and loop supply</td>
+</tr>
+<tr>
+<td>Scaling</td>
+<td>Verify engineering-unit conversion in the application</td>
+</tr>
+</tbody>
+</table>
+<p>For a 4–20 mA transmitter, the electrical signal represents a measurement range. If 4 mA represents 0 bar and 20 mA represents 10 bar, the ideal linear conversion is:</p>
+<div class="math-display">\[ P = \frac{I-4}{20-4}\times 10 \]</div>
+<p>where <span class="math-inline">\(I\)</span> is the measured current in mA and <span class="math-inline">\(P\)</span> is pressure in bar.</p>
+<p>At 12 mA:</p>
+<div class="math-display">\[ P = \frac{12-4}{16}\times 10 = 5\text{ bar} \]</div>
+<p>The equation is valid only when the transmitter range and module configuration match the assumed signal range. The migrated system must also preserve correct fault handling for signals below or above the valid range.</p>
+<h3 id="65-io-address-and-channel-mapping">6.5 I/O address and channel mapping</h3>
+<p>The new system's I/O addresses may differ from the original configuration. Even if the new modules provide the same number of channels, the physical channel assignment and logical addresses must be verified.</p>
+<p>For example:</p>
+<table>
+<thead>
+<tr>
+<th>Original signal</th>
+<th>Required migration record</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Digital input for clamp closed</td>
+<td>Original address, new address, terminal, sensor tag</td>
+</tr>
+<tr>
+<td>Digital output for clamp valve</td>
+<td>Original address, new address, terminal, load tag</td>
+</tr>
+<tr>
+<td>Analog input for pressure</td>
+<td>Original address, range, scaling, new address</td>
+</tr>
+<tr>
+<td>Analog output for drive reference</td>
+<td>Original address, range, output type, new address</td>
+</tr>
+</tbody>
+</table>
+<p>Do not assume the original byte addresses remain unchanged. The final mapping must agree with the new hardware configuration, the application program, the wiring diagrams, and the commissioning test sheets.</p>
+<h2 id="7-power-supply-differences">7. Power Supply Differences</h2>
+<p>Power design must distinguish between the power required by the PLC system and the power required by field devices.</p>
+<h3 id="71-three-separate-power-considerations">7.1 Three separate power considerations</h3>
+<ol>
+<li>System power: Power needed by the CPU and compatible system components.</li>
+<li>Load power: Power needed by the selected modules and their loads, according to the system design.</li>
+<li>Field power: Power supplied to sensors, actuators, transmitters, relays, and other external devices.</li>
+</ol>
+<p>These functions may be supplied by different devices. The exact arrangement depends on the selected CPU, modules, power supplies, and system configuration.</p>
+<h3 id="72-s7-300-versus-s7-1500-power-assessment">7.2 S7-300 versus S7-1500 power assessment</h3>
+<p>Some S7-300 configurations use a PS module to supply the central rack and may use separate supplies for field loads. S7-1500 installations have their own system-power and load-power requirements, and the roles of system power supply modules and load-current supplies must be checked for the chosen configuration.</p>
+<p>Do not assume that an S7-300 power supply can be reused as the S7-1500 system supply, or that one 24 VDC supply can automatically satisfy every requirement.</p>
+<h3 id="73-power-calculation">7.3 Power calculation</h3>
+<p>Calculate the required load for every relevant supply.</p>
+<div class="math-display">\[ I\_{\text{total}} = \sum\_{k=1}^{n} I_k \]</div>
+<p>For a practical design, include:</p>
+<ul>
+<li>CPU and module requirements.</li>
+<li>Sensor and transmitter loads.</li>
+<li>Solenoid valves and contactor coils.</li>
+<li>Relay coils and interface devices.</li>
+<li>Startup or inrush current where applicable.</li>
+<li>Required engineering margin.</li>
+<li>Protective devices and circuit segmentation.</li>
+</ul>
+<p>Example: If a 24 VDC field supply feeds 12 sensors drawing 40 mA each and 6 interface relays drawing 60 mA each, the calculated steady-state load is:</p>
+<div class="math-display">\[ I\_{\text{total}} = (12\times0.04)+(6\times0.06)=0.84\text{ A} \]</div>
+<p>This excludes any additional loads and startup effects. The selected supply must be checked against the actual load profile and applicable design requirements.</p>
+<h2 id="8-communication-interfaces-and-network-hardware">8. Communication Interfaces and Network Hardware</h2>
+<h3 id="81-integrated-interfaces">8.1 Integrated interfaces</h3>
+<p>Many S7-1500 CPUs provide integrated PROFINET interfaces. S7-300 communication capabilities vary by CPU and by installed communication processors.</p>
+<p>Do not assume that a port on the new CPU replaces every function of the old CPU's communication processor. Siemens documents separate S7-1500 communication modules and processors for Ethernet, PROFIBUS, and point-to-point communication, depending on the required functionality.&#x20;</p>
+<p><a href="https://www.google.com/s2/favicons?domain=https://support.industry.siemens.com\&amp;sz=32">image</a></p>
+<p>05/2017Guide for Migrating SIMATIC</p>
+<p>+1</p>
+<h3 id="82-network-migration-checklist">8.2 Network migration checklist</h3>
+<p>For each communication connection, record:</p>
+<ul>
+<li>Protocol and application function.</li>
+<li>Local and remote device identities.</li>
+<li>IP address, subnet mask, gateway, and device name where applicable.</li>
+<li>Physical port and network topology.</li>
+<li>Switch port assignment and VLAN requirements, if used.</li>
+<li>Connection count and resource requirements.</li>
+<li>Baud rate and bus configuration for serial or fieldbus networks.</li>
+<li>Termination and shielding requirements for applicable buses.</li>
+<li>Required communication update time and timeout behavior.</li>
+<li>Supported hardware, firmware, and engineering configuration.</li>
+</ul>
+<h3 id="83-legacy-mpi-and-profibus-equipment">8.3 Legacy MPI and PROFIBUS equipment</h3>
+<p>Older S7-300 installations may use MPI, PROFIBUS DP, or communication processors for connections to HMIs, drives, remote I/O, barcode readers, or other controllers.</p>
+<p>During migration, each connection must be classified:</p>
+<ul>
+<li>Retain through a documented compatible interface.</li>
+<li>Replace the communication module or interface.</li>
+<li>Introduce a suitable gateway where technically appropriate.</li>
+<li>Redesign the device communication.</li>
+<li>Retain a legacy subsystem temporarily as part of a staged migration.</li>
+</ul>
+<p>A gateway is not a universal solution. It must support the required protocol, data exchange, timing, diagnostics, and failure behavior.</p>
+<h3 id="84-point-to-point-communication">8.4 Point-to-point communication</h3>
+<p>Serial communication deserves special attention when the old system uses RS-232 or RS-422/RS-485 to communicate with instruments, scanners, printers, or controllers.</p>
+<p>Check:</p>
+<ul>
+<li>Electrical interface standard.</li>
+<li>Connector and pin assignment.</li>
+<li>Baud rate, parity, data bits, and stop bits.</li>
+<li>Hardware or software flow control.</li>
+<li>Message framing and termination.</li>
+<li>Device addressing and response timing.</li>
+<li>Isolation and grounding requirements.</li>
+</ul>
+<p>A serial module with the same general interface type may still behave differently because of configuration or protocol implementation. Verify it using the actual connected device.</p>
+<h2 id="9-distributed-io-and-remote-stations">9. Distributed I/O and Remote Stations</h2>
+<h3 id="91-central-io-versus-distributed-io">9.1 Central I/O versus distributed I/O</h3>
+<p>The migration must distinguish central rack modules from remote I/O stations. A machine may contain an S7-300 CPU centrally and ET 200M stations distributed around the production line.</p>
+<p>Replacing the central CPU does not automatically make every existing remote station compatible with the new configuration. The interface module, I/O module types, device description files, firmware, network protocol, and engineering support must be verified.</p>
+<h3 id="92-et-200m-and-et-200mp-considerations">9.2 ET 200M and ET 200MP considerations</h3>
+<p>ET 200M commonly appears in older installations using S7-300-family signal modules. ET 200MP is associated with the S7-1500 system architecture.</p>
+<p>These families must not be treated as physically or electrically interchangeable. If a remote station is to be retained, confirm the exact supported configuration and the required engineering setup. If it is replaced, plan for the new interface module, signal modules, wiring, and device configuration.&#x20;</p>
+<p><a href="https://www.google.com/s2/favicons?domain=https://blog.siemens.com\&amp;sz=32">image</a></p>
+<p>blog.siemens.com</p>
+<p>+1</p>
+<h3 id="93-distributed-io-migration-checklist">9.3 Distributed I/O migration checklist</h3>
+<ul>
+<li>Identify every remote station and its interface module.</li>
+<li>Record the station name, network address, and protocol.</li>
+<li>List all installed signal and technology modules.</li>
+<li>Check the supported device description file and firmware.</li>
+<li>Verify channel mapping and diagnostic behavior.</li>
+<li>Check the network cable, connector, shield, and termination.</li>
+<li>Test communication loss and recovery behavior.</li>
+<li>Confirm whether any legacy module requires a dedicated replacement or a redesign.</li>
+</ul>
+<p>For a production line, create one record per remote station rather than a single entry labelled “remote I/O.” That vague entry is how expensive surprises become part of the commissioning schedule.</p>
+<h2 id="10-technology-and-special-purpose-modules">10. Technology and Special-Purpose Modules</h2>
+<p>Older S7-300 systems may use special modules for high-speed counting, positioning, weighing, serial communication, or closed-loop control. These functions may not have a direct module-to-module replacement in the S7-1500 range.</p>
+<p>The migration must be based on the required function, not only the old module's physical form. Siemens' migration guidance describes cases where a function is implemented using a different combination of hardware and software rather than a one-to-one module replacement.&#x20;</p>
+<p><a href="https://www.google.com/s2/favicons?domain=https://support.industry.siemens.com\&amp;sz=32">image</a></p>
+<p>Siemens Industry Support</p>
+<p>+1</p>
+<p>For each technology module, document:</p>
+<ul>
+<li>Required measurement or control function.</li>
+<li>Input and output electrical characteristics.</li>
+<li>Maximum frequency or update rate.</li>
+<li>Required accuracy and resolution.</li>
+<li>Encoder or sensor interface.</li>
+<li>Axis count and motion requirements.</li>
+<li>Required synchronization and response time.</li>
+<li>Diagnostics and fault reaction.</li>
+<li>Availability of a supported successor module or CPU technology function.</li>
+</ul>
+<h3 id="101-example-high-speed-counting">10.1 Example: High-speed counting</h3>
+<p>If an existing S7-300 installation uses a dedicated counter module for an encoder, a new design might use a compatible S7-1500 technology module or an appropriate CPU technology function.</p>
+<p>The replacement must support the encoder interface, maximum pulse frequency, counting mode, reference signals, and required response time. The application logic and commissioning procedure must also be adapted to the selected solution.</p>
+<h3 id="102-example-serial-interface-module">10.2 Example: Serial interface module</h3>
+<p>If an old CP340 or CP341 communicates with a measurement instrument, identify the exact communication protocol and the required serial interface. A suitable S7-1500 communication module may be available, but its hardware selection, configuration, and application interface must be checked. A connector that fits is not evidence of functional equivalence.</p>
+<h2 id="11-memory-cards-and-data-retention">11. Memory Cards and Data Retention</h2>
+<h3 id="111-memory-media">11.1 Memory media</h3>
+<p>S7-300 CPUs that support memory cards commonly use the applicable Micro Memory Card (MMC) family. S7-1500 CPUs use the SIMATIC Memory Card for supported CPU functions. The card types and their purposes differ, so the old card must not be assumed to work in the new CPU.&#x20;</p>
+<p><a href="https://www.google.com/s2/favicons?domain=https://support.industry.siemens.com\&amp;sz=32">image</a></p>
+<p>Siemens Industry Support</p>
+<p>+1</p>
+<h3 id="112-migration-requirements">11.2 Migration requirements</h3>
+<p>Before removing the original PLC, preserve:</p>
+<ul>
+<li>The complete original project and available source files.</li>
+<li>The original hardware configuration.</li>
+<li>The latest verified program backup.</li>
+<li>Relevant CPU and module diagnostics.</li>
+<li>Retentive values that must be preserved.</li>
+<li>Recipes, calibration constants, machine parameters, and setpoints.</li>
+<li>Network settings and communication configuration.</li>
+<li>Firmware and hardware identification records.</li>
+</ul>
+<p>Record which data is stored in the PLC, which data is retained through the CPU's retentive mechanisms, and which data exists in an external HMI, PC, drive, or other device.</p>
+<p>Do not assume that retentive data transfers automatically to the replacement CPU. Define which values must be restored and verify them during commissioning.</p>
+<h2 id="12-front-connectors-and-field-wiring">12. Front Connectors and Field Wiring</h2>
+<h3 id="121-connector-compatibility">12.1 Connector compatibility</h3>
+<p>Front connectors and terminal arrangements are hardware-specific. Even when both modules provide the same number of channels, their connector design, pin assignment, and wiring requirements may differ.</p>
+<p>For every module being replaced:</p>
+<ol>
+<li>Identify the exact original module and connector.</li>
+<li>Obtain the replacement module's wiring and pin-assignment documentation.</li>
+<li>Match each field wire to its actual signal and terminal.</li>
+<li>Verify supply, common, and reference connections.</li>
+<li>Check polarity and sensor or actuator type.</li>
+<li>Inspect shield and protective-earth arrangements.</li>
+<li>Perform continuity and insulation checks appropriate to the circuit.</li>
+<li>Validate the completed wiring before applying power.</li>
+</ol>
+<h3 id="122-wire-identification">12.2 Wire identification</h3>
+<p>Use signal tags and terminal identifiers rather than relying solely on wire colour or the old connector's physical position.</p>
+<p>A useful migration record includes:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Example entry</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine or station</td>
+<td>Test bench 03</td>
+</tr>
+<tr>
+<td>Original module</td>
+<td>Exact S7-300 order number</td>
+</tr>
+<tr>
+<td>Original channel</td>
+<td>Digital input channel 5</td>
+</tr>
+<tr>
+<td>Signal tag</td>
+<td><code>CLAMP_CLOSED_FB</code></td>
+</tr>
+<tr>
+<td>Field device</td>
+<td>Clamp closed proximity sensor</td>
+</tr>
+<tr>
+<td>New module</td>
+<td>Exact S7-1500 order number</td>
+</tr>
+<tr>
+<td>New channel</td>
+<td>Verified channel assignment</td>
+</tr>
+<tr>
+<td>Wiring status</td>
+<td>Checked against approved drawing</td>
+</tr>
+<tr>
+<td>Functional test</td>
+<td>Input changes correctly during the test</td>
+</tr>
+</tbody>
+</table>
+<p>The example tag is illustrative; the actual machine's naming convention and signal assignment must be used.</p>
+<h2 id="13-safety-related-hardware">13. Safety-Related Hardware</h2>
+<p>If the original machine uses fail-safe CPUs, safety I/O, safety relays, or safety-related communication, the migration must include a dedicated safety assessment.</p>
+<p>Do not replace a safety CPU or safety module with a standard component merely because the channel count and voltage ratings appear similar.</p>
+<p>Verify:</p>
+<ul>
+<li>Required safety function and performance level or SIL.</li>
+<li>Supported fail-safe CPU and module combination.</li>
+<li>Safety communication and device compatibility.</li>
+<li>Safety program conversion and validation requirements.</li>
+<li>Emergency-stop, guard-door, enabling-device, and safe-motion behavior.</li>
+<li>Required proof testing and documentation.</li>
+<li>Applicable machinery and site safety requirements.</li>
+</ul>
+<p>A hardware migration that changes the safety architecture requires appropriate risk assessment and validation before the machine is returned to service.</p>
+<h2 id="14-practical-example-production-test-bench-migration">14. Practical Example: Production Test Bench Migration</h2>
+<p>Consider an older test bench with an S7-300 CPU, digital inputs for fixture sensors, digital outputs for pneumatic valves, analog inputs for pressure transducers, an HMI, a drive, and a remote I/O station.</p>
+<p>The migration assessment should be performed by subsystem.</p>
+<table>
+<thead>
+<tr>
+<th>Subsystem</th>
+<th>Existing arrangement</th>
+<th>Required migration action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CPU</td>
+<td>S7-300 CPU</td>
+<td>Select an S7-1500 CPU based on workload, interfaces, memory, and required functions</td>
+</tr>
+<tr>
+<td>Central I/O</td>
+<td>S7-300 signal modules</td>
+<td>Select compatible S7-1500 modules and verify electrical specifications</td>
+</tr>
+<tr>
+<td>Mounting</td>
+<td>Existing PLC rail and cabinet</td>
+<td>Confirm new rail, module dimensions, and cabinet clearances</td>
+</tr>
+<tr>
+<td>Power</td>
+<td>Existing PLC and field supplies</td>
+<td>Recalculate system and field loads</td>
+</tr>
+<tr>
+<td>HMI</td>
+<td>Existing panel connection</td>
+<td>Verify supported protocol, interface, and communication configuration</td>
+</tr>
+<tr>
+<td>Drive</td>
+<td>Existing fieldbus or Ethernet connection</td>
+<td>Confirm interface support, telegrams or data mapping, and timing requirements</td>
+</tr>
+<tr>
+<td>Remote I/O</td>
+<td>Existing distributed station</td>
+<td>Verify station and module compatibility or plan replacement</td>
+</tr>
+<tr>
+<td>Analog measurement</td>
+<td>Pressure or other process transmitter</td>
+<td>Verify range, accuracy, scaling, diagnostics, and response time</td>
+</tr>
+<tr>
+<td>Safety</td>
+<td>Existing safety circuit</td>
+<td>Complete a separate safety migration and validation</td>
+</tr>
+<tr>
+<td>Backup</td>
+<td>Existing project and parameters</td>
+<td>Preserve original project, critical data, and recovery procedure</td>
+</tr>
+</tbody>
+</table>
+<h3 id="141-recommended-migration-sequence">14.1 Recommended migration sequence</h3>
+<ol>
+<li>Document the existing installation and capture the original configuration.</li>
+<li>Identify every module by exact order number and firmware version.</li>
+<li>Build a proposed S7-1500 hardware configuration.</li>
+<li>Verify module compatibility, power, mounting, communication, and wiring.</li>
+<li>Identify components requiring redesign rather than direct replacement.</li>
+<li>Prepare the wiring drawings, I/O mapping, and acceptance tests.</li>
+<li>Assemble and inspect the replacement hardware.</li>
+<li>Commission communication and I/O systematically.</li>
+<li>Test machine sequences, fault responses, timing, and recovery.</li>
+<li>Obtain the required approvals before production release.</li>
+</ol>
+<h2 id="15-common-hardware-migration-mistakes">15. Common Hardware Migration Mistakes</h2>
+<table>
+<thead>
+<tr>
+<th>Mistake</th>
+<th>Likely consequence</th>
+<th>Correct practice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Selecting a CPU by model number alone</td>
+<td>Insufficient resources or missing interfaces</td>
+<td>Evaluate the complete application and device requirements</td>
+</tr>
+<tr>
+<td>Assuming old modules fit the new rack</td>
+<td>Incompatible mounting and backplane</td>
+<td>Design using supported hardware</td>
+</tr>
+<tr>
+<td>Reusing an old power supply without checking</td>
+<td>Inadequate or unsuitable supply arrangement</td>
+<td>Calculate system and field power requirements</td>
+</tr>
+<tr>
+<td>Assuming equal I/O channel counts mean equivalence</td>
+<td>Electrical mismatch or incorrect signal behavior</td>
+<td>Compare complete module specifications</td>
+</tr>
+<tr>
+<td>Copying original I/O addresses blindly</td>
+<td>Incorrect or inactive signals</td>
+<td>Verify the new hardware configuration and application mapping</td>
+</tr>
+<tr>
+<td>Reusing memory cards without checking</td>
+<td>Unsupported media or failed startup</td>
+<td>Use the specified memory card type</td>
+</tr>
+<tr>
+<td>Ignoring remote I/O compatibility</td>
+<td>Network or station configuration failures</td>
+<td>Verify interface modules, firmware, and device descriptions</td>
+</tr>
+<tr>
+<td>Assuming the old serial interface behaves identically</td>
+<td>Communication errors or incorrect data</td>
+<td>Validate protocol and electrical interface</td>
+</tr>
+<tr>
+<td>Ignoring cabinet space and heat</td>
+<td>Installation and reliability problems</td>
+<td>Review dimensions, clearances, and thermal conditions</td>
+</tr>
+<tr>
+<td>Skipping safety validation</td>
+<td>Unsafe machine behavior</td>
+<td>Validate safety functions before release</td>
+</tr>
+</tbody>
+</table>
+<h2 id="16-hardware-migration-checklist">16. Hardware Migration Checklist</h2>
+<p>Use this checklist during engineering review.</p>
+<h3 id="existing-system-documentation">Existing-system documentation</h3>
+<ul>
+<li>Record the exact CPU order number and firmware.</li>
+<li>Record all central and distributed module order numbers.</li>
+<li>Document the rail, rack, and cabinet layout.</li>
+<li>Record power supply ratings and connected loads.</li>
+<li>Record all network interfaces and connected devices.</li>
+<li>Capture I/O assignments, terminal plans, and field-device tags.</li>
+<li>Identify special technology and safety modules.</li>
+<li>Preserve the original project and required machine parameters.</li>
+</ul>
+<h3 id="proposed-system-verification">Proposed-system verification</h3>
+<ul>
+<li>Select the CPU using workload and functional requirements.</li>
+<li>Confirm supported S7-1500 modules and module arrangement.</li>
+<li>Verify mounting dimensions and enclosure requirements.</li>
+<li>Recalculate power and field-load requirements.</li>
+<li>Verify analog and digital signal compatibility.</li>
+<li>Confirm connector and terminal assignments.</li>
+<li>Validate communication and remote I/O compatibility.</li>
+<li>Define replacements for legacy technology modules.</li>
+<li>Confirm memory-card and data-retention requirements.</li>
+<li>Complete safety review where applicable.</li>
+</ul>
+<h3 id="commissioning-and-release">Commissioning and release</h3>
+<ul>
+<li>Verify wiring before energizing the system.</li>
+<li>Confirm CPU startup and module diagnostics.</li>
+<li>Test every input and output against the approved I/O list.</li>
+<li>Validate analog scaling and measurement accuracy.</li>
+<li>Test all network connections and communication-loss behavior.</li>
+<li>Validate timing, interlocks, and machine sequences.</li>
+<li>Test recovery after power interruption and CPU restart.</li>
+<li>Complete safety validation where required.</li>
+<li>Save the final project and update drawings, spare lists, and maintenance records.</li>
+</ul>
+<h2 id="17-interview-and-practical-competency-questions">17. Interview and Practical Competency Questions</h2>
+<p>1. Can an S7-300 signal module be installed directly in an S7-1500 rack?</p>
+<p>No. The module and backplane architectures differ. Use compatible S7-1500 hardware or a documented alternative architecture.</p>
+<p>2. Does an S7-1500 CPU with a higher model number automatically replace an S7-300 CPU?</p>
+<p>No. CPU selection depends on processing performance, memory, interfaces, communication resources, technology functions, and application requirements.</p>
+<p>3. Why must the old I/O wiring be checked even when the new module has the same channel count?</p>
+<p>Electrical characteristics, terminal assignments, isolation, diagnostics, and channel configuration can differ.</p>
+<p>4. Can the original remote I/O station remain in service?</p>
+<p>Only when the exact interface, modules, firmware, communication protocol, and engineering configuration are supported and validated.</p>
+<p>5. Why is the original memory card not automatically reusable?</p>
+<p>The two platform families use different memory-card arrangements. The replacement CPU's specified card and operating requirements must be followed.</p>
+<p>6. What is the first action before physically replacing the PLC?</p>
+<p>Document and back up the original system, identify exact hardware, and prepare an approved migration design and recovery plan.</p>
+<h2 id="18-final-engineering-principle">18. Final Engineering Principle</h2>
+<p>A successful S7-300 to S7-1500 hardware migration is based on verified functional equivalence, not visual similarity or product-family naming.</p>
+<p>For every original component, the migration record should identify one of four outcomes:</p>
+<ul>
+<li>Retain: Existing equipment is documented as compatible with the proposed design.</li>
+<li>Replace: A supported successor component is selected.</li>
+<li>Redesign: The original function must be implemented through a different hardware arrangement.</li>
+<li>Validate: Compatibility or behavior remains unconfirmed and requires documented testing before release.</li>
+</ul>
+<p>The final hardware design must be checked against the exact Siemens manuals, order numbers, firmware versions, and project configuration. A migration guide provides a starting point, but it does not replace product-specific verification.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\24_Obsolescence\07_Examples\01_S7_300_to_1500\02_Software - Software: STEP 7 to TIA Portal</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

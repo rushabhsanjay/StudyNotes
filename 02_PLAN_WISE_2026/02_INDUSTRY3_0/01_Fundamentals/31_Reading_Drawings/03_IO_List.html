@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>31.03 I/O List: Map an Address to a Field Device</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">31.03 I/O List: Map an Address to a Field Device</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-what-is-an-io-point">2. What is an I/O point?</a><ul>
+<li><a href="#digital-inputs">Digital inputs</a></li>
+<li><a href="#digital-outputs">Digital outputs</a></li>
+<li><a href="#analog-inputs">Analog inputs</a></li>
+<li><a href="#analog-outputs">Analog outputs</a></li>
+</ul>
+</li>
+<li><a href="#3-anatomy-of-an-io-list">3. Anatomy of an I/O list</a></li>
+<li><a href="#4-how-a-field-device-maps-to-a-plc-address">4. How a field device maps to a PLC address</a></li>
+<li><a href="#5-hardware-addresses-versus-symbolic-tags">5. Hardware addresses versus symbolic tags</a></li>
+<li><a href="#6-reading-io-addresses-across-plc-platforms">6. Reading I/O addresses across PLC platforms</a></li>
+<li><a href="#7-understanding-a-digital-input-in-practice">7. Understanding a digital input in practice</a></li>
+<li><a href="#8-understanding-a-digital-output-in-practice">8. Understanding a digital output in practice</a></li>
+<li><a href="#9-analog-io-mapping">9. Analog I/O mapping</a></li>
+<li><a href="#10-how-to-use-an-io-list-during-breakdowns">10. How to use an I/O list during breakdowns</a></li>
+<li><a href="#11-io-list-versus-electrical-schematic-versus-plc-program">11. I/O list versus electrical schematic versus PLC program</a></li>
+<li><a href="#12-common-mistakes">12. Common mistakes</a></li>
+<li><a href="#13-interview-questions-and-answers">13. Interview questions and answers</a></li>
+<li><a href="#14-practical-exercise">14. Practical exercise</a></li>
+<li><a href="#15-final-mental-model">15. Final mental model</a></li>
+<li><a href="#next-topic-3104-tag-naming-read-device-and-cable-numbers">Next topic: 31.04 Tag Naming: Read Device and Cable Numbers</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>An I/O list, or Input/Output list, is an engineering document that maps a controller's input and output addresses to the physical devices, signals, and functions they represent in an industrial automation system.</p>
+<p>It establishes the relationship between the field device, electrical wiring, PLC hardware channel, PLC program tag, and intended machine function.</p>
+<p>For industrial maintenance, an I/O list answers a critical question:</p>
+<p>Which physical device corresponds to this PLC address, and where should the signal be checked when the machine behaves incorrectly?</p>
+<p>For example, a PLC input may represent a sensor that detects whether a robot fixture is clamped. The I/O list identifies the sensor, the corresponding PLC address, its signal description, and associated hardware information.</p>
+<h2 id="2-what-is-an-io-point">2. What is an I/O point?</h2>
+<p>An I/O point is an individual input or output signal handled by a controller or its associated I/O system.</p>
+<p>There are four fundamental categories.</p>
+<table>
+<thead>
+<tr>
+<th>I/O type</th>
+<th>Full form</th>
+<th>Direction relative to PLC</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DI</td>
+<td>Digital Input</td>
+<td>Field device to PLC</td>
+<td>Proximity sensor detects a fixture</td>
+</tr>
+<tr>
+<td>DO</td>
+<td>Digital Output</td>
+<td>PLC to field device</td>
+<td>PLC commands a solenoid valve</td>
+</tr>
+<tr>
+<td>AI</td>
+<td>Analog Input</td>
+<td>Field device to PLC</td>
+<td>Pressure transmitter measures pressure</td>
+</tr>
+<tr>
+<td>AO</td>
+<td>Analog Output</td>
+<td>PLC to field device</td>
+<td>PLC sends a speed reference to a drive</td>
+</tr>
+</tbody>
+</table>
+<p>The direction is always described relative to the PLC, not relative to the field device.</p>
+<h3 id="digital-inputs">Digital inputs</h3>
+<p>Digital inputs represent discrete states, commonly ON/OFF or TRUE/FALSE.</p>
+<p>Examples:</p>
+<ul>
+<li>Proximity sensor detects a component.</li>
+<li>Limit switch confirms a cylinder's position.</li>
+<li>Push button requests a machine start.</li>
+<li>Overload relay provides a fault indication.</li>
+<li>Drive reports a ready or running state.</li>
+</ul>
+<h3 id="digital-outputs">Digital outputs</h3>
+<p>Digital outputs command external devices or interface circuits.</p>
+<p>Examples:</p>
+<ul>
+<li>Energize a relay or contactor coil.</li>
+<li>Operate a solenoid valve.</li>
+<li>Switch on a tower lamp.</li>
+<li>Request a robot cycle.</li>
+<li>Enable a device through a discrete input.</li>
+</ul>
+<h3 id="analog-inputs">Analog inputs</h3>
+<p>Analog inputs represent continuously varying measured quantities.</p>
+<p>Examples:</p>
+<ul>
+<li>Pressure transmitter: 4–20 mA.</li>
+<li>Temperature transmitter: 4–20 mA.</li>
+<li>Position sensor: 0–10 V.</li>
+<li>Flow transmitter: 4–20 mA.</li>
+</ul>
+<p>The PLC converts the electrical signal into a numeric value and, where configured, scales it into engineering units.</p>
+<h3 id="analog-outputs">Analog outputs</h3>
+<p>Analog outputs send a variable command to a receiving device.</p>
+<p>Examples:</p>
+<ul>
+<li>Speed reference to a VFD.</li>
+<li>Position reference to a controller.</li>
+<li>Control signal to a proportional valve.</li>
+<li>Setpoint to an external control system.</li>
+</ul>
+<p>A numeric PLC value is not automatically an engineering value. Scaling, units, limits, and the receiving device's configuration must be verified.</p>
+<h2 id="3-anatomy-of-an-io-list">3. Anatomy of an I/O list</h2>
+<p>A practical I/O list typically contains the following information. Actual column names vary between companies and projects.</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Purpose</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>I/O address</td>
+<td>Hardware or logical address</td>
+<td><code>Local:1:I.Data.0</code></td>
+</tr>
+<tr>
+<td>PLC tag</td>
+<td>Symbolic program name</td>
+<td><code>CLAMP_CLOSED</code></td>
+</tr>
+<tr>
+<td>Signal description</td>
+<td>What the signal means</td>
+<td>Clamp closed confirmation</td>
+</tr>
+<tr>
+<td>I/O type</td>
+<td>Signal category</td>
+<td>DI</td>
+</tr>
+<tr>
+<td>Device tag</td>
+<td>Reference to the field device</td>
+<td><code>-B101</code></td>
+</tr>
+<tr>
+<td>Device location</td>
+<td>Physical location</td>
+<td>Fixture station 1</td>
+</tr>
+<tr>
+<td>Rack/slot/channel</td>
+<td>Hardware location</td>
+<td>Rack 0, slot 1, channel 0</td>
+</tr>
+<tr>
+<td>Electrical signal</td>
+<td>Signal type or range</td>
+<td>24 V DC</td>
+</tr>
+<tr>
+<td>Normal state</td>
+<td>Expected state in a defined condition</td>
+<td>ON when clamp is closed</td>
+</tr>
+<tr>
+<td>Wiring reference</td>
+<td>Drawing or terminal reference</td>
+<td>Sheet 12, terminal X1:14</td>
+</tr>
+<tr>
+<td>Destination/source</td>
+<td>Connected device or system</td>
+<td>Proximity sensor</td>
+</tr>
+<tr>
+<td>Remarks</td>
+<td>Special conditions</td>
+<td>Input used as a sequence permissive</td>
+</tr>
+</tbody>
+</table>
+<p>Not every project uses every column. The important requirement is that the information is sufficient to trace the signal from the physical device into the control system, or from the controller to the commanded device.</p>
+<h2 id="4-how-a-field-device-maps-to-a-plc-address">4. How a field device maps to a PLC address</h2>
+<p>Consider a proximity sensor used to detect whether a fixture clamp has reached its closed position.</p>
+<pre><code>PHYSICAL SENSOR
+      |
+      v
+SENSOR CONNECTOR AND CABLE
+      |
+      v
+TERMINAL BLOCK
+      |
+      v
+PLC INPUT MODULE CHANNEL
+      |
+      v
+PLC HARDWARE ADDRESS
+      |
+      v
+PLC SYMBOLIC TAG
+      |
+      v
+SEQUENCE / INTERLOCK LOGIC
+</code></pre>
+<p>An example mapping:</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Field device</td>
+<td>Clamp-closed proximity sensor</td>
+</tr>
+<tr>
+<td>Device tag</td>
+<td><code>-B101</code></td>
+</tr>
+<tr>
+<td>Electrical signal</td>
+<td>24 V DC digital</td>
+</tr>
+<tr>
+<td>Terminal reference</td>
+<td><code>X1:14</code></td>
+</tr>
+<tr>
+<td>PLC module</td>
+<td>Digital input module</td>
+</tr>
+<tr>
+<td>Hardware address</td>
+<td><code>Local:1:I.Data.0</code></td>
+</tr>
+<tr>
+<td>PLC tag</td>
+<td><code>CLAMP_CLOSED</code></td>
+</tr>
+<tr>
+<td>Program function</td>
+<td>Confirms clamp position before welding</td>
+</tr>
+</tbody>
+</table>
+<p>The identifiers above are illustrative. Actual addresses, terminal numbers, and tag conventions must come from the machine's approved drawings and PLC project.</p>
+<p>The same physical signal can have several identifiers, each serving a different purpose. They should be cross-referenced rather than treated as interchangeable.</p>
+<h2 id="5-hardware-addresses-versus-symbolic-tags">5. Hardware addresses versus symbolic tags</h2>
+<p>This distinction is essential when troubleshooting or modifying PLC programs.</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Hardware address</th>
+<th>Symbolic tag</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Meaning</td>
+<td>Identifies a physical or configured I/O point</td>
+<td>Identifies a variable by its engineering meaning</td>
+</tr>
+<tr>
+<td>Example</td>
+<td><code>Local:1:I.Data.0</code></td>
+<td><code>CLAMP_CLOSED</code></td>
+</tr>
+<tr>
+<td>Main use</td>
+<td>Hardware mapping and diagnostics</td>
+<td>Program readability and logic</td>
+</tr>
+<tr>
+<td>Portability</td>
+<td>Can change when hardware configuration changes</td>
+<td>May remain stable if the project preserves the tag</td>
+</tr>
+<tr>
+<td>Interpretation</td>
+<td>Depends on the PLC platform and configuration</td>
+<td>Depends on the tag definition and mapping</td>
+</tr>
+</tbody>
+</table>
+<p>In Allen-Bradley Logix systems, a tag such as <code>CLAMP_CLOSED</code> may alias a physical I/O point or be assigned from another tag. In Siemens systems, the mapping may use a process image address such as <code>%I0.0</code> alongside a symbolic tag such as <code>"Clamp_Closed"</code>.</p>
+<p>The address syntax is platform-dependent. Do not assume that the address format from one PLC family applies to another.</p>
+<h2 id="6-reading-io-addresses-across-plc-platforms">6. Reading I/O addresses across PLC platforms</h2>
+<p>The same physical function can use different address formats in different PLC families.</p>
+<table>
+<thead>
+<tr>
+<th>PLC platform</th>
+<th>Illustrative address or tag</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Allen-Bradley ControlLogix</td>
+<td><code>Local:1:I.Data.0</code></td>
+<td>Input bit 0 of the configured local module at slot 1</td>
+</tr>
+<tr>
+<td>Siemens S7</td>
+<td><code>%I0.0</code></td>
+<td>Input bit at byte 0, bit 0</td>
+</tr>
+<tr>
+<td>Mitsubishi PLC</td>
+<td><code>X0</code></td>
+<td>A common input-device notation</td>
+</tr>
+<tr>
+<td>Rockwell symbolic tag</td>
+<td><code>CLAMP_CLOSED</code></td>
+<td>Symbolic variable, possibly mapped to a physical input</td>
+</tr>
+<tr>
+<td>Siemens symbolic tag</td>
+<td><code>"Clamp_Closed"</code></td>
+<td>Symbolic variable representing the input function</td>
+</tr>
+</tbody>
+</table>
+<p>These are illustrative conventions, not a complete address specification. Remote I/O, network adapters, rack configuration, module type, and PLC software version can change how a point is represented.</p>
+<p>Maintenance rule: Verify the exact controller family, hardware configuration, and tag mapping before using an address to identify a physical channel.</p>
+<h2 id="7-understanding-a-digital-input-in-practice">7. Understanding a digital input in practice</h2>
+<p>Suppose an Allen-Bradley controller uses the following example:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC tag</td>
+<td><code>CLAMP_CLOSED</code></td>
+</tr>
+<tr>
+<td>Hardware address</td>
+<td><code>Local:1:I.Data.0</code></td>
+</tr>
+<tr>
+<td>Module</td>
+<td>Digital input module in slot 1</td>
+</tr>
+<tr>
+<td>Field device</td>
+<td>Clamp-closed sensor <code>-B101</code></td>
+</tr>
+<tr>
+<td>Expected state</td>
+<td>TRUE when the clamp is detected closed</td>
+</tr>
+</tbody>
+</table>
+<p>When the clamp closes, the sensor changes its output state. The electrical signal reaches the input module, and the PLC's corresponding input bit changes state, subject to the module configuration and electrical conditions.</p>
+<p>The program can then use <code>CLAMP_CLOSED</code> to determine whether the next sequence step is allowed.</p>
+<p>If the PLC tag remains FALSE even though the clamp appears closed, investigate the complete signal path rather than immediately editing the PLC logic.</p>
+<p>Potential causes include:</p>
+<ul>
+<li>Sensor not switching.</li>
+<li>Sensor supply missing.</li>
+<li>Damaged or disconnected cable.</li>
+<li>Incorrect terminal connection.</li>
+<li>Incorrect input common or wiring arrangement.</li>
+<li>Failed input channel.</li>
+<li>Wrong hardware address or tag mapping.</li>
+<li>A different signal being used by the program.</li>
+<li>The physical clamp reaching a position that does not actually activate the sensor.</li>
+</ul>
+<h2 id="8-understanding-a-digital-output-in-practice">8. Understanding a digital output in practice</h2>
+<p>Consider a PLC commanding a solenoid valve that extends a cylinder.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC tag</td>
+<td><code>CYLINDER_EXTEND_CMD</code></td>
+</tr>
+<tr>
+<td>I/O type</td>
+<td>DO</td>
+</tr>
+<tr>
+<td>Device tag</td>
+<td><code>-Y101</code></td>
+</tr>
+<tr>
+<td>Destination</td>
+<td>Solenoid valve</td>
+</tr>
+<tr>
+<td>Program function</td>
+<td>Requests cylinder extension</td>
+</tr>
+</tbody>
+</table>
+<p>The signal path is:</p>
+<pre><code>PLC LOGIC
+    |
+    v
+OUTPUT TAG
+    |
+    v
+OUTPUT MODULE CHANNEL
+    |
+    v
+TERMINAL BLOCK AND FIELD WIRING
+    |
+    v
+SOLENOID COIL
+    |
+    v
+VALVE SHIFTS
+    |
+    v
+CYLINDER MOVES
+</code></pre>
+<p>If the output tag is TRUE but the cylinder does not extend, several different faults are possible.</p>
+<table>
+<thead>
+<tr>
+<th>Observation</th>
+<th>Investigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC output tag is FALSE</td>
+<td>Check logic conditions, sequence state, faults, and permissives</td>
+</tr>
+<tr>
+<td>Tag is TRUE but output channel is OFF</td>
+<td>Check tag mapping, module status, configuration, and channel diagnostics</td>
+</tr>
+<tr>
+<td>Output channel is ON but coil is not energized</td>
+<td>Check supply, output wiring, protection, and coil circuit</td>
+</tr>
+<tr>
+<td>Coil is energized but valve does not shift</td>
+<td>Check coil condition, valve mechanism, pressure supply, and valve specification</td>
+</tr>
+<tr>
+<td>Valve shifts but cylinder does not move</td>
+<td>Check pneumatic or hydraulic supply, actuator, mechanical obstruction, and downstream conditions</td>
+</tr>
+</tbody>
+</table>
+<p>A PLC command proves only that the program variable has a particular value. It does not prove that the field device physically operated.</p>
+<h2 id="9-analog-io-mapping">9. Analog I/O mapping</h2>
+<p>Analog I/O lists require additional information because a signal represents a range of values rather than just two states.</p>
+<p>Consider a pressure transmitter with a 4–20 mA output and a configured measurement range of 0–10 bar.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC tag</td>
+<td><code>AIR_PRESSURE_BAR</code></td>
+</tr>
+<tr>
+<td>Device tag</td>
+<td><code>-PT101</code></td>
+</tr>
+<tr>
+<td>I/O type</td>
+<td>AI</td>
+</tr>
+<tr>
+<td>Signal type</td>
+<td>4–20 mA</td>
+</tr>
+<tr>
+<td>Engineering range</td>
+<td>0–10 bar</td>
+</tr>
+<tr>
+<td>Raw input</td>
+<td>Platform-dependent integer or representation</td>
+</tr>
+<tr>
+<td>Scaled value</td>
+<td>Pressure in bar</td>
+</tr>
+<tr>
+<td>Alarm threshold</td>
+<td>Project-defined value</td>
+</tr>
+</tbody>
+</table>
+<p>For ideal linear scaling:</p>
+<div class="math-display">\[ PV = \frac{I-4}{20-4}\times 10 \]</div>
+<p>where:</p>
+<ul>
+<li><span class="math-inline">\(PV\)</span> is pressure in bar.</li>
+<li><span class="math-inline">\(I\)</span> is the measured current in mA.</li>
+<li>4 mA represents 0 bar.</li>
+<li>20 mA represents 10 bar.</li>
+</ul>
+<p>For example, a measured current of 12 mA corresponds to:</p>
+<div class="math-display">\[ PV = \frac{12-4}{16}\times10=5\text{ bar} \]</div>
+<p>This calculation assumes a correctly configured linear transmitter and input channel, with no additional offsets or nonlinear scaling.</p>
+<p>For an analog output, the direction is reversed: the PLC calculates or commands a value, converts it to the configured output signal, and sends it to the receiving device.</p>
+<p>An I/O list should make the signal range, engineering units, scaling, and destination clear enough to verify the complete measurement or command chain.</p>
+<h2 id="10-how-to-use-an-io-list-during-breakdowns">10. How to use an I/O list during breakdowns</h2>
+<p>A disciplined troubleshooting process follows the signal from one end to the other.</p>
+<ol>
+<li>Identify the machine symptom and the device involved.</li>
+<li>Find the device tag or functional description in the I/O list.</li>
+<li>Confirm the I/O type and PLC tag.</li>
+<li>Identify the hardware address, module, slot, and channel.</li>
+<li>Locate the relevant terminal and wiring references in the electrical drawings.</li>
+<li>Check the actual PLC tag and module diagnostics.</li>
+<li>Compare the observed state with the expected state under the current operating condition.</li>
+<li>Verify the field device and electrical path using approved procedures.</li>
+<li>Check how the signal is used by the PLC sequence, permissive, interlock, or alarm logic.</li>
+<li>Record the confirmed fault and update documentation if the installed system differs from the approved records.</li>
+</ol>
+<p>The key is to separate the problem into three layers:</p>
+<ul>
+<li>Signal generation: Is the field device producing the correct signal?</li>
+<li>Signal transmission and acquisition: Does the signal reach the correct PLC input or output channel?</li>
+<li>Signal interpretation and action: Is the PLC using the correct tag and producing the intended response?</li>
+</ul>
+<p>This separation prevents unnecessary sensor replacements, random wiring changes, and unverified PLC edits.</p>
+<h2 id="11-io-list-versus-electrical-schematic-versus-plc-program">11. I/O list versus electrical schematic versus PLC program</h2>
+<p>These documents complement one another. None replaces the others.</p>
+<table>
+<thead>
+<tr>
+<th>Document</th>
+<th>Main question answered</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>I/O list</td>
+<td>Which controller signal corresponds to which field device and function?</td>
+</tr>
+<tr>
+<td>Electrical schematic</td>
+<td>How are the device, terminals, protection, and wiring electrically connected?</td>
+</tr>
+<tr>
+<td>PLC hardware configuration</td>
+<td>Which modules, slots, channels, and addresses are configured?</td>
+</tr>
+<tr>
+<td>PLC program</td>
+<td>How is the signal used in control logic?</td>
+</tr>
+<tr>
+<td>Network or device configuration</td>
+<td>How is a networked device addressed and connected?</td>
+</tr>
+<tr>
+<td>Instrument datasheet</td>
+<td>What are the device's electrical characteristics, ranges, and operating limits?</td>
+</tr>
+<tr>
+<td>As-built drawings</td>
+<td>What is documented as the installed configuration?</td>
+</tr>
+</tbody>
+</table>
+<p>For example, the I/O list may identify a sensor as <code>CLAMP_CLOSED</code>. The schematic shows how it is wired. The hardware configuration shows the input module and channel. The PLC program shows which sequence conditions depend on that signal.</p>
+<h2 id="12-common-mistakes">12. Common mistakes</h2>
+<ul>
+<li>Confusing a PLC tag with a physical device tag.</li>
+<li>Assuming every PLC tag corresponds directly to one physical I/O channel.</li>
+<li>Assuming an input being ON proves that the mechanical position is correct.</li>
+<li>Assuming an output being ON proves that a valve, motor, or contactor operated.</li>
+<li>Ignoring input common, output supply, module configuration, and field wiring.</li>
+<li>Using an address from an old PLC project after hardware has been changed.</li>
+<li>Treating an analog raw value as an engineering measurement without verifying scaling.</li>
+<li>Failing to distinguish local I/O from remote or networked I/O.</li>
+<li>Modifying the PLC program before confirming whether the problem is electrical, mechanical, or logical.</li>
+<li>Failing to update the I/O list after a retrofit or channel reassignment.</li>
+</ul>
+<h2 id="13-interview-questions-and-answers">13. Interview questions and answers</h2>
+<p>Q1. What is an I/O list?</p>
+<p>An I/O list maps controller inputs and outputs to field devices, signal descriptions, PLC tags, hardware addresses, and relevant wiring or terminal references.</p>
+<p>Q2. What is the difference between DI and DO?</p>
+<p>A digital input brings a discrete signal into the PLC. A digital output sends a discrete command from the PLC to a field device or interface circuit.</p>
+<p>Q3. What is the difference between a PLC address and a PLC tag?</p>
+<p>An address identifies a hardware or configured signal location. A tag provides a symbolic name representing the signal or variable in the PLC program.</p>
+<p>Q4. A sensor LED is ON, but the PLC input is OFF. What do you check?</p>
+<p>Check whether the LED indicates power or actual switching, then verify sensor output, supply and common, cable continuity, terminal wiring, input-channel configuration, and the correct PLC address.</p>
+<p>Q5. A PLC output is ON, but the actuator does not operate. What does that tell you?</p>
+<p>It tells you that the observed program variable is ON. It does not prove that the output hardware, wiring, supply, actuator, or mechanical system is functioning.</p>
+<p>Q6. Why is an I/O list important during a retrofit?</p>
+<p>It provides a baseline for mapping existing signals, identifying spare channels, assessing dependencies, planning changes, and updating PLC hardware and software documentation.</p>
+<h2 id="14-practical-exercise">14. Practical exercise</h2>
+<p>Choose one sensor and one actuator from a machine you maintain. Trace each from the field device to the controller or from the controller to the field device.</p>
+<ul>
+<li>Record the physical device tag and function.</li>
+<li>Identify DI, DO, AI, or AO.</li>
+<li>Find the PLC tag and hardware address.</li>
+<li>Record the module, slot, and channel where applicable.</li>
+<li>Locate the terminal numbers and wire references.</li>
+<li>Identify the electrical signal type and voltage or current range.</li>
+<li>Find the relevant PLC logic or sequence condition.</li>
+<li>Record the expected state during stopped, running, and fault conditions.</li>
+<li>Verify the actual signal path using approved diagnostic procedures.</li>
+<li>Document any mismatch between the I/O list, PLC project, schematic, and installed wiring.</li>
+</ul>
+<h2 id="15-final-mental-model">15. Final mental model</h2>
+<p>An I/O list connects the physical world to the controller's representation of that world.</p>
+<pre><code>FIELD DEVICE
+    |
+    v
+ELECTRICAL SIGNAL
+    |
+    v
+WIRING AND TERMINALS
+    |
+    v
+I/O MODULE AND ADDRESS
+    |
+    v
+PLC TAG
+    |
+    v
+CONTROL LOGIC
+    |
+    v
+MACHINE RESPONSE
+</code></pre>
+<p>For inputs, trace from the field device toward the PLC. For outputs, trace from the PLC toward the commanded device. In both cases, verify each link instead of assuming that a correct tag value guarantees correct physical behavior.</p>
+<p>The real value of an I/O list is that it makes the signal traceable, testable, and maintainable throughout the machine's lifecycle.</p>
+<h1 id="next-topic-3104-tag-naming-read-device-and-cable-numbers">Next topic: 31.04 Tag Naming: Read Device and Cable Numbers</h1>
+<p>After this final topic under Reading Drawings, the next study section will be Auto Tech.</p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

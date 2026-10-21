@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CNC Fault: PLC/PMC, Machine Logic and I/O</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">CNC Fault: PLC/PMC, Machine Logic and I/O</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-of-cnc-plcpmc-troubleshooting">1. Purpose of CNC PLC/PMC Troubleshooting</a></li>
+<li><a href="#2-cnc-plcpmc-drives-and-field-devices">2. CNC, PLC/PMC, Drives and Field Devices</a></li>
+<li><a href="#3-important-plcpmc-terminology">3. Important PLC/PMC Terminology</a></li>
+<li><a href="#4-main-responsibilities-of-cnc-plcpmc-logic">4. Main Responsibilities of CNC PLC/PMC Logic</a><ul>
+<li><a href="#41-machine-sequence-control">4.1 Machine sequence control</a></li>
+<li><a href="#42-interlock-management">4.2 Interlock management</a></li>
+<li><a href="#43-signal-processing">4.3 Signal processing</a></li>
+<li><a href="#44-alarm-generation">4.4 Alarm generation</a></li>
+</ul>
+</li>
+<li><a href="#5-digital-inputs-and-outputs">5. Digital Inputs and Outputs</a><ul>
+<li><a href="#51-digital-inputs">5.1 Digital inputs</a></li>
+<li><a href="#52-digital-outputs">5.2 Digital outputs</a></li>
+<li><a href="#53-input-and-output-diagnostic-comparison">5.3 Input and output diagnostic comparison</a></li>
+</ul>
+</li>
+<li><a href="#6-understanding-plcpmc-signal-logic">6. Understanding PLC/PMC Signal Logic</a><ul>
+<li><a href="#61-command-versus-confirmation">6.1 Command versus confirmation</a></li>
+<li><a href="#62-permissive-conditions">6.2 Permissive conditions</a></li>
+<li><a href="#63-interlock-versus-fault">6.3 Interlock versus fault</a></li>
+</ul>
+</li>
+<li><a href="#7-plcpmc-troubleshooting-workflow">7. PLC/PMC Troubleshooting Workflow</a><ul>
+<li><a href="#step-1-establish-the-machine-state">Step 1: Establish the machine state</a></li>
+<li><a href="#step-2-identify-the-expected-operation">Step 2: Identify the expected operation</a></li>
+<li><a href="#step-3-identify-the-required-signals">Step 3: Identify the required signals</a></li>
+<li><a href="#step-4-compare-logic-with-physical-conditions">Step 4: Compare logic with physical conditions</a></li>
+<li><a href="#step-5-isolate-the-fault-domain">Step 5: Isolate the fault domain</a></li>
+<li><a href="#step-6-correct-the-confirmed-cause">Step 6: Correct the confirmed cause</a></li>
+<li><a href="#step-7-verify-the-complete-sequence">Step 7: Verify the complete sequence</a></li>
+</ul>
+</li>
+<li><a href="#8-plcpmc-ladder-logic-practical-interpretation">8. PLC/PMC Ladder Logic: Practical Interpretation</a><ul>
+<li><a href="#81-trace-the-logic-backward">8.1 Trace the logic backward</a></li>
+<li><a href="#82-trace-the-logic-forward">8.2 Trace the logic forward</a></li>
+</ul>
+</li>
+<li><a href="#9-plcpmc-io-module-faults">9. PLC/PMC I/O Module Faults</a><ul>
+<li><a href="#91-input-module-fault">9.1 Input module fault</a></li>
+<li><a href="#92-output-module-fault">9.2 Output module fault</a></li>
+</ul>
+</li>
+<li><a href="#10-sensor-and-switch-faults">10. Sensor and Switch Faults</a><ul>
+<li><a href="#101-proximity-sensor">10.1 Proximity sensor</a></li>
+<li><a href="#102-limit-switch">10.2 Limit switch</a></li>
+<li><a href="#103-pressure-switch">10.3 Pressure switch</a></li>
+</ul>
+</li>
+<li><a href="#11-output-devices-and-actuator-faults">11. Output Devices and Actuator Faults</a><ul>
+<li><a href="#111-solenoid-valve">11.1 Solenoid valve</a></li>
+<li><a href="#112-relay-or-contactor">11.2 Relay or contactor</a></li>
+<li><a href="#113-hydraulic-or-pneumatic-actuator">11.3 Hydraulic or pneumatic actuator</a></li>
+</ul>
+</li>
+<li><a href="#12-cnc-machine-interlocks">12. CNC Machine Interlocks</a><ul>
+<li><a href="#troubleshooting-method">Troubleshooting method</a></li>
+</ul>
+</li>
+<li><a href="#13-sequence-timeout-faults">13. Sequence Timeout Faults</a><ul>
+<li><a href="#diagnostic-method">Diagnostic method</a></li>
+</ul>
+</li>
+<li><a href="#14-remote-io-and-communication-problems">14. Remote I/O and Communication Problems</a><ul>
+<li><a href="#troubleshooting-priorities">Troubleshooting priorities</a></li>
+</ul>
+</li>
+<li><a href="#15-common-cnc-plcpmc-breakdown-cases">15. Common CNC PLC/PMC Breakdown Cases</a><ul>
+<li><a href="#case-1-automatic-cycle-will-not-start">Case 1: Automatic cycle will not start</a></li>
+<li><a href="#case-2-tool-changer-stops-halfway-through-the-sequence">Case 2: Tool changer stops halfway through the sequence</a></li>
+<li><a href="#case-3-hydraulic-clamp-command-is-on-but-clamping-does-not-occur">Case 3: Hydraulic clamp command is ON, but clamping does not occur</a></li>
+<li><a href="#case-4-physical-sensor-operates-but-the-cnc-still-reports-an-interlock">Case 4: Physical sensor operates, but the CNC still reports an interlock</a></li>
+<li><a href="#case-5-several-io-signals-fail-at-once">Case 5: Several I/O signals fail at once</a></li>
+</ul>
+</li>
+<li><a href="#16-safe-testing-and-electrical-precautions">16. Safe Testing and Electrical Precautions</a></li>
+<li><a href="#17-preventive-maintenance-checklist">17. Preventive Maintenance Checklist</a><ul>
+<li><a href="#plcpmc-and-io">PLC/PMC and I/O</a></li>
+<li><a href="#sensors-and-actuators">Sensors and actuators</a></li>
+<li><a href="#sequence-and-documentation">Sequence and documentation</a></li>
+</ul>
+</li>
+<li><a href="#18-plcpmc-breakdown-record-template">18. PLC/PMC Breakdown Record Template</a></li>
+<li><a href="#19-interview-questions-and-answers">19. Interview Questions and Answers</a><ul>
+<li><a href="#q1-what-is-the-function-of-plcpmc-in-a-cnc-machine">Q1. What is the function of PLC/PMC in a CNC machine?</a></li>
+<li><a href="#q2-what-is-the-difference-between-a-command-and-feedback">Q2. What is the difference between a command and feedback?</a></li>
+<li><a href="#q3-why-does-a-cnc-machine-fail-to-start-its-automatic-cycle">Q3. Why does a CNC machine fail to start its automatic cycle?</a></li>
+<li><a href="#q4-what-is-a-sequence-timeout">Q4. What is a sequence timeout?</a></li>
+<li><a href="#q5-how-do-you-diagnose-an-input-that-does-not-change-in-the-plcpmc">Q5. How do you diagnose an input that does not change in the PLC/PMC?</a></li>
+<li><a href="#q6-what-if-a-plcpmc-output-is-on-but-the-actuator-does-not-move">Q6. What if a PLC/PMC output is ON but the actuator does not move?</a></li>
+<li><a href="#q7-why-should-interlocks-not-be-bypassed-to-clear-a-fault">Q7. Why should interlocks not be bypassed to clear a fault?</a></li>
+<li><a href="#q8-what-causes-multiple-io-signals-to-fail-simultaneously">Q8. What causes multiple I/O signals to fail simultaneously?</a></li>
+<li><a href="#q9-what-is-the-difference-between-plc-logic-and-field-device-troubleshooting">Q9. What is the difference between PLC logic and field-device troubleshooting?</a></li>
+<li><a href="#q10-what-is-the-best-way-to-find-the-root-cause-of-a-machine-interlock">Q10. What is the best way to find the root cause of a machine interlock?</a></li>
+</ul>
+</li>
+<li><a href="#20-completion-checklist">20. Completion Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\19_Breakdown\05_CNC_Fault\03_PLC_PMC</code></p>
+<h2 id="1-purpose-of-cnc-plcpmc-troubleshooting">1. Purpose of CNC PLC/PMC Troubleshooting</h2>
+<p>A CNC machine depends on both numerical control and machine-sequence control. The CNC executes machining programs and coordinates motion, while the PLC or PMC manages machine functions such as clamping, lubrication, tool changing, door interlocks, hydraulic systems, coolant, and machine-ready conditions.</p>
+<p>A PLC/PMC-related breakdown may appear as:</p>
+<ul>
+<li>Machine cycle does not start.</li>
+<li>CNC displays an interlock or machine-builder alarm.</li>
+<li>Tool changer stops halfway through a sequence.</li>
+<li>Hydraulic or pneumatic clamping does not operate.</li>
+<li>Coolant, lubrication, or chip conveyor fails to start.</li>
+<li>A limit switch or proximity sensor is not detected.</li>
+<li>An output command is present, but the actuator does not operate.</li>
+<li>An input signal changes physically but not in the diagnostic screen.</li>
+<li>A sequence waits indefinitely for a confirmation signal.</li>
+<li>Multiple machine functions fail because of a common I/O or communication problem.</li>
+</ul>
+<p>Core diagnostic principle: Trace the complete signal path from the physical condition to the PLC/PMC input, through the machine logic, to the output and final actuator. Do not replace an I/O module merely because an input or output appears incorrect.</p>
+<h2 id="2-cnc-plcpmc-drives-and-field-devices">2. CNC, PLC/PMC, Drives and Field Devices</h2>
+<pre><code>Operator Command / CNC Program
+              ↓
+          CNC Control
+              ↓
+        PLC / PMC Logic
+              ↓
+      Output I/O Module
+              ↓
+ Relay / Contactor / Valve Driver
+              ↓
+       Field Actuator
+              ↓
+    Physical Machine Movement
+              ↓
+     Sensor / Limit Switch
+              ↓
+       Input I/O Module
+              ↓
+        PLC / PMC Logic
+              ↓
+   Sequence Confirmation / Alarm
+</code></pre>
+<p>The actual architecture varies. Some CNCs integrate PLC/PMC functions into the CNC controller, while others use separate modules or remote I/O networks.</p>
+<p>The PLC/PMC generally handles discrete machine sequencing. It may also process analog signals, counters, timers, data registers, and communication with drives or other devices.</p>
+<h2 id="3-important-plcpmc-terminology">3. Important PLC/PMC Terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC</td>
+<td>Programmable Logic Controller used to control industrial machine sequences</td>
+</tr>
+<tr>
+<td>PMC</td>
+<td>Programmable Machine Controller, commonly used for machine-control logic in CNC systems</td>
+</tr>
+<tr>
+<td>Ladder logic</td>
+<td>Graphical logic language using contacts, coils, timers, counters, and function blocks</td>
+</tr>
+<tr>
+<td>Input</td>
+<td>Signal received from a sensor, switch, drive, or other device</td>
+</tr>
+<tr>
+<td>Output</td>
+<td>Command sent to a relay, valve, contactor, lamp, or other device</td>
+</tr>
+<tr>
+<td>I/O module</td>
+<td>Hardware interface for physical or networked inputs and outputs</td>
+</tr>
+<tr>
+<td>Interlock</td>
+<td>Condition that must be satisfied before an operation is permitted</td>
+</tr>
+<tr>
+<td>Permissive</td>
+<td>Required condition allowing an operation to start</td>
+</tr>
+<tr>
+<td>Sequence</td>
+<td>Ordered set of machine operations</td>
+</tr>
+<tr>
+<td>Timer</td>
+<td>Logic element that measures elapsed time for a control function</td>
+</tr>
+<tr>
+<td>Counter</td>
+<td>Logic element that counts events</td>
+</tr>
+<tr>
+<td>Internal relay / marker</td>
+<td>Memory bit used within control logic</td>
+</tr>
+<tr>
+<td>Keep relay</td>
+<td>Retained PLC/PMC data, depending on the controller's architecture</td>
+</tr>
+<tr>
+<td>Diagnostic address</td>
+<td>Address or identifier used to monitor a signal or internal variable</td>
+</tr>
+<tr>
+<td>Input filter</td>
+<td>Function that suppresses brief or unwanted input transitions</td>
+</tr>
+<tr>
+<td>Scan cycle</td>
+<td>Repeated process of reading inputs, executing logic, and updating outputs, subject to controller architecture</td>
+</tr>
+<tr>
+<td>Watchdog</td>
+<td>Mechanism that detects certain controller execution or timing failures</td>
+</tr>
+<tr>
+<td>Handshake</td>
+<td>Exchange of request and confirmation signals between control systems</td>
+</tr>
+<tr>
+<td>Feedback</td>
+<td>Signal confirming a command or physical condition</td>
+</tr>
+<tr>
+<td>Timeout</td>
+<td>Alarm condition when an expected event does not occur within the specified period</td>
+</tr>
+</tbody>
+</table>
+<p>Important: Address formats, signal naming, memory organization, and diagnostic tools differ between CNC manufacturers. Always use the electrical drawings, I/O list, and controller-specific documentation for the machine under investigation.</p>
+<h2 id="4-main-responsibilities-of-cnc-plcpmc-logic">4. Main Responsibilities of CNC PLC/PMC Logic</h2>
+<h3 id="41-machine-sequence-control">4.1 Machine sequence control</h3>
+<p>The PLC/PMC coordinates operations such as:</p>
+<ul>
+<li>Machine startup and readiness.</li>
+<li>Axis and spindle enable conditions.</li>
+<li>Tool change sequence.</li>
+<li>Pallet or fixture clamping.</li>
+<li>Hydraulic and pneumatic operations.</li>
+<li>Coolant and lubrication.</li>
+<li>Chip conveyor operation.</li>
+<li>Door locking and access interlocks.</li>
+<li>Automatic cycle start and completion.</li>
+<li>Machine alarm generation.</li>
+</ul>
+<h3 id="42-interlock-management">4.2 Interlock management</h3>
+<p>The PLC/PMC checks whether required conditions are satisfied before allowing an operation.</p>
+<p>For example, a tool-change sequence may require:</p>
+<ul>
+<li>The machine to be in an allowed operating state.</li>
+<li>The spindle to be stopped or at the required orientation.</li>
+<li>The axes to be at an approved tool-change position.</li>
+<li>The tool magazine to be in the required state.</li>
+<li>The unclamp or clamp confirmation to be valid.</li>
+<li>The relevant safety conditions to be satisfied.</li>
+</ul>
+<p>The exact requirements depend on the machine builder's design.</p>
+<h3 id="43-signal-processing">4.3 Signal processing</h3>
+<p>The PLC/PMC interprets field signals and produces control decisions.</p>
+<p>Examples include:</p>
+<ul>
+<li>Proximity sensor detects a slide position.</li>
+<li>Pressure switch confirms hydraulic pressure.</li>
+<li>Limit switch confirms a mechanical end position.</li>
+<li>Drive-ready signal confirms drive availability.</li>
+<li>Contactor feedback confirms an expected electrical state.</li>
+<li>Tool clamp sensor confirms the tool retention mechanism's state.</li>
+</ul>
+<h3 id="44-alarm-generation">4.4 Alarm generation</h3>
+<p>The PLC/PMC may generate an alarm when:</p>
+<ul>
+<li>A required input is missing.</li>
+<li>A sequence does not complete.</li>
+<li>Two conditions contradict each other.</li>
+<li>An actuator fails to reach the expected state.</li>
+<li>A pressure, temperature, or position condition is outside its allowed range.</li>
+<li>A communication or device-ready condition is lost.</li>
+</ul>
+<p>The alarm text is often defined by the machine builder. It should be interpreted alongside the corresponding logic and electrical drawings.</p>
+<h2 id="5-digital-inputs-and-outputs">5. Digital Inputs and Outputs</h2>
+<h3 id="51-digital-inputs">5.1 Digital inputs</h3>
+<p>Digital inputs represent discrete states, commonly ON/OFF or TRUE/FALSE.</p>
+<p>Examples:</p>
+<ul>
+<li>Door closed.</li>
+<li>Hydraulic pressure healthy.</li>
+<li>Tool unclamped.</li>
+<li>Slide at home position.</li>
+<li>Spindle drive ready.</li>
+<li>Emergency-stop chain status, where monitored through the applicable control interface.</li>
+<li>Limit switch operated.</li>
+</ul>
+<p>A digital input is not necessarily a direct indication of a physical state. The signal may pass through contacts, relays, terminal blocks, interface circuits, or networked I/O before reaching the PLC/PMC.</p>
+<h3 id="52-digital-outputs">5.2 Digital outputs</h3>
+<p>Digital outputs command devices such as:</p>
+<ul>
+<li>Solenoid valves.</li>
+<li>Interposing relays.</li>
+<li>Contactors.</li>
+<li>Indicator lamps.</li>
+<li>Pneumatic valve manifolds.</li>
+<li>Coolant pumps through approved control circuits.</li>
+<li>Lubrication pumps.</li>
+<li>Chip conveyor controls.</li>
+</ul>
+<p>A PLC/PMC output turning ON does not prove that the actuator has operated. The output circuit, field wiring, supply, load, and actuator must still function correctly.</p>
+<h3 id="53-input-and-output-diagnostic-comparison">5.3 Input and output diagnostic comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Observation</th>
+<th>Possible causes</th>
+<th>Diagnostic direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sensor physically changes, input stays OFF</td>
+<td>Sensor supply, wiring, polarity, input module, address mapping</td>
+<td>Check the field signal and input circuit</td>
+</tr>
+<tr>
+<td>Input stays ON when sensor is inactive</td>
+<td>Short circuit, incorrect wiring, stuck contact, sensor failure</td>
+<td>Verify the sensor output and wiring against the drawing</td>
+</tr>
+<tr>
+<td>PLC/PMC output stays OFF</td>
+<td>Logic condition unmet, permissive missing, sequence inactive</td>
+<td>Trace the logic and prerequisite conditions</td>
+</tr>
+<tr>
+<td>Output shows ON, actuator does not move</td>
+<td>Missing load supply, blown fuse, broken wire, defective relay or actuator</td>
+<td>Measure the output circuit and check the load</td>
+</tr>
+<tr>
+<td>Actuator operates, feedback input does not change</td>
+<td>Failed sensor, incorrect adjustment, wiring issue, wrong address</td>
+<td>Verify physical feedback and signal path</td>
+</tr>
+<tr>
+<td>Several inputs or outputs fail together</td>
+<td>Common supply, common, fuse, module, network, or connector problem</td>
+<td>Check the shared circuit or communication path</td>
+</tr>
+<tr>
+<td>Signal changes intermittently</td>
+<td>Loose connection, vibration, noise, poor sensor mounting, unstable supply</td>
+<td>Monitor the signal during the fault and inspect its circuit</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6-understanding-plcpmc-signal-logic">6. Understanding PLC/PMC Signal Logic</h2>
+<h3 id="61-command-versus-confirmation">6.1 Command versus confirmation</h3>
+<p>A machine sequence normally distinguishes between a command and the confirmation that the requested action occurred.</p>
+<p>Example: hydraulic clamping.</p>
+<pre><code>Clamp Request
+      ↓
+Check Required Permissives
+      ↓
+Activate Clamp Output
+      ↓
+Hydraulic Valve Operates
+      ↓
+Cylinder Moves
+      ↓
+Clamp Sensor Changes State
+      ↓
+PLC/PMC Confirms Clamp Complete
+</code></pre>
+<p>If the clamp command is ON but the clamp confirmation remains OFF, the failure may lie in the output circuit, hydraulic system, mechanical mechanism, sensor, or feedback wiring.</p>
+<h3 id="62-permissive-conditions">6.2 Permissive conditions</h3>
+<p>A permissive is a condition required before an operation can begin.</p>
+<p>For example:</p>
+<pre><code>Tool Change Permissives
+        ↓
+Machine in Allowed State
+        AND Spindle Condition Valid
+        AND Axis Position Valid
+        AND Magazine State Valid
+        AND Required Safety Conditions Valid
+        ↓
+Tool Change Sequence Allowed
+</code></pre>
+<p>The actual logic must be obtained from the machine's PLC/PMC program and documentation.</p>
+<h3 id="63-interlock-versus-fault">6.3 Interlock versus fault</h3>
+<p>An interlock may simply indicate that a required condition is not satisfied. It does not necessarily mean a component is defective.</p>
+<p>For example, a door-open condition may prevent automatic cycle start by design. Replacing the door sensor without verifying the actual door state and signal path would be an impressive demonstration of how to waste maintenance time.</p>
+<p>A fault indicates an abnormal condition according to the control design, such as a timeout, device error, or contradictory feedback.</p>
+<h2 id="7-plcpmc-troubleshooting-workflow">7. PLC/PMC Troubleshooting Workflow</h2>
+<h3 id="step-1-establish-the-machine-state">Step 1: Establish the machine state</h3>
+<p>Record:</p>
+<ul>
+<li>CNC alarm text and number.</li>
+<li>PLC/PMC alarm or message.</li>
+<li>Operating mode.</li>
+<li>Sequence step when the fault occurred.</li>
+<li>Physical machine condition.</li>
+<li>Last operation that completed successfully.</li>
+<li>Recent maintenance or changes.</li>
+</ul>
+<p>Do not clear alarms before recording useful evidence.</p>
+<h3 id="step-2-identify-the-expected-operation">Step 2: Identify the expected operation</h3>
+<p>Determine what the machine was trying to do.</p>
+<p>Examples:</p>
+<ul>
+<li>Clamp a fixture.</li>
+<li>Move an axis to a reference position.</li>
+<li>Change a tool.</li>
+<li>Start the spindle.</li>
+<li>Activate coolant.</li>
+<li>Complete a door-locking sequence.</li>
+</ul>
+<h3 id="step-3-identify-the-required-signals">Step 3: Identify the required signals</h3>
+<p>Use the machine's electrical drawings, I/O list, ladder logic, and diagnostic screen to identify:</p>
+<ul>
+<li>Command bit.</li>
+<li>Required permissives.</li>
+<li>Output address.</li>
+<li>Feedback input.</li>
+<li>Sequence timer.</li>
+<li>Alarm condition.</li>
+</ul>
+<p>Do not guess addresses from a different machine or controller model.</p>
+<h3 id="step-4-compare-logic-with-physical-conditions">Step 4: Compare logic with physical conditions</h3>
+<p>Check whether each required condition is actually satisfied.</p>
+<p>For a missing input:</p>
+<ul>
+<li>Verify the sensor's physical state.</li>
+<li>Check the sensor supply and output.</li>
+<li>Check the signal at the relevant terminal using the approved method.</li>
+<li>Check the corresponding PLC/PMC diagnostic input.</li>
+<li>Verify address mapping and module status.</li>
+</ul>
+<p>For a missing output:</p>
+<ul>
+<li>Check whether the command is requested.</li>
+<li>Determine which permissive or logic condition prevents activation.</li>
+<li>If the output is commanded, verify the output circuit and load.</li>
+<li>Check actuator operation and feedback.</li>
+</ul>
+<h3 id="step-5-isolate-the-fault-domain">Step 5: Isolate the fault domain</h3>
+<p>Determine whether the fault is in:</p>
+<ul>
+<li>Control logic.</li>
+<li>Sensor or switch.</li>
+<li>Wiring or terminal.</li>
+<li>I/O module.</li>
+<li>Shared supply or return.</li>
+<li>Network or remote I/O.</li>
+<li>Relay, contactor, or output interface.</li>
+<li>Hydraulic, pneumatic, or mechanical equipment.</li>
+</ul>
+<h3 id="step-6-correct-the-confirmed-cause">Step 6: Correct the confirmed cause</h3>
+<p>Use an approved repair method. Do not force outputs, bypass interlocks, or change logic simply to make the machine cycle.</p>
+<h3 id="step-7-verify-the-complete-sequence">Step 7: Verify the complete sequence</h3>
+<p>Confirm that the command, physical action, feedback, and sequence completion all occur correctly.</p>
+<p>Test the machine only under the authorized operating procedure and required safety conditions.</p>
+<h2 id="8-plcpmc-ladder-logic-practical-interpretation">8. PLC/PMC Ladder Logic: Practical Interpretation</h2>
+<p>Ladder logic represents control conditions and actions. In a simplified example, a machine output may require a start request and several permissives.</p>
+<pre><code>Start_Request
+    AND Door_Closed
+    AND Hydraulic_Pressure_OK
+    AND Drive_Ready
+        ↓
+    Cycle_Enable
+</code></pre>
+<p>This is a conceptual example, not executable ladder logic. Actual machine logic may include latches, timers, edge detection, mode checks, safety interfaces, and additional conditions.</p>
+<h3 id="81-trace-the-logic-backward">8.1 Trace the logic backward</h3>
+<p>When an output is OFF:</p>
+<ol>
+<li>Find the output coil or output command in the PLC/PMC program.</li>
+<li>Identify all conditions that must be true for it to activate.</li>
+<li>Monitor those conditions online using the approved diagnostic tool.</li>
+<li>Find the first condition that is not satisfied.</li>
+<li>Trace that condition to its source, which may be another logic bit, an input, a drive status, or a communication signal.</li>
+<li>Verify the physical condition before deciding on a repair.</li>
+</ol>
+<h3 id="82-trace-the-logic-forward">8.2 Trace the logic forward</h3>
+<p>When an input changes but the machine does not respond:</p>
+<ol>
+<li>Confirm the input address and actual diagnostic state.</li>
+<li>Locate the logic that uses the input.</li>
+<li>Check whether the logic condition becomes true.</li>
+<li>Follow the resulting internal bits or sequence state.</li>
+<li>Check whether the expected output command is generated.</li>
+<li>Verify the physical output circuit and actuator.</li>
+</ol>
+<p>Practical rule: A signal can be electrically correct but mapped to the wrong address, ignored by the active logic, or blocked by another permissive.</p>
+<h2 id="9-plcpmc-io-module-faults">9. PLC/PMC I/O Module Faults</h2>
+<h3 id="91-input-module-fault">9.1 Input module fault</h3>
+<p>Possible causes:</p>
+<ul>
+<li>Missing module supply.</li>
+<li>Missing field supply.</li>
+<li>Blown fuse in a shared circuit.</li>
+<li>Incorrect common connection.</li>
+<li>Damaged input channel.</li>
+<li>Loose terminal or connector.</li>
+<li>Incorrect module configuration.</li>
+<li>Remote I/O communication failure.</li>
+</ul>
+<p>Diagnostic method:</p>
+<ol>
+<li>Identify the exact input channel.</li>
+<li>Check the module and channel status.</li>
+<li>Verify the sensor supply and signal according to the circuit design.</li>
+<li>Compare the signal at the field device, terminal, and diagnostic screen.</li>
+<li>Check common wiring and module configuration.</li>
+<li>Replace the module only when evidence supports the diagnosis.</li>
+</ol>
+<h3 id="92-output-module-fault">9.2 Output module fault</h3>
+<p>Possible causes:</p>
+<ul>
+<li>Output supply missing.</li>
+<li>Short circuit or overload.</li>
+<li>Failed output channel.</li>
+<li>Incorrect common connection.</li>
+<li>Defective relay or interface circuit.</li>
+<li>Wiring fault.</li>
+<li>Remote I/O communication problem.</li>
+<li>Output inhibited by the controller or module protection.</li>
+</ul>
+<p>Diagnostic method:</p>
+<ol>
+<li>Confirm the output command state.</li>
+<li>Check module status and diagnostic alarms.</li>
+<li>Verify the specified output supply.</li>
+<li>Check the output circuit and load.</li>
+<li>Determine whether the fault is at the module or downstream.</li>
+<li>Repair the confirmed fault and verify operation.</li>
+</ol>
+<p>Never assume that an ON indication on the PLC/PMC screen means rated voltage is present at the load terminals.</p>
+<h2 id="10-sensor-and-switch-faults">10. Sensor and Switch Faults</h2>
+<p>Common devices in CNC machines include proximity sensors, limit switches, pressure switches, temperature switches, position sensors, and tool-clamp sensors.</p>
+<h3 id="101-proximity-sensor">10.1 Proximity sensor</h3>
+<p>Possible issues:</p>
+<ul>
+<li>Sensor misalignment.</li>
+<li>Incorrect sensing distance.</li>
+<li>Metal target not positioned correctly.</li>
+<li>Damaged cable.</li>
+<li>Missing supply.</li>
+<li>Sensor output failure.</li>
+<li>Incorrect PNP/NPN compatibility.</li>
+<li>Contamination or mechanical damage.</li>
+</ul>
+<p>Check the sensor's rated supply, output type, sensing distance, and wiring diagram.</p>
+<h3 id="102-limit-switch">10.2 Limit switch</h3>
+<p>Possible issues:</p>
+<ul>
+<li>Mechanical actuator not reaching the switch.</li>
+<li>Switch damage.</li>
+<li>Contact wear.</li>
+<li>Incorrect adjustment.</li>
+<li>Broken wiring.</li>
+<li>Loose mounting.</li>
+<li>Incorrect normally open/normally closed interpretation.</li>
+</ul>
+<p>Verify the physical operating point and the expected electrical state.</p>
+<h3 id="103-pressure-switch">10.3 Pressure switch</h3>
+<p>Possible issues:</p>
+<ul>
+<li>Insufficient hydraulic or pneumatic pressure.</li>
+<li>Pressure switch setpoint incorrect.</li>
+<li>Failed switch.</li>
+<li>Blocked pressure port.</li>
+<li>Wiring or supply fault.</li>
+<li>Pressure instability.</li>
+</ul>
+<p>A pressure-switch input can be electrically healthy while correctly reporting that the hydraulic system has insufficient pressure. Diagnose the physical pressure before changing the electrical signal.</p>
+<h2 id="11-output-devices-and-actuator-faults">11. Output Devices and Actuator Faults</h2>
+<h3 id="111-solenoid-valve">11.1 Solenoid valve</h3>
+<p>Possible causes of failure:</p>
+<ul>
+<li>Coil open circuit.</li>
+<li>Coil short circuit.</li>
+<li>Incorrect coil voltage.</li>
+<li>Missing supply or return.</li>
+<li>Sticking valve spool.</li>
+<li>Insufficient pressure.</li>
+<li>Blocked flow path.</li>
+<li>Defective output relay or module.</li>
+</ul>
+<p>Check electrical and fluid-system conditions separately. A coil can be energized while the valve fails to shift mechanically.</p>
+<h3 id="112-relay-or-contactor">11.2 Relay or contactor</h3>
+<p>Possible causes:</p>
+<ul>
+<li>Coil supply missing.</li>
+<li>Coil failure.</li>
+<li>Burnt or worn contacts.</li>
+<li>Loose terminal.</li>
+<li>Incorrect interlock condition.</li>
+<li>Defective auxiliary feedback contact.</li>
+</ul>
+<p>Check the control circuit and the power circuit according to the electrical drawings.</p>
+<h3 id="113-hydraulic-or-pneumatic-actuator">11.3 Hydraulic or pneumatic actuator</h3>
+<p>Possible causes:</p>
+<ul>
+<li>Low pressure.</li>
+<li>Leakage.</li>
+<li>Sticking cylinder.</li>
+<li>Valve fault.</li>
+<li>Mechanical obstruction.</li>
+<li>Incorrect flow adjustment.</li>
+<li>Faulty end-position feedback.</li>
+</ul>
+<p>Do not diagnose a mechanical or fluid-power fault solely from the PLC output status.</p>
+<h2 id="12-cnc-machine-interlocks">12. CNC Machine Interlocks</h2>
+<p>Common machine interlocks include:</p>
+<ul>
+<li>Door or guard condition.</li>
+<li>Hydraulic pressure condition.</li>
+<li>Lubrication status.</li>
+<li>Axis reference status.</li>
+<li>Spindle status.</li>
+<li>Tool-clamp confirmation.</li>
+<li>Tool-magazine position.</li>
+<li>Fixture-clamp confirmation.</li>
+<li>Coolant or temperature conditions.</li>
+<li>Drive-ready status.</li>
+</ul>
+<p>The exact conditions depend on the machine builder.</p>
+<h3 id="troubleshooting-method">Troubleshooting method</h3>
+<ol>
+<li>Identify the blocked operation.</li>
+<li>Find the alarm description and relevant sequence.</li>
+<li>List the required permissives.</li>
+<li>Check each condition on the diagnostic screen.</li>
+<li>Verify the corresponding physical condition.</li>
+<li>Identify the first unsatisfied condition.</li>
+<li>Repair the cause and retest the sequence.</li>
+</ol>
+<p>Safety-critical distinction: Safety functions such as emergency stops, guard monitoring, and safety-rated enabling functions may be implemented through dedicated safety relays, safety PLCs, or safety-rated controller functions. Standard PLC/PMC logic is not automatically a substitute for a safety-rated system. Never bypass a safety device to clear a machine interlock.</p>
+<h2 id="13-sequence-timeout-faults">13. Sequence Timeout Faults</h2>
+<p>A sequence timeout occurs when the controller expects a condition to become true within a specified time, but it does not.</p>
+<p>Examples:</p>
+<ul>
+<li>Tool clamp confirmation does not arrive.</li>
+<li>Hydraulic pressure is not established in time.</li>
+<li>A tool magazine fails to reach the requested position.</li>
+<li>A slide does not reach its end position.</li>
+<li>A spindle-ready signal does not arrive.</li>
+<li>A door-lock confirmation is missing.</li>
+</ul>
+<h3 id="diagnostic-method">Diagnostic method</h3>
+<ol>
+<li>Identify the sequence step and timeout alarm.</li>
+<li>Identify the command issued at that step.</li>
+<li>Identify the expected confirmation.</li>
+<li>Check whether the command was actually generated.</li>
+<li>Verify actuator movement and physical conditions.</li>
+<li>Check the feedback sensor and its input path.</li>
+<li>Check the timer configuration only if the approved diagnosis indicates a timing problem.</li>
+</ol>
+<p>Increasing a timer is not a valid first-line repair. If a cylinder is sticking or a sensor is not detecting position, a longer timeout merely allows the machine to wait longer before admitting defeat.</p>
+<h2 id="14-remote-io-and-communication-problems">14. Remote I/O and Communication Problems</h2>
+<p>Modern CNC machines may use remote I/O modules connected over an industrial network or proprietary fieldbus.</p>
+<p>Possible symptoms include:</p>
+<ul>
+<li>Several inputs suddenly becoming unavailable.</li>
+<li>Multiple outputs being reported as faulty.</li>
+<li>Remote I/O station alarm.</li>
+<li>Communication loss with a valve manifold.</li>
+<li>Intermittent machine-ready signal.</li>
+<li>Multiple sequence alarms following one network fault.</li>
+</ul>
+<p>Potential causes:</p>
+<ul>
+<li>Remote station power failure.</li>
+<li>Network cable damage.</li>
+<li>Connector or termination issue, where applicable.</li>
+<li>Defective network interface.</li>
+<li>Incorrect configuration.</li>
+<li>Communication fault in a shared device.</li>
+<li>Electrical interference or grounding issue.</li>
+</ul>
+<h3 id="troubleshooting-priorities">Troubleshooting priorities</h3>
+<ul>
+<li>Identify the affected station and devices.</li>
+<li>Check the station's power and status indicators.</li>
+<li>Determine whether all devices on the station are affected.</li>
+<li>Inspect the relevant communication path.</li>
+<li>Review network diagnostics and device configuration.</li>
+<li>Check common supply and grounding conditions.</li>
+<li>Replace the suspected component only after confirming the failure.</li>
+</ul>
+<p>When multiple devices fail together, a common power or communication fault is often a better starting point than replacing each device individually.</p>
+<h2 id="15-common-cnc-plcpmc-breakdown-cases">15. Common CNC PLC/PMC Breakdown Cases</h2>
+<h3 id="case-1-automatic-cycle-will-not-start">Case 1: Automatic cycle will not start</h3>
+<p>Symptoms: The CNC is powered and no obvious hardware failure is present, but the cycle-start command does not initiate machining.</p>
+<p>Diagnostic steps:</p>
+<ol>
+<li>Record the displayed machine alarm or interlock message.</li>
+<li>Check the active mode and required machine-ready conditions.</li>
+<li>Review the PLC/PMC cycle-start logic.</li>
+<li>Check required door, pressure, lubrication, reference, and drive-ready signals as applicable.</li>
+<li>Identify the first unsatisfied permissive.</li>
+<li>Verify the corresponding field device and wiring.</li>
+<li>Correct the confirmed cause and retest.</li>
+</ol>
+<p>Possible root causes: Missing interlock signal, incomplete reference return, low hydraulic pressure, drive not ready, or a failed sensor.</p>
+<h3 id="case-2-tool-changer-stops-halfway-through-the-sequence">Case 2: Tool changer stops halfway through the sequence</h3>
+<p>Symptoms: The tool-change operation begins but stops before completion.</p>
+<p>Diagnostic steps:</p>
+<ol>
+<li>Record the sequence step and alarm.</li>
+<li>Identify the last command issued.</li>
+<li>Identify the expected confirmation signal.</li>
+<li>Check spindle state, magazine position, tool-clamp state, and relevant axis conditions.</li>
+<li>Check the associated outputs and feedback inputs.</li>
+<li>Inspect the actuator, sensor, and mechanical mechanism.</li>
+<li>Restore the required condition and verify the complete tool-change sequence.</li>
+</ol>
+<p>Possible root causes: Failed position sensor, solenoid valve problem, mechanical obstruction, missing spindle-orientation confirmation, or a sequence timeout.</p>
+<p>Never manually force the mechanism without following the machine builder's tool-change recovery procedure.</p>
+<h3 id="case-3-hydraulic-clamp-command-is-on-but-clamping-does-not-occur">Case 3: Hydraulic clamp command is ON, but clamping does not occur</h3>
+<p>Symptoms: The PLC/PMC output indicates a clamp command, but the fixture does not clamp.</p>
+<p>Diagnostic steps:</p>
+<ol>
+<li>Verify the output address and command.</li>
+<li>Check the output module status.</li>
+<li>Measure the specified electrical signal using the approved method.</li>
+<li>Check the solenoid coil and valve.</li>
+<li>Verify hydraulic pressure and fluid-system condition.</li>
+<li>Check cylinder movement and mechanical obstruction.</li>
+<li>Verify clamp confirmation feedback.</li>
+</ol>
+<p>Possible root causes: Missing load supply, failed output channel, open solenoid coil, defective valve, low hydraulic pressure, or mechanical failure.</p>
+<h3 id="case-4-physical-sensor-operates-but-the-cnc-still-reports-an-interlock">Case 4: Physical sensor operates, but the CNC still reports an interlock</h3>
+<p>Symptoms: A door, limit switch, or proximity sensor appears to operate, but the PLC/PMC does not recognize the required condition.</p>
+<p>Diagnostic steps:</p>
+<ol>
+<li>Confirm the sensor's actual operating state.</li>
+<li>Check the sensor supply and output type.</li>
+<li>Verify wiring and terminal connections.</li>
+<li>Check the input signal at the PLC/PMC diagnostic screen.</li>
+<li>Confirm the I/O address mapping.</li>
+<li>Trace the signal through the logic to the interlock condition.</li>
+</ol>
+<p>Possible root causes: Incorrect sensor alignment, broken conductor, incorrect PNP/NPN interface, input-channel failure, wrong address, or a separate unmet permissive.</p>
+<h3 id="case-5-several-io-signals-fail-at-once">Case 5: Several I/O signals fail at once</h3>
+<p>Symptoms: Multiple inputs or outputs become unavailable, causing several unrelated machine alarms.</p>
+<p>Diagnostic steps:</p>
+<ol>
+<li>Identify all affected channels and modules.</li>
+<li>Determine whether they share a module, field supply, common connection, or remote I/O station.</li>
+<li>Check module status and communication diagnostics.</li>
+<li>Verify the shared supply and return path.</li>
+<li>Inspect connectors and wiring under safe conditions.</li>
+<li>Repair the common cause before replacing individual devices.</li>
+</ol>
+<p>Possible root causes: Blown shared fuse, failed I/O supply, loose common connection, remote I/O communication failure, or defective module.</p>
+<h2 id="16-safe-testing-and-electrical-precautions">16. Safe Testing and Electrical Precautions</h2>
+<p>PLC/PMC troubleshooting can involve 24 VDC circuits, higher-voltage control circuits, contactors, motors, stored energy, and fluid-power actuators.</p>
+<ul>
+<li>Follow the site's lockout/tagout and isolation procedures.</li>
+<li>Verify absence of hazardous energy before touching exposed conductors.</li>
+<li>Use correctly rated test instruments and approved measurement methods.</li>
+<li>Check circuit drawings before probing terminals.</li>
+<li>Do not disconnect or reconnect I/O modules under power unless explicitly supported and authorized by the manufacturer.</li>
+<li>Do not force outputs or change machine logic to bypass interlocks.</li>
+<li>Do not bypass guards, door switches, emergency stops, or safety functions.</li>
+<li>Consider unexpected actuator movement when testing valves and outputs.</li>
+<li>Use approved online monitoring and force functions only under authorized procedures, with appropriate safeguards.</li>
+<li>Restore all temporary test connections and confirm the machine is in its approved operating configuration.</li>
+</ul>
+<p>Safety rule: If a diagnostic test requires a safety function to be defeated, stop and use the approved maintenance or recovery procedure instead.</p>
+<h2 id="17-preventive-maintenance-checklist">17. Preventive Maintenance Checklist</h2>
+<h3 id="plcpmc-and-io">PLC/PMC and I/O</h3>
+<ul>
+<li>Review recurring machine-sequence and I/O alarms.</li>
+<li>Check PLC/PMC and remote I/O status indicators.</li>
+<li>Inspect accessible connectors and terminals during planned isolation.</li>
+<li>Check specified control supplies and shared I/O supplies.</li>
+<li>Verify that module diagnostics show no unresolved faults.</li>
+<li>Review changes to logic, parameters, and I/O configuration.</li>
+</ul>
+<h3 id="sensors-and-actuators">Sensors and actuators</h3>
+<ul>
+<li>Inspect sensor mounting and target alignment.</li>
+<li>Check cable condition and connector security.</li>
+<li>Inspect switches for mechanical wear.</li>
+<li>Check solenoid valves and relay interfaces according to the maintenance plan.</li>
+<li>Review hydraulic and pneumatic pressure-related alarms.</li>
+<li>Confirm that required feedback signals correspond to actual machine conditions.</li>
+</ul>
+<h3 id="sequence-and-documentation">Sequence and documentation</h3>
+<ul>
+<li>Maintain current electrical drawings and I/O lists.</li>
+<li>Maintain approved PLC/PMC backups.</li>
+<li>Record machine-specific interlocks and sequence recovery procedures.</li>
+<li>Document recurring timeouts and their confirmed causes.</li>
+<li>Record logic or parameter changes through change control.</li>
+<li>Verify operation after maintenance using the approved test procedure.</li>
+</ul>
+<h2 id="18-plcpmc-breakdown-record-template">18. PLC/PMC Breakdown Record Template</h2>
+<pre><code>Machine ID:
+Machine Builder:
+CNC Manufacturer / Model:
+PLC/PMC Type:
+PLC/PMC Program Version:
+
+Reported Symptom:
+CNC Alarm:
+PLC/PMC Alarm:
+Operating Mode:
+Sequence Step:
+Last Successful Operation:
+
+Command Signal:
+Required Permissives:
+Output Address:
+Feedback Input:
+Input / Output Module:
+Remote I/O Station:
+Physical Device:
+
+Sensor Supply:
+Input Signal Status:
+Logic Condition Status:
+Output Command Status:
+Measured Output Condition:
+Actuator Status:
+Feedback Confirmation:
+
+Recent Maintenance:
+Recent Logic / Parameter Changes:
+Diagnostic Findings:
+Confirmed Root Cause:
+Corrective Action:
+Parts Replaced:
+
+Sequence Verification:
+Interlock Verification:
+Safety Configuration Verified:
+Machine Functional Test:
+Technician:
+Work Order:
+Date:
+</code></pre>
+<h2 id="19-interview-questions-and-answers">19. Interview Questions and Answers</h2>
+<h3 id="q1-what-is-the-function-of-plcpmc-in-a-cnc-machine">Q1. What is the function of PLC/PMC in a CNC machine?</h3>
+<p>It controls machine sequencing, interlocks, auxiliary functions, and I/O. It coordinates functions such as clamping, tool changing, lubrication, coolant, and machine readiness.</p>
+<h3 id="q2-what-is-the-difference-between-a-command-and-feedback">Q2. What is the difference between a command and feedback?</h3>
+<p>A command requests an operation, while feedback confirms a device state or completed action. A command being ON does not prove that the requested physical action occurred.</p>
+<h3 id="q3-why-does-a-cnc-machine-fail-to-start-its-automatic-cycle">Q3. Why does a CNC machine fail to start its automatic cycle?</h3>
+<p>A required permissive may be missing, such as door status, reference position, pressure confirmation, lubrication status, or drive readiness. The exact cause should be identified from the logic and diagnostic data.</p>
+<h3 id="q4-what-is-a-sequence-timeout">Q4. What is a sequence timeout?</h3>
+<p>It occurs when a required condition does not become true within the configured time. The investigation should check the command, actuator, physical process, feedback sensor, and signal path.</p>
+<h3 id="q5-how-do-you-diagnose-an-input-that-does-not-change-in-the-plcpmc">Q5. How do you diagnose an input that does not change in the PLC/PMC?</h3>
+<p>Check the physical device, supply, output signal, wiring, terminal, input channel, module status, and address mapping in a controlled sequence.</p>
+<h3 id="q6-what-if-a-plcpmc-output-is-on-but-the-actuator-does-not-move">Q6. What if a PLC/PMC output is ON but the actuator does not move?</h3>
+<p>Check the output supply and circuit, relay or interface, field wiring, actuator, and process conditions such as hydraulic or pneumatic pressure.</p>
+<h3 id="q7-why-should-interlocks-not-be-bypassed-to-clear-a-fault">Q7. Why should interlocks not be bypassed to clear a fault?</h3>
+<p>Interlocks may prevent hazardous movement or operation under an unsafe condition. Bypassing them can expose personnel and equipment to serious danger and can conceal the actual fault.</p>
+<h3 id="q8-what-causes-multiple-io-signals-to-fail-simultaneously">Q8. What causes multiple I/O signals to fail simultaneously?</h3>
+<p>Possible causes include a shared supply failure, common return problem, defective I/O module, remote I/O communication loss, or common connector fault.</p>
+<h3 id="q9-what-is-the-difference-between-plc-logic-and-field-device-troubleshooting">Q9. What is the difference between PLC logic and field-device troubleshooting?</h3>
+<p>PLC logic troubleshooting determines whether the required conditions and commands are being processed correctly. Field-device troubleshooting verifies the sensor, wiring, output circuit, actuator, and physical process.</p>
+<h3 id="q10-what-is-the-best-way-to-find-the-root-cause-of-a-machine-interlock">Q10. What is the best way to find the root cause of a machine interlock?</h3>
+<p>Identify the blocked operation, trace its required permissives, find the first unsatisfied condition, verify the physical signal path, correct the confirmed cause, and retest the complete sequence.</p>
+<h2 id="20-completion-checklist">20. Completion Checklist</h2>
+<ul>
+<li>Understand the CNC PLC/PMC architecture and responsibilities.</li>
+<li>Distinguish inputs, outputs, commands, feedback, and permissives.</li>
+<li>Understand machine interlocks and sequence timeouts.</li>
+<li>Trace ladder logic backward from an output and forward from an input.</li>
+<li>Diagnose input-module, output-module, and remote I/O faults.</li>
+<li>Check sensors, relays, solenoids, and field wiring systematically.</li>
+<li>Separate logic faults from electrical, mechanical, hydraulic, and pneumatic faults.</li>
+<li>Understand the risks of forcing outputs and bypassing interlocks.</li>
+<li>Record the confirmed root cause and verify the complete sequence.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\19_Breakdown\05_CNC_Fault\04_Servo - Servo: Axis drive and motor</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

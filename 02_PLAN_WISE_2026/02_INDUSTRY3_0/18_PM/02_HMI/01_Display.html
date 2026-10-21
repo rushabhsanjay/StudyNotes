@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HMI Display</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">HMI Display</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-purpose-of-an-hmi-display">2. Purpose of an HMI display</a></li>
+<li><a href="#3-hmi-display-architecture">3. HMI display architecture</a></li>
+<li><a href="#4-types-of-industrial-displays">4. Types of industrial displays</a></li>
+<li><a href="#5-common-screen-types">5. Common screen types</a></li>
+<li><a href="#6-hmi-tags-and-displayed-values">6. HMI tags and displayed values</a><ul>
+<li><a href="#data-types">Data types</a></li>
+</ul>
+</li>
+<li><a href="#7-displaying-analog-values-correctly">7. Displaying analog values correctly</a></li>
+<li><a href="#8-display-design-and-readability">8. Display design and readability</a><ul>
+<li><a href="#layout-principles">Layout principles</a></li>
+<li><a href="#color-conventions">Color conventions</a></li>
+</ul>
+</li>
+<li><a href="#9-machine-symbols-and-animations">9. Machine symbols and animations</a></li>
+<li><a href="#10-hmi-alarms-and-status-indications">10. HMI alarms and status indications</a></li>
+<li><a href="#11-trends-and-historical-displays">11. Trends and historical displays</a></li>
+<li><a href="#12-hmi-communication-and-refresh-behavior">12. HMI communication and refresh behavior</a><ul>
+<li><a href="#practical-considerations">Practical considerations</a></li>
+</ul>
+</li>
+<li><a href="#13-operator-controls-and-command-feedback">13. Operator controls and command feedback</a></li>
+<li><a href="#14-display-faults-and-troubleshooting">14. Display faults and troubleshooting</a><ul>
+<li><a href="#troubleshooting-sequence">Troubleshooting sequence</a></li>
+</ul>
+</li>
+<li><a href="#15-hmi-display-hardware-and-environmental-requirements">15. HMI display hardware and environmental requirements</a></li>
+<li><a href="#16-hmi-display-development-and-commissioning">16. HMI display development and commissioning</a></li>
+<li><a href="#17-hmi-display-security-and-access-control">17. HMI display security and access control</a></li>
+<li><a href="#18-manufacturer-specific-hmi-display-terminology">18. Manufacturer-specific HMI display terminology</a></li>
+<li><a href="#19-practical-industrial-example">19. Practical industrial example</a></li>
+<li><a href="#20-hmi-display-maintenance-checklist">20. HMI display maintenance checklist</a><ul>
+<li><a href="#routine-inspection">Routine inspection</a></li>
+<li><a href="#during-troubleshooting-or-modification">During troubleshooting or modification</a></li>
+</ul>
+</li>
+<li><a href="#21-key-principles">21. Key principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>An HMI (Human-Machine Interface) display is the visual interface through which an operator observes machine conditions, process values, alarms, operating modes, and production information.</p>
+<p>In industrial automation, an HMI display connects the operator with the control system. It presents information received from PLCs, controllers, drives, sensors, and other connected systems, and may provide authorized controls for operating the machine.</p>
+<p>Examples include:</p>
+<ul>
+<li>A Siemens Comfort Panel displaying a machine's operating status.</li>
+<li>A Mitsubishi GOT2000 displaying PLC inputs, outputs, alarms, and production counters.</li>
+<li>An Allen-Bradley PanelView displaying a machine sequence and fault messages.</li>
+<li>An industrial PC running SCADA screens for an entire production line.</li>
+</ul>
+<p>An HMI display is not simply a screen attached to a PLC. Its usefulness depends on the quality of its information, readability, alarm design, communication reliability, and suitability for the operator's actual tasks.</p>
+<h2 id="2-purpose-of-an-hmi-display">2. Purpose of an HMI display</h2>
+<p>The primary purpose is to help operators understand the current machine state and take appropriate actions.</p>
+<ul>
+<li>Process monitoring: Display temperatures, pressures, speeds, positions, counts, and other values.</li>
+<li>Machine status: Show whether equipment is running, stopped, idle, faulted, or in a maintenance state.</li>
+<li>Alarm notification: Identify abnormal conditions and communicate their severity.</li>
+<li>Operator control: Provide approved start, stop, reset, jog, and mode-selection commands where appropriate.</li>
+<li>Fault diagnosis: Present useful fault descriptions, device identities, and diagnostic information.</li>
+<li>Production monitoring: Display cycle counts, target quantities, downtime, and production status.</li>
+<li>Setup and adjustment: Allow authorized users to enter recipes or change approved process parameters.</li>
+<li>Maintenance support: Help technicians identify failed devices, interlock conditions, and communication problems.</li>
+</ul>
+<p>A well-designed display reduces the time needed to understand a fault. A poorly designed display merely relocates confusion from the machine to a rectangular piece of glass.</p>
+<h2 id="3-hmi-display-architecture">3. HMI display architecture</h2>
+<p>A typical industrial HMI architecture contains the following elements:</p>
+<pre><code>Operator
+   ↓
+HMI Display and Runtime Application
+   ↓
+Communication Driver or Industrial Network
+   ↓
+PLC or Process Controller
+   ↓
+Sensors, Actuators, Drives, and Machine Equipment
+</code></pre>
+<p>The information path may be bidirectional. The HMI reads values from the controller and sends authorized operator commands back to it.</p>
+<p>Typical components include:</p>
+<ul>
+<li>Display hardware: LCD or other screen technology, backlight, protective glass, and associated electronics.</li>
+<li>HMI runtime: Executes screens, animations, alarms, trends, navigation, and user interactions.</li>
+<li>Engineering software: Used to develop, configure, download, and maintain the HMI project.</li>
+<li>Communication interface: Ethernet, serial communication, or another supported interface.</li>
+<li>Tags or variables: Named references to PLC data or internal HMI values.</li>
+<li>PLC logic: Validates commands and executes machine control.</li>
+<li>User access system: Applies authentication and permissions where supported.</li>
+</ul>
+<p>The HMI should not be the sole authority for machine safety. Critical interlocks and safety functions must be implemented in the appropriate control and safety systems.</p>
+<h2 id="4-types-of-industrial-displays">4. Types of industrial displays</h2>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+<th>Typical application</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Basic operator panel</td>
+<td>Small display with simple status and control functions</td>
+<td>Compact machines and standalone equipment</td>
+</tr>
+<tr>
+<td>Text-based display</td>
+<td>Presents values and messages primarily as text</td>
+<td>Simple controllers and legacy equipment</td>
+</tr>
+<tr>
+<td>Graphic HMI panel</td>
+<td>Uses graphical screens, symbols, buttons, and alarms</td>
+<td>Automated production machines</td>
+</tr>
+<tr>
+<td>Touchscreen HMI</td>
+<td>Allows direct interaction with on-screen controls</td>
+<td>Modern machine operator stations</td>
+</tr>
+<tr>
+<td>Key-operated HMI</td>
+<td>Uses physical keys or function buttons for navigation and commands</td>
+<td>Industrial environments where tactile operation is useful</td>
+</tr>
+<tr>
+<td>Industrial PC HMI</td>
+<td>Runs a software-based interface on an industrial computer</td>
+<td>Complex machines and production systems</td>
+</tr>
+<tr>
+<td>SCADA workstation</td>
+<td>Provides process visualization across multiple controllers or machines</td>
+<td>Production lines and plant-wide monitoring</td>
+</tr>
+<tr>
+<td>Mobile industrial interface</td>
+<td>Uses a supported mobile or portable device</td>
+<td>Authorized service and monitoring applications</td>
+</tr>
+</tbody>
+</table>
+<p>A touchscreen is one method of interacting with a display, not a separate category of process information. Display technology and operator-input technology should be evaluated independently.</p>
+<h2 id="5-common-screen-types">5. Common screen types</h2>
+<p>An HMI project typically contains multiple screens, each designed for a specific operator task.</p>
+<table>
+<thead>
+<tr>
+<th>Screen</th>
+<th>Main purpose</th>
+<th>Typical content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Overview or home</td>
+<td>Show the overall machine state</td>
+<td>Running status, production count, active alarms, navigation</td>
+</tr>
+<tr>
+<td>Process screen</td>
+<td>Monitor process operation</td>
+<td>Process values, equipment symbols, operating sequence</td>
+</tr>
+<tr>
+<td>Manual operation</td>
+<td>Support authorized individual-device operation</td>
+<td>Jog commands, actuator status, selected manual controls</td>
+</tr>
+<tr>
+<td>Automatic operation</td>
+<td>Show automatic sequence progress</td>
+<td>Current step, cycle state, permissives, completion status</td>
+</tr>
+<tr>
+<td>Alarm screen</td>
+<td>Display active and historical alarms</td>
+<td>Alarm text, timestamp, priority, acknowledgement state</td>
+</tr>
+<tr>
+<td>Trend screen</td>
+<td>Show how values change over time</td>
+<td>Pressure, temperature, speed, position, or cycle-time trends</td>
+</tr>
+<tr>
+<td>Diagnostic screen</td>
+<td>Support maintenance troubleshooting</td>
+<td>I/O states, device health, communication status, fault codes</td>
+</tr>
+<tr>
+<td>Recipe or setup</td>
+<td>Enter or select approved process parameters</td>
+<td>Recipe identity, setpoints, parameter limits</td>
+</tr>
+<tr>
+<td>Production screen</td>
+<td>Monitor output and performance</td>
+<td>Good parts, rejected parts, cycle time, downtime</td>
+</tr>
+<tr>
+<td>User administration</td>
+<td>Manage authorized access</td>
+<td>User roles, permissions, login status</td>
+</tr>
+<tr>
+<td>Maintenance screen</td>
+<td>Provide service-related information</td>
+<td>Device status, counters, maintenance reminders</td>
+</tr>
+</tbody>
+</table>
+<p>Screen availability depends on the machine, HMI platform, and user permissions. A small standalone machine does not need the same screen architecture as a multi-station automotive production line.</p>
+<h2 id="6-hmi-tags-and-displayed-values">6. HMI tags and displayed values</h2>
+<p>An HMI tag is a named variable used by the HMI to obtain or store a value. Depending on the platform, it may refer directly to a PLC address, a symbolic PLC tag, or an internal HMI variable.</p>
+<p>Examples:</p>
+<table>
+<thead>
+<tr>
+<th>HMI tag</th>
+<th>Example value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Machine_Running</code></td>
+<td><code>TRUE</code></td>
+<td>Machine running indication</td>
+</tr>
+<tr>
+<td><code>Auto_Mode</code></td>
+<td><code>TRUE</code></td>
+<td>Automatic mode selected</td>
+</tr>
+<tr>
+<td><code>Part_Count</code></td>
+<td><code>1250</code></td>
+<td>Accumulated production count</td>
+</tr>
+<tr>
+<td><code>Motor_Speed</code></td>
+<td><code>1450 rpm</code></td>
+<td>Displayed motor speed</td>
+</tr>
+<tr>
+<td><code>Air_Pressure</code></td>
+<td><code>5.8 bar</code></td>
+<td>Pneumatic supply pressure</td>
+</tr>
+<tr>
+<td><code>Cycle_Time</code></td>
+<td><code>12.4 s</code></td>
+<td>Measured cycle duration</td>
+</tr>
+<tr>
+<td><code>Fault_Code</code></td>
+<td><code>203</code></td>
+<td>Application-defined fault identifier</td>
+</tr>
+<tr>
+<td><code>PLC_Communication_OK</code></td>
+<td><code>TRUE</code></td>
+<td>Communication diagnostic indication</td>
+</tr>
+</tbody>
+</table>
+<p>The names and values above are illustrative. Actual PLC data types, addresses, units, and scaling must match the machine configuration.</p>
+<h3 id="data-types">Data types</h3>
+<p>Common HMI data types include:</p>
+<ul>
+<li>Boolean: On/off or true/false states.</li>
+<li>Integer: Whole-number values such as counts or fault codes.</li>
+<li>Real or floating-point: Values such as temperature, pressure, speed, or position.</li>
+<li>String: Text such as recipe names, messages, or device identifiers.</li>
+<li>Date/time: Timestamps for events and production records.</li>
+<li>Arrays and structures: Groups of related values supported by the platform.</li>
+</ul>
+<p>Incorrect data-type mapping can produce invalid values, misleading indications, communication errors, or unintended command behavior.</p>
+<h2 id="7-displaying-analog-values-correctly">7. Displaying analog values correctly</h2>
+<p>Analog values often require engineering-unit scaling before being displayed.</p>
+<p>For example, a PLC analog input may represent a pressure transmitter's signal as a raw count. The HMI may display the corresponding pressure in bar.</p>
+<p>For linear scaling:</p>
+<div class="math-display">\[ EU = \frac{Raw-Raw\_{\min}}{Raw\_{\max}-Raw\_{\min}}(EU\_{\max}-EU\_{\min})+EU\_{\min} \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(EU\)</span> is the engineering-unit value.</li>
+<li><span class="math-inline">\(Raw\)</span> is the measured raw value.</li>
+<li><span class="math-inline">\(Raw\_{\min}\)</span> and <span class="math-inline">\(Raw\_{\max}\)</span> are the configured raw limits.</li>
+<li><span class="math-inline">\(EU\_{\min}\)</span> and <span class="math-inline">\(EU\_{\max}\)</span> are the engineering-unit limits.</li>
+</ul>
+<p>For a transmitter configured for 0 to 10 bar, if the valid raw range is 0 to 27648 and the raw value is 13824:</p>
+<div class="math-display">\[ EU=\frac{13824}{27648}\times10=5\text{ bar} \]</div>
+<p>This example assumes a zero-based raw range and a correctly configured linear input. Actual PLC modules may use different raw ranges, signed values, diagnostics, or channel-specific scaling.</p>
+<p>Best practice: Perform scaling in a clearly defined location, commonly the PLC application or a dedicated data-processing layer, and avoid accidentally scaling the same value twice in the HMI.</p>
+<p>The display should also handle invalid, out-of-range, disconnected, or bad-quality data explicitly. Showing a plausible number when the source is invalid can be more dangerous than showing no number at all.</p>
+<h2 id="8-display-design-and-readability">8. Display design and readability</h2>
+<p>An HMI screen should communicate machine condition quickly, even when an operator is under pressure or a maintenance technician is troubleshooting a breakdown.</p>
+<h3 id="layout-principles">Layout principles</h3>
+<ul>
+<li>Place the most important operating information where it can be found quickly.</li>
+<li>Keep navigation consistent across screens.</li>
+<li>Group related values, controls, and status indicators.</li>
+<li>Use readable text sizes and adequate contrast.</li>
+<li>Avoid unnecessary decorative graphics, excessive animation, and crowded layouts.</li>
+<li>Use consistent units, decimal precision, tag names, and equipment symbols.</li>
+<li>Keep frequently used controls separate from rarely used configuration functions.</li>
+<li>Provide clear feedback after an operator command.</li>
+<li>Use layouts that remain readable at the actual viewing distance and screen resolution.</li>
+</ul>
+<h3 id="color-conventions">Color conventions</h3>
+<p>Color should convey a consistent meaning across the machine.</p>
+<table>
+<thead>
+<tr>
+<th>Visual treatment</th>
+<th>Typical meaning</th>
+<th>Design consideration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Red</td>
+<td>Fault, trip, or emergency-related state</td>
+<td>Use according to the plant's established standards</td>
+</tr>
+<tr>
+<td>Yellow or amber</td>
+<td>Warning or abnormal condition</td>
+<td>Distinguish warnings from critical faults</td>
+</tr>
+<tr>
+<td>Green</td>
+<td>Running, active, or healthy state</td>
+<td>Define the exact meaning for each indicator</td>
+</tr>
+<tr>
+<td>Gray</td>
+<td>Inactive, unavailable, or neutral state</td>
+<td>Avoid using the same gray for unrelated conditions</td>
+</tr>
+<tr>
+<td>Blue</td>
+<td>Information, selection, or a defined operating state</td>
+<td>Use consistently with site conventions</td>
+</tr>
+<tr>
+<td>Flashing indication</td>
+<td>A condition requiring attention</td>
+<td>Reserve for meaningful events and follow site standards</td>
+</tr>
+</tbody>
+</table>
+<p>Color alone should not communicate a critical condition. Combine color with text, symbols, status labels, or other accessible visual cues.</p>
+<p>Avoid making every object green during normal operation and every object red during a fault without providing meaningful context. Operators need to identify what failed, not simply discover that the screen has become a festive warning sign.</p>
+<h2 id="9-machine-symbols-and-animations">9. Machine symbols and animations</h2>
+<p>Graphic symbols represent machine components such as motors, cylinders, valves, conveyors, robots, pumps, and sensors.</p>
+<p>Examples of useful display behavior include:</p>
+<ul>
+<li>A motor symbol changes state according to verified running feedback.</li>
+<li>A valve symbol indicates its confirmed position.</li>
+<li>A conveyor symbol shows whether the equipment is running or stopped.</li>
+<li>A sensor indicator displays the corresponding input state.</li>
+<li>A robot or CNC status area shows the available operating state and relevant fault information.</li>
+</ul>
+<p>The displayed state should reflect the actual feedback or an explicitly defined calculated status. A command to run a motor is not proof that the motor is running.</p>
+<p>For example:</p>
+<table>
+<thead>
+<tr>
+<th>PLC information</th>
+<th>HMI presentation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Motor run command is ON</td>
+<td>Run command requested</td>
+</tr>
+<tr>
+<td>Motor running feedback is ON</td>
+<td>Motor confirmed running</td>
+</tr>
+<tr>
+<td>Motor overload input is ON</td>
+<td>Overload fault indication</td>
+</tr>
+<tr>
+<td>Drive reports a fault</td>
+<td>Drive fault and diagnostic code</td>
+</tr>
+<tr>
+<td>Feedback is unavailable</td>
+<td>Unknown or communication-loss state</td>
+</tr>
+</tbody>
+</table>
+<p>This distinction is essential for troubleshooting. Otherwise, an HMI may confidently display a running motor that is physically sitting motionless.</p>
+<h2 id="10-hmi-alarms-and-status-indications">10. HMI alarms and status indications</h2>
+<p>An alarm informs the operator about an abnormal condition that may require attention. A status message describes a condition without necessarily requiring an alarm response.</p>
+<p>Examples:</p>
+<ul>
+<li>Alarm: <code>Hydraulic Pressure Low</code></li>
+<li>Alarm: <code>Robot Communication Fault</code></li>
+<li>Status: <code>Automatic Mode Selected</code></li>
+<li>Status: <code>Waiting for Downstream Machine</code></li>
+<li>Status: <code>Cycle Complete</code></li>
+</ul>
+<p>A useful alarm record generally contains:</p>
+<ul>
+<li>Clear, actionable alarm text.</li>
+<li>Relevant equipment or device identification.</li>
+<li>Timestamp and priority where supported.</li>
+<li>Active, cleared, and acknowledged states where applicable.</li>
+<li>Diagnostic details or a reference to the troubleshooting procedure.</li>
+<li>A defined response for the operator or maintenance technician.</li>
+</ul>
+<p>Alarm acknowledgement does not mean the fault has been corrected. It usually means that the operator has acknowledged the notification. The underlying condition must still be resolved and verified.</p>
+<p>Alarm priorities, colors, audible indications, and acknowledgement behavior should follow the site's alarm-management standards.</p>
+<h2 id="11-trends-and-historical-displays">11. Trends and historical displays</h2>
+<p>A trend screen plots process values against time. It can help identify intermittent faults, gradual degradation, process instability, and abnormal machine behavior.</p>
+<p>Typical trend variables include:</p>
+<ul>
+<li>Motor current and speed.</li>
+<li>Hydraulic or pneumatic pressure.</li>
+<li>Temperature and flow.</li>
+<li>Servo position and following error.</li>
+<li>Cycle time.</li>
+<li>Production rate.</li>
+<li>Analog sensor measurements.</li>
+</ul>
+<p>Trend interpretation depends on sample rate, timestamp accuracy, retention, and data quality. A slow trend cannot reliably capture a very brief fault that occurs between samples.</p>
+<p>For example, a pressure trend that gradually falls before a cylinder-position timeout may suggest an air-supply problem. The trend helps narrow the investigation, but it does not prove the cause without further checks.</p>
+<p>An HMI trend may display live data only, while historical data may be stored in a historian, SCADA database, or other approved data system. The engineering design must specify which is required.</p>
+<h2 id="12-hmi-communication-and-refresh-behavior">12. HMI communication and refresh behavior</h2>
+<p>The HMI communicates with the PLC through a supported driver and protocol. It periodically reads configured tags and, when authorized, writes values to the controller.</p>
+<p>Important terms:</p>
+<ul>
+<li>Update rate: How frequently the HMI refreshes a value.</li>
+<li>Communication timeout: The period allowed before a missing response is treated as a failure.</li>
+<li>Data quality: An indication of whether a value is valid and current.</li>
+<li>Polling: A method in which a client requests values from a device.</li>
+<li>Subscription: A mechanism in which updates are provided according to a configured subscription or event model.</li>
+<li>Reconnect behavior: How communication is re-established after an interruption.</li>
+</ul>
+<p>Actual behavior depends on the protocol and HMI platform.</p>
+<h3 id="practical-considerations">Practical considerations</h3>
+<ul>
+<li>Use suitable update rates for the variable's operational importance.</li>
+<li>Avoid excessively frequent polling of large numbers of tags without assessing controller and network load.</li>
+<li>Display communication failure clearly.</li>
+<li>Do not present stale values as though they are current.</li>
+<li>Configure communication diagnostics and timeouts according to the system design.</li>
+<li>Verify that the HMI is connected to the intended PLC.</li>
+<li>Ensure that communication recovery does not automatically trigger unsafe or unintended commands.</li>
+</ul>
+<p>A pressure value used for operator awareness may not require the same refresh rate as a rapidly changing motion diagnostic. The correct update rate depends on the process and the intended use of the information.</p>
+<h2 id="13-operator-controls-and-command-feedback">13. Operator controls and command feedback</h2>
+<p>HMI controls can initiate machine actions, but the PLC should validate commands against the machine's control logic and permissives.</p>
+<p>Common controls include:</p>
+<ul>
+<li>Start and stop.</li>
+<li>Reset.</li>
+<li>Auto/manual mode selection.</li>
+<li>Jog or inching commands.</li>
+<li>Recipe selection.</li>
+<li>Approved setpoint entry.</li>
+<li>Device enable or disable functions.</li>
+</ul>
+<p>A robust command design includes:</p>
+<ol>
+<li>Clear identification of the command and its target equipment.</li>
+<li>Permission checks where required.</li>
+<li>PLC-side validation of operating mode and permissives.</li>
+<li>Appropriate handling of command duration and repeated inputs.</li>
+<li>Feedback showing whether the command was accepted, rejected, or completed.</li>
+<li>Defined behavior when communication is lost.</li>
+<li>Appropriate protection against unintended or duplicate commands.</li>
+</ol>
+<p>For example, pressing <code>Start</code> may request a cycle, but the PLC should determine whether guards, interlocks, pressure, downstream readiness, and other required conditions are satisfied.</p>
+<p>An HMI button should never be treated as a substitute for a safety-rated device or safety function. Emergency-stop functions and other safety controls must follow the applicable machine-safety design.</p>
+<h2 id="14-display-faults-and-troubleshooting">14. Display faults and troubleshooting</h2>
+<p>HMI display problems may originate in the screen hardware, application, tag mapping, PLC, network, or data source.</p>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible causes</th>
+<th>Checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Blank screen</td>
+<td>Loss of power, failed display, startup failure, or backlight problem</td>
+<td>Check approved power supply, status indicators, and hardware diagnostics</td>
+</tr>
+<tr>
+<td>HMI starts but project does not load</td>
+<td>Missing runtime, damaged project, storage fault, or software mismatch</td>
+<td>Check runtime status and project compatibility</td>
+</tr>
+<tr>
+<td>Values remain frozen</td>
+<td>Communication failure, stale data, stalled runtime, or incorrect tag configuration</td>
+<td>Verify PLC communication and data-quality indicators</td>
+</tr>
+<tr>
+<td>Incorrect analog reading</td>
+<td>Wrong scaling, data type, engineering units, or source mapping</td>
+<td>Compare the raw PLC value with the displayed value</td>
+</tr>
+<tr>
+<td>Buttons do not operate</td>
+<td>Permission restriction, wrong tag, PLC interlock, or communication failure</td>
+<td>Check command status, access rights, and PLC permissives</td>
+</tr>
+<tr>
+<td>Alarm does not appear</td>
+<td>Incorrect trigger logic, alarm configuration, deadband, or acknowledgement behavior</td>
+<td>Verify the PLC alarm condition and HMI alarm configuration</td>
+</tr>
+<tr>
+<td>Screen changes slowly</td>
+<td>Excessive graphics, too many tags, overloaded runtime, or network delays</td>
+<td>Inspect runtime performance and communication load</td>
+</tr>
+<tr>
+<td>Touch areas do not respond correctly</td>
+<td>Touch calibration, surface damage, or hardware fault</td>
+<td>Follow the manufacturer's approved diagnostic procedure</td>
+</tr>
+<tr>
+<td>Communication repeatedly drops</td>
+<td>Network instability, power issues, addressing errors, or device faults</td>
+<td>Check device diagnostics, network path, and connection parameters</td>
+</tr>
+<tr>
+<td>Displayed state disagrees with machine</td>
+<td>Incorrect tag mapping, misleading logic, or missing feedback</td>
+<td>Compare the HMI tag with the actual PLC signal and physical condition</td>
+</tr>
+</tbody>
+</table>
+<h3 id="troubleshooting-sequence">Troubleshooting sequence</h3>
+<ol>
+<li>Confirm the symptom and identify the affected screen or function.</li>
+<li>Determine whether the problem affects one tag, one screen, the whole HMI, or the physical machine.</li>
+<li>Check HMI power, runtime status, and available diagnostics.</li>
+<li>Verify communication with the intended PLC.</li>
+<li>Compare the displayed value with the PLC's actual value.</li>
+<li>Check tag mapping, data type, scaling, and update behavior.</li>
+<li>Review relevant alarms and recent changes.</li>
+<li>Test corrective actions only under approved maintenance procedures.</li>
+<li>Confirm correct operation and document the cause and resolution.</li>
+</ol>
+<p>Do not restart, download, or reset the HMI or PLC as the first troubleshooting action. Preserve diagnostic evidence before disturbing the system, especially when the fault is intermittent.</p>
+<h2 id="15-hmi-display-hardware-and-environmental-requirements">15. HMI display hardware and environmental requirements</h2>
+<p>Industrial HMI panels operate in environments that can be much harsher than an office or a home computer setup.</p>
+<p>Important hardware considerations include:</p>
+<ul>
+<li>Screen size and resolution: Must suit the information density and viewing distance.</li>
+<li>Brightness: Must support visibility under the actual factory lighting conditions.</li>
+<li>Viewing angle: Must permit the operator to read the screen from the intended position.</li>
+<li>Operating temperature: Must remain within the manufacturer's specified range.</li>
+<li>Ingress protection: The enclosure and front panel must meet the environmental requirements for dust, water, and cleaning.</li>
+<li>Vibration and shock: Must be suitable for the installation location.</li>
+<li>Electrical noise: Power and communication installation must follow the manufacturer's requirements.</li>
+<li>Glove compatibility: Relevant when operators use protective gloves.</li>
+<li>Chemical resistance: The screen surface and enclosure must tolerate approved cleaning agents.</li>
+<li>Serviceability: Replacement availability, mounting dimensions, connectors, and project compatibility should be considered.</li>
+</ul>
+<p>A display's IP rating applies to specified parts of the equipment under defined test conditions. It does not mean the complete installation is protected against every type of liquid, chemical, or cleaning method.</p>
+<h2 id="16-hmi-display-development-and-commissioning">16. HMI display development and commissioning</h2>
+<p>When developing a new HMI or modifying an existing display, use a controlled engineering process.</p>
+<ol>
+<li>Identify operator and maintenance requirements.</li>
+<li>Define the required screens, alarms, trends, navigation, and controls.</li>
+<li>Establish tag names, data types, units, and scaling.</li>
+<li>Create a consistent layout and visual convention.</li>
+<li>Configure communication drivers and PLC connections.</li>
+<li>Configure access permissions and protected functions.</li>
+<li>Test normal, abnormal, fault, and communication-loss conditions.</li>
+<li>Verify every displayed value against the PLC or approved data source.</li>
+<li>Test command behavior, permissives, and feedback.</li>
+<li>Validate alarm messages, priorities, timestamps, and acknowledgement behavior.</li>
+<li>Conduct an operator review and document deficiencies.</li>
+<li>Obtain approval before deployment to production.</li>
+<li>Save the approved HMI project and create a verified backup.</li>
+<li>Record the revision and update the maintenance documentation.</li>
+</ol>
+<p>Testing should include more than confirming that the screen looks correct. The displayed information must be accurate, and the controls must behave correctly under both normal and abnormal conditions.</p>
+<h2 id="17-hmi-display-security-and-access-control">17. HMI display security and access control</h2>
+<p>An HMI can expose important process information and provide access to machine commands. Its configuration should therefore follow the plant's OT cybersecurity requirements.</p>
+<ul>
+<li>Assign user roles according to operational responsibilities.</li>
+<li>Restrict engineering and configuration functions to authorized personnel.</li>
+<li>Protect sensitive setpoints and maintenance functions where appropriate.</li>
+<li>Use approved authentication and password-management procedures.</li>
+<li>Disable unused services and interfaces when required by the security design.</li>
+<li>Maintain approved project backups and change records.</li>
+<li>Avoid connecting unauthorized devices to the HMI or its network.</li>
+<li>Ensure that user-interface restrictions do not replace required PLC-side access controls or safety functions.</li>
+</ul>
+<p>A hidden button is not a security control by itself. If an action must be restricted, the relevant permissions and command validation must be enforced by the appropriate system.</p>
+<h2 id="18-manufacturer-specific-hmi-display-terminology">18. Manufacturer-specific HMI display terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Manufacturer or platform</th>
+<th>Common product or software examples</th>
+<th>Relevant concepts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Siemens</td>
+<td>SIMATIC HMI, WinCC, TIA Portal</td>
+<td>Screens, tags, alarms, faceplates, trends, and runtime configuration</td>
+</tr>
+<tr>
+<td>Mitsubishi Electric</td>
+<td>GOT2000, GT Designer3</td>
+<td>Base screens, window screens, device monitoring, alarms, and numerical displays</td>
+</tr>
+<tr>
+<td>Rockwell Automation</td>
+<td>PanelView, FactoryTalk View</td>
+<td>Displays, graphic objects, tags, alarms, navigation, and runtime applications</td>
+</tr>
+<tr>
+<td>Schneider Electric</td>
+<td>Harmony HMI, EcoStruxure Operator Terminal Expert</td>
+<td>Screens, variables, alarms, and device communication</td>
+</tr>
+<tr>
+<td>Industrial PC/SCADA platforms</td>
+<td>Manufacturer-specific SCADA and HMI software</td>
+<td>Process graphics, historical trends, alarms, and multi-controller visualization</td>
+</tr>
+</tbody>
+</table>
+<p>The names of configuration objects and available functions vary by software version. The underlying principles of accurate data, readable presentation, controlled commands, and reliable diagnostics remain broadly applicable.</p>
+<h2 id="19-practical-industrial-example">19. Practical industrial example</h2>
+<p>Consider an automated test station with a PLC, HMI, VFD, pressure sensor, and a pneumatic actuator.</p>
+<p>The main HMI screen should display:</p>
+<ul>
+<li>Machine operating mode.</li>
+<li>Automatic cycle status.</li>
+<li>Actuator command and confirmed position.</li>
+<li>Air pressure in bar.</li>
+<li>VFD running status and fault state.</li>
+<li>Parts tested, accepted, and rejected.</li>
+<li>Active alarms and communication health.</li>
+</ul>
+<p>Suppose the actuator fails to reach its required position.</p>
+<p>A useful HMI should allow the technician to distinguish among several possibilities:</p>
+<ul>
+<li>The PLC has not issued the actuator command.</li>
+<li>The command has been issued, but the solenoid output is not active.</li>
+<li>The solenoid is active, but pneumatic pressure is inadequate.</li>
+<li>The actuator has moved, but the position sensor has not changed state.</li>
+<li>The PLC is not receiving the expected feedback.</li>
+<li>The HMI is displaying stale or incorrectly mapped information.</li>
+</ul>
+<p>The display should expose the relevant evidence without pretending to determine the root cause automatically. The technician can then check PLC logic, electrical outputs, the solenoid valve, pneumatic supply, sensors, and communication as appropriate.</p>
+<h2 id="20-hmi-display-maintenance-checklist">20. HMI display maintenance checklist</h2>
+<h3 id="routine-inspection">Routine inspection</h3>
+<ul>
+<li>Check the screen for damage, discoloration, and unreadable areas.</li>
+<li>Confirm that all required screens open correctly.</li>
+<li>Verify that displayed values are current and plausible.</li>
+<li>Check date and time information where used for alarms or production records.</li>
+<li>Confirm that active alarms and communication faults are visible.</li>
+<li>Check navigation and authorized operator controls.</li>
+<li>Inspect the panel enclosure and installation environment.</li>
+<li>Clean the screen using the manufacturer's approved method.</li>
+</ul>
+<h3 id="during-troubleshooting-or-modification">During troubleshooting or modification</h3>
+<ul>
+<li>Record the symptom and affected screen.</li>
+<li>Verify PLC communication and tag mapping.</li>
+<li>Compare displayed values with their actual data sources.</li>
+<li>Check scaling, units, and data types.</li>
+<li>Review recent project or configuration changes.</li>
+<li>Preserve the current approved project before modification.</li>
+<li>Test affected screens, alarms, and controls.</li>
+<li>Save the approved revision and update maintenance records.</li>
+</ul>
+<h2 id="21-key-principles">21. Key principles</h2>
+<ul>
+<li>An HMI display is an operator interface, not the source of truth for every machine condition.</li>
+<li>Displayed states should reflect verified feedback or clearly defined calculated conditions.</li>
+<li>Accurate tags, scaling, units, and communication diagnostics are essential.</li>
+<li>Alarms must explain abnormal conditions and support appropriate action.</li>
+<li>Operator commands must be validated by the control system.</li>
+<li>Safety functions must not depend solely on ordinary HMI graphics or buttons.</li>
+<li>Readability, environmental suitability, cybersecurity, and maintainability are all part of HMI design.</li>
+<li>A display that looks attractive but shows incorrect or stale information is a defective interface, regardless of how polished it appears.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\18_PM\02_HMI\02_Touchscreen - Touchscreen</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

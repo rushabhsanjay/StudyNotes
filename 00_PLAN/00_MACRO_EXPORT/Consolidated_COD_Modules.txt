@@ -1,0 +1,2940 @@
+' ========================================
+' MODULE: ThisWorkbook
+' ========================================
+Private Sub Workbook_BeforeSave(ByVal SaveAsUI As Boolean, Cancel As Boolean)
+    StopStuff
+    On Error GoTo Done
+    If Not SaveIndexToMaster() Then Cancel = True   ' bad INDEX (e.g. duplicate) blocks the save
+Done:
+    StartStuff
+End Sub
+
+
+
+' ========================================
+' MODULE: Sheet5
+' ========================================
+Private Sub CommandButton1_Click()
+    OPEN_SUBTOPIC
+    CHECK_INDEX_EXISTS
+End Sub
+
+Private Sub CommandButton2_Click()
+    Open_Current_Folder
+End Sub
+
+Private Sub CommandButton3_Click()
+    OPEN_STUDY_PLAN
+End Sub
+
+Private Sub CommandButton4_Click()
+    TAKE_A_STEP_BACK
+    CHECK_INDEX_EXISTS
+End Sub
+
+Private Sub CommandButton5_Click()
+    COPY_AND_GO_NEXT
+End Sub
+
+Private Sub CommandButton6_Click()
+    UPDATE_MASTER
+End Sub
+
+Private Sub CommandButton7_Click()
+    OPEN_PARENT_FOLDER
+End Sub
+
+Private Sub CommandButton8_Click()
+    GenerateFormattedDocx
+End Sub
+
+Private Sub Worksheet_BeforeDoubleClick(ByVal Target As Range, Cancel As Boolean)
+    Cancel = True
+    OPEN_SUBTOPIC
+    On Error GoTo ErrorHandler
+    
+    'Target.Select
+    Exit Sub
+    
+ErrorHandler:
+    Me.Activate
+    Me.Range("B6").Select
+End Sub
+
+Private Sub Worksheet_BeforeRightClick(ByVal Target As Range, Cancel As Boolean)
+    Cancel = True
+    TAKE_A_STEP_BACK
+    On Error GoTo ErrorHandler
+    CHECK_INDEX_EXISTS
+    Target.Select
+    Exit Sub
+    
+ErrorHandler:
+    Me.Activate
+    Me.Range("B6").Select
+End Sub
+
+
+
+' ========================================
+' MODULE: Sheet10
+' ========================================
+' [Empty Module]
+
+
+
+' ========================================
+' MODULE: COD_OPEN_FOLDER
+' ========================================
+Option Explicit
+
+Sub Open_Current_Folder()
+
+    Dim TopicName As String
+    Dim TopicType As String
+    Dim ParentPath As String
+    Dim TargetPath As String
+    Dim FilePath As String
+    Dim FileType As String
+
+    StopStuff
+    On Error GoTo Fail
+
+    If Not GetSelectedTopic(TopicName, TopicType) Then GoTo Done
+
+    If TopicType <> "FILE" And TopicType <> "FOLDER" Then
+        MsgBox "Invalid TOPIC_TYPE for the selected topic:" & vbCrLf & vbCrLf & _
+               TopicName & vbCrLf & "TOPIC_TYPE = " & TopicType, vbCritical
+        GoTo Done
+    End If
+
+    ParentPath = NavigationFolderPath()
+    If ParentPath = "" Then GoTo Done
+
+    EnsureFolder ParentPath
+
+    If TopicType = "FOLDER" Then
+        TargetPath = ParentPath & TopicName
+        EnsureFolder TargetPath
+        OpenInExplorer TargetPath
+        GoTo Done
+    End If
+
+    '---- FILE: open it, or offer to create it ----
+    FilePath = FindExistingFile(ParentPath & TopicName)
+
+    If FilePath <> "" Then
+        OpenInExplorer FilePath
+    Else
+        Dim response As VbMsgBoxResult
+        response = MsgBox("Do you have text copied?", vbYesNo + vbQuestion, "Clipboard Check")
+        
+        If response = vbYes Then
+            GenerateFormattedDocxDirect
+            CHECK_INDEX_EXISTS
+            GO_NEXT_THEN_COPY
+        Else
+            FileType = AskFileType(TopicName)
+            If FileType <> "" Then
+                CreateOfficeFile ParentPath & TopicName & "." & LCase$(FileType), FileType
+            End If
+        End If
+    End If
+
+Done:
+    StartStuff
+    Exit Sub
+
+Fail:
+    MsgBox "Error " & Err.Number & ": " & Err.Description, vbCritical, "Open_Current_Folder"
+    Resume Done
+
+End Sub
+
+
+
+
+' ========================================
+' MODULE: COD_OPEN_STUDY_PLAN
+' ========================================
+Option Explicit
+
+Sub OPEN_STUDY_PLAN()
+
+    Dim TopicName As String
+    Dim TopicType As String
+    Dim FolderPath As String
+    Dim FilePath As String
+
+    StopStuff
+    On Error GoTo Fail
+
+    If Not GetSelectedTopic(TopicName, TopicType) Then GoTo Done
+
+    FolderPath = NavigationFolderPath()
+    If FolderPath = "" Then GoTo Done
+
+    FolderPath = FolderPath & TopicName
+    FilePath = FolderPath & "\" & STUDY_PLAN_FILE
+
+    If Not FolderExists(FolderPath) Then
+        MsgBox "Folder not found:" & vbCrLf & vbCrLf & FolderPath, vbExclamation
+        GoTo Done
+    End If
+
+    If Not FileExists(FilePath) Then
+        MsgBox "Study plan not found:" & vbCrLf & vbCrLf & FilePath, vbExclamation
+        GoTo Done
+    End If
+
+    OpenInExplorer FilePath
+
+Done:
+    StartStuff
+    Exit Sub
+
+Fail:
+    MsgBox "Error " & Err.Number & ": " & Err.Description, vbCritical, "OPEN_STUDY_PLAN"
+    Resume Done
+
+End Sub
+
+
+
+' ========================================
+' MODULE: COD_OPEN_SUBTOPICS
+' ========================================
+Option Explicit
+
+Sub OPEN_SUBTOPIC()
+
+    Dim tblMaster As ListObject
+    Dim tblIndex As ListObject
+
+    Dim Navigation As String
+    Dim NewNavigation As String
+    Dim TopicName As String
+
+    Dim NewLevel As Long
+    Dim Levels As Long
+    Dim ControlRow As Long
+    Dim TypeCol As Long
+    Dim Pos As Long
+
+    StopStuff
+    On Error GoTo Fail
+
+    Set tblMaster = ThisWorkbook.Worksheets("MASTER").ListObjects("MASTER")
+    Set tblIndex = ThisWorkbook.Worksheets("INDEX").ListObjects("INDEX")
+
+    '---- validate navigation and selection ----
+    Navigation = CStr(NavigationCell.Value)
+
+    If Navigation = "" Then
+        MsgBox "NR_NAVIGATION is empty.", vbCritical
+        GoTo Done
+    End If
+    If Right$(Navigation, 1) <> "\" Then Navigation = Navigation & "\"
+
+    If tblIndex.DataBodyRange Is Nothing Then
+        MsgBox "INDEX table contains no topics.", vbExclamation
+        GoTo Done
+    End If
+
+    If Not ActiveCell.Worksheet Is tblIndex.Parent Then
+        MsgBox "Select a topic inside the INDEX table.", vbExclamation
+        GoTo Done
+    End If
+
+    If Intersect(ActiveCell, tblIndex.DataBodyRange) Is Nothing Then
+        MsgBox "Select a topic inside the INDEX table.", vbExclamation
+        GoTo Done
+    End If
+
+    Pos = ActiveCell.Row - tblIndex.DataBodyRange.Row + 1
+    TopicName = Trim$(CStr(tblIndex.DataBodyRange.Cells(Pos, 2).Value))
+
+    If TopicName = "" Then
+        MsgBox "The selected topic does not contain a topic name.", vbExclamation
+        GoTo Done
+    End If
+
+    TypeCol = FindColumn(tblIndex, "TOPIC_TYPE")
+    If TypeCol = 0 Then
+        MsgBox "TOPIC_TYPE column was not found in INDEX.", vbCritical
+        GoTo Done
+    End If
+
+    If UCase$(Trim$(CStr(tblIndex.DataBodyRange.Cells(Pos, TypeCol).Value))) = "FILE" Then
+        'MsgBox "The selected topic is marked as FILE." & vbCrLf & vbCrLf & _
+               "OPEN_SUBTOPIC will not run for this topic.", vbInformation
+        Open_Current_Folder
+        GoTo Done
+    End If
+    
+    '---- save INDEX edits to MASTER before leaving this level ----
+    If Not SaveIndexToMaster() Then GoTo Done          ' <-- ADD THIS
+
+    '---- work out the target level ----
+    NewNavigation = Navigation & TopicName & "\"
+    NewLevel = Len(NewNavigation) - Len(Replace(NewNavigation, "\", ""))
+
+    Levels = GetMasterLevels(tblMaster, ControlRow)
+    If ControlRow = 0 Then
+        MsgBox "MasterLevels control row was not found.", vbCritical
+        GoTo Done
+    End If
+
+    '---- offer to create missing LEVEL columns ----
+    If NewLevel > Levels Then
+
+        If MsgBox("LEVEL" & NewLevel & " DOES NOT EXIST." & vbCrLf & vbCrLf & _
+                  "Current Level : " & (NewLevel - 1) & vbCrLf & _
+                  "Master Levels : " & Levels & vbCrLf & vbCrLf & _
+                  "Do you want to create LEVEL" & NewLevel & "?", _
+                  vbYesNo + vbQuestion, "Create New Level") <> vbYes Then GoTo Done
+
+        Do While Levels < NewLevel
+            tblMaster.ListColumns.Add(Levels + 3).Name = "LEVEL" & (Levels + 1)
+            Levels = Levels + 1
+        Loop
+
+        tblMaster.DataBodyRange.Cells(ControlRow, 3).Value = Levels
+
+    End If
+
+    '---- load children into INDEX ----
+    LoadIndex NewNavigation
+
+Done:
+    StartStuff
+    Exit Sub
+
+Fail:
+    MsgBox "Error " & Err.Number & ": " & Err.Description, vbCritical, "OPEN_SUBTOPIC"
+    Resume Done
+
+End Sub
+
+
+
+' ========================================
+' MODULE: FRM_MODULES
+' ========================================
+Option Explicit
+Sub REFRESH_HARD()
+    UPDATE_MASTER_COMPLETION
+End Sub
+Sub REFRESH_SOFT()
+    FRM_REFRESH_SR_NO
+    FRM_CURRENT_LEVEL
+End Sub
+Sub FRM_CURRENT_LEVEL()
+
+    Dim Navigation As String
+    Dim CurrentLevel As Long
+
+    Navigation = CStr(Range("NR_NAVIGATION").Cells(1, 1).Value)
+
+    CurrentLevel = Len(Navigation) - _
+                   Len(Replace(Navigation, "\", ""))
+
+    Range("NR_CURRENT_LEVEL").Cells(1, 1).Value = CurrentLevel
+
+End Sub
+
+Sub FRM_REFRESH_SR_NO()
+
+    Dim tbl As ListObject
+    Dim i As Long
+
+    Set tbl = ThisWorkbook.Worksheets("INDEX").ListObjects("INDEX")
+
+    For i = 1 To tbl.ListRows.Count
+        tbl.DataBodyRange.Cells(i, 1).Value = i
+    Next i
+
+End Sub
+
+
+
+
+' ========================================
+' MODULE: COD_UPDATE_MASTER
+' ========================================
+Option Explicit
+
+' Button entry point
+Sub UPDATE_MASTER()
+    StopStuff
+    On Error GoTo Fail
+    If SaveIndexToMaster() Then LoadIndex CStr(NavigationCell.Value)   ' reload so folder % is current
+Done:
+    StartStuff
+    Exit Sub
+Fail:
+    MsgBox "Error " & Err.Number & ": " & Err.Description, vbCritical, "UPDATE_MASTER"
+    Resume Done
+End Sub
+
+Public Function HasInvalidChars(ByVal s As String) As Boolean
+    Dim ch As Variant
+    For Each ch In Array("\", "/", ":", "*", "?", """", "<", ">", "|")
+        If InStr(s, ch) > 0 Then HasInvalidChars = True: Exit Function
+    Next ch
+End Function
+
+'==============================================================
+' Saves INDEX into MASTER for the path in NR_NAVIGATION.
+' Returns False if nothing was saved (validation failed or the
+' user declined the deletion prompt) so navigation can abort.
+' Does NOT call StopStuff/StartStuff.
+'==============================================================
+Public Function SaveIndexToMaster() As Boolean
+
+    Dim tblMaster As ListObject
+    Dim tblIndex As ListObject
+    Dim Parts() As String
+    Dim Navigation As String
+
+    Dim Level As Long, Levels As Long, ControlRow As Long
+    Dim IdxCols As Long, DataCols As Long
+
+    Dim MData As Variant, IData As Variant
+    Dim IndexRows As Object, ExactRow As Object, DeleteTopics As Object
+    Dim ScopeTopic() As String
+    Dim tmp() As Variant, Blk1() As Variant, Blk2() As Variant, Nums() As Variant
+
+    Dim nM As Long, r As Long, c As Long, j As Long, n As Long
+    Dim ir As Long, mr As Long
+    Dim NewCount As Long, FirstNew As Long, DelRows As Long
+    Dim Topic As String, Msg As String
+    Dim InScope As Boolean, IsExact As Boolean
+    Dim k As Variant
+
+    Set tblMaster = ThisWorkbook.Worksheets("MASTER").ListObjects("MASTER")
+    Set tblIndex = ThisWorkbook.Worksheets("INDEX").ListObjects("INDEX")
+
+    '---- path and structure ----
+    Navigation = CStr(NavigationCell.Value)
+    If Navigation = "" Then
+        MsgBox "NR_NAVIGATION is empty.", vbCritical
+        Exit Function
+    End If
+    If Right$(Navigation, 1) <> "\" Then Navigation = Navigation & "\"
+    Parts = Split(Navigation, "\")
+    Level = UBound(Parts)
+
+    Levels = GetMasterLevels(tblMaster, ControlRow)
+    If ControlRow = 0 Then
+        MsgBox "MasterLevels control row was not found.", vbCritical
+        Exit Function
+    End If
+    If Level < 1 Or Level > Levels Then
+        MsgBox "LEVEL" & Level & " does not exist in MASTER.", vbCritical
+        Exit Function
+    End If
+
+    If tblIndex.DataBodyRange Is Nothing Then
+        MsgBox "INDEX table contains no data.", vbExclamation
+        Exit Function
+    End If
+
+    IdxCols = tblIndex.ListColumns.Count
+    If IdxCols + Levels > tblMaster.ListColumns.Count Then
+        MsgBox "INDEX has more columns than MASTER can supply.", vbCritical
+        Exit Function
+    End If
+    DataCols = IdxCols - 2                    ' INDEX col c (c>=3) <-> MASTER col c + Levels
+
+    '---- read INDEX, check names and duplicates ----
+    IData = tblIndex.DataBodyRange.Value
+    Set IndexRows = CreateObject("Scripting.Dictionary")
+    IndexRows.CompareMode = vbTextCompare
+
+    For r = 1 To UBound(IData, 1)
+        Topic = Trim$(CStr(IData(r, 2)))
+        If Topic <> "" Then
+            If HasInvalidChars(Topic) Then
+                MsgBox "Topic name contains a character that is not allowed in folder/file names:" & _
+                       vbCrLf & vbCrLf & Topic & vbCrLf & vbCrLf & "No changes were made to MASTER.", vbCritical
+                Exit Function
+            End If
+            If IndexRows.Exists(Topic) Then
+                MsgBox "Duplicate topic found in INDEX:" & vbCrLf & vbCrLf & Topic & vbCrLf & vbCrLf & _
+                       "Update cancelled. No changes were made to MASTER.", vbCritical
+                Exit Function
+            End If
+            IndexRows.Add Topic, r
+        End If
+    Next r
+
+    '---- read MASTER once: find rows under this path ----
+    MData = tblMaster.DataBodyRange.Value
+    nM = UBound(MData, 1)
+    ReDim ScopeTopic(1 To nM)
+    Set ExactRow = CreateObject("Scripting.Dictionary")
+    ExactRow.CompareMode = vbTextCompare
+
+    For r = 1 To nM
+        If r <> ControlRow Then
+            InScope = (StrComp(Trim$(CStr(MData(r, 2))), Parts(0), vbTextCompare) = 0)
+
+            If InScope Then
+                For j = 1 To Level - 1
+                    If StrComp(Trim$(CStr(MData(r, j + 2))), Parts(j), vbTextCompare) <> 0 Then
+                        InScope = False
+                        Exit For
+                    End If
+                Next j
+            End If
+
+            If InScope Then
+                Topic = Trim$(CStr(MData(r, Level + 2)))
+                If Topic <> "" Then
+                    ScopeTopic(r) = Topic          ' this row belongs to Topic (itself or a descendant)
+
+                    IsExact = True                 ' exact = nothing deeper filled
+                    For j = Level + 1 To Levels
+                        If Trim$(CStr(MData(r, j + 2))) <> "" Then
+                            IsExact = False
+                            Exit For
+                        End If
+                    Next j
+
+                    If IsExact Then
+                        If Not ExactRow.Exists(Topic) Then ExactRow.Add Topic, r
+                    End If
+                End If
+            End If
+        End If
+    Next r
+
+    '---- topics removed from INDEX (their descendants go too) ----
+    Set DeleteTopics = CreateObject("Scripting.Dictionary")
+    DeleteTopics.CompareMode = vbTextCompare
+
+    For Each k In ExactRow.Keys
+        If Not IndexRows.Exists(k) Then DeleteTopics.Add k, 0
+    Next k
+
+    If DeleteTopics.Count > 0 Then
+        For r = 1 To nM
+            If ScopeTopic(r) <> "" Then
+                If DeleteTopics.Exists(ScopeTopic(r)) Then DelRows = DelRows + 1
+            End If
+        Next r
+
+        Msg = ""
+        n = 0
+        For Each k In DeleteTopics.Keys
+            n = n + 1
+            If n > 10 Then Msg = Msg & "..." & vbCrLf: Exit For
+            Msg = Msg & "  - " & k & vbCrLf
+        Next k
+
+        If MsgBox(DeleteTopics.Count & " topic(s) are no longer in INDEX and will be DELETED from MASTER:" & _
+                  vbCrLf & vbCrLf & Msg & vbCrLf & _
+                  "Total rows removed (including sub-topics): " & DelRows & vbCrLf & vbCrLf & _
+                  "Continue?", vbYesNo + vbExclamation, "Confirm deletion") <> vbYes Then Exit Function
+    End If
+
+    '---- 1) update existing rows ----
+    If DataCols > 0 Then ReDim tmp(1 To 1, 1 To DataCols)
+
+    For Each k In IndexRows.Keys
+        If ExactRow.Exists(k) Then
+            ir = IndexRows(k)
+            mr = ExactRow(k)
+            With tblMaster.DataBodyRange
+                .Cells(mr, Level + 2).Value = k
+                If DataCols > 0 Then
+                    For c = 1 To DataCols
+                        tmp(1, c) = IData(ir, c + 2)
+                    Next c
+                    .Cells(mr, Levels + 3).Resize(1, DataCols).Value = tmp
+                End If
+            End With
+        End If
+    Next k
+
+    '---- 2) delete removed topics, bottom-up ----
+    If DeleteTopics.Count > 0 Then
+        For r = nM To 1 Step -1
+            If ScopeTopic(r) <> "" Then
+                If DeleteTopics.Exists(ScopeTopic(r)) Then tblMaster.ListRows(r).Delete
+            End If
+        Next r
+    End If
+
+    '---- 3) add new topics at the end ----
+    For Each k In IndexRows.Keys
+        If Not ExactRow.Exists(k) Then NewCount = NewCount + 1
+    Next k
+
+    If NewCount > 0 Then
+        ReDim Blk1(1 To NewCount, 1 To Level + 1)          ' MASTER cols 2 .. Level+2
+        If DataCols > 0 Then ReDim Blk2(1 To NewCount, 1 To DataCols)
+
+        n = 0
+        For Each k In IndexRows.Keys
+            If Not ExactRow.Exists(k) Then
+                n = n + 1
+                ir = IndexRows(k)
+                Blk1(n, 1) = Parts(0)
+                For j = 1 To Level - 1
+                    Blk1(n, j + 1) = Parts(j)
+                Next j
+                Blk1(n, Level + 1) = k
+                For c = 1 To DataCols
+                    Blk2(n, c) = IData(ir, c + 2)
+                Next c
+            End If
+        Next k
+
+        FirstNew = tblMaster.ListRows.Count + 1
+        For n = 1 To NewCount
+            tblMaster.ListRows.Add
+        Next n
+
+        With tblMaster.DataBodyRange
+            .Cells(FirstNew, 2).Resize(NewCount, Level + 1).Value = Blk1
+            If DataCols > 0 Then .Cells(FirstNew, Levels + 3).Resize(NewCount, DataCols).Value = Blk2
+        End With
+    End If
+
+    '---- renumber Sr.No in one write ----
+    n = tblMaster.ListRows.Count
+    ReDim Nums(1 To n, 1 To 1)
+    For r = 1 To n
+        Nums(r, 1) = r
+    Next r
+    tblMaster.ListColumns(1).DataBodyRange.Value = Nums
+
+    SaveIndexToMaster = RecalcCompletion()
+
+End Function
+
+
+
+
+' ========================================
+' MODULE: COD_BACK
+' ========================================
+Option Explicit
+
+Sub TAKE_A_STEP_BACK()
+
+    Dim Navigation As String
+    Dim NewNavigation As String
+    Dim Parts() As String
+    Dim Level As Long
+    Dim i As Long
+
+    StopStuff
+    On Error GoTo Fail
+
+    Navigation = CStr(NavigationCell.Value)
+
+    If Navigation = "" Then
+        MsgBox "NR_NAVIGATION is empty.", vbCritical
+        GoTo Done
+    End If
+    If Right$(Navigation, 1) <> "\" Then Navigation = Navigation & "\"
+
+    Parts = Split(Navigation, "\")
+    Level = UBound(Parts)                       ' number of backslashes
+
+    If Level <= 1 Then
+        MsgBox "Already at the root level. Cannot move back further.", vbInformation
+        GoTo Done
+    End If
+
+    '---- save INDEX edits to MASTER before leaving this level ----
+    If Not SaveIndexToMaster() Then GoTo Done
+
+    '---- path one level up ----
+    For i = 0 To Level - 2
+        NewNavigation = NewNavigation & Parts(i) & "\"
+    Next i
+
+    '---- load parent level into INDEX ----
+    LoadIndex NewNavigation
+
+Done:
+    StartStuff
+    Exit Sub
+
+Fail:
+    MsgBox "Error " & Err.Number & ": " & Err.Description, vbCritical, "TAKE_A_STEP_BACK"
+    Resume Done
+
+End Sub
+
+
+
+' ========================================
+' MODULE: FRM_CREATE_FILE
+' ========================================
+Option Explicit
+
+Public SelectedFileType As String
+
+Private Sub BTN_DOCX_Click()
+
+    SelectedFileType = "DOCX"
+    Me.Hide
+
+End Sub
+
+Private Sub BTN_PPTX_Click()
+
+    SelectedFileType = "PPTX"
+    Me.Hide
+
+End Sub
+
+Private Sub BTN_XLSX_Click()
+
+    SelectedFileType = "XLSX"
+    Me.Hide
+
+End Sub
+
+Private Sub BTN_CANCEL_Click()
+
+    SelectedFileType = ""
+    Me.Hide
+
+End Sub
+
+Private Sub UserForm_QueryClose(Cancel As Integer, CloseMode As Integer)
+
+    If CloseMode = vbFormControlMenu Then
+        SelectedFileType = ""
+    End If
+
+End Sub
+
+
+
+' ========================================
+' MODULE: COD_OPEN_PARENT
+' ========================================
+Option Explicit
+
+Sub OPEN_PARENT_FOLDER()
+
+    Dim ParentPath As String
+
+    StopStuff
+    On Error GoTo Fail
+
+    ParentPath = NavigationFolderPath()
+    If ParentPath = "" Then GoTo Done
+
+    If Not FolderExists(ParentPath) Then
+        MsgBox "Parent folder not found:" & vbCrLf & vbCrLf & ParentPath, vbExclamation
+        GoTo Done
+    End If
+
+    OpenInExplorer ParentPath
+
+Done:
+    StartStuff
+    Exit Sub
+
+Fail:
+    MsgBox "Error " & Err.Number & ": " & Err.Description, vbCritical, "OPEN_PARENT_FOLDER"
+    Resume Done
+
+End Sub
+
+
+
+' ========================================
+' MODULE: COD_UPDATE_COMPLETION
+' ========================================
+Option Explicit
+
+' Button / REFRESH_HARD entry point
+Sub UPDATE_MASTER_COMPLETION()
+    StopStuff
+    On Error GoTo Fail
+    RecalcCompletion
+Done:
+    StartStuff
+    Exit Sub
+Fail:
+    MsgBox "Error " & Err.Number & ": " & Err.Description, vbCritical, "UPDATE_MASTER_COMPLETION"
+    Resume Done
+End Sub
+
+'==============================================================
+' FILE   = manual value (blank = 0)
+' FOLDER = average of its direct children, calculated bottom-up
+' Rows are grouped by a path key: MasterColumn\Level1\...\LevelN
+'==============================================================
+Public Function RecalcCompletion() As Boolean
+
+    Dim tbl As ListObject
+    Dim Data As Variant
+    Dim Result() As Variant
+    Dim Depth() As Long
+    Dim PathKey() As String
+    Dim ParentKey() As String
+    Dim Vals() As Double
+    Dim Cum() As String
+    Dim ChildSum As Object
+    Dim ChildCnt As Object
+
+    Dim Levels As Long, ControlRow As Long
+    Dim TypeCol As Long, CompCol As Long
+    Dim n As Long, r As Long, j As Long, D As Long, MaxDepth As Long
+    Dim s As String, TopicType As String
+
+    Set tbl = ThisWorkbook.Worksheets("MASTER").ListObjects("MASTER")
+
+    If tbl.DataBodyRange Is Nothing Then
+        MsgBox "MASTER table contains no data.", vbExclamation
+        Exit Function
+    End If
+
+    Levels = GetMasterLevels(tbl, ControlRow)
+    If ControlRow = 0 Then
+        MsgBox "MasterLevels control row was not found.", vbCritical
+        Exit Function
+    End If
+
+    TypeCol = FindColumn(tbl, "TOPIC_TYPE")
+    CompCol = FindColumn(tbl, "COMPLETION")
+    If TypeCol = 0 Or CompCol = 0 Then
+        MsgBox "TOPIC_TYPE or COMPLETION column was not found in MASTER.", vbCritical
+        Exit Function
+    End If
+
+    Data = tbl.DataBodyRange.Value
+    n = UBound(Data, 1)
+
+    ReDim Depth(1 To n)
+    ReDim PathKey(1 To n)
+    ReDim ParentKey(1 To n)
+    ReDim Vals(1 To n)
+    ReDim Cum(0 To Levels)
+
+    '---- depth and keys for every row ----
+    For r = 1 To n
+        If r <> ControlRow Then
+            Cum(0) = Trim$(CStr(Data(r, 2)))
+            For j = 1 To Levels
+                s = Trim$(CStr(Data(r, j + 2)))
+                Cum(j) = Cum(j - 1) & "\" & s
+                If s <> "" Then Depth(r) = j
+            Next j
+            If Depth(r) > 0 Then
+                PathKey(r) = Cum(Depth(r))
+                ParentKey(r) = Cum(Depth(r) - 1)
+                If Depth(r) > MaxDepth Then MaxDepth = Depth(r)
+            End If
+        End If
+    Next r
+
+    '---- validate FILE values ----
+    For r = 1 To n
+        If Depth(r) > 0 Then
+            If UCase$(Trim$(CStr(Data(r, TypeCol)))) = "FILE" Then
+                s = Trim$(CStr(Data(r, CompCol)))
+                If s = "" Then
+                    Vals(r) = 0
+                ElseIf Not IsNumeric(Data(r, CompCol)) Then
+                    MsgBox "Invalid COMPLETION value for FILE:" & vbCrLf & vbCrLf & _
+                           PathKey(r) & vbCrLf & "Sheet row: " & (tbl.DataBodyRange.Row + r - 1) & _
+                           vbCrLf & "Value: " & s, vbCritical
+                    Exit Function
+                Else
+                    Vals(r) = CDbl(Data(r, CompCol))
+                    If Vals(r) < 0 Or Vals(r) > 100 Then
+                        MsgBox "FILE completion must be between 0 and 100:" & vbCrLf & vbCrLf & _
+                               PathKey(r) & vbCrLf & "Sheet row: " & (tbl.DataBodyRange.Row + r - 1) & _
+                               vbCrLf & "Value: " & Vals(r), vbCritical
+                        Exit Function
+                    End If
+                End If
+            End If
+        End If
+    Next r
+
+    '---- roll up from deepest level to level 1 ----
+    Set ChildSum = CreateObject("Scripting.Dictionary")
+    Set ChildCnt = CreateObject("Scripting.Dictionary")
+    ChildSum.CompareMode = vbTextCompare
+    ChildCnt.CompareMode = vbTextCompare
+
+    For D = MaxDepth To 1 Step -1
+        For r = 1 To n
+            If Depth(r) = D Then
+
+                TopicType = UCase$(Trim$(CStr(Data(r, TypeCol))))
+
+                If TopicType = "FOLDER" Then
+                    If ChildCnt.Exists(PathKey(r)) Then
+                        Vals(r) = ChildSum(PathKey(r)) / ChildCnt(PathKey(r))
+                    Else
+                        Vals(r) = 0
+                    End If
+                ElseIf TopicType <> "FILE" Then
+                    If IsNumeric(Data(r, CompCol)) Then Vals(r) = CDbl(Data(r, CompCol))
+                End If
+
+                If D > 1 Then
+                    If ChildCnt.Exists(ParentKey(r)) Then
+                        ChildSum(ParentKey(r)) = ChildSum(ParentKey(r)) + Vals(r)
+                        ChildCnt(ParentKey(r)) = ChildCnt(ParentKey(r)) + 1
+                    Else
+                        ChildSum.Add ParentKey(r), Vals(r)
+                        ChildCnt.Add ParentKey(r), 1
+                    End If
+                End If
+
+            End If
+        Next r
+    Next D
+
+    '---- write back (rows that are not FILE/FOLDER keep their value) ----
+    ReDim Result(1 To n, 1 To 1)
+
+    For r = 1 To n
+        TopicType = UCase$(Trim$(CStr(Data(r, TypeCol))))
+        If Depth(r) > 0 And (TopicType = "FILE" Or TopicType = "FOLDER") Then
+            Result(r, 1) = Round(Vals(r), 2)
+        Else
+            Result(r, 1) = Data(r, CompCol)
+        End If
+    Next r
+
+    With tbl.ListColumns(CompCol).DataBodyRange
+        .Value = Result
+        .NumberFormat = "0.00"
+    End With
+
+    RecalcCompletion = True
+    RecalcCreation
+
+End Function
+
+
+
+
+' ========================================
+' MODULE: COD_ADM_SHARED
+' ========================================
+Option Explicit
+'==============================================================
+' PATHS AND CONSTANTS  (the only place the root path lives)
+'==============================================================
+Public Const ROOT_PATH As String = "D:\03_STUDY_FOR_CAREER\"
+Public Const STUDY_PLAN_FILE As String = "01_STUDY_INDEX.DOCX"
+
+'==============================================================
+' SHARED HELPERS
+'==============================================================
+
+Public Function NavigationCell() As Range
+    Set NavigationCell = ThisWorkbook.Names("NR_NAVIGATION").RefersToRange.Cells(1, 1)
+End Function
+
+Public Function LevelCell() As Range
+    Set LevelCell = ThisWorkbook.Names("NR_CURRENT_LEVEL").RefersToRange.Cells(1, 1)
+End Function
+
+' Returns the column number of a table header, or 0 if not found
+Public Function FindColumn(ByVal tbl As ListObject, ByVal HeaderName As String) As Long
+    Dim v As Variant
+    v = Application.Match(HeaderName, tbl.HeaderRowRange, 0)
+    If IsError(v) Then FindColumn = 0 Else FindColumn = CLng(v)
+End Function
+
+' Returns the MasterLevels value; ControlRow = its row in the table (0 if missing)
+Public Function GetMasterLevels(ByVal tblMaster As ListObject, _
+                                Optional ByRef ControlRow As Long) As Long
+    Dim v As Variant
+    ControlRow = 0
+    v = Application.Match("MasterLevels", tblMaster.ListColumns(2).DataBodyRange, 0)
+    If IsError(v) Then Exit Function
+    ControlRow = CLng(v)
+    GetMasterLevels = CLng(tblMaster.DataBodyRange.Cells(ControlRow, 3).Value)
+End Function
+
+' Makes a table have exactly "wanted" data rows (minimum 1)
+Private Sub SizeTableRows(ByVal tbl As ListObject, ByVal wanted As Long)
+    Dim cur As Long
+    If wanted < 1 Then wanted = 1
+    If tbl.DataBodyRange Is Nothing Then cur = 0 Else cur = tbl.ListRows.Count
+
+    If cur > wanted Then
+        tbl.DataBodyRange.Offset(wanted).Resize(cur - wanted).Delete xlShiftUp
+    ElseIf cur < wanted Then
+        tbl.Resize tbl.Range.Resize(wanted + 1)
+    End If
+End Sub
+
+'==============================================================
+' LOAD INDEX FOR A NAVIGATION PATH
+'
+' Navigation = "MasterColumn\Level1\Level2\"
+' Shows the topics at level = number of backslashes.
+' Sets NR_NAVIGATION and NR_CURRENT_LEVEL only on success.
+'==============================================================
+Public Function LoadIndex(ByVal Navigation As String) As Boolean
+
+    Dim tblMaster As ListObject
+    Dim tblIndex As ListObject
+    Dim Data As Variant
+    Dim Out() As Variant
+    Dim Hits() As Long
+    Dim Parts() As String
+
+    Dim Level As Long
+    Dim Levels As Long
+    Dim IdxCols As Long
+    Dim HitCount As Long
+    Dim r As Long, c As Long, j As Long
+    Dim IsMatch As Boolean
+
+    Set tblMaster = ThisWorkbook.Worksheets("MASTER").ListObjects("MASTER")
+    Set tblIndex = ThisWorkbook.Worksheets("INDEX").ListObjects("INDEX")
+
+    If Right$(Navigation, 1) <> "\" Then Navigation = Navigation & "\"
+    Parts = Split(Navigation, "\")
+    Level = UBound(Parts)                  ' number of backslashes
+
+    Levels = GetMasterLevels(tblMaster)
+    If Levels = 0 Then
+        MsgBox "MasterLevels control row was not found.", vbCritical
+        Exit Function
+    End If
+    If Level < 1 Or Level > Levels Then
+        MsgBox "LEVEL" & Level & " does not exist in MASTER.", vbCritical
+        Exit Function
+    End If
+
+    ' INDEX column c (c >= 3)  <->  MASTER column c + Levels
+    IdxCols = tblIndex.ListColumns.Count
+    If IdxCols + Levels > tblMaster.ListColumns.Count Then
+        MsgBox "INDEX has more columns than MASTER can supply.", vbCritical
+        Exit Function
+    End If
+
+    Data = tblMaster.DataBodyRange.Value
+    ReDim Hits(1 To UBound(Data, 1))
+
+    ' ---- single pass: find matching rows ----
+    For r = 1 To UBound(Data, 1)
+
+        IsMatch = (StrComp(Trim$(CStr(Data(r, 2))), Parts(0), vbTextCompare) = 0)
+
+        If IsMatch Then                        ' path above must match
+            For j = 1 To Level - 1
+                If StrComp(Trim$(CStr(Data(r, j + 2))), Parts(j), vbTextCompare) <> 0 Then
+                    IsMatch = False
+                    Exit For
+                End If
+            Next j
+        End If
+
+        If IsMatch Then                        ' must have this level filled
+            If Trim$(CStr(Data(r, Level + 2))) = "" Then IsMatch = False
+        End If
+
+        If IsMatch Then                        ' and nothing deeper
+            For j = Level + 1 To Levels
+                If Trim$(CStr(Data(r, j + 2))) <> "" Then
+                    IsMatch = False
+                    Exit For
+                End If
+            Next j
+        End If
+
+        If IsMatch Then
+            HitCount = HitCount + 1
+            Hits(HitCount) = r
+        End If
+
+    Next r
+
+    ' ---- build output array ----
+    If HitCount > 0 Then
+        ReDim Out(1 To HitCount, 1 To IdxCols)
+        For r = 1 To HitCount
+            Out(r, 1) = r
+            Out(r, 2) = Data(Hits(r), Level + 2)
+            For c = 3 To IdxCols
+                Out(r, c) = Data(Hits(r), c + Levels)
+            Next c
+        Next r
+    End If
+
+    ' ---- write INDEX ----
+    SizeTableRows tblIndex, HitCount
+
+    If HitCount = 0 Then
+        tblIndex.DataBodyRange.ClearContents
+    Else
+        tblIndex.DataBodyRange.Resize(HitCount, IdxCols).Value = Out
+    End If
+
+    NavigationCell.Value = Navigation
+    LevelCell.Value = Level
+    LoadIndex = True
+
+End Function
+
+
+' Level of a path = number of backslashes ("A\B\" -> 2)
+Public Function PathLevel(ByVal Navigation As String) As Long
+    If Navigation = "" Then Exit Function
+    If Right$(Navigation, 1) <> "\" Then Navigation = Navigation & "\"
+    PathLevel = Len(Navigation) - Len(Replace(Navigation, "\", ""))
+End Function
+
+' Full disk path of the current navigation level, ending in "\".
+' Returns "" (after a message) if NR_NAVIGATION is empty.
+Public Function NavigationFolderPath() As String
+    Dim Nav As String
+    Nav = CStr(NavigationCell.Value)
+    If Nav = "" Then
+        MsgBox "NR_NAVIGATION is empty.", vbCritical
+        Exit Function
+    End If
+    If Right$(Nav, 1) <> "\" Then Nav = Nav & "\"
+    NavigationFolderPath = ROOT_PATH & Nav
+End Function
+
+'==============================================================
+' SELECTED INDEX ROW
+' Returns the topic name and its TOPIC_TYPE (upper case) for the
+' row containing the active cell. Shows a message and returns
+' False if the selection is not valid.
+'==============================================================
+Public Function GetSelectedTopic(ByRef TopicName As String, _
+                                 ByRef TopicType As String) As Boolean
+
+    Dim tblIndex As ListObject
+    Dim TypeCol As Long
+    Dim Pos As Long
+
+    Set tblIndex = ThisWorkbook.Worksheets("INDEX").ListObjects("INDEX")
+
+    If tblIndex.DataBodyRange Is Nothing Then
+        MsgBox "INDEX table contains no topics.", vbExclamation
+        Exit Function
+    End If
+
+    If Not ActiveCell.Worksheet Is tblIndex.Parent Then
+        MsgBox "Select a cell inside the INDEX table.", vbExclamation
+        Exit Function
+    End If
+
+    If Intersect(ActiveCell, tblIndex.DataBodyRange) Is Nothing Then
+        MsgBox "Select a cell inside the INDEX table.", vbExclamation
+        Exit Function
+    End If
+
+    TypeCol = FindColumn(tblIndex, "TOPIC_TYPE")
+    If TypeCol = 0 Then
+        MsgBox "TOPIC_TYPE column was not found in INDEX.", vbCritical
+        Exit Function
+    End If
+
+    Pos = ActiveCell.Row - tblIndex.DataBodyRange.Row + 1
+
+    TopicName = Trim$(CStr(tblIndex.DataBodyRange.Cells(Pos, 2).Value))
+    If TopicName = "" Then
+        MsgBox "The selected row does not contain a topic name.", vbExclamation
+        Exit Function
+    End If
+
+    TopicType = UCase$(Trim$(CStr(tblIndex.DataBodyRange.Cells(Pos, TypeCol).Value)))
+    GetSelectedTopic = True
+
+End Function
+
+'==============================================================
+' FILE SYSTEM HELPERS
+'==============================================================
+Public Function FolderExists(ByVal Path As String) As Boolean
+    If Right$(Path, 1) = "\" Then Path = Left$(Path, Len(Path) - 1)
+    On Error Resume Next
+    FolderExists = ((GetAttr(Path) And vbDirectory) = vbDirectory)
+    Err.Clear
+End Function
+
+Public Function FileExists(ByVal Path As String) As Boolean
+    On Error Resume Next
+    FileExists = ((GetAttr(Path) And vbDirectory) = 0)
+    Err.Clear
+End Function
+
+' Creates a folder and any missing parents
+Public Sub EnsureFolder(ByVal Path As String)
+    Dim Parts() As String
+    Dim Build As String
+    Dim i As Long
+
+    If Right$(Path, 1) = "\" Then Path = Left$(Path, Len(Path) - 1)
+    Parts = Split(Path, "\")
+    Build = Parts(0)                          ' drive, e.g. "D:"
+
+    For i = 1 To UBound(Parts)
+        If Parts(i) <> "" Then
+            Build = Build & "\" & Parts(i)
+            If Not FolderExists(Build) Then MkDir Build
+        End If
+    Next i
+End Sub
+
+Public Sub OpenInExplorer(ByVal Path As String)
+    shell "explorer.exe """ & Path & """", vbNormalFocus
+End Sub
+
+' Returns the full path of BasePath + .docx/.pptx/.xlsx if one exists, else ""
+Public Function FindExistingFile(ByVal BasePath As String) As String
+    Dim Ext As Variant
+    For Each Ext In Array(".docx", ".pptx", ".xlsx")
+        If FileExists(BasePath & Ext) Then
+            FindExistingFile = BasePath & Ext
+            Exit Function
+        End If
+    Next Ext
+End Function
+
+'==============================================================
+' NEW FILE CREATION
+'==============================================================
+' Shows FRM_CREATE_FILE; returns "DOCX", "PPTX", "XLSX" or "" if cancelled
+Public Function AskFileType(ByVal TopicName As String) As String
+    FRM_CREATE_FILE.SelectedFileType = ""
+    FRM_CREATE_FILE.LBL_TOPIC.Caption = _
+        "Topic: " & TopicName & vbCrLf & vbCrLf & "Select file type to create:"
+    FRM_CREATE_FILE.Show vbModal
+    AskFileType = FRM_CREATE_FILE.SelectedFileType
+    Unload FRM_CREATE_FILE
+End Function
+
+' Creates an empty Office file at FilePath and opens it
+Public Sub CreateOfficeFile(ByVal FilePath As String, ByVal FileType As String)
+
+    Dim App As Object
+    Dim Doc As Object
+
+    Select Case FileType
+        Case "DOCX"
+            Set App = CreateObject("Word.Application")
+            Set Doc = App.Documents.Add
+            Doc.SaveAs2 FilePath, 16
+        Case "PPTX"
+            Set App = CreateObject("PowerPoint.Application")
+            Set Doc = App.Presentations.Add
+            Doc.SaveAs FilePath, 24
+        Case "XLSX"
+            Set App = CreateObject("Excel.Application")
+            Set Doc = App.Workbooks.Add
+            Doc.SaveAs FilePath, 51
+        Case Else
+            Exit Sub
+    End Select
+
+    App.Visible = True
+    On Error Resume Next
+    Doc.Activate                              ' not every Office app supports this
+    On Error GoTo 0
+
+End Sub
+
+
+
+
+' ========================================
+' MODULE: COD_FORMAT_TEXT
+' ========================================
+Option Explicit
+
+'============================================================
+'  Converts clipboard (ChatGPT / Gemini / Claude output) into
+'  a formatted DOCX and opens it.
+'  Requires:  Python on PATH  +  python-docx  +  pyperclip
+'============================================================
+Sub GenerateFormattedDocx()
+
+    Const PY_SCRIPT As String = "D:\00_ADMIN_FILES\02_FORMAT_TEXT_TO_DOCX.PY"
+    Const OUT_FILE  As String = "D:\00_ADMIN_FILES\03_FORMATTED_DOCX.docx"
+
+    Dim wdApp As Object, wdDoc As Object, D As Object
+    Dim isOpen As Boolean: isOpen = False
+    Dim ans As VbMsgBoxResult
+
+    '-- 1. Find a running Word instance (if any) -----------------
+    On Error Resume Next
+    Set wdApp = GetObject(, "Word.Application")
+    On Error GoTo 0
+
+    '-- 2. Is OUT_FILE already open? -----------------------------
+    If Not wdApp Is Nothing Then
+        For Each D In wdApp.Documents
+            If StrComp(D.FullName, OUT_FILE, vbTextCompare) = 0 Then
+                Set wdDoc = D
+                isOpen = True
+                Exit For
+            End If
+        Next D
+    End If
+
+    '-- 3. Ask the user -----------------------------------------
+    If isOpen Then
+        ans = MsgBox( _
+            "'03_FORMATTED_DOCX.docx' is already open in Word." & vbCrLf & vbCrLf & _
+            "Continue?" & vbCrLf & _
+            "(The open copy will be closed WITHOUT saving.)", _
+            vbYesNo + vbQuestion + vbDefaultButton2, _
+            "File Already Open")
+        If ans = vbNo Then Exit Sub
+
+        On Error Resume Next
+        wdDoc.Close SaveChanges:=False
+        On Error GoTo 0
+        Set wdDoc = Nothing
+    End If
+
+    '-- 4. Run Python (hidden console, wait for exit code) ------
+    Dim shell As Object: Set shell = CreateObject("WScript.Shell")
+    Dim exitCode As Long
+    exitCode = shell.Run("cmd /c python """ & PY_SCRIPT & """", 0, True)
+
+    If exitCode <> 0 Then
+        MsgBox "Python script failed (exit code " & exitCode & ")." & vbCrLf & vbCrLf & _
+               "Check that:" & vbCrLf & _
+               "  ? Python is installed and on PATH (try:  python --version)" & vbCrLf & _
+               "  ? pyperclip and python-docx are installed" & vbCrLf & _
+               "  ? Clipboard actually contains text", _
+               vbCritical, "Python Error"
+        Exit Sub
+    End If
+
+    '-- Python has already opened the file via os.startfile() ---
+    Set shell = Nothing
+    Set wdApp = Nothing
+End Sub
+
+
+
+
+' ========================================
+' MODULE: Z_AdmNotInUse
+' ========================================
+Option Explicit
+
+'==============================================================
+' RENAMES FOLDERS / FILES ON DISK TO MATCH A NEW MASTER
+'   OLD_MASTER table = names currently on disk
+'   MASTER table     = names you want
+' Rows must line up 1:1 (same order, same row count).
+' Works top-down: MasterColumn (level 0), then LEVEL1, LEVEL2 ...
+'==============================================================
+
+Private Const OLD_SHEET As String = "OLD_MASTER"
+Private Const OLD_TABLE As String = "OLD_MASTER"
+Private Const LOG_SHEET As String = "RENAME_LOG"
+
+Private opLevel() As Long
+Private opIsFile() As Boolean
+Private opOldName() As String
+Private opNewName() As String
+Private opOldParent() As String
+Private opNewParent() As String
+Private opStatus() As String
+Private opDone() As Boolean
+Private opCount As Long
+Private PrefixMap As Object
+
+Sub RENAME_PREVIEW()
+    RunRename True
+End Sub
+
+Sub RENAME_APPLY()
+    RunRename False
+End Sub
+
+Private Sub RunRename(ByVal DryRun As Boolean)
+
+    Dim Changed As Long
+    Dim i As Long
+    Dim nOK As Long, nErr As Long, nBlock As Long, nOther As Long
+    Dim s As String, Nav As String, NewNav As String
+
+    StopStuff
+    On Error GoTo Fail
+
+    If Not BuildPlan(Changed) Then GoTo Done
+
+    If Changed = 0 Then
+        MsgBox "OLD_MASTER and MASTER have identical names. Nothing to rename.", vbInformation
+        GoTo Done
+    End If
+
+    If Not DryRun Then
+        If MsgBox(Changed & " name change(s) are planned." & vbCrLf & vbCrLf & _
+                  "Folders and files on disk will be renamed." & vbCrLf & _
+                  "Have you backed up the folder and checked RENAME_PREVIEW?", _
+                  vbYesNo + vbExclamation, "Confirm rename") <> vbYes Then GoTo Done
+    End If
+
+    ExecutePlan DryRun
+    WriteLog DryRun
+
+    For i = 1 To opCount
+        If StrComp(opOldName(i), opNewName(i), vbBinaryCompare) <> 0 Then
+            s = opStatus(i)
+            If s Like "WILL*" Or s Like "RENAMED*" Then
+                nOK = nOK + 1
+            ElseIf s Like "ERROR*" Then
+                nErr = nErr + 1
+            ElseIf s Like "CONFLICT*" Then
+                nBlock = nBlock + 1
+            Else
+                nOther = nOther + 1
+            End If
+        End If
+    Next i
+
+    If Not DryRun Then
+        ' Move navigation to the new names and reload INDEX from MASTER
+        Nav = CStr(NavigationCell.Value)
+        If Right$(Nav, 1) = "\" Then Nav = Left$(Nav, Len(Nav) - 1)
+
+        If PrefixMap.Exists(Nav) Then
+            NewNav = PrefixMap(Nav)
+        ElseIf PrefixMap.Exists(Split(Nav, "\")(0)) Then
+            NewNav = PrefixMap(Split(Nav, "\")(0))
+        Else
+            NewNav = Split(Nav, "\")(0)
+        End If
+        LoadIndex NewNav & "\"
+    End If
+
+    MsgBox IIf(DryRun, "PREVIEW - nothing was renamed.", "RENAME FINISHED.") & vbCrLf & vbCrLf & _
+           IIf(DryRun, "Would rename", "Renamed") & " : " & nOK & vbCrLf & _
+           "Already done / not on disk : " & nOther & vbCrLf & _
+           "Conflicts (target exists) : " & nBlock & vbCrLf & _
+           "Errors : " & nErr & vbCrLf & vbCrLf & _
+           "Details are on the " & LOG_SHEET & " sheet.", _
+           IIf(nErr + nBlock > 0, vbExclamation, vbInformation)
+
+Done:
+    StartStuff
+    Exit Sub
+
+Fail:
+    MsgBox "Error " & Err.Number & ": " & Err.Description, vbCritical, "RENAME"
+    Resume Done
+
+End Sub
+
+'==============================================================
+' PLAN: one operation per distinct folder/file path prefix
+'==============================================================
+Private Function BuildPlan(ByRef Changed As Long) As Boolean
+
+    Dim tblOld As ListObject, tblNew As ListObject
+    Dim OD As Variant, ND As Variant
+    Dim oCtl As Long, nCtl As Long, oLv As Long, nLv As Long
+    Dim oType As Long, nType As Long
+    Dim n As Long, r As Long, k As Long
+    Dim oDepth As Long, nDepth As Long
+    Dim oName As String, nName As String
+    Dim oCum As String, nCum As String, oPar As String, nPar As String
+    Dim RowType As String, Key As String, NKey As String
+    Dim IsFile As Boolean, RowOK As Boolean
+    Dim OpIndex As Object, NewOf As Object, NewToOld As Object
+    Dim Problems As String, ProbCount As Long
+
+    On Error Resume Next
+    Set tblOld = ThisWorkbook.Worksheets(OLD_SHEET).ListObjects(OLD_TABLE)
+    On Error GoTo 0
+
+    If tblOld Is Nothing Then
+        MsgBox "Table """ & OLD_TABLE & """ was not found on sheet """ & OLD_SHEET & """.", vbCritical
+        Exit Function
+    End If
+
+    Set tblNew = ThisWorkbook.Worksheets("MASTER").ListObjects("MASTER")
+
+    If tblOld.DataBodyRange Is Nothing Or tblNew.DataBodyRange Is Nothing Then
+        MsgBox "OLD_MASTER or MASTER has no data.", vbCritical
+        Exit Function
+    End If
+
+    oLv = GetMasterLevels(tblOld, oCtl)
+    nLv = GetMasterLevels(tblNew, nCtl)
+
+    If oCtl = 0 Or nCtl = 0 Then
+        MsgBox "The MasterLevels control row is missing in OLD_MASTER or MASTER.", vbCritical
+        Exit Function
+    End If
+
+    If oLv <> nLv Or oCtl <> nCtl Or tblOld.ListRows.Count <> tblNew.ListRows.Count Then
+        MsgBox "OLD_MASTER and MASTER do not line up." & vbCrLf & vbCrLf & _
+               "Rows : " & tblOld.ListRows.Count & " vs " & tblNew.ListRows.Count & vbCrLf & _
+               "MasterLevels : " & oLv & " vs " & nLv & vbCrLf & _
+               "MasterLevels row : " & oCtl & " vs " & nCtl, vbCritical
+        Exit Function
+    End If
+
+    oType = FindColumn(tblOld, "TOPIC_TYPE")
+    nType = FindColumn(tblNew, "TOPIC_TYPE")
+    If oType = 0 Or nType = 0 Then
+        MsgBox "TOPIC_TYPE column was not found in OLD_MASTER or MASTER.", vbCritical
+        Exit Function
+    End If
+
+    OD = tblOld.DataBodyRange.Value
+    ND = tblNew.DataBodyRange.Value
+    n = UBound(ND, 1)
+
+    opCount = 0
+    ReDim opLevel(1 To n * (nLv + 1))
+    ReDim opIsFile(1 To n * (nLv + 1))
+    ReDim opOldName(1 To n * (nLv + 1))
+    ReDim opNewName(1 To n * (nLv + 1))
+    ReDim opOldParent(1 To n * (nLv + 1))
+    ReDim opNewParent(1 To n * (nLv + 1))
+    ReDim opStatus(1 To n * (nLv + 1))
+    ReDim opDone(1 To n * (nLv + 1))
+
+    Set OpIndex = CreateObject("Scripting.Dictionary")
+    Set NewOf = CreateObject("Scripting.Dictionary")
+    Set NewToOld = CreateObject("Scripting.Dictionary")
+    Set PrefixMap = CreateObject("Scripting.Dictionary")
+    OpIndex.CompareMode = vbTextCompare
+    NewOf.CompareMode = vbTextCompare
+    NewToOld.CompareMode = vbTextCompare
+    PrefixMap.CompareMode = vbTextCompare
+
+    For r = 1 To n
+        If r <> nCtl Then
+
+            oDepth = RowDepth(OD, r, nLv)
+            nDepth = RowDepth(ND, r, nLv)
+
+            If oDepth > 0 Or nDepth > 0 Then
+
+                RowType = UCase$(Trim$(CStr(ND(r, nType))))
+                RowOK = (oDepth = nDepth And RowType = UCase$(Trim$(CStr(OD(r, oType)))))
+
+                If Not RowOK Then
+                    AddProblem Problems, ProbCount, "Table row " & r & ": depth or TOPIC_TYPE differs between OLD_MASTER and MASTER."
+                Else
+                    oCum = "": nCum = ""
+
+                    For k = 0 To nDepth          ' k = 0 is MasterColumn
+
+                        oName = Trim$(CStr(OD(r, k + 2)))
+                        nName = Trim$(CStr(ND(r, k + 2)))
+
+                        If oName = "" Or nName = "" Then
+                            AddProblem Problems, ProbCount, "Table row " & r & ": empty name at level " & k & "."
+                            Exit For
+                        End If
+
+                        If HasInvalidChars(nName) Or Right$(nName, 1) = "." Then
+                            AddProblem Problems, ProbCount, "Table row " & r & ": invalid new name '" & nName & "'."
+                            Exit For
+                        End If
+
+                        oPar = oCum: nPar = nCum
+                        If k = 0 Then
+                            oCum = oName: nCum = nName
+                        Else
+                            oCum = oCum & "\" & oName
+                            nCum = nCum & "\" & nName
+                        End If
+
+                        IsFile = (RowType = "FILE" And k = nDepth)
+                        Key = IIf(IsFile, "F|", "D|") & oCum
+                        NKey = IIf(IsFile, "F|", "D|") & nCum
+
+                        If OpIndex.Exists(Key) Then
+
+                            If StrComp(NewOf(Key), nCum, vbBinaryCompare) <> 0 Then
+                                AddProblem Problems, ProbCount, "'" & oCum & "' is renamed two different ways (row " & r & ")."
+                            End If
+
+                        Else
+
+                            opCount = opCount + 1
+                            OpIndex.Add Key, opCount
+                            NewOf.Add Key, nCum
+
+                            opLevel(opCount) = k
+                            opIsFile(opCount) = IsFile
+                            opOldName(opCount) = oName
+                            opNewName(opCount) = nName
+                            opOldParent(opCount) = oPar
+                            opNewParent(opCount) = nPar
+
+                            If Not IsFile Then PrefixMap(oCum) = nCum
+
+                            If NewToOld.Exists(NKey) Then
+                                If StrComp(NewToOld(NKey), oCum, vbTextCompare) <> 0 Then
+                                    AddProblem Problems, ProbCount, "Two different items become '" & nCum & "'."
+                                End If
+                            Else
+                                NewToOld.Add NKey, oCum
+                            End If
+
+                            If StrComp(oName, nName, vbBinaryCompare) <> 0 Then Changed = Changed + 1
+
+                        End If
+
+                    Next k
+                End If
+            End If
+        End If
+    Next r
+
+    If ProbCount > 0 Then
+        MsgBox "Cannot continue. Nothing was changed." & vbCrLf & vbCrLf & Problems, vbCritical
+        Exit Function
+    End If
+
+    BuildPlan = True
+
+End Function
+
+Private Sub AddProblem(ByRef Problems As String, ByRef Count As Long, ByVal Msg As String)
+    Count = Count + 1
+    If Count <= 15 Then Problems = Problems & "- " & Msg & vbCrLf
+    If Count = 16 Then Problems = Problems & "- ... more" & vbCrLf
+End Sub
+
+' Last non-empty LEVEL column of a row (0 = row is blank)
+Private Function RowDepth(ByRef D As Variant, ByVal r As Long, ByVal Levels As Long) As Long
+    Dim k As Long
+    If Trim$(CStr(D(r, 2))) = "" Then Exit Function
+    For k = 1 To Levels
+        If Trim$(CStr(D(r, k + 2))) <> "" Then RowDepth = k
+    Next k
+End Function
+
+'==============================================================
+' EXECUTE: level by level, parents before children.
+' An op blocked because its target exists is retried after the
+' other ops on the same level (handles 01->02, 02->03 chains).
+'==============================================================
+Private Sub ExecutePlan(ByVal DryRun As Boolean)
+
+    Dim i As Long, lvl As Long, MaxLvl As Long
+    Dim Progress As Boolean
+
+    For i = 1 To opCount
+        If opLevel(i) > MaxLvl Then MaxLvl = opLevel(i)
+        opDone(i) = (StrComp(opOldName(i), opNewName(i), vbBinaryCompare) = 0)
+    Next i
+
+    For lvl = 0 To MaxLvl
+
+        Do
+            Progress = False
+            For i = 1 To opCount
+                If opLevel(i) = lvl And Not opDone(i) Then
+                    If ProcessOp(i, DryRun) Then
+                        opDone(i) = True
+                        Progress = True
+                    End If
+                End If
+            Next i
+        Loop While Progress
+
+        For i = 1 To opCount
+            If opLevel(i) = lvl And Not opDone(i) Then
+                opStatus(i) = "CONFLICT - target already exists"
+            End If
+        Next i
+
+    Next lvl
+
+End Sub
+
+' Returns True when the op is finished (renamed, skipped or failed),
+' False when it is blocked because the target already exists.
+Private Function ProcessOp(ByVal i As Long, ByVal DryRun As Boolean) As Boolean
+
+    Dim pOld As String, pNew As String, Base As String
+    Dim src As String, dst As String, ErrText As String
+    Dim CaseOnly As Boolean
+
+    pOld = ROOT_PATH
+    If opOldParent(i) <> "" Then pOld = ROOT_PATH & opOldParent(i) & "\"
+    pNew = ROOT_PATH
+    If opNewParent(i) <> "" Then pNew = ROOT_PATH & opNewParent(i) & "\"
+
+    ' After the parent was renamed the new parent exists; in a preview it does not yet
+    If FolderExists(pNew) Then Base = pNew Else Base = pOld
+
+    CaseOnly = (StrComp(opOldName(i), opNewName(i), vbTextCompare) = 0)
+
+    If opIsFile(i) Then
+        ProcessOp = ProcessFileOp(i, Base, CaseOnly, DryRun)
+        Exit Function
+    End If
+
+    src = Base & opOldName(i)
+    dst = Base & opNewName(i)
+
+    If FolderExists(src) Then
+
+        If FolderExists(dst) And Not CaseOnly Then Exit Function      ' blocked (returns False)
+
+        If DryRun Then
+            opStatus(i) = "WILL RENAME"
+        Else
+            ErrText = SafeRename(src, dst)
+            If ErrText = "" Then opStatus(i) = "RENAMED" Else opStatus(i) = "ERROR - " & ErrText
+        End If
+
+    ElseIf FolderExists(dst) Then
+        opStatus(i) = "ALREADY DONE"
+    Else
+        opStatus(i) = "NOT ON DISK"
+    End If
+
+    ProcessOp = True
+
+End Function
+
+' A FILE topic renames every file whose base name = old name (any extension)
+Private Function ProcessFileOp(ByVal i As Long, ByVal Base As String, _
+                               ByVal CaseOnly As Boolean, ByVal DryRun As Boolean) As Boolean
+
+    Dim fso As Object, f As Object
+    Dim Exts As Collection
+    Dim Ext As Variant
+    Dim ErrText As String, FirstErr As String
+    Dim src As String, dst As String
+    Dim AlreadyDone As Boolean
+
+    If Not FolderExists(Base) Then
+        opStatus(i) = "NOT ON DISK"
+        ProcessFileOp = True
+        Exit Function
+    End If
+
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    Set Exts = New Collection
+
+    For Each f In fso.GetFolder(Base).Files
+        If StrComp(fso.GetBaseName(f.Name), opOldName(i), vbTextCompare) = 0 Then
+            Exts.Add fso.GetExtensionName(f.Name)
+        End If
+    Next f
+
+    If Exts.Count = 0 Then
+        For Each f In fso.GetFolder(Base).Files
+            If StrComp(fso.GetBaseName(f.Name), opNewName(i), vbTextCompare) = 0 Then
+                AlreadyDone = True
+                Exit For
+            End If
+        Next f
+        opStatus(i) = IIf(AlreadyDone, "ALREADY DONE", "NOT ON DISK")
+        ProcessFileOp = True
+        Exit Function
+    End If
+
+    If Not CaseOnly Then
+        For Each Ext In Exts
+            dst = Base & opNewName(i) & IIf(Ext <> "", "." & Ext, "")
+            If FileExists(dst) Then Exit Function                    ' blocked (returns False)
+        Next Ext
+    End If
+
+    If DryRun Then
+        opStatus(i) = "WILL RENAME (" & Exts.Count & " file(s))"
+    Else
+        For Each Ext In Exts
+            src = Base & opOldName(i) & IIf(Ext <> "", "." & Ext, "")
+            dst = Base & opNewName(i) & IIf(Ext <> "", "." & Ext, "")
+            ErrText = SafeRename(src, dst)
+            If ErrText <> "" And FirstErr = "" Then FirstErr = ErrText
+        Next Ext
+        If FirstErr = "" Then
+            opStatus(i) = "RENAMED (" & Exts.Count & " file(s))"
+        Else
+            opStatus(i) = "ERROR - " & FirstErr
+        End If
+    End If
+
+    ProcessFileOp = True
+
+End Function
+
+' Returns "" on success, otherwise the error text. Handles case-only renames.
+Private Function SafeRename(ByVal src As String, ByVal dst As String) As String
+
+    Dim tmp As String
+
+    On Error Resume Next
+
+    If StrComp(src, dst, vbTextCompare) = 0 Then
+        tmp = src & "_~tmp"
+        Name src As tmp
+        If Err.Number = 0 Then Name tmp As dst
+    Else
+        Name src As dst
+    End If
+
+    If Err.Number <> 0 Then SafeRename = Err.Description
+
+End Function
+
+'==============================================================
+' LOG SHEET
+'==============================================================
+Private Sub WriteLog(ByVal DryRun As Boolean)
+
+    Dim ws As Worksheet
+    Dim Out() As Variant
+    Dim n As Long, i As Long, lvl As Long, MaxLvl As Long
+
+    On Error Resume Next
+    Set ws = ThisWorkbook.Worksheets(LOG_SHEET)
+    On Error GoTo 0
+
+    If ws Is Nothing Then
+        Set ws = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Worksheets(ThisWorkbook.Worksheets.Count))
+        ws.Name = LOG_SHEET
+    End If
+
+    ws.Cells.Clear
+
+    For i = 1 To opCount
+        If opLevel(i) > MaxLvl Then MaxLvl = opLevel(i)
+        If StrComp(opOldName(i), opNewName(i), vbBinaryCompare) <> 0 Then n = n + 1
+    Next i
+
+    ws.Range("A1:G1").Value = Array("#", "LEVEL", "TYPE", "OLD NAME", "NEW NAME", "STATUS", "IN FOLDER (old path)")
+    ws.Range("A1:G1").Font.Bold = True
+    ws.Range("I1").Value = IIf(DryRun, "PREVIEW - nothing was renamed", "APPLIED " & Format(Now, "yyyy-mm-dd hh:nn"))
+
+    If n > 0 Then
+
+        ReDim Out(1 To n, 1 To 7)
+        n = 0
+
+        For lvl = 0 To MaxLvl
+            For i = 1 To opCount
+                If opLevel(i) = lvl Then
+                    If StrComp(opOldName(i), opNewName(i), vbBinaryCompare) <> 0 Then
+                        n = n + 1
+                        Out(n, 1) = n
+                        Out(n, 2) = lvl
+                        Out(n, 3) = IIf(opIsFile(i), "FILE", "FOLDER")
+                        Out(n, 4) = opOldName(i)
+                        Out(n, 5) = opNewName(i)
+                        Out(n, 6) = opStatus(i)
+                        Out(n, 7) = ROOT_PATH & opOldParent(i)
+                    End If
+                End If
+            Next i
+        Next lvl
+
+        ws.Range("A2").Resize(n, 7).Value = Out
+
+    End If
+
+    ws.Columns("A:G").AutoFit
+    ws.Activate
+
+End Sub
+
+
+
+
+' ========================================
+' MODULE: Sheet1
+' ========================================
+' [Empty Module]
+
+
+
+' ========================================
+' MODULE: COD_COPIED_FORMAT_DOCX
+' ========================================
+Option Explicit
+
+'============================================================
+'  Converts clipboard (ChatGPT / Gemini / Claude output) into
+'  a formatted DOCX at <NavigationFolder>\<Topic>.docx, plus
+'  a companion <Topic>.html and <Topic>_assets\ folder.
+'  Requires:  Python on PATH  +  python-docx  +  pyperclip
+'             (HTML companion additionally needs:  markdown)
+'============================================================
+Sub GenerateFormattedDocxDirect()
+
+    Const PY_SCRIPT As String = "D:\00_ADMIN_FILES\02_FORMAT_TEXT_TO_DOCX.PY"
+    Const ARGS_FILE As String = "D:\00_ADMIN_FILES\_py_args.txt"
+
+    Dim TopicName   As String
+    Dim TopicType   As String
+    Dim ParentPath  As String
+    Dim FinalPath   As String
+    Dim SEP         As String
+    Dim ans         As VbMsgBoxResult
+    Dim shell       As Object
+    Dim exitCode    As Long
+    Dim fnum        As Integer
+
+    StopStuff
+    On Error GoTo Fail
+
+    '-- 1. Which topic is selected? Must be a FILE topic ---------
+    If Not GetSelectedTopic(TopicName, TopicType) Then GoTo Done
+
+    If TopicType <> "FILE" Then
+        MsgBox "The selected topic is not a FILE topic:" & vbCrLf & vbCrLf & _
+               TopicName & vbCrLf & "TOPIC_TYPE = " & TopicType, vbCritical
+        GoTo Done
+    End If
+
+    '-- 2. Destination path -------------------------------------
+    ParentPath = NavigationFolderPath()
+    If ParentPath = "" Then GoTo Done
+
+    EnsureFolder ParentPath
+
+    If Right$(ParentPath, 1) = "\" Then SEP = "" Else SEP = "\"
+    FinalPath = ParentPath & SEP & TopicName & ".docx"
+
+    '-- 3. Destination exists? Ask before overwriting -----------
+    If Len(Dir(FinalPath)) > 0 Then
+        ans = MsgBox("A DOCX already exists for this topic:" & vbCrLf & vbCrLf & _
+                     FinalPath & vbCrLf & vbCrLf & _
+                     "Overwrite it?" & vbCrLf & _
+                     "(If it is open in Word, it will be closed WITHOUT saving.)", _
+                     vbYesNo + vbQuestion + vbDefaultButton2, "File Already Exists")
+        If ans = vbNo Then GoTo Done
+
+        CloseIfOpenInWord FinalPath
+    End If
+
+    '-- 4. Write the two arguments to a scratch file -------------
+    '     Command-line quoting through cmd.exe is fragile: a path
+    '     ending in "\" breaks Windows argv parsing and Python
+    '     never sees the arguments.  Writing them to a text file
+    '     sidesteps quoting entirely.  Python reads and deletes it.
+    fnum = FreeFile
+    Open ARGS_FILE For Output As #fnum
+    Print #fnum, ParentPath       ' line 1: destination folder
+    Print #fnum, TopicName        ' line 2: file stem
+    Close #fnum
+
+    '-- 5. Run Python (hidden console, wait for exit code) ------
+    Set shell = CreateObject("WScript.Shell")
+    exitCode = shell.Run("cmd /c python """ & PY_SCRIPT & """", 0, True)
+    Set shell = Nothing
+
+    ' Clean up the args file if Python couldn't (e.g. crashed early)
+    On Error Resume Next
+    If Len(Dir(ARGS_FILE)) > 0 Then Kill ARGS_FILE
+    On Error GoTo Fail
+
+    If exitCode <> 0 Then
+        MsgBox "Python script failed (exit code " & exitCode & ")." & vbCrLf & vbCrLf & _
+               "Check that:" & vbCrLf & _
+               "  - Python is installed and on PATH (try:  python --version)" & vbCrLf & _
+               "  - pyperclip, python-docx, latex2mathml, lxml are installed" & vbCrLf & _
+               "  - markdown is installed if you want the HTML companion" & vbCrLf & _
+               "  - Clipboard actually contains text", _
+               vbCritical, "Python Error"
+        GoTo Done
+    End If
+
+    If Len(Dir(FinalPath)) = 0 Then
+        MsgBox "Python finished but the DOCX was not created:" & vbCrLf & _
+               FinalPath, vbCritical, "Output Missing"
+        GoTo Done
+    End If
+
+    '-- 6. Open the final file ----------------------------------
+    'OpenInExplorer FinalPath
+
+Done:
+    StartStuff
+    Exit Sub
+
+Fail:
+    MsgBox "Error " & Err.Number & ": " & Err.Description, vbCritical, "GenerateFormattedDocx"
+    Resume Done
+
+End Sub
+
+
+'------------------------------------------------------------
+'  Closes the given file in a running Word instance (no save).
+'------------------------------------------------------------
+Private Sub CloseIfOpenInWord(ByVal FilePath As String)
+
+    Dim wdApp As Object, D As Object
+
+    On Error Resume Next
+    Set wdApp = GetObject(, "Word.Application")
+    On Error GoTo 0
+
+    If wdApp Is Nothing Then Exit Sub
+
+    For Each D In wdApp.Documents
+        If StrComp(D.FullName, FilePath, vbTextCompare) = 0 Then
+            On Error Resume Next
+            D.Close SaveChanges:=False
+            On Error GoTo 0
+            Exit For
+        End If
+    Next D
+
+End Sub
+
+
+
+
+' ========================================
+' MODULE: COD_CHECK_EXISTS
+' ========================================
+' ========================================
+' MODULE: COD_CHECK_EXISTS
+' ========================================
+Option Explicit
+
+'==============================================================
+' CHECK_INDEX_EXISTS
+' Scans the currently loaded INDEX table and writes TRUE/FALSE
+' into the EXISTS column:
+'   TOPIC_TYPE = FILE   -> TRUE if <topic>.docx/.pptx/.xlsx exists
+'   TOPIC_TYPE = FOLDER -> TRUE if the folder exists
+' Call it after any navigation or action (back, forward, etc.).
+' Silent: it shows no messages unless a column is missing.
+'==============================================================
+Public Sub CHECK_INDEX_EXISTS()
+
+    Dim tblIndex As ListObject
+    Dim Nav As String
+    Dim ParentPath As String
+    Dim TopicName As String
+    Dim TopicType As String
+    Dim TypeCol As Long
+    Dim ExistsCol As Long
+    Dim RowCount As Long
+    Dim r As Long
+    Dim Result() As Variant
+    Dim Names As Variant
+    Dim Types As Variant
+    Dim PrevScreenUpdating As Boolean
+
+    On Error GoTo Fail
+
+    PrevScreenUpdating = Application.ScreenUpdating
+    Application.ScreenUpdating = False
+
+    Set tblIndex = ThisWorkbook.Worksheets("INDEX").ListObjects("INDEX")
+
+    If tblIndex.DataBodyRange Is Nothing Then GoTo Done
+
+    TypeCol = FindColumn(tblIndex, "TOPIC_TYPE")
+    ExistsCol = FindColumn(tblIndex, "EXISTS")
+
+    If TypeCol = 0 Or ExistsCol = 0 Then
+        MsgBox "TOPIC_TYPE or EXISTS column was not found in INDEX.", _
+               vbCritical, "CHECK_INDEX_EXISTS"
+        GoTo Done
+    End If
+
+    '---- current folder on disk (silent version of NavigationFolderPath) ----
+    Nav = CStr(NavigationCell.Value)
+    If Nav = "" Then GoTo Done
+    If Right$(Nav, 1) <> "\" Then Nav = Nav & "\"
+    ParentPath = ROOT_PATH & Nav
+
+    '---- read columns once, write result once ----
+    RowCount = tblIndex.ListRows.Count
+    Names = tblIndex.ListColumns(2).DataBodyRange.Value
+    Types = tblIndex.ListColumns(TypeCol).DataBodyRange.Value
+    ReDim Result(1 To RowCount, 1 To 1)
+
+    For r = 1 To RowCount
+
+        TopicName = Trim$(CStr(Names(r, 1)))
+        TopicType = UCase$(Trim$(CStr(Types(r, 1))))
+
+        If TopicName = "" Then
+            Result(r, 1) = False
+        Else
+            Select Case TopicType
+                Case "FILE"
+                    Result(r, 1) = (FindExistingFile(ParentPath & TopicName) <> "")
+                Case "FOLDER"
+                    Result(r, 1) = FolderExists(ParentPath & TopicName)
+                Case Else
+                    Result(r, 1) = False
+            End Select
+        End If
+
+    Next r
+
+    tblIndex.ListColumns(ExistsCol).DataBodyRange.Value = Result
+
+Done:
+    Application.ScreenUpdating = PrevScreenUpdating
+    Exit Sub
+
+Fail:
+    MsgBox "Error " & Err.Number & ": " & Err.Description, vbCritical, "CHECK_INDEX_EXISTS"
+    Resume Done
+
+End Sub
+
+
+
+
+' ========================================
+' MODULE: COD_UPDATE_CREATION
+' ========================================
+' ========================================
+' MODULE: COD_UPDATE_CREATION
+' ========================================
+Option Explicit
+
+' Button entry point (optional - normally runs from RecalcCompletion)
+Sub UPDATE_MASTER_CREATION()
+    StopStuff
+    On Error GoTo Fail
+    RecalcCreation
+Done:
+    StartStuff
+    Exit Sub
+Fail:
+    MsgBox "Error " & Err.Number & ": " & Err.Description, vbCritical, "UPDATE_MASTER_CREATION"
+    Resume Done
+End Sub
+
+'==============================================================
+' FILE   = 100 if the file exists on disk, else 0
+' FOLDER = average of its direct children, calculated bottom-up
+' Disk path of a row = ROOT_PATH & MasterColumn\Level1\...\Topic
+' Does NOT call StopStuff/StartStuff.
+'==============================================================
+Public Function RecalcCreation() As Boolean
+
+    Dim tbl As ListObject
+    Dim Data As Variant
+    Dim Result() As Variant
+    Dim Depth() As Long
+    Dim PathKey() As String
+    Dim ParentKey() As String
+    Dim Vals() As Double
+    Dim Cum() As String
+    Dim ChildSum As Object
+    Dim ChildCnt As Object
+
+    Dim Levels As Long, ControlRow As Long
+    Dim TypeCol As Long, CreateCol As Long
+    Dim n As Long, r As Long, j As Long, D As Long, MaxDepth As Long
+    Dim s As String, TopicType As String
+
+    Set tbl = ThisWorkbook.Worksheets("MASTER").ListObjects("MASTER")
+
+    If tbl.DataBodyRange Is Nothing Then Exit Function
+
+    Levels = GetMasterLevels(tbl, ControlRow)
+    If ControlRow = 0 Then
+        MsgBox "MasterLevels control row was not found.", vbCritical
+        Exit Function
+    End If
+
+    TypeCol = FindColumn(tbl, "TOPIC_TYPE")
+    CreateCol = FindColumn(tbl, "CREATION")
+    If TypeCol = 0 Or CreateCol = 0 Then
+        MsgBox "TOPIC_TYPE or CREATION column was not found in MASTER.", vbCritical
+        Exit Function
+    End If
+
+    ' If the drive/root is unavailable every file would read as missing,
+    ' so leave the existing values untouched instead of writing zeros.
+    If Not FolderExists(ROOT_PATH) Then
+        MsgBox "Root folder not found - CREATION was not updated:" & vbCrLf & vbCrLf & ROOT_PATH, _
+               vbExclamation, "RecalcCreation"
+        Exit Function
+    End If
+
+    Data = tbl.DataBodyRange.Value
+    n = UBound(Data, 1)
+
+    ReDim Depth(1 To n)
+    ReDim PathKey(1 To n)
+    ReDim ParentKey(1 To n)
+    ReDim Vals(1 To n)
+    ReDim Cum(0 To Levels)
+
+    '---- depth and keys for every row ----
+    For r = 1 To n
+        If r <> ControlRow Then
+            Cum(0) = Trim$(CStr(Data(r, 2)))
+            For j = 1 To Levels
+                s = Trim$(CStr(Data(r, j + 2)))
+                Cum(j) = Cum(j - 1) & "\" & s
+                If s <> "" Then Depth(r) = j
+            Next j
+            If Depth(r) > 0 Then
+                PathKey(r) = Cum(Depth(r))
+                ParentKey(r) = Cum(Depth(r) - 1)
+                If Depth(r) > MaxDepth Then MaxDepth = Depth(r)
+            End If
+        End If
+    Next r
+
+    '---- FILE rows: check the disk ----
+    For r = 1 To n
+        If Depth(r) > 0 Then
+            If UCase$(Trim$(CStr(Data(r, TypeCol)))) = "FILE" Then
+                If FindExistingFile(ROOT_PATH & PathKey(r)) <> "" Then Vals(r) = 100
+            End If
+        End If
+    Next r
+
+    '---- roll up from deepest level to level 1 ----
+    Set ChildSum = CreateObject("Scripting.Dictionary")
+    Set ChildCnt = CreateObject("Scripting.Dictionary")
+    ChildSum.CompareMode = vbTextCompare
+    ChildCnt.CompareMode = vbTextCompare
+
+    For D = MaxDepth To 1 Step -1
+        For r = 1 To n
+            If Depth(r) = D Then
+
+                TopicType = UCase$(Trim$(CStr(Data(r, TypeCol))))
+
+                If TopicType = "FOLDER" Then
+                    If ChildCnt.Exists(PathKey(r)) Then
+                        Vals(r) = ChildSum(PathKey(r)) / ChildCnt(PathKey(r))
+                    Else
+                        Vals(r) = 0
+                    End If
+                End If
+
+                If D > 1 Then
+                    If ChildCnt.Exists(ParentKey(r)) Then
+                        ChildSum(ParentKey(r)) = ChildSum(ParentKey(r)) + Vals(r)
+                        ChildCnt(ParentKey(r)) = ChildCnt(ParentKey(r)) + 1
+                    Else
+                        ChildSum.Add ParentKey(r), Vals(r)
+                        ChildCnt.Add ParentKey(r), 1
+                    End If
+                End If
+
+            End If
+        Next r
+    Next D
+
+    '---- write back (rows that are not FILE/FOLDER keep their value) ----
+    ReDim Result(1 To n, 1 To 1)
+
+    For r = 1 To n
+        TopicType = UCase$(Trim$(CStr(Data(r, TypeCol))))
+        If Depth(r) > 0 And (TopicType = "FILE" Or TopicType = "FOLDER") Then
+            Result(r, 1) = Round(Vals(r), 2)
+        Else
+            Result(r, 1) = Data(r, CreateCol)
+        End If
+    Next r
+
+    With tbl.ListColumns(CreateCol).DataBodyRange
+        .Value = Result
+        .NumberFormat = "0.00"
+    End With
+
+    RecalcCreation = True
+
+End Function
+
+
+
+
+' ========================================
+' MODULE: COD_COPY_PROMPT
+' ========================================
+' ========================================
+' MODULE: COD_NEXT_TOPIC
+' ========================================
+Option Explicit
+
+' True  = if the selected row is a FOLDER, the next target is the first file inside it
+' False = if the selected row is a FOLDER, the next target is after the whole folder
+Private Const DESCEND_INTO_FOLDER As Boolean = True
+Private Const SEP As String = " - "          ' between topic name and description
+
+' MASTER snapshot used by the helpers below
+Private mN As Long
+Private mDepth() As Long
+Private mPath() As String
+Private mParent() As String
+Private mKind() As String
+
+'==============================================================
+' COPY_AND_GO_NEXT
+' 1) copies "YES THE NEXT IS <selected> / THEN WE WILL STUDY <next>"
+' 2) navigates to <next> and selects its row in INDEX
+'==============================================================
+Sub COPY_AND_GO_NEXT()
+
+    Dim tblMaster As ListObject
+    Dim tblIndex As ListObject
+    Dim Data As Variant
+    Dim IData As Variant
+    Dim Cum() As String
+    Dim Nav As String
+    Dim TopicName As String
+    Dim TopicType As String
+    Dim TargetNav As String
+    Dim TargetName As String
+    Dim Txt As String
+    Dim s As String
+    Dim Levels As Long, ControlRow As Long
+    Dim TypeCol As Long, DescCol As Long
+    Dim r As Long, j As Long
+    Dim CurRow As Long, NextRow As Long
+
+    StopStuff
+    On Error GoTo Fail
+
+    If Not GetSelectedTopic(TopicName, TopicType) Then GoTo Done
+
+    Nav = CStr(NavigationCell.Value)
+    If Nav = "" Then
+        MsgBox "NR_NAVIGATION is empty.", vbCritical
+        GoTo Done
+    End If
+    If Right$(Nav, 1) <> "\" Then Nav = Nav & "\"
+
+    '---- save INDEX edits so MASTER is current ----
+    If Not SaveIndexToMaster() Then GoTo Done
+
+    Set tblMaster = ThisWorkbook.Worksheets("MASTER").ListObjects("MASTER")
+    Set tblIndex = ThisWorkbook.Worksheets("INDEX").ListObjects("INDEX")
+
+    Levels = GetMasterLevels(tblMaster, ControlRow)
+    If ControlRow = 0 Then
+        MsgBox "MasterLevels control row was not found.", vbCritical
+        GoTo Done
+    End If
+
+    TypeCol = FindColumn(tblMaster, "TOPIC_TYPE")
+    If TypeCol = 0 Then
+        MsgBox "TOPIC_TYPE column was not found in MASTER.", vbCritical
+        GoTo Done
+    End If
+    DescCol = Levels + 3                       ' INDEX col 3 <-> MASTER col 3 + Levels
+
+    '---- snapshot MASTER: depth, path, parent, type of every row ----
+    Data = tblMaster.DataBodyRange.Value
+    mN = UBound(Data, 1)
+    ReDim mDepth(1 To mN)
+    ReDim mPath(1 To mN)
+    ReDim mParent(1 To mN)
+    ReDim mKind(1 To mN)
+    ReDim Cum(0 To Levels)
+
+    For r = 1 To mN
+        If r <> ControlRow Then
+            Cum(0) = Trim$(CStr(Data(r, 2)))
+            For j = 1 To Levels
+                s = Trim$(CStr(Data(r, j + 2)))
+                Cum(j) = Cum(j - 1) & "\" & s
+                If s <> "" Then mDepth(r) = j
+            Next j
+            If mDepth(r) > 0 Then
+                mPath(r) = Cum(mDepth(r))
+                mParent(r) = Cum(mDepth(r) - 1)
+                mKind(r) = UCase$(Trim$(CStr(Data(r, TypeCol))))
+            End If
+        End If
+    Next r
+
+    '---- locate the selected topic in MASTER ----
+    CurRow = FindRow(Nav & TopicName)
+    If CurRow = 0 Then
+        MsgBox "The selected topic was not found in MASTER:" & vbCrLf & vbCrLf & Nav & TopicName, vbCritical
+        GoTo Done
+    End If
+
+    NextRow = FindNext(CurRow)
+
+    '---- no next topic: copy line 1 only ----
+    If NextRow = 0 Then
+        CopyToClipboard "YES THE NEXT IS " & Label(TopicName, CStr(Data(CurRow, DescCol)))
+        MsgBox "This is the last topic - there is nothing after it.", vbInformation, "COPY_AND_GO_NEXT"
+        GoTo Done
+    End If
+
+    TargetNav = mParent(NextRow) & "\"
+    TargetName = Mid$(mPath(NextRow), Len(mParent(NextRow)) + 2)
+
+    '---- build and copy the text (path only when the folder changes) ----
+    Txt = "YES THE NEXT IS " & Label(TopicName, CStr(Data(CurRow, DescCol))) & vbNewLine & _
+          "THEN WE WILL STUDY "
+    If StrComp(TargetNav, Nav, vbTextCompare) <> 0 Then Txt = Txt & TargetNav
+    Txt = Txt & Label(TargetName, CStr(Data(NextRow, DescCol)))
+
+    If Not CopyToClipboard(Txt) Then
+        MsgBox "Could not copy to the clipboard. Navigation will continue.", vbExclamation, "COPY_AND_GO_NEXT"
+    End If
+
+    '---- navigate to the target and select its row ----
+    If Not LoadIndex(TargetNav) Then GoTo Done
+    CHECK_INDEX_EXISTS
+
+    ThisWorkbook.Worksheets("INDEX").Activate
+    IData = tblIndex.ListColumns(2).DataBodyRange.Value
+    For r = 1 To UBound(IData, 1)
+        If StrComp(Trim$(CStr(IData(r, 1))), TargetName, vbTextCompare) = 0 Then
+            tblIndex.DataBodyRange.Cells(r, 2).Select
+            Exit For
+        End If
+    Next r
+
+Done:
+    StartStuff
+    Exit Sub
+
+Fail:
+    MsgBox "Error " & Err.Number & ": " & Err.Description, vbCritical, "COPY_AND_GO_NEXT"
+    Resume Done
+
+End Sub
+
+'--------------------------------------------------------------
+' NEXT-TOPIC SEARCH
+'--------------------------------------------------------------
+
+' Next FILE in curriculum order after row r (0 = none)
+Private Function FindNext(ByVal CurRow As Long) As Long
+
+    Dim node As Long, sib As Long, hit As Long
+
+    If DESCEND_INTO_FOLDER And mKind(CurRow) = "FOLDER" Then
+        hit = FirstLeaf(CurRow)
+        If hit > 0 Then FindNext = hit: Exit Function
+    End If
+
+    node = CurRow
+    Do While node > 0
+        sib = NextSibling(node)
+        Do While sib > 0                       ' next sibling: file, or first file inside folder
+            hit = FirstLeaf(sib)
+            If hit > 0 Then FindNext = hit: Exit Function
+            sib = NextSibling(sib)             ' empty folder - skip it
+        Loop
+        node = FindRow(mParent(node))          ' last in its folder: go a level up
+    Loop
+
+End Function
+
+' The row itself if it is not a FOLDER; otherwise the first file found inside it
+Private Function FirstLeaf(ByVal r As Long) As Long
+
+    Dim k As Long, hit As Long
+
+    If mKind(r) <> "FOLDER" Then FirstLeaf = r: Exit Function
+
+    For k = 1 To mN
+        If mDepth(k) = mDepth(r) + 1 Then
+            If StrComp(mParent(k), mPath(r), vbTextCompare) = 0 Then
+                hit = FirstLeaf(k)
+                If hit > 0 Then FirstLeaf = hit: Exit Function
+            End If
+        End If
+    Next k
+
+End Function
+
+Private Function NextSibling(ByVal r As Long) As Long
+
+    Dim k As Long
+
+    For k = r + 1 To mN
+        If mDepth(k) = mDepth(r) Then
+            If StrComp(mParent(k), mParent(r), vbTextCompare) = 0 Then
+                NextSibling = k
+                Exit Function
+            End If
+        End If
+    Next k
+
+End Function
+
+Private Function FindRow(ByVal Key As String) As Long
+
+    Dim k As Long
+
+    If Key = "" Then Exit Function
+    For k = 1 To mN
+        If mDepth(k) > 0 Then
+            If StrComp(mPath(k), Key, vbTextCompare) = 0 Then
+                FindRow = k
+                Exit Function
+            End If
+        End If
+    Next k
+
+End Function
+
+'--------------------------------------------------------------
+' TEXT / CLIPBOARD HELPERS
+'--------------------------------------------------------------
+Private Function Label(ByVal Topic As String, ByVal Desc As String) As String
+    Desc = Trim$(Desc)
+    If Desc = "" Then Label = Topic Else Label = Topic & SEP & Desc
+End Function
+
+Private Function CopyToClipboard(ByVal Txt As String) As Boolean
+    On Error GoTo Fail
+    With CreateObject("new:{1C3B4210-F441-11CE-B9EA-00AA006B1A69}")   ' MSForms DataObject, late bound
+        .SetText Txt
+        .PutInClipboard
+    End With
+    CopyToClipboard = True
+    Exit Function
+Fail:
+End Function
+
+'==============================================================
+' COPY_ONLY
+' Copies "YES THE NEXT IS <selected> / THEN WE WILL STUDY <next>"
+' to the clipboard. Does NOT navigate and does NOT change the selection.
+'==============================================================
+Sub COPY_ONLY()
+
+    Dim tblMaster As ListObject
+    Dim Data As Variant
+    Dim Cum() As String
+    Dim Nav As String
+    Dim TopicName As String
+    Dim TopicType As String
+    Dim TargetNav As String
+    Dim TargetName As String
+    Dim Txt As String
+    Dim s As String
+    Dim Levels As Long, ControlRow As Long
+    Dim TypeCol As Long, DescCol As Long
+    Dim r As Long, j As Long
+    Dim CurRow As Long, NextRow As Long
+
+    StopStuff
+    On Error GoTo Fail
+
+    If Not GetSelectedTopic(TopicName, TopicType) Then GoTo Done
+
+    Nav = CStr(NavigationCell.Value)
+    If Nav = "" Then
+        MsgBox "NR_NAVIGATION is empty.", vbCritical
+        GoTo Done
+    End If
+    If Right$(Nav, 1) <> "\" Then Nav = Nav & "\"
+
+    '---- save INDEX edits so MASTER is current ----
+    If Not SaveIndexToMaster() Then GoTo Done
+
+    Set tblMaster = ThisWorkbook.Worksheets("MASTER").ListObjects("MASTER")
+
+    Levels = GetMasterLevels(tblMaster, ControlRow)
+    If ControlRow = 0 Then
+        MsgBox "MasterLevels control row was not found.", vbCritical
+        GoTo Done
+    End If
+
+    TypeCol = FindColumn(tblMaster, "TOPIC_TYPE")
+    If TypeCol = 0 Then
+        MsgBox "TOPIC_TYPE column was not found in MASTER.", vbCritical
+        GoTo Done
+    End If
+    DescCol = Levels + 3
+
+    '---- snapshot MASTER ----
+    Data = tblMaster.DataBodyRange.Value
+    mN = UBound(Data, 1)
+    ReDim mDepth(1 To mN)
+    ReDim mPath(1 To mN)
+    ReDim mParent(1 To mN)
+    ReDim mKind(1 To mN)
+    ReDim Cum(0 To Levels)
+
+    For r = 1 To mN
+        If r <> ControlRow Then
+            Cum(0) = Trim$(CStr(Data(r, 2)))
+            For j = 1 To Levels
+                s = Trim$(CStr(Data(r, j + 2)))
+                Cum(j) = Cum(j - 1) & "\" & s
+                If s <> "" Then mDepth(r) = j
+            Next j
+            If mDepth(r) > 0 Then
+                mPath(r) = Cum(mDepth(r))
+                mParent(r) = Cum(mDepth(r) - 1)
+                mKind(r) = UCase$(Trim$(CStr(Data(r, TypeCol))))
+            End If
+        End If
+    Next r
+
+    '---- locate the selected topic ----
+    CurRow = FindRow(Nav & TopicName)
+    If CurRow = 0 Then
+        MsgBox "The selected topic was not found in MASTER:" & vbCrLf & vbCrLf & Nav & TopicName, vbCritical
+        GoTo Done
+    End If
+
+    NextRow = FindNext(CurRow)
+
+    '---- no next topic: copy line 1 only ----
+    If NextRow = 0 Then
+        CopyToClipboard "YES THE NEXT IS " & Label(TopicName, CStr(Data(CurRow, DescCol)))
+        MsgBox "This is the last topic - there is nothing after it.", vbInformation, "COPY_ONLY"
+        GoTo Done
+    End If
+
+    TargetNav = mParent(NextRow) & "\"
+    TargetName = Mid$(mPath(NextRow), Len(mParent(NextRow)) + 2)
+
+    '---- build and copy the text (path only when the folder changes) ----
+    Txt = "YES THE NEXT IS " & Label(TopicName, CStr(Data(CurRow, DescCol))) & vbNewLine & _
+          "THEN WE WILL STUDY "
+    If StrComp(TargetNav, Nav, vbTextCompare) <> 0 Then Txt = Txt & TargetNav
+    Txt = Txt & Label(TargetName, CStr(Data(NextRow, DescCol)))
+
+    If Not CopyToClipboard(Txt) Then
+        MsgBox "Could not copy to the clipboard.", vbExclamation, "COPY_ONLY"
+    End If
+
+Done:
+    StartStuff
+    Exit Sub
+
+Fail:
+    MsgBox "Error " & Err.Number & ": " & Err.Description, vbCritical, "COPY_ONLY"
+    Resume Done
+
+End Sub
+'==============================================================
+' GO_NEXT_THEN_COPY
+' 1) navigates to the next topic and selects its row in INDEX
+' 2) then copies "YES THE NEXT IS <new topic> / THEN WE WILL STUDY <topic after it>"
+'==============================================================
+Sub GO_NEXT_THEN_COPY()
+
+    Dim tblMaster As ListObject
+    Dim tblIndex As ListObject
+    Dim Data As Variant
+    Dim IData As Variant
+    Dim Cum() As String
+    Dim Nav As String
+    Dim TopicName As String
+    Dim TopicType As String
+    Dim NewNav As String
+    Dim NewName As String
+    Dim FollowNav As String
+    Dim FollowName As String
+    Dim Txt As String
+    Dim s As String
+    Dim Levels As Long, ControlRow As Long
+    Dim TypeCol As Long, DescCol As Long
+    Dim r As Long, j As Long
+    Dim CurRow As Long, NewRow As Long, FollowRow As Long
+
+    StopStuff
+    On Error GoTo Fail
+
+    If Not GetSelectedTopic(TopicName, TopicType) Then GoTo Done
+
+    Nav = CStr(NavigationCell.Value)
+    If Nav = "" Then
+        MsgBox "NR_NAVIGATION is empty.", vbCritical
+        GoTo Done
+    End If
+    If Right$(Nav, 1) <> "\" Then Nav = Nav & "\"
+
+    '---- save INDEX edits so MASTER is current ----
+    If Not SaveIndexToMaster() Then GoTo Done
+
+    Set tblMaster = ThisWorkbook.Worksheets("MASTER").ListObjects("MASTER")
+    Set tblIndex = ThisWorkbook.Worksheets("INDEX").ListObjects("INDEX")
+
+    Levels = GetMasterLevels(tblMaster, ControlRow)
+    If ControlRow = 0 Then
+        MsgBox "MasterLevels control row was not found.", vbCritical
+        GoTo Done
+    End If
+
+    TypeCol = FindColumn(tblMaster, "TOPIC_TYPE")
+    If TypeCol = 0 Then
+        MsgBox "TOPIC_TYPE column was not found in MASTER.", vbCritical
+        GoTo Done
+    End If
+    DescCol = Levels + 3
+
+    '---- snapshot MASTER ----
+    Data = tblMaster.DataBodyRange.Value
+    mN = UBound(Data, 1)
+    ReDim mDepth(1 To mN)
+    ReDim mPath(1 To mN)
+    ReDim mParent(1 To mN)
+    ReDim mKind(1 To mN)
+    ReDim Cum(0 To Levels)
+
+    For r = 1 To mN
+        If r <> ControlRow Then
+            Cum(0) = Trim$(CStr(Data(r, 2)))
+            For j = 1 To Levels
+                s = Trim$(CStr(Data(r, j + 2)))
+                Cum(j) = Cum(j - 1) & "\" & s
+                If s <> "" Then mDepth(r) = j
+            Next j
+            If mDepth(r) > 0 Then
+                mPath(r) = Cum(mDepth(r))
+                mParent(r) = Cum(mDepth(r) - 1)
+                mKind(r) = UCase$(Trim$(CStr(Data(r, TypeCol))))
+            End If
+        End If
+    Next r
+
+    '---- locate the selected topic, then the next one ----
+    CurRow = FindRow(Nav & TopicName)
+    If CurRow = 0 Then
+        MsgBox "The selected topic was not found in MASTER:" & vbCrLf & vbCrLf & Nav & TopicName, vbCritical
+        GoTo Done
+    End If
+
+    NewRow = FindNext(CurRow)
+    If NewRow = 0 Then
+        MsgBox "This is the last topic - there is nothing after it.", vbInformation, "GO_NEXT_THEN_COPY"
+        GoTo Done
+    End If
+
+    NewNav = mParent(NewRow) & "\"
+    NewName = Mid$(mPath(NewRow), Len(mParent(NewRow)) + 2)
+
+    '---- 1) navigate to the new topic and select its row ----
+    If Not LoadIndex(NewNav) Then GoTo Done
+    CHECK_INDEX_EXISTS
+
+    ThisWorkbook.Worksheets("INDEX").Activate
+    IData = tblIndex.ListColumns(2).DataBodyRange.Value
+    For r = 1 To UBound(IData, 1)
+        If StrComp(Trim$(CStr(IData(r, 1))), NewName, vbTextCompare) = 0 Then
+            tblIndex.DataBodyRange.Cells(r, 2).Select
+            Exit For
+        End If
+    Next r
+
+    '---- 2) copy: the new topic is now "selected", so look one step further ----
+    FollowRow = FindNext(NewRow)
+
+    If FollowRow = 0 Then
+        CopyToClipboard "YES THE NEXT IS " & Label(NewName, CStr(Data(NewRow, DescCol)))
+        MsgBox "You are now on the last topic - there is nothing after it.", vbInformation, "GO_NEXT_THEN_COPY"
+        GoTo Done
+    End If
+
+    FollowNav = mParent(FollowRow) & "\"
+    FollowName = Mid$(mPath(FollowRow), Len(mParent(FollowRow)) + 2)
+
+    Txt = "YES THE NEXT IS " & Label(NewName, CStr(Data(NewRow, DescCol))) & vbNewLine & _
+          "THEN WE WILL STUDY "
+    If StrComp(FollowNav, NewNav, vbTextCompare) <> 0 Then Txt = Txt & FollowNav
+    Txt = Txt & Label(FollowName, CStr(Data(FollowRow, DescCol)))
+
+    If Not CopyToClipboard(Txt) Then
+        MsgBox "Could not copy to the clipboard.", vbExclamation, "GO_NEXT_THEN_COPY"
+    End If
+
+Done:
+    StartStuff
+    Exit Sub
+
+Fail:
+    MsgBox "Error " & Err.Number & ": " & Err.Description, vbCritical, "GO_NEXT_THEN_COPY"
+    Resume Done
+
+End Sub
+
+'==============================================================
+' EXPORT_PROMPTS_TO_TEXT
+' Starting at the selected topic, builds every prompt in curriculum
+' order and writes them, numbered, to ONE UTF-8 text file:
+'
+'   [0001]
+'   YES THE NEXT IS <path>\<topic> - <description>
+'   THEN WE WILL STUDY <path>\<next topic> - <description>
+'
+' Stops before the first topic whose level-1 folder is 03_LEADERSHIP_SKILLS.
+' Does NOT navigate and does NOT touch the clipboard.
+'==============================================================
+Sub EXPORT_PROMPTS_TO_TEXT()
+
+    Const STOP_LEVEL1 As String = "03_LEADERSHIP_SKILLS"
+
+    Dim tblMaster As ListObject
+    Dim Data As Variant
+    Dim Cum() As String
+    Dim Out() As String
+    Dim Nav As String
+    Dim TopicName As String
+    Dim TopicType As String
+    Dim CurName As String
+    Dim NxtName As String
+    Dim Txt As String
+    Dim s As String
+    Dim FilePath As Variant
+    Dim Levels As Long, ControlRow As Long
+    Dim TypeCol As Long, DescCol As Long
+    Dim r As Long, j As Long
+    Dim CurRow As Long, NextRow As Long
+    Dim Cnt As Long
+
+    StopStuff
+    On Error GoTo Fail
+
+    If Not GetSelectedTopic(TopicName, TopicType) Then GoTo Done
+
+    Nav = CStr(NavigationCell.Value)
+    If Nav = "" Then
+        MsgBox "NR_NAVIGATION is empty.", vbCritical
+        GoTo Done
+    End If
+    If Right$(Nav, 1) <> "\" Then Nav = Nav & "\"
+
+    '---- save INDEX edits so MASTER is current ----
+    If Not SaveIndexToMaster() Then GoTo Done
+
+    Set tblMaster = ThisWorkbook.Worksheets("MASTER").ListObjects("MASTER")
+
+    Levels = GetMasterLevels(tblMaster, ControlRow)
+    If ControlRow = 0 Then
+        MsgBox "MasterLevels control row was not found.", vbCritical
+        GoTo Done
+    End If
+
+    TypeCol = FindColumn(tblMaster, "TOPIC_TYPE")
+    If TypeCol = 0 Then
+        MsgBox "TOPIC_TYPE column was not found in MASTER.", vbCritical
+        GoTo Done
+    End If
+    DescCol = Levels + 3
+
+    '---- load MASTER once and snapshot depth/path/parent/type ----
+    Data = tblMaster.DataBodyRange.Value
+    mN = UBound(Data, 1)
+    ReDim mDepth(1 To mN)
+    ReDim mPath(1 To mN)
+    ReDim mParent(1 To mN)
+    ReDim mKind(1 To mN)
+    ReDim Cum(0 To Levels)
+
+    For r = 1 To mN
+        If r <> ControlRow Then
+            Cum(0) = Trim$(CStr(Data(r, 2)))
+            For j = 1 To Levels
+                s = Trim$(CStr(Data(r, j + 2)))
+                Cum(j) = Cum(j - 1) & "\" & s
+                If s <> "" Then mDepth(r) = j
+            Next j
+            If mDepth(r) > 0 Then
+                mPath(r) = Cum(mDepth(r))
+                mParent(r) = Cum(mDepth(r) - 1)
+                mKind(r) = UCase$(Trim$(CStr(Data(r, TypeCol))))
+            End If
+        End If
+    Next r
+
+    '---- locate the selected topic ----
+    CurRow = FindRow(Nav & TopicName)
+    If CurRow = 0 Then
+        MsgBox "The selected topic was not found in MASTER:" & vbCrLf & vbCrLf & Nav & TopicName, vbCritical
+        GoTo Done
+    End If
+
+    If StrComp(Trim$(CStr(Data(CurRow, 3))), STOP_LEVEL1, vbTextCompare) = 0 Then
+        MsgBox "The selected topic is already inside " & STOP_LEVEL1 & ".", vbInformation, "EXPORT_PROMPTS_TO_TEXT"
+        GoTo Done
+    End If
+
+    '---- walk the curriculum, building the processed array ----
+    ReDim Out(1 To 512)
+    Do While CurRow > 0
+
+        NextRow = FindNext(CurRow)
+        If NextRow > 0 Then
+            If StrComp(Trim$(CStr(Data(NextRow, 3))), STOP_LEVEL1, vbTextCompare) = 0 Then NextRow = 0
+        End If
+
+        CurName = Mid$(mPath(CurRow), Len(mParent(CurRow)) + 2)
+        Txt = "YES THE NEXT IS " & mParent(CurRow) & "\" & Label(CurName, CStr(Data(CurRow, DescCol)))
+
+        If NextRow > 0 Then
+            NxtName = Mid$(mPath(NextRow), Len(mParent(NextRow)) + 2)
+            Txt = Txt & vbNewLine & "THEN WE WILL STUDY " & mParent(NextRow) & "\" & Label(NxtName, CStr(Data(NextRow, DescCol)))
+        End If
+
+        Cnt = Cnt + 1
+        If Cnt > UBound(Out) Then ReDim Preserve Out(1 To UBound(Out) * 2)
+        Out(Cnt) = "[" & Format$(Cnt, "0000") & "]" & vbNewLine & Txt
+
+        CurRow = NextRow
+    Loop
+
+    ReDim Preserve Out(1 To Cnt)
+
+    '---- ask where to save, then write everything in one go ----
+    FilePath = Application.GetSaveAsFilename( _
+        InitialFileName:=ThisWorkbook.Path & "\PROMPTS_" & Format$(Now, "yyyymmdd_hhnnss") & ".txt", _
+        FileFilter:="Text Files (*.txt), *.txt", _
+        Title:="Save extracted prompts")
+    If VarType(FilePath) = vbBoolean Then GoTo Done        ' cancelled
+
+    If Not WriteUtf8(CStr(FilePath), Join(Out, vbNewLine & vbNewLine & String$(40, "-") & vbNewLine & vbNewLine)) Then
+        MsgBox "Could not write the file:" & vbCrLf & CStr(FilePath), vbCritical, "EXPORT_PROMPTS_TO_TEXT"
+        GoTo Done
+    End If
+
+    MsgBox Cnt & " prompts exported to:" & vbCrLf & vbCrLf & CStr(FilePath), vbInformation, "EXPORT_PROMPTS_TO_TEXT"
+
+Done:
+    StartStuff
+    Exit Sub
+
+Fail:
+    MsgBox "Error " & Err.Number & ": " & Err.Description, vbCritical, "EXPORT_PROMPTS_TO_TEXT"
+    Resume Done
+
+End Sub
+
+' Writes a string to a UTF-8 text file (late bound, no reference needed)
+Private Function WriteUtf8(ByVal FilePath As String, ByVal Txt As String) As Boolean
+    On Error GoTo Fail
+    With CreateObject("ADODB.Stream")
+        .Type = 2                    ' adTypeText
+        .Charset = "utf-8"
+        .Open
+        .WriteText Txt
+        .SaveToFile FilePath, 2      ' adSaveCreateOverWrite
+        .Close
+    End With
+    WriteUtf8 = True
+    Exit Function
+Fail:
+End Function
+
+
+

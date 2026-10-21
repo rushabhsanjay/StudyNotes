@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01_Drive_Arch: Variable Frequency Drive Architecture</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">01_Drive_Arch: Variable Frequency Drive Architecture</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-of-a-variable-frequency-drive">1. Definition of a Variable Frequency Drive</a><ul>
+<li><a href="#why-is-a-vfd-required">Why is a VFD required?</a></li>
+</ul>
+</li>
+<li><a href="#2-overall-vfd-architecture">2. Overall VFD Architecture</a></li>
+<li><a href="#3-main-functional-sections-of-a-vfd">3. Main Functional Sections of a VFD</a></li>
+<li><a href="#4-input-and-protection-section">4. Input and Protection Section</a><ul>
+<li><a href="#main-functions">Main functions</a></li>
+<li><a href="#associated-components">Associated components</a></li>
+</ul>
+</li>
+<li><a href="#5-rectifier-section-ac-to-dc-conversion">5. Rectifier Section: AC to DC Conversion</a><ul>
+<li><a href="#six-diode-bridge-concept">Six-diode bridge concept</a></li>
+<li><a href="#approximate-dc-bus-voltage">Approximate DC bus voltage</a></li>
+<li><a href="#common-rectifier-faults">Common rectifier faults</a></li>
+</ul>
+</li>
+<li><a href="#6-dc-link-the-intermediate-dc-bus">6. DC Link: The Intermediate DC Bus</a><ul>
+<li><a href="#why-is-the-dc-link-needed">Why is the DC link needed?</a></li>
+<li><a href="#dc-bus-voltage-monitoring">DC bus voltage monitoring</a></li>
+<li><a href="#dc-bus-safety">DC bus safety</a></li>
+</ul>
+</li>
+<li><a href="#7-inverter-section-dc-to-variable-frequency-ac">7. Inverter Section: DC to Variable-Frequency AC</a><ul>
+<li><a href="#conceptual-three-phase-inverter">Conceptual three-phase inverter</a></li>
+<li><a href="#what-does-pwm-mean">What does PWM mean?</a></li>
+<li><a href="#common-inverter-faults">Common inverter faults</a></li>
+</ul>
+</li>
+<li><a href="#8-control-electronics-and-gate-drivers">8. Control Electronics and Gate Drivers</a><ul>
+<li><a href="#control-sequence">Control sequence</a></li>
+<li><a href="#gate-drivers">Gate drivers</a></li>
+<li><a href="#control-board-versus-power-board">Control board versus power board</a></li>
+</ul>
+</li>
+<li><a href="#9-cooling-and-thermal-management">9. Cooling and Thermal Management</a><ul>
+<li><a href="#why-cooling-matters">Why cooling matters</a></li>
+</ul>
+</li>
+<li><a href="#10-feedback-and-sensing">10. Feedback and Sensing</a></li>
+<li><a href="#11-motor-control-methods">11. Motor Control Methods</a><ul>
+<li><a href="#111-vf-or-scalar-control">11.1 V/f or scalar control</a></li>
+<li><a href="#112-sensorless-vector-control">11.2 Sensorless vector control</a></li>
+<li><a href="#113-closed-loop-vector-control">11.3 Closed-loop vector control</a></li>
+<li><a href="#comparison">Comparison</a></li>
+</ul>
+</li>
+<li><a href="#12-braking-and-regenerative-energy">12. Braking and Regenerative Energy</a><ul>
+<li><a href="#braking-resistor-arrangement">Braking resistor arrangement</a></li>
+<li><a href="#regenerative-drive">Regenerative drive</a></li>
+<li><a href="#typical-symptoms-of-braking-related-problems">Typical symptoms of braking-related problems</a></li>
+</ul>
+</li>
+<li><a href="#13-vfd-interfaces-in-industrial-automation">13. VFD Interfaces in Industrial Automation</a><ul>
+<li><a href="#hardwired-interface">Hardwired interface</a></li>
+<li><a href="#communication-interface">Communication interface</a></li>
+<li><a href="#example-plc-controlled-conveyor">Example: PLC-controlled conveyor</a></li>
+</ul>
+</li>
+<li><a href="#14-vfd-protection-functions">14. VFD Protection Functions</a></li>
+<li><a href="#15-reading-a-vfd-nameplate-and-ratings">15. Reading a VFD Nameplate and Ratings</a><ul>
+<li><a href="#why-output-current-matters">Why output current matters</a></li>
+</ul>
+</li>
+<li><a href="#16-common-architecture-related-troubleshooting">16. Common Architecture-Related Troubleshooting</a></li>
+<li><a href="#17-maintenance-engineers-architecture-checklist">17. Maintenance Engineer's Architecture Checklist</a></li>
+<li><a href="#18-interview-questions-and-answers">18. Interview Questions and Answers</a></li>
+<li><a href="#19-practical-exercises">19. Practical Exercises</a></li>
+<li><a href="#20-final-mental-model">20. Final Mental Model</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\02_Auto_Tech\04_VFD\01_Drive_Arch</code></p>
+<h2 id="1-definition-of-a-variable-frequency-drive">1. Definition of a Variable Frequency Drive</h2>
+<p>A Variable Frequency Drive (VFD) is an electronic device that controls the speed and torque of an AC motor by controlling the electrical power supplied to it, primarily through adjustment of the output frequency and voltage.</p>
+<p>VFDs are widely used in industrial automation to control:</p>
+<ul>
+<li>Conveyor motors.</li>
+<li>Cooling fans and exhaust systems.</li>
+<li>Pumps.</li>
+<li>Hydraulic power-pack motors.</li>
+<li>Blowers.</li>
+<li>Machine spindles and auxiliary drives.</li>
+<li>Automotive manufacturing equipment.</li>
+<li>Robot-related peripheral equipment and transfer systems.</li>
+</ul>
+<p>A VFD is also called an AC drive, variable speed drive (VSD), or adjustable frequency drive. These terms overlap in industrial usage, although VSD is a broader term that can include DC drives and other variable-speed technologies.</p>
+<h3 id="why-is-a-vfd-required">Why is a VFD required?</h3>
+<p>Consider a conveyor motor rated at 50 Hz. When connected directly to a fixed-frequency supply, its operating speed is largely determined by the supply frequency, motor pole count, and load.</p>
+<p>A VFD allows the control system to change the motor's operating frequency, enabling controlled acceleration, deceleration, and speed adjustment.</p>
+<p>For example, a conveyor might run at a lower speed during setup and at its production speed during normal operation. The VFD can execute these changes according to its configuration and the machine's requirements.</p>
+<p>A VFD does not automatically make every motor application suitable for every speed. Motor cooling, torque requirements, mechanical limits, and the drive's operating envelope still matter.</p>
+<h2 id="2-overall-vfd-architecture">2. Overall VFD Architecture</h2>
+<p>The main power-conversion path of a typical AC VFD is:</p>
+<pre><code>      THREE-PHASE AC SUPPLY
+          R / S / T
+               |
+               v
+      +-------------------+
+      | Input Protection  |
+      | and Switching     |
+      +-------------------+
+               |
+               v
+      +-------------------+
+      | Rectifier         |
+      | AC to DC          |
+      +-------------------+
+               |
+               v
+      +-------------------+
+      | DC Link /         |
+      | DC Bus             |
+      +-------------------+
+               |
+               v
+      +-------------------+
+      | Inverter          |
+      | DC to Variable AC |
+      +-------------------+
+               |
+               v
+       U / V / W OUTPUT
+               |
+               v
+          AC MOTOR
+</code></pre>
+<p>The VFD also contains control electronics, sensing circuits, gate drivers, protective functions, and a cooling arrangement.</p>
+<pre><code>          CONTROL AND FEEDBACK
+                    |
+        +-----------+-----------+
+        |                       |
+        v                       v
++---------------+       +---------------+
+| Control       |&lt;-----&gt;| Sensors and   |
+| Processor     |       | Feedback      |
++-------+-------+       +---------------+
+        |
+        v
++---------------+
+| Gate Driver   |
+| Circuits      |
++-------+-------+
+        |
+        v
++---------------+
+| Power         |
+| Semiconductor |
+| Stage         |
++---------------+
+</code></pre>
+<p>The first diagram shows the main power path. The second shows the conceptual control path. Actual internal architectures vary by manufacturer and drive family.</p>
+<h2 id="3-main-functional-sections-of-a-vfd">3. Main Functional Sections of a VFD</h2>
+<p>A typical VFD contains six major functional sections:</p>
+<ol>
+<li>Input and protection section.</li>
+<li>Rectifier section.</li>
+<li>DC link section.</li>
+<li>Inverter section.</li>
+<li>Control and gate-drive section.</li>
+<li>Cooling, sensing, and protection section.</li>
+</ol>
+<p>Some drives include additional sections, such as braking choppers, internal EMC filters, line reactors, communication interfaces, or regenerative power stages.</p>
+<h2 id="4-input-and-protection-section">4. Input and Protection Section</h2>
+<p>The input section receives electrical power from the supply and provides the required connection and protection arrangements.</p>
+<p>Typical input connections on a three-phase drive are labelled:</p>
+<ul>
+<li><code>R/L1</code></li>
+<li><code>S/L2</code></li>
+<li><code>T/L3</code></li>
+</ul>
+<p>Some manufacturers use different terminal names, so the drive's wiring diagram is authoritative.</p>
+<h3 id="main-functions">Main functions</h3>
+<ul>
+<li>Receive the AC supply.</li>
+<li>Provide an interface for the incoming power conductors.</li>
+<li>Work with the upstream protective device.</li>
+<li>Support electromagnetic compatibility measures where provided.</li>
+<li>Protect the drive against specified electrical faults through its internal monitoring and protective functions.</li>
+</ul>
+<h3 id="associated-components">Associated components</h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MCCB or circuit breaker</td>
+<td>Provides specified overcurrent and short-circuit protection</td>
+</tr>
+<tr>
+<td>Fuses</td>
+<td>Provide protection according to their type and application</td>
+</tr>
+<tr>
+<td>Contactor</td>
+<td>Provides an appropriate switching or isolation function when correctly selected</td>
+</tr>
+<tr>
+<td>Line reactor</td>
+<td>Reduces certain supply-side current harmonics and limits some current transients</td>
+</tr>
+<tr>
+<td>EMC/RFI filter</td>
+<td>Reduces conducted electromagnetic interference within its rated application</td>
+</tr>
+<tr>
+<td>Surge protective device</td>
+<td>Limits specified transient overvoltages</td>
+</tr>
+<tr>
+<td>Earthing connection</td>
+<td>Provides a protective path and helps control electrical interference</td>
+</tr>
+</tbody>
+</table>
+<p>These components are not automatically all required on every drive. Their selection depends on the manufacturer's instructions, installation conditions, fault-current ratings, applicable standards, and plant design.</p>
+<p>Important: A VFD's internal electronic protection does not replace correctly selected upstream short-circuit protection.</p>
+<h2 id="5-rectifier-section-ac-to-dc-conversion">5. Rectifier Section: AC to DC Conversion</h2>
+<p>The rectifier converts the incoming AC supply into DC.</p>
+<p>A common three-phase VFD uses a six-diode bridge rectifier. Other designs use controlled rectifiers or active front ends.</p>
+<h3 id="six-diode-bridge-concept">Six-diode bridge concept</h3>
+<pre><code>       THREE-PHASE AC
+          R  S  T
+          |  |  |
+          v  v  v
+      +----------------+
+      | 6-Diode Bridge |
+      |   Rectifier    |
+      +--------+-------+
+               |
+               v
+          DC POSITIVE
+               |
+           DC LINK
+               |
+          DC NEGATIVE
+</code></pre>
+<p>The six-diode arrangement uses the instantaneous voltage relationships among the three input phases to produce a DC output.</p>
+<p>The rectified output is not perfectly constant. It contains ripple, which is reduced by the DC link capacitors and other elements.</p>
+<h3 id="approximate-dc-bus-voltage">Approximate DC bus voltage</h3>
+<p>For an ideal three-phase diode bridge under suitable assumptions, the average DC output is approximately:</p>
+<div class="math-display">\[ V\_{DC} \approx 1.35 V\_{LL} \]</div>
+<p>where <span class="math-inline">\(V\_{LL}\)</span> is the RMS line-to-line supply voltage.</p>
+<p>For a 400 V three-phase supply:</p>
+<div class="math-display">\[ V\_{DC} \approx 1.35 \times 400 = 540\text{ V} \]</div>
+<p>This is a simplified average-voltage estimate for a three-phase six-pulse rectifier. The actual DC bus voltage depends on supply conditions, loading, ripple, circuit design, and the measurement method. With a light load, the DC bus may approach the peak line-to-line voltage, approximately <span class="math-inline">\(\sqrt{2}V\_{LL}\)</span>, in a capacitor-input arrangement.</p>
+<p>This is why a VFD supplied from a nominal 400 V system can contain a DC bus at several hundred volts. The internal DC bus is dangerous even after the AC supply is disconnected.</p>
+<h3 id="common-rectifier-faults">Common rectifier faults</h3>
+<ul>
+<li>Open or shorted rectifier diode.</li>
+<li>Input phase loss.</li>
+<li>Abnormal input voltage.</li>
+<li>Blown upstream fuse.</li>
+<li>Excessive current due to downstream faults.</li>
+<li>Damaged connections or terminals.</li>
+</ul>
+<p>Possible symptoms include input-phase alarms, DC bus abnormalities, input current imbalance, or failure to start. The exact symptom depends on the drive design and fault-detection logic.</p>
+<h2 id="6-dc-link-the-intermediate-dc-bus">6. DC Link: The Intermediate DC Bus</h2>
+<p>The DC link sits between the rectifier and inverter.</p>
+<p>Its job is to provide a DC energy-storage and filtering stage for the inverter.</p>
+<p>Typical components include:</p>
+<ul>
+<li>DC bus capacitors.</li>
+<li>DC bus conductors and connections.</li>
+<li>A DC link choke or reactor, where fitted.</li>
+<li>Voltage sensing circuits.</li>
+<li>Discharge or bleeder circuits.</li>
+<li>A braking chopper connection or circuit, where fitted.</li>
+</ul>
+<h3 id="why-is-the-dc-link-needed">Why is the DC link needed?</h3>
+<p>The rectifier converts AC to DC, but the rectified voltage contains ripple. The DC link smooths the voltage and provides an intermediate energy reservoir for the inverter.</p>
+<pre><code>Rectifier Output
+      |
+      v
+ Pulsating DC
+      |
+      v
++------------------+
+| DC Link Capacitor|
+| and Associated   |
+| Circuitry        |
++------------------+
+      |
+      v
+ DC Bus for Inverter
+</code></pre>
+<h3 id="dc-bus-voltage-monitoring">DC bus voltage monitoring</h3>
+<p>A drive may display parameters such as:</p>
+<ul>
+<li>DC bus voltage.</li>
+<li>DC bus undervoltage.</li>
+<li>DC bus overvoltage.</li>
+<li>DC bus ripple or related diagnostic measurements, depending on the model.</li>
+</ul>
+<p>Undervoltage can occur because of supply disturbances, input phase loss, excessive loading, or other problems.</p>
+<p>Overvoltage can occur during deceleration when the motor regenerates energy into the drive's DC bus, or due to supply and drive conditions.</p>
+<h3 id="dc-bus-safety">DC bus safety</h3>
+<p>DC link capacitors can retain hazardous energy after the supply has been disconnected.</p>
+<p>Before maintenance:</p>
+<ol>
+<li>Follow the site's approved electrical isolation and lockout/tagout procedure.</li>
+<li>Isolate the correct power sources.</li>
+<li>Wait the discharge time specified by the manufacturer.</li>
+<li>Verify absence of hazardous voltage using an appropriate, rated test instrument and approved procedure.</li>
+<li>Follow the equipment-specific instructions before touching internal components.</li>
+</ol>
+<p>A display going dark does not prove the DC bus is safe. Capacitors do not care how reassuring the display looks.</p>
+<h2 id="7-inverter-section-dc-to-variable-frequency-ac">7. Inverter Section: DC to Variable-Frequency AC</h2>
+<p>The inverter converts the DC bus voltage into a controlled AC output for the motor.</p>
+<p>A common voltage-source VFD uses power semiconductor switches, such as IGBTs or MOSFETs, arranged in a three-phase bridge. The appropriate semiconductor depends on the drive's voltage, power, switching frequency, and design.</p>
+<h3 id="conceptual-three-phase-inverter">Conceptual three-phase inverter</h3>
+<pre><code>              DC BUS
+           +DC      -DC
+            |         |
+       +----+---------+----+
+       |   Power Switches   |
+       |   Three-Phase      |
+       |   Inverter Bridge  |
+       +----+----+----+-----+
+            |    |    |
+            U    V    W
+            |    |    |
+            +----+----+
+                 |
+                 v
+              AC MOTOR
+</code></pre>
+<p>The inverter switches the DC bus in a controlled pattern. Using pulse-width modulation (PWM), it generates output waveforms whose effective voltage and frequency can be controlled.</p>
+<p>The motor receives a synthesized AC waveform rather than a direct connection to the fixed-frequency supply.</p>
+<h3 id="what-does-pwm-mean">What does PWM mean?</h3>
+<p>Pulse-width modulation controls the duration of switching pulses to synthesize the required output waveform.</p>
+<p>The output consists of high-frequency voltage pulses. The motor's inductance causes the current to respond more smoothly than the raw voltage waveform might suggest.</p>
+<p>The drive controls the switching pattern to regulate motor operation within its configured limits.</p>
+<h3 id="common-inverter-faults">Common inverter faults</h3>
+<ul>
+<li>Power semiconductor failure.</li>
+<li>Gate-driver fault.</li>
+<li>Output short circuit.</li>
+<li>Ground fault.</li>
+<li>Excessive output current.</li>
+<li>Internal temperature or cooling fault.</li>
+<li>Motor cable or motor insulation problem.</li>
+</ul>
+<p>A drive reporting an output fault does not prove the inverter module itself is defective. The motor, cable, installation, parameters, and load must also be considered.</p>
+<h2 id="8-control-electronics-and-gate-drivers">8. Control Electronics and Gate Drivers</h2>
+<p>The control section is the decision-making part of the drive.</p>
+<p>It processes commands and feedback, executes the selected control algorithm, and determines the inverter switching pattern.</p>
+<p>Typical components include:</p>
+<ul>
+<li>Microcontroller or digital signal processor.</li>
+<li>Memory and parameter storage.</li>
+<li>Analog-to-digital conversion circuits.</li>
+<li>Digital inputs and outputs.</li>
+<li>Analog inputs and outputs.</li>
+<li>Communication interfaces.</li>
+<li>Current and voltage sensing.</li>
+<li>Gate-driver circuits.</li>
+<li>Fault monitoring and diagnostic logic.</li>
+</ul>
+<h3 id="control-sequence">Control sequence</h3>
+<pre><code>Speed Reference
+      |
+      v
+Command and Limit Checks
+      |
+      v
+Motor Control Algorithm
+      |
+      v
+Switching Commands
+      |
+      v
+Gate Drivers
+      |
+      v
+Power Semiconductor Switching
+      |
+      v
+Motor Voltage, Current and Torque
+      |
+      v
+Feedback Measurements
+      |
+      +------&gt; Control Algorithm
+</code></pre>
+<p>The controller may calculate switching commands using a scalar control method or a vector-based control method.</p>
+<h3 id="gate-drivers">Gate drivers</h3>
+<p>Gate drivers translate low-power control signals into the electrical signals needed to switch the power semiconductors.</p>
+<p>They also provide the required electrical isolation or level shifting in many designs.</p>
+<p>A gate-driver problem can prevent proper switching or trigger a drive fault even when the control processor is operating.</p>
+<h3 id="control-board-versus-power-board">Control board versus power board</h3>
+<table>
+<thead>
+<tr>
+<th>Control board</th>
+<th>Power board</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Processes commands and parameters</td>
+<td>Carries or switches high electrical power</td>
+</tr>
+<tr>
+<td>Executes the control algorithm</td>
+<td>Contains or interfaces with power semiconductors</td>
+</tr>
+<tr>
+<td>Handles many communication and I/O functions</td>
+<td>Handles high-current and high-voltage paths</td>
+</tr>
+<tr>
+<td>Processes diagnostic information</td>
+<td>May contain current sensing, gate drives, and protection circuits</td>
+</tr>
+</tbody>
+</table>
+<p>The physical division varies by manufacturer. Some drives integrate several functions on one board.</p>
+<h2 id="9-cooling-and-thermal-management">9. Cooling and Thermal Management</h2>
+<p>VFDs generate heat because power semiconductors, capacitors, magnetic components, and other electronic parts have losses.</p>
+<p>Cooling may use:</p>
+<ul>
+<li>Internal fans.</li>
+<li>Heat sinks.</li>
+<li>Forced-air ventilation.</li>
+<li>Liquid cooling in certain high-power applications.</li>
+<li>Temperature sensors and thermal monitoring.</li>
+</ul>
+<h3 id="why-cooling-matters">Why cooling matters</h3>
+<p>High temperature can reduce component life and trigger thermal protection. Blocked air passages, failed fans, excessive ambient temperature, and insufficient panel ventilation can cause repeated faults.</p>
+<p>For a maintenance engineer, inspect:</p>
+<ul>
+<li>Fan operation and condition.</li>
+<li>Air intake and exhaust paths.</li>
+<li>Dust buildup.</li>
+<li>Ambient temperature.</li>
+<li>Cabinet ventilation.</li>
+<li>Signs of overheating or damaged components.</li>
+<li>Drive temperature and fan diagnostics where available.</li>
+</ul>
+<p>Do not assume a cooling fault is solved by resetting the drive. Resetting a thermal fault without correcting its cause merely schedules another interruption.</p>
+<h2 id="10-feedback-and-sensing">10. Feedback and Sensing</h2>
+<p>The drive may measure or estimate several electrical and mechanical quantities.</p>
+<table>
+<thead>
+<tr>
+<th>Measurement or estimate</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Output current</td>
+<td>Current control and overload or fault detection</td>
+</tr>
+<tr>
+<td>DC bus voltage</td>
+<td>Detect undervoltage and overvoltage conditions</td>
+</tr>
+<tr>
+<td>Output voltage</td>
+<td>Control and diagnostic functions</td>
+</tr>
+<tr>
+<td>Heatsink temperature</td>
+<td>Thermal protection</td>
+</tr>
+<tr>
+<td>Motor speed</td>
+<td>Control and monitoring</td>
+</tr>
+<tr>
+<td>Motor torque</td>
+<td>Control, estimation, and limiting</td>
+</tr>
+<tr>
+<td>Encoder feedback</td>
+<td>Closed-loop speed or position-related control where supported</td>
+</tr>
+<tr>
+<td>Input phase status</td>
+<td>Detect certain supply abnormalities</td>
+</tr>
+</tbody>
+</table>
+<p>Not every VFD has every sensor or supports every feedback method.</p>
+<p>In sensorless control, the drive estimates certain motor states from electrical measurements and its control model. With encoder feedback, it receives an additional measurement of motor motion.</p>
+<h2 id="11-motor-control-methods">11. Motor Control Methods</h2>
+<p>The drive architecture supports different control strategies. These strategies are related to the software and control algorithms, not simply to the physical power-conversion stages.</p>
+<h3 id="111-vf-or-scalar-control">11.1 V/f or scalar control</h3>
+<p>V/f control adjusts output voltage in relation to output frequency according to a configured relationship.</p>
+<p>The basic principle is to maintain a suitable voltage-to-frequency relationship across the operating range, subject to the drive's control scheme and voltage limits.</p>
+<p>For example, a drive operating a conventional induction motor may use V/f control for a conveyor or fan where sophisticated dynamic torque control is not required.</p>
+<p>Advantages:</p>
+<ul>
+<li>Relatively simple configuration.</li>
+<li>Suitable for many general-purpose applications.</li>
+<li>Often sufficient for steady-speed operation.</li>
+</ul>
+<p>Limitations:</p>
+<ul>
+<li>Generally less precise dynamic torque and speed control than suitable vector-control implementations.</li>
+<li>Low-speed performance depends on drive design, motor parameters, and configuration.</li>
+<li>Not ideal for every high-dynamic or demanding load.</li>
+</ul>
+<h3 id="112-sensorless-vector-control">11.2 Sensorless vector control</h3>
+<p>Sensorless vector control uses a motor model and electrical measurements to estimate motor behavior and control torque and flux more independently than basic scalar control.</p>
+<p>It does not require a shaft encoder in its usual sensorless implementation.</p>
+<p>Advantages may include improved torque response and low-speed behavior compared with basic V/f control.</p>
+<p>Performance depends on the drive, motor model, commissioning, and application.</p>
+<h3 id="113-closed-loop-vector-control">11.3 Closed-loop vector control</h3>
+<p>Closed-loop vector control uses feedback, commonly from an encoder or another supported feedback device, to improve control of motor speed and sometimes position-related behavior.</p>
+<p>Typical applications include demanding speed regulation, rapid load changes, and certain high-performance motion applications.</p>
+<h3 id="comparison">Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>V/f control</th>
+<th>Sensorless vector</th>
+<th>Closed-loop vector</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>General approach</td>
+<td>Scalar voltage/frequency relationship</td>
+<td>Vector control with estimated motor state</td>
+<td>Vector control with external feedback</td>
+</tr>
+<tr>
+<td>Encoder required</td>
+<td>Usually no</td>
+<td>Usually no</td>
+<td>Typically yes for encoder-based versions</td>
+</tr>
+<tr>
+<td>Dynamic torque response</td>
+<td>Basic to moderate</td>
+<td>Often better</td>
+<td>Can provide high performance</td>
+</tr>
+<tr>
+<td>Low-speed behavior</td>
+<td>Depends strongly on setup and drive</td>
+<td>Often improved</td>
+<td>Can be very good when properly configured</td>
+</tr>
+<tr>
+<td>Commissioning complexity</td>
+<td>Usually lower</td>
+<td>Moderate</td>
+<td>Higher</td>
+</tr>
+<tr>
+<td>Typical use</td>
+<td>Fans, pumps, general conveyors</td>
+<td>Conveyors and variable-load applications</td>
+<td>Demanding speed or torque control</td>
+</tr>
+</tbody>
+</table>
+<p>A control mode should be selected from the application's actual requirements and the manufacturer's guidance, not merely because a more advanced name sounds impressive.</p>
+<h2 id="12-braking-and-regenerative-energy">12. Braking and Regenerative Energy</h2>
+<p>When a motor decelerates, its mechanical energy may be converted into electrical energy. Depending on the motor and control conditions, that energy can return to the drive's DC bus.</p>
+<p>In a typical diode-rectifier VFD, energy generally cannot flow back to the AC supply through the input rectifier.</p>
+<p>As a result, DC bus voltage may rise during deceleration.</p>
+<h3 id="braking-resistor-arrangement">Braking resistor arrangement</h3>
+<p>A braking chopper switches a braking resistor into the DC bus when required, dissipating energy as heat.</p>
+<pre><code>Motor Deceleration
+        |
+        v
+ Energy Returns to DC Bus
+        |
+        v
+ DC Bus Voltage Rises
+        |
+        v
+ Braking Chopper Operates
+        |
+        v
+ Braking Resistor
+        |
+        v
+ Energy Dissipated as Heat
+</code></pre>
+<p>A braking resistor is not required for every VFD. Its need depends on the load, deceleration time, energy, and drive design.</p>
+<h3 id="regenerative-drive">Regenerative drive</h3>
+<p>A regenerative drive uses a suitable power-conversion stage to return energy to the supply or another supported energy system.</p>
+<p>This differs from a conventional diode-front-end VFD with a braking resistor.</p>
+<h3 id="typical-symptoms-of-braking-related-problems">Typical symptoms of braking-related problems</h3>
+<ul>
+<li>DC bus overvoltage during deceleration.</li>
+<li>Drive trips when a high-inertia load stops.</li>
+<li>Excessive braking resistor temperature.</li>
+<li>Braking chopper fault.</li>
+<li>Deceleration time longer than expected.</li>
+</ul>
+<p>The corrective action may involve the deceleration profile, load inertia, braking equipment, or drive configuration. Do not simply shorten the deceleration time and hope the DC bus agrees.</p>
+<h2 id="13-vfd-interfaces-in-industrial-automation">13. VFD Interfaces in Industrial Automation</h2>
+<p>A VFD commonly interacts with PLCs, HMIs, SCADA systems, and field devices.</p>
+<h3 id="hardwired-interface">Hardwired interface</h3>
+<p>Typical hardwired signals include:</p>
+<ul>
+<li>Run enable or start command.</li>
+<li>Forward/reverse command, if permitted.</li>
+<li>Fault reset, where supported.</li>
+<li>Digital status outputs.</li>
+<li>Analog speed reference.</li>
+<li>Analog speed or current feedback.</li>
+</ul>
+<p>The exact signals and electrical specifications vary by drive.</p>
+<h3 id="communication-interface">Communication interface</h3>
+<p>Industrial communication can allow a PLC to send commands and exchange drive data over a supported network.</p>
+<p>Depending on the drive, options may include:</p>
+<ul>
+<li>EtherNet/IP.</li>
+<li>PROFINET.</li>
+<li>Modbus RTU.</li>
+<li>Modbus TCP.</li>
+<li>Other manufacturer-specific or industrial communication protocols.</li>
+</ul>
+<p>Do not assume every drive supports every protocol natively. Some require a separate communication option or gateway.</p>
+<h3 id="example-plc-controlled-conveyor">Example: PLC-controlled conveyor</h3>
+<pre><code>          +------------------+
+          | PLC              |
+          | Run / Speed Ref  |
+          +---------+--------+
+                    |
+            Fieldbus or I/O
+                    |
+                    v
+          +------------------+
+          | VFD              |
+          | Command Processing|
+          +---------+--------+
+                    |
+               U / V / W
+                    |
+                    v
+               Conveyor Motor
+                    |
+                    v
+           Mechanical Conveyor
+</code></pre>
+<p>Feedback may include running status, actual speed, output current, drive-ready status, and fault codes.</p>
+<p>In a real control program, the PLC should distinguish a run request from confirmed running status. Sending a command does not prove that the motor is turning.</p>
+<h2 id="14-vfd-protection-functions">14. VFD Protection Functions</h2>
+<p>A VFD usually provides a range of protective and diagnostic functions.</p>
+<table>
+<thead>
+<tr>
+<th>Protection or diagnostic</th>
+<th>What it detects or indicates</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Overcurrent</td>
+<td>Current exceeds a defined limit or protection threshold</td>
+</tr>
+<tr>
+<td>Overload</td>
+<td>Motor or drive loading exceeds an applicable thermal or time-based limit</td>
+</tr>
+<tr>
+<td>DC bus overvoltage</td>
+<td>DC bus exceeds the allowed voltage range</td>
+</tr>
+<tr>
+<td>DC bus undervoltage</td>
+<td>DC bus falls below the permitted range</td>
+</tr>
+<tr>
+<td>Overtemperature</td>
+<td>Drive or monitored component temperature is excessive</td>
+</tr>
+<tr>
+<td>Ground fault</td>
+<td>Certain output-to-ground fault conditions</td>
+</tr>
+<tr>
+<td>Input phase loss</td>
+<td>Certain missing or abnormal input phase conditions</td>
+</tr>
+<tr>
+<td>Output phase loss</td>
+<td>Certain abnormal motor-output conditions, if supported</td>
+</tr>
+<tr>
+<td>Stall or speed-related fault</td>
+<td>A configured or detected inability to operate as expected</td>
+</tr>
+<tr>
+<td>Communication loss</td>
+<td>A monitored control or feedback communication link is unavailable</td>
+</tr>
+<tr>
+<td>Motor thermal protection</td>
+<td>Motor thermal model or sensor indicates excessive thermal loading</td>
+</tr>
+</tbody>
+</table>
+<p>Protection functions have specific operating limits and detection methods. An alarm label is not a complete diagnosis.</p>
+<p>Safety distinction: Ordinary VFD protection and a standard PLC stop command are not automatically safety-rated functions. Emergency stopping and hazardous-motion control must follow the machine's risk assessment and required safety architecture. Where a drive supports a safety function such as Safe Torque Off (STO), it must be designed, wired, configured, and validated according to its certified documentation and the machine's safety requirements.</p>
+<h2 id="15-reading-a-vfd-nameplate-and-ratings">15. Reading a VFD Nameplate and Ratings</h2>
+<p>Before selecting, replacing, or commissioning a drive, check its ratings and compatibility.</p>
+<p>Important information includes:</p>
+<ul>
+<li>Rated input voltage.</li>
+<li>Input phase and frequency.</li>
+<li>Rated input current.</li>
+<li>Rated output voltage.</li>
+<li>Rated output current.</li>
+<li>Motor power rating.</li>
+<li>Applicable overload rating.</li>
+<li>Permitted switching frequency.</li>
+<li>Ambient temperature and derating requirements.</li>
+<li>Enclosure or ingress protection rating.</li>
+<li>Supported motor types.</li>
+<li>Required installation clearances.</li>
+<li>Compatible communication and feedback options.</li>
+</ul>
+<h3 id="why-output-current-matters">Why output current matters</h3>
+<p>Matching only the kW or horsepower rating is not sufficient.</p>
+<p>Two motors with the same nominal power can have different rated currents, overload requirements, and operating characteristics. Drive selection must consider the actual motor nameplate, load duty, ambient conditions, and application requirements.</p>
+<p>The drive must also be suitable for the intended motor and supply configuration.</p>
+<h2 id="16-common-architecture-related-troubleshooting">16. Common Architecture-Related Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible section or cause</th>
+<th>Initial checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Drive does not power up</td>
+<td>Input supply, protection, internal power supply</td>
+<td>Check approved isolation status, incoming supply, upstream protective devices, and fault indications</td>
+</tr>
+<tr>
+<td>DC bus undervoltage</td>
+<td>Supply dip, phase loss, rectifier or connection issue</td>
+<td>Check supply quality, input phases, and diagnostic history</td>
+</tr>
+<tr>
+<td>DC bus overvoltage during stopping</td>
+<td>Regenerative energy, deceleration profile, braking system</td>
+<td>Check deceleration settings, load characteristics, and braking diagnostics</td>
+</tr>
+<tr>
+<td>Motor does not run despite a run command</td>
+<td>Control logic, enable conditions, configuration, output stage</td>
+<td>Check ready status, active commands, interlocks, fault state, and drive diagnostics</td>
+</tr>
+<tr>
+<td>Motor trips on overcurrent</td>
+<td>Load, motor cable, motor, acceleration settings, or output stage</td>
+<td>Review fault timing, current history, motor/cable condition, and mechanical load</td>
+</tr>
+<tr>
+<td>Drive overheats</td>
+<td>Cooling, ambient conditions, loading, switching losses</td>
+<td>Check fan status, airflow, temperature, load, and installation clearances</td>
+</tr>
+<tr>
+<td>Speed is unstable</td>
+<td>Reference scaling, control mode, motor data, feedback, load</td>
+<td>Verify command source, motor parameters, control mode, and feedback diagnostics</td>
+</tr>
+<tr>
+<td>Communication is lost</td>
+<td>Network, interface, configuration, power, or timeout settings</td>
+<td>Check physical link, addressing, protocol configuration, and communication status</td>
+</tr>
+<tr>
+<td>Repeated trips after replacement</td>
+<td>Parameter mismatch, motor data, wiring, configuration, or application issue</td>
+<td>Compare the old and new drive configurations and verify all motor and application settings</td>
+</tr>
+</tbody>
+</table>
+<p>Troubleshooting should start with fault history, drive status, actual measurements, and the machine's operating conditions. Replacing a power module because an alarm contains the word "current" is not a diagnostic method.</p>
+<h2 id="17-maintenance-engineers-architecture-checklist">17. Maintenance Engineer's Architecture Checklist</h2>
+<p>For a drive installed in a machine or production line, document the following:</p>
+<ul>
+<li>Drive manufacturer, model, serial number, and rating.</li>
+<li>Input supply and upstream protective device.</li>
+<li>Motor manufacturer, model, nameplate data, and connection.</li>
+<li>Input and output terminal identification.</li>
+<li>PLC interface type and communication protocol.</li>
+<li>Command source and speed-reference source.</li>
+<li>Feedback signals and scaling.</li>
+<li>Control mode and essential motor parameters.</li>
+<li>Braking resistor or regenerative arrangement, if applicable.</li>
+<li>Cooling arrangement and ventilation requirements.</li>
+<li>Fault history and relevant parameter backups.</li>
+<li>Spare-drive compatibility and replacement procedure.</li>
+<li>Applicable safety functions and isolation requirements.</li>
+</ul>
+<p>For a replacement drive, verify more than the physical fit. Different models can have different terminal assignments, parameter structures, communication options, protection behavior, and braking requirements.</p>
+<h2 id="18-interview-questions-and-answers">18. Interview Questions and Answers</h2>
+<p>Q1. What are the main sections of a VFD?</p>
+<p>Input and protection, rectifier, DC link, inverter, control and gate-drive electronics, plus sensing, protection, and cooling systems.</p>
+<p>Q2. What is the function of the rectifier?</p>
+<p>It converts the incoming AC supply into DC for the DC link.</p>
+<p>Q3. What is the purpose of the DC link?</p>
+<p>It smooths and stores energy in the intermediate DC bus and supplies the inverter.</p>
+<p>Q4. What does the inverter do?</p>
+<p>It switches the DC bus to generate a controlled AC output with the required voltage and frequency characteristics.</p>
+<p>Q5. What is PWM?</p>
+<p>Pulse-width modulation controls the switching pulses used to synthesize the inverter's output waveform.</p>
+<p>Q6. Why can a VFD trip on DC bus overvoltage during deceleration?</p>
+<p>The motor may return energy to the DC bus faster than the drive can dissipate or regenerate it.</p>
+<p>Q7. What is the difference between V/f and vector control?</p>
+<p>V/f control uses a scalar voltage-to-frequency relationship. Vector control regulates motor flux and torque using a more detailed motor-control model.</p>
+<p>Q8. Why does a VFD need cooling?</p>
+<p>Power electronics and associated components generate heat during operation. Excessive temperature can trigger protection and shorten component life.</p>
+<p>Q9. Does a run command prove that the motor is running?</p>
+<p>No. The command is a request. Running status and actual behavior must be verified from suitable drive feedback and, where necessary, physical measurements.</p>
+<p>Q10. Does a VFD replace upstream short-circuit protection?</p>
+<p>No. The drive must be installed with suitable upstream protective devices according to its documentation and the applicable electrical requirements.</p>
+<p>Q11. Why can two drives with the same kW rating be unsuitable replacements for each other?</p>
+<p>They may differ in output current, overload capability, voltage rating, motor compatibility, braking arrangements, communication options, and environmental requirements.</p>
+<p>Q12. What is the difference between a braking resistor and a regenerative front end?</p>
+<p>A braking resistor dissipates returned energy as heat. A regenerative front end can return suitable energy to the electrical supply or another supported system.</p>
+<p>Q13. What is the purpose of a gate driver?</p>
+<p>It provides the switching signals and electrical interface required to control the power semiconductors.</p>
+<p>Q14. Why must the DC bus be checked before internal maintenance?</p>
+<p>The DC link capacitors can retain hazardous voltage after the input supply is isolated.</p>
+<p>Q15. Is a VFD's ordinary stop command a safety function?</p>
+<p>Not automatically. Safety-related stopping functions must be designed and validated to the applicable requirements. A supported safety-rated function such as STO has its own implementation requirements.</p>
+<h2 id="19-practical-exercises">19. Practical Exercises</h2>
+<ol>
+<li>Draw the VFD power path from the incoming supply to the motor.</li>
+<li>Label the input terminals, rectifier, DC link, inverter, and output terminals.</li>
+<li>Explain why a 400 V AC supply can produce a DC bus at several hundred volts.</li>
+<li>Trace the flow of energy during normal motor acceleration and deceleration.</li>
+<li>Compare V/f, sensorless vector, and closed-loop vector control.</li>
+<li>Identify which VFD status signals a PLC should monitor to distinguish a run request from confirmed operation.</li>
+<li>Create a fault-investigation table for DC bus undervoltage, overvoltage, overcurrent, and overtemperature.</li>
+<li>List the information required before replacing an installed VFD.</li>
+<li>Explain why a braking resistor might be needed for a high-inertia load.</li>
+<li>Create a maintenance record containing the drive model, motor data, control mode, communication interface, braking arrangement, and parameter backup location.</li>
+</ol>
+<h2 id="20-final-mental-model">20. Final Mental Model</h2>
+<p>Think of a VFD as three connected systems:</p>
+<p>Power conversion: The rectifier converts AC to DC, the DC link stabilizes and stores energy, and the inverter converts DC into controlled AC for the motor.</p>
+<p>Control: The processor receives commands and feedback, calculates the required motor-control response, and drives the power semiconductors through gate-driver circuits.</p>
+<p>Protection and support: Sensors, diagnostics, cooling, protective functions, and communication interfaces keep the drive operating within its permitted limits and help identify faults.</p>
+<p>The complete operating chain is:</p>
+<pre><code>AC Supply
+   |
+   v
+Input and Protection
+   |
+   v
+Rectifier: AC to DC
+   |
+   v
+DC Link
+   |
+   v
+Inverter: DC to Controlled AC
+   |
+   v
+Motor
+   |
+   v
+Mechanical Load
+
+PLC / HMI / Network
+          |
+          v
+Control Processor
+          |
+          v
+Gate Drivers and Inverter Control
+</code></pre>
+<p>The key maintenance principle is to identify which section is responsible for the observed symptom before deciding what to test or replace. A VFD fault can originate in the supply, power-conversion stages, control logic, motor, cabling, cooling, configuration, or driven machinery.</p>
+<p>Topic completed: <code>01_Drive_Arch - Drive architecture</code></p>
+<p>Next topic: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\02_Auto_Tech\04_VFD\02_Wiring\01_Power_Wiring - Power wiring: Input, output, motor terminals</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

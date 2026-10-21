@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Planned vs Unplanned Downtime</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Planned vs Unplanned Downtime</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-planned-downtime">2. Planned Downtime</a><ul>
+<li><a href="#characteristics-of-planned-downtime">Characteristics of planned downtime</a></li>
+</ul>
+</li>
+<li><a href="#3-unplanned-downtime">3. Unplanned Downtime</a></li>
+<li><a href="#4-planned-vs-unplanned-downtime">4. Planned vs Unplanned Downtime</a></li>
+<li><a href="#5-planned-downtime-is-not-always-lost-production-time">5. Planned Downtime Is Not Always Lost Production Time</a></li>
+<li><a href="#6-downtime-time-boundaries">6. Downtime Time Boundaries</a></li>
+<li><a href="#7-downtime-classification-rules">7. Downtime Classification Rules</a></li>
+<li><a href="#8-planned-and-unplanned-downtime-formulas">8. Planned and Unplanned Downtime Formulas</a><ul>
+<li><a href="#81-total-downtime">8.1 Total downtime</a></li>
+<li><a href="#82-unplanned-downtime-percentage">8.2 Unplanned downtime percentage</a></li>
+<li><a href="#83-planned-downtime-percentage">8.3 Planned downtime percentage</a></li>
+<li><a href="#84-downtime-as-a-percentage-of-required-production-time">8.4 Downtime as a percentage of required production time</a></li>
+</ul>
+</li>
+<li><a href="#9-worked-example-production-shift">9. Worked Example: Production Shift</a></li>
+<li><a href="#10-planned-maintenance-overrun">10. Planned Maintenance Overrun</a></li>
+<li><a href="#11-why-unplanned-downtime-occurs">11. Why Unplanned Downtime Occurs</a></li>
+<li><a href="#12-reducing-planned-downtime">12. Reducing Planned Downtime</a></li>
+<li><a href="#13-reducing-unplanned-downtime">13. Reducing Unplanned Downtime</a><ul>
+<li><a href="#131-reduce-failure-frequency">13.1 Reduce failure frequency</a></li>
+<li><a href="#132-reduce-restoration-duration">13.2 Reduce restoration duration</a></li>
+<li><a href="#133-improve-fault-detection">13.3 Improve fault detection</a></li>
+</ul>
+</li>
+<li><a href="#14-planned-vs-unplanned-downtime-in-sap-pm">14. Planned vs Unplanned Downtime in SAP PM</a></li>
+<li><a href="#15-excel-and-power-bi-analysis">15. Excel and Power BI Analysis</a><ul>
+<li><a href="#example-dataset">Example dataset</a></li>
+<li><a href="#excel-formula">Excel formula</a></li>
+</ul>
+</li>
+<li><a href="#16-downtime-pareto-analysis">16. Downtime Pareto Analysis</a></li>
+<li><a href="#17-common-downtime-reporting-errors">17. Common Downtime Reporting Errors</a></li>
+<li><a href="#18-practical-industrial-example">18. Practical Industrial Example</a><ul>
+<li><a href="#initial-observations">Initial observations</a></li>
+<li><a href="#investigation">Investigation</a></li>
+<li><a href="#corrective-actions">Corrective actions</a></li>
+<li><a href="#evaluation">Evaluation</a></li>
+</ul>
+</li>
+<li><a href="#19-interview-questions-and-answers">19. Interview Questions and Answers</a></li>
+<li><a href="#20-final-checklist">20. Final Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\34_Maint_Metrics\01_Key_Metrics\06_Planned_Unplanned - Planned vs Unplanned downtime</code></p>
+<h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>Downtime is a period during which equipment cannot perform its required function, or is not producing as required, according to the defined measurement rules.</p>
+<p>Planned versus unplanned downtime analysis separates expected interruptions from unexpected losses so maintenance and production teams can understand where time is being lost and how to improve equipment performance.</p>
+<ul>
+<li>Planned downtime: An interruption scheduled or authorized in advance for maintenance or another defined activity.</li>
+<li>Unplanned downtime: An unexpected interruption caused by a failure, abnormal condition, or other event that prevents the required operation.</li>
+</ul>
+<p>The classification depends on the organization's rules. A planned maintenance task can overrun its approved window, and an unexpected breakdown can occur during a scheduled maintenance period. The original plan and actual event must be recorded separately.</p>
+<p>This analysis is useful for:</p>
+<ul>
+<li>PLC, HMI, CNC, robot, and VFD breakdowns.</li>
+<li>Electrical and mechanical maintenance.</li>
+<li>Production-line availability.</li>
+<li>Preventive and predictive maintenance planning.</li>
+<li>Spare-parts and manpower planning.</li>
+<li>Maintenance cost analysis.</li>
+<li>Production scheduling and OEE improvement.</li>
+<li>Root cause analysis and corrective action.</li>
+</ul>
+<h2 id="2-planned-downtime">2. Planned Downtime</h2>
+<p>Planned downtime is an interruption arranged in advance, usually with an approved scope, schedule, resources, and restoration plan.</p>
+<p>Common examples include:</p>
+<ul>
+<li>Preventive maintenance.</li>
+<li>Scheduled inspections and lubrication.</li>
+<li>Planned component replacement.</li>
+<li>CNC spindle or axis maintenance.</li>
+<li>Robot inspection and approved calibration.</li>
+<li>Drive or PLC upgrades.</li>
+<li>Electrical-panel cleaning and inspection.</li>
+<li>Planned network-device replacement.</li>
+<li>Statutory inspection and testing.</li>
+<li>Controlled shutdowns for major repairs or modifications.</li>
+</ul>
+<p>Planned downtime does not automatically mean the interruption is necessary, efficient, or properly executed. It should be justified by maintenance requirements, equipment risk, production needs, and the approved work scope.</p>
+<h3 id="characteristics-of-planned-downtime">Characteristics of planned downtime</h3>
+<ul>
+<li>The work is scheduled or authorized before execution.</li>
+<li>The task scope and expected duration are defined.</li>
+<li>Required personnel, tools, permits, and spare parts are arranged.</li>
+<li>Production is informed about the expected interruption.</li>
+<li>Isolation and restoration requirements are identified.</li>
+<li>The completed work is documented and verified.</li>
+</ul>
+<h2 id="3-unplanned-downtime">3. Unplanned Downtime</h2>
+<p>Unplanned downtime is an unexpected interruption that prevents the required function from being performed.</p>
+<p>Common examples include:</p>
+<ul>
+<li>PLC or remote I/O failure.</li>
+<li>VFD or servo-drive trip requiring intervention.</li>
+<li>Broken conveyor chain or coupling.</li>
+<li>Sensor, actuator, or power-supply failure.</li>
+<li>CNC spindle or tool-changer fault.</li>
+<li>Robot collision or servo alarm requiring recovery.</li>
+<li>Industrial network communication loss.</li>
+<li>Unexpected utility failure.</li>
+<li>Repeated machine interlock faults caused by an unresolved issue.</li>
+</ul>
+<p>Unplanned downtime may result from component failure, incorrect configuration, poor maintenance, operating conditions, human error, external utilities, or other causes.</p>
+<p>Important: An unplanned stop is not automatically evidence of poor maintenance. Some failures are difficult to predict, and some interruptions originate outside the maintenance team's control. Analysis should establish the cause rather than assign blame based on the downtime label.</p>
+<h2 id="4-planned-vs-unplanned-downtime">4. Planned vs Unplanned Downtime</h2>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Planned downtime</th>
+<th>Unplanned downtime</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Timing</td>
+<td>Scheduled or authorized in advance</td>
+<td>Unexpected interruption</td>
+</tr>
+<tr>
+<td>Work preparation</td>
+<td>Scope and resources can be prepared</td>
+<td>Preparation often begins after the event</td>
+</tr>
+<tr>
+<td>Spare-parts readiness</td>
+<td>Can be checked beforehand</td>
+<td>Parts may be unavailable when needed</td>
+</tr>
+<tr>
+<td>Production coordination</td>
+<td>Can be arranged in advance</td>
+<td>May disrupt the production plan</td>
+</tr>
+<tr>
+<td>Maintenance approach</td>
+<td>Often preventive, predictive, or improvement work</td>
+<td>Often corrective troubleshooting and restoration</td>
+</tr>
+<tr>
+<td>Time uncertainty</td>
+<td>Usually easier to estimate</td>
+<td>Often harder to predict</td>
+</tr>
+<tr>
+<td>Typical records</td>
+<td>Maintenance schedule and work order</td>
+<td>Breakdown notification and corrective work order</td>
+</tr>
+<tr>
+<td>Primary improvement</td>
+<td>Optimize scope, interval, and execution</td>
+<td>Reduce failures, diagnosis time, and restoration delays</td>
+</tr>
+</tbody>
+</table>
+<p>Planned downtime can still be poorly controlled, and unplanned downtime can sometimes be caused by failures that were preventable. Classification describes how the interruption was scheduled, not whether the maintenance was good or bad.</p>
+<h2 id="5-planned-downtime-is-not-always-lost-production-time">5. Planned Downtime Is Not Always Lost Production Time</h2>
+<p>A maintenance task can be planned without reducing production if it occurs outside the required production window or while the affected equipment is not needed.</p>
+<p>For example:</p>
+<ul>
+<li>A machine is scheduled for a four-hour preventive maintenance task on Sunday.</li>
+<li>Production is not scheduled during that period.</li>
+<li>The task does not reduce the machine's required production time.</li>
+</ul>
+<p>The task has a four-hour maintenance duration, but it may contribute zero production downtime under a schedule-based production-loss definition.</p>
+<p>By contrast, if the same task occurs during an eight-hour scheduled production shift, it may contribute to planned production downtime.</p>
+<p>Therefore, always distinguish maintenance duration, equipment downtime, and production downtime.</p>
+<h2 id="6-downtime-time-boundaries">6. Downtime Time Boundaries</h2>
+<p>Downtime calculations require consistent start and end events.</p>
+<p>A practical event timeline may be:</p>
+<pre><code>Equipment interruption occurs
+        ↓
+Fault detected and recorded
+        ↓
+Maintenance notified
+        ↓
+Diagnosis and restoration work
+        ↓
+Repair completed
+        ↓
+Functional verification
+        ↓
+Equipment released for production
+        ↓
+Production resumes
+</code></pre>
+<p>Depending on the KPI, the end time may be technical restoration, formal production release, or actual production restart.</p>
+<p>Record these timestamps separately when they represent different events. Otherwise, maintenance delays and production delays can become mixed into one misleading duration.</p>
+<h2 id="7-downtime-classification-rules">7. Downtime Classification Rules</h2>
+<p>A good downtime system should classify events consistently.</p>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>Suggested classification approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Scheduled preventive maintenance during production time</td>
+<td>Planned downtime</td>
+</tr>
+<tr>
+<td>Unexpected sensor failure during production</td>
+<td>Unplanned downtime</td>
+</tr>
+<tr>
+<td>Scheduled replacement overruns because a bolt is seized</td>
+<td>Record planned work and separately classify the overrun according to site rules</td>
+</tr>
+<tr>
+<td>Breakdown occurs during a planned maintenance window</td>
+<td>Record the failure event and define how overlapping time is treated</td>
+</tr>
+<tr>
+<td>Production waits for material while the machine is healthy</td>
+<td>Production or material-related loss, not automatically equipment downtime</td>
+</tr>
+<tr>
+<td>Machine waits for a technician after failure</td>
+<td>Unplanned downtime if the asset remains unavailable and the metric includes response delay</td>
+</tr>
+<tr>
+<td>Planned software upgrade fails and disables the machine</td>
+<td>Record the planned change and the resulting interruption; classify additional loss according to the agreed rules</td>
+</tr>
+<tr>
+<td>Utility failure stops several machines</td>
+<td>Record the common cause and affected assets without double-counting the same time in an aggregate measure</td>
+</tr>
+<tr>
+<td>Planned maintenance occurs outside scheduled production</td>
+<td>Maintenance duration may exist without production downtime</td>
+</tr>
+<tr>
+<td>Machine is running but producing defective parts</td>
+<td>Quality loss, not necessarily downtime</td>
+</tr>
+</tbody>
+</table>
+<p>Organizations should define whether events are classified by original intent, actual cause, schedule adherence, or a combination of these. A single label cannot answer every operational question.</p>
+<h2 id="8-planned-and-unplanned-downtime-formulas">8. Planned and Unplanned Downtime Formulas</h2>
+<h3 id="81-total-downtime">8.1 Total downtime</h3>
+<p>When all counted downtime intervals are mutually exclusive:</p>
+<div class="math-display">\[ T\_{\text{total}}=T\_{\text{planned}}+T\_{\text{unplanned}} \]</div>
+<p>For example, if planned downtime is 60 minutes and unplanned downtime is 40 minutes:</p>
+<div class="math-display">\[ T\_{\text{total}}=60+40=100\text{ minutes} \]</div>
+<p>This equation is valid only if the two categories use the same time basis and do not overlap.</p>
+<h3 id="82-unplanned-downtime-percentage">8.2 Unplanned downtime percentage</h3>
+<p>If total downtime is the sum of the two categories:</p>
+<div class="math-display">\[ \\%\text{Unplanned}= \frac{T\_{\text{unplanned}}}{T\_{\text{total}}}\times100 \]</div>
+<p>Using the example:</p>
+<div class="math-display">\[ \\%\text{Unplanned}=\frac{40}{100}\times100=40\\% \]</div>
+<p>Forty percent of the recorded downtime was unplanned.</p>
+<p>This does not mean that 40% of production time was lost. It means 40% of the downtime in this dataset was unplanned.</p>
+<h3 id="83-planned-downtime-percentage">8.3 Planned downtime percentage</h3>
+<div class="math-display">\[ \\%\text{Planned}= \frac{T\_{\text{planned}}}{T\_{\text{total}}}\times100 \]</div>
+<p>With 60 minutes planned and 40 minutes unplanned, the planned share is 60%.</p>
+<h3 id="84-downtime-as-a-percentage-of-required-production-time">8.4 Downtime as a percentage of required production time</h3>
+<div class="math-display">\[ \\%\text{Downtime}= \frac{T\_{\text{counted downtime}}}{T\_{\text{required production time}}}\times100 \]</div>
+<p>This measure answers a different question: how much of the required production time was lost to the counted downtime categories?</p>
+<p>Always label the denominator. Percentages without defined denominators invite accidental comparisons between unrelated metrics.</p>
+<h2 id="9-worked-example-production-shift">9. Worked Example: Production Shift</h2>
+<p>A machine is scheduled for 480 minutes of production time.</p>
+<p>Recorded interruptions:</p>
+<ul>
+<li>Planned maintenance: 30 minutes.</li>
+<li>Unplanned equipment failures: 45 minutes.</li>
+<li>No other counted downtime.</li>
+</ul>
+<p>Total counted downtime is 75 minutes.</p>
+<div class="math-display">\[ T\_{\text{available}}=480-75=405\text{ minutes} \]</div>
+<div class="math-display">\[ \text{Availability}=\frac{405}{480}\times100=84.375\\% \]</div>
+<p>The machine's time-based availability is approximately 84.38%, assuming both downtime categories are included in the defined production-time availability metric.</p>
+<p>Unplanned downtime as a percentage of required production time is:</p>
+<div class="math-display">\[ \frac{45}{480}\times100=9.375\\% \]</div>
+<p>Planned downtime as a percentage of required production time is:</p>
+<div class="math-display">\[ \frac{30}{480}\times100=6.25\\% \]</div>
+<p>The unplanned portion should be investigated for failure prevention and restoration improvement. The planned portion should be reviewed for necessity, scheduling, execution efficiency, and whether it can be moved outside required production time.</p>
+<h2 id="10-planned-maintenance-overrun">10. Planned Maintenance Overrun</h2>
+<p>A planned maintenance window is not the same as the actual time required to complete the work.</p>
+<p>Example:</p>
+<ul>
+<li>Approved maintenance window: 60 minutes.</li>
+<li>Actual maintenance duration: 90 minutes.</li>
+<li>Overrun: 30 minutes.</li>
+</ul>
+<div class="math-display">\[ T\_{\text{overrun}}=T\_{\text{actual}}-T\_{\text{planned}} \]</div>
+<div class="math-display">\[ T\_{\text{overrun}}=90-60=30\text{ minutes} \]</div>
+<p>The overrun can result from:</p>
+<ul>
+<li>Incorrect work estimates.</li>
+<li>Missing spare parts or tools.</li>
+<li>Unexpected equipment condition.</li>
+<li>Seized fasteners or difficult access.</li>
+<li>Additional faults discovered during inspection.</li>
+<li>Delayed permits or isolation.</li>
+<li>Failed post-maintenance testing.</li>
+<li>Incomplete procedures or inadequate skills.</li>
+</ul>
+<p>The original planned work should remain traceable. Record the overrun separately rather than rewriting the original plan to make schedule performance appear better.</p>
+<p>Whether the overrun is classified as planned or unplanned downtime depends on the site's rules. The analysis should preserve both the planned duration and the actual interruption.</p>
+<h2 id="11-why-unplanned-downtime-occurs">11. Why Unplanned Downtime Occurs</h2>
+<table>
+<thead>
+<tr>
+<th>Cause category</th>
+<th>Industrial examples</th>
+<th>Improvement direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Component failure</td>
+<td>Failed sensor, relay, bearing, or drive</td>
+<td>Failure analysis and component improvement</td>
+</tr>
+<tr>
+<td>Electrical problems</td>
+<td>Loose terminals, poor power quality, insulation faults</td>
+<td>Inspection, electrical testing, and corrective action</td>
+</tr>
+<tr>
+<td>Automation problems</td>
+<td>PLC logic faults, I/O failures, configuration errors</td>
+<td>Diagnostics, software control, and verification</td>
+</tr>
+<tr>
+<td>Mechanical problems</td>
+<td>Misalignment, wear, broken coupling</td>
+<td>Condition monitoring and mechanical maintenance</td>
+</tr>
+<tr>
+<td>Network problems</td>
+<td>Switch failure, damaged cable, configuration mismatch</td>
+<td>Network diagnostics and controlled configuration</td>
+</tr>
+<tr>
+<td>Environmental problems</td>
+<td>Heat, dust, moisture, vibration</td>
+<td>Environmental protection and condition monitoring</td>
+</tr>
+<tr>
+<td>Maintenance errors</td>
+<td>Incorrect wiring or parameter changes</td>
+<td>Standard procedures, competency, and independent checks where needed</td>
+</tr>
+<tr>
+<td>Spare-parts delays</td>
+<td>No compatible replacement available</td>
+<td>Critical spares and obsolescence planning</td>
+</tr>
+<tr>
+<td>Inadequate planning</td>
+<td>Missing tools, permits, or resources</td>
+<td>Better job preparation</td>
+</tr>
+<tr>
+<td>External causes</td>
+<td>Utility or upstream equipment failure</td>
+<td>Dependency analysis and contingency planning</td>
+</tr>
+</tbody>
+</table>
+<p>These categories should be refined using actual failure evidence. A failed component is often the immediate cause, not necessarily the underlying root cause.</p>
+<h2 id="12-reducing-planned-downtime">12. Reducing Planned Downtime</h2>
+<p>Planned maintenance should be effective, safe, and appropriately timed.</p>
+<p>Practical improvements include:</p>
+<ul>
+<li>Prepare work orders with a defined scope.</li>
+<li>Review previous maintenance duration and findings.</li>
+<li>Arrange permits, isolation, tools, and spare parts before shutdown.</li>
+<li>Use standard job plans and checklists.</li>
+<li>Combine compatible tasks within one approved shutdown.</li>
+<li>Avoid unnecessary inspection or replacement tasks.</li>
+<li>Verify the need for age-based replacement against failure behavior and risk.</li>
+<li>Prepare restoration and functional testing steps in advance.</li>
+<li>Track planned versus actual duration.</li>
+<li>Review overruns and revise future estimates using evidence.</li>
+</ul>
+<p>The goal is not to eliminate planned maintenance. A well-planned shutdown may prevent a much larger unplanned interruption later.</p>
+<h2 id="13-reducing-unplanned-downtime">13. Reducing Unplanned Downtime</h2>
+<h3 id="131-reduce-failure-frequency">13.1 Reduce failure frequency</h3>
+<ul>
+<li>Investigate recurring breakdowns.</li>
+<li>Improve lubrication, alignment, cooling, and electrical connections.</li>
+<li>Monitor relevant condition indicators.</li>
+<li>Correct recurring PLC, network, and configuration faults.</li>
+<li>Review operating conditions and component suitability.</li>
+<li>Use preventive or predictive maintenance when justified.</li>
+</ul>
+<h3 id="132-reduce-restoration-duration">13.2 Reduce restoration duration</h3>
+<ul>
+<li>Maintain tested backups.</li>
+<li>Improve alarm interpretation and troubleshooting guides.</li>
+<li>Keep critical spares and approved successors available.</li>
+<li>Maintain accurate drawings and installed-component records.</li>
+<li>Train technicians on common failure modes.</li>
+<li>Standardize safe component replacement and recovery procedures.</li>
+<li>Define escalation paths for specialist or vendor support.</li>
+</ul>
+<h3 id="133-improve-fault-detection">13.3 Improve fault detection</h3>
+<ul>
+<li>Monitor recurring alarms and abnormal trends.</li>
+<li>Record intermittent faults before clearing diagnostic evidence.</li>
+<li>Use vibration, temperature, current, or network diagnostics where relevant.</li>
+<li>Correlate PLC events with maintenance and production records.</li>
+<li>Verify that alarms indicate a meaningful failure condition.</li>
+</ul>
+<p>Not every unexpected failure can be prevented. The objective is to reduce avoidable failures and minimize their consequences without compromising safety or quality.</p>
+<h2 id="14-planned-vs-unplanned-downtime-in-sap-pm">14. Planned vs Unplanned Downtime in SAP PM</h2>
+<p>SAP Plant Maintenance can support downtime analysis through notifications, maintenance orders, work-center records, and associated operational data, depending on the site's configuration.</p>
+<p>Recommended data fields include:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Asset ID</td>
+<td>Identifies the machine</td>
+</tr>
+<tr>
+<td>Notification number</td>
+<td>Links the reported event</td>
+</tr>
+<tr>
+<td>Maintenance order</td>
+<td>Links the maintenance work</td>
+</tr>
+<tr>
+<td>Event start timestamp</td>
+<td>Records interruption start</td>
+</tr>
+<tr>
+<td>Restoration timestamp</td>
+<td>Records when required function returned</td>
+</tr>
+<tr>
+<td>Downtime classification</td>
+<td>Planned, unplanned, or another defined category</td>
+</tr>
+<tr>
+<td>Failure mode</td>
+<td>Identifies how the equipment failed</td>
+</tr>
+<tr>
+<td>Cause code</td>
+<td>Supports consistent analysis</td>
+</tr>
+<tr>
+<td>Planned duration</td>
+<td>Records the expected work duration</td>
+</tr>
+<tr>
+<td>Actual duration</td>
+<td>Records the measured duration</td>
+</tr>
+<tr>
+<td>Work status</td>
+<td>Tracks work progress</td>
+</tr>
+<tr>
+<td>Spare-parts delay</td>
+<td>Identifies logistics losses</td>
+</tr>
+<tr>
+<td>Corrective action</td>
+<td>Records improvement work</td>
+</tr>
+<tr>
+<td>Production release time</td>
+<td>Records operational readiness, if required</td>
+</tr>
+</tbody>
+</table>
+<p>The exact data source and field mapping should be confirmed against the local SAP configuration. Do not assume that order creation, technical completion, or closure timestamps automatically represent the actual start or end of production downtime.</p>
+<h2 id="15-excel-and-power-bi-analysis">15. Excel and Power BI Analysis</h2>
+<p>A useful dashboard should distinguish downtime duration, frequency, and production impact.</p>
+<p>Recommended indicators include:</p>
+<ul>
+<li>Planned downtime minutes by asset and period.</li>
+<li>Unplanned downtime minutes by asset and failure mode.</li>
+<li>Number of unplanned breakdown events.</li>
+<li>Planned maintenance schedule adherence.</li>
+<li>Planned maintenance overrun.</li>
+<li>Unplanned downtime as a percentage of required production time.</li>
+<li>Repeat breakdown contribution.</li>
+<li>Downtime by shift and production line.</li>
+<li>Spare-parts and vendor-support delay.</li>
+<li>Availability trend.</li>
+<li>Top contributors to downtime.</li>
+<li>Improvement results before and after corrective actions.</li>
+</ul>
+<h3 id="example-dataset">Example dataset</h3>
+<table>
+<thead>
+<tr>
+<th>Asset</th>
+<th>Planned downtime</th>
+<th>Unplanned downtime</th>
+<th>Total downtime</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC station</td>
+<td>30 minutes</td>
+<td>20 minutes</td>
+<td>50 minutes</td>
+</tr>
+<tr>
+<td>CNC machine</td>
+<td>60 minutes</td>
+<td>45 minutes</td>
+<td>105 minutes</td>
+</tr>
+<tr>
+<td>Robot cell</td>
+<td>45 minutes</td>
+<td>30 minutes</td>
+<td>75 minutes</td>
+</tr>
+<tr>
+<td>Test bench</td>
+<td>30 minutes</td>
+<td>60 minutes</td>
+<td>90 minutes</td>
+</tr>
+</tbody>
+</table>
+<p>These values are illustrative. The assets must use consistent time boundaries, and overlapping downtime intervals must be reconciled before totals are aggregated.</p>
+<h3 id="excel-formula">Excel formula</h3>
+<p>If planned downtime is in <code>B2</code> and unplanned downtime is in <code>C2</code>:</p>
+<pre><code>=B2+C2
+</code></pre>
+<p>To calculate the unplanned share of total downtime:</p>
+<pre><code>=IF(B2+C2&gt;0,C2/(B2+C2),&quot;N/A&quot;)
+</code></pre>
+<p>Format the result as a percentage.</p>
+<p>To calculate unplanned downtime as a percentage of required production time, divide unplanned downtime by the relevant required-time value instead. These two percentages are not interchangeable.</p>
+<h2 id="16-downtime-pareto-analysis">16. Downtime Pareto Analysis</h2>
+<p>Pareto analysis ranks causes by their contribution to a defined loss measure, such as total downtime minutes or number of failures.</p>
+<p>Example:</p>
+<table>
+<thead>
+<tr>
+<th>Failure category</th>
+<th>Downtime</th>
+<th>Share of total</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VFD failures</td>
+<td>180 minutes</td>
+<td>40%</td>
+</tr>
+<tr>
+<td>Sensor failures</td>
+<td>120 minutes</td>
+<td>26.67%</td>
+</tr>
+<tr>
+<td>Network failures</td>
+<td>90 minutes</td>
+<td>20%</td>
+</tr>
+<tr>
+<td>Other causes</td>
+<td>60 minutes</td>
+<td>13.33%</td>
+</tr>
+<tr>
+<td>Total</td>
+<td>450 minutes</td>
+<td>100%</td>
+</tr>
+</tbody>
+</table>
+<p>The figures are illustrative. In this dataset, VFD failures contribute the largest share of downtime, so drive-related failure analysis is a reasonable priority.</p>
+<p>However, the highest downtime category is not automatically the highest safety risk or the best first investment. Also consider failure severity, recurrence, production constraints, repair cost, and the probability of successful improvement.</p>
+<h2 id="17-common-downtime-reporting-errors">17. Common Downtime Reporting Errors</h2>
+<table>
+<thead>
+<tr>
+<th>Error</th>
+<th>Consequence</th>
+<th>Correct practice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Treating all maintenance duration as production downtime</td>
+<td>Overstates production loss</td>
+<td>Compare events with required production time</td>
+</tr>
+<tr>
+<td>Counting overlapping events more than once</td>
+<td>Inflates total downtime</td>
+<td>Reconcile overlapping intervals</td>
+</tr>
+<tr>
+<td>Reclassifying breakdowns as planned after the event</td>
+<td>Hides unplanned losses</td>
+<td>Preserve original event history and apply documented rules</td>
+</tr>
+<tr>
+<td>Treating every stop as an equipment failure</td>
+<td>Misidentifies maintenance performance</td>
+<td>Classify the actual loss mechanism</td>
+</tr>
+<tr>
+<td>Ignoring planned maintenance overruns</td>
+<td>Hides scheduling and execution problems</td>
+<td>Track planned and actual duration</td>
+</tr>
+<tr>
+<td>Combining different denominators</td>
+<td>Creates misleading percentages</td>
+<td>Label and standardize each denominator</td>
+</tr>
+<tr>
+<td>Using work-order closure as the only end timestamp</td>
+<td>May distort actual downtime</td>
+<td>Verify restoration and production-release events</td>
+</tr>
+<tr>
+<td>Ignoring repeat breakdowns</td>
+<td>Misses chronic reliability problems</td>
+<td>Analyze recurrence and root causes</td>
+</tr>
+<tr>
+<td>Optimizing only for less downtime</td>
+<td>May encourage unsafe shortcuts</td>
+<td>Preserve required isolation, testing, and quality checks</td>
+</tr>
+</tbody>
+</table>
+<h2 id="18-practical-industrial-example">18. Practical Industrial Example</h2>
+<p>Scenario: A production line experiences repeated unplanned downtime because a remote I/O communication module intermittently loses communication.</p>
+<h3 id="initial-observations">Initial observations</h3>
+<ul>
+<li>Unplanned interruptions are recorded across multiple shifts.</li>
+<li>The module is repeatedly reset to restore operation.</li>
+<li>Some events have incomplete alarm histories.</li>
+<li>Technicians spend time checking cables, power, and network configuration.</li>
+<li>The same fault reappears after temporary recovery.</li>
+</ul>
+<h3 id="investigation">Investigation</h3>
+<ol>
+<li>Define the qualifying downtime event and its start and end times.</li>
+<li>Correlate PLC diagnostics, module status, switch logs, and production stoppage records.</li>
+<li>Check power quality, connectors, cable condition, grounding, and network configuration.</li>
+<li>Determine whether the issue is hardware-related, configuration-related, environmental, or caused by a common upstream condition.</li>
+<li>Record the confirmed cause and corrective action.</li>
+</ol>
+<h3 id="corrective-actions">Corrective actions</h3>
+<ul>
+<li>Repair or replace the defective component if evidence supports it.</li>
+<li>Correct cable routing, connector integrity, power supply, or configuration as required.</li>
+<li>Update network drawings and installed-component records.</li>
+<li>Establish a standard diagnostic procedure.</li>
+<li>Verify communication recovery and the affected machine sequence.</li>
+<li>Monitor recurrence across comparable production exposure.</li>
+</ul>
+<h3 id="evaluation">Evaluation</h3>
+<p>Compare unplanned downtime minutes, event frequency, restoration duration, and repeat failures before and after the action.</p>
+<p>A successful improvement should reduce the targeted loss without simply reclassifying downtime or clearing alarms more quickly.</p>
+<h2 id="19-interview-questions-and-answers">19. Interview Questions and Answers</h2>
+<p>Q1. What is planned downtime?</p>
+<p>An interruption scheduled or authorized in advance for maintenance or another defined activity.</p>
+<p>Q2. What is unplanned downtime?</p>
+<p>An unexpected interruption that prevents the equipment from performing its required function.</p>
+<p>Q3. Is all planned maintenance downtime a production loss?</p>
+<p>No. Maintenance performed outside required production time may not reduce scheduled production availability.</p>
+<p>Q4. Can planned downtime become unplanned downtime?</p>
+<p>A scheduled task can overrun or reveal an unexpected fault. The original plan and additional interruption should be recorded according to documented classification rules.</p>
+<p>Q5. How do you reduce unplanned downtime?</p>
+<p>Reduce recurring failures, improve fault diagnostics, maintain critical spares, improve restoration procedures, and verify root cause corrective actions.</p>
+<p>Q6. Why is planned downtime important?</p>
+<p>Planned maintenance can prevent larger failures, improve equipment condition, and allow work to be performed with appropriate resources and production coordination.</p>
+<p>Q7. How do you measure planned maintenance performance?</p>
+<p>Compare approved and actual durations, schedule adherence, completed scope, overrun reasons, and the effectiveness of the maintenance task.</p>
+<p>Q8. What is the difference between downtime and MTTR?</p>
+<p>Downtime is the duration of an interruption under the chosen definition. MTTR is an average repair-duration metric across qualifying repair events.</p>
+<p>Q9. How does downtime affect availability?</p>
+<p>Downtime reduces availability when it falls within the defined required-time denominator and is included by the measurement rules.</p>
+<p>Q10. Why should downtime be analyzed by cause?</p>
+<p>Cause-based analysis identifies the most significant failure mechanisms and delays, allowing corrective actions to target the actual sources of loss.</p>
+<h2 id="20-final-checklist">20. Final Checklist</h2>
+<ul>
+<li>Planned and unplanned downtime definitions documented.</li>
+<li>Asset boundaries and required production periods defined.</li>
+<li>Event start and end timestamps standardized.</li>
+<li>Maintenance duration separated from production downtime.</li>
+<li>Planned duration and actual duration recorded.</li>
+<li>Planned maintenance overruns reviewed.</li>
+<li>Unplanned events classified by cause and failure mode.</li>
+<li>Overlapping events reconciled.</li>
+<li>Downtime and event frequency analyzed separately.</li>
+<li>Repeat breakdowns identified.</li>
+<li>Critical spare-parts and restoration delays reviewed.</li>
+<li>Corrective actions assigned and verified.</li>
+<li>Availability and downtime denominators clearly labeled.</li>
+<li>Required safety and quality checks retained.</li>
+<li>Historical records preserved for trend analysis and audit.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\34_Maint_Metrics\02_Analysis_Tools\01_Repeat_Chronic_Breakdown - Repeat/Chronic breakdown analysis</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

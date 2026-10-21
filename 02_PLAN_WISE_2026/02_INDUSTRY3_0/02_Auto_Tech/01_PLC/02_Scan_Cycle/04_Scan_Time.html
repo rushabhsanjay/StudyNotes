@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>04. Scan Time: Watchdog and Cycle-Time Limits</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">04. Scan Time: Watchdog and Cycle-Time Limits</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-what-is-scan-time">1. What Is Scan Time?</a></li>
+<li><a href="#2-important-timing-terminology">2. Important Timing Terminology</a></li>
+<li><a href="#3-what-determines-scan-time">3. What Determines Scan Time?</a></li>
+<li><a href="#4-why-does-scan-time-vary">4. Why Does Scan Time Vary?</a><ul>
+<li><a href="#jitter">Jitter</a></li>
+</ul>
+</li>
+<li><a href="#5-what-is-a-watchdog-timer">5. What Is a Watchdog Timer?</a><ul>
+<li><a href="#watchdog-versus-process-timer">Watchdog versus process timer</a></li>
+</ul>
+</li>
+<li><a href="#6-cycle-time-limits-and-task-overruns">6. Cycle-Time Limits and Task Overruns</a><ul>
+<li><a href="#why-the-limit-matters">Why the limit matters</a></li>
+</ul>
+</li>
+<li><a href="#7-plc-scan-time-and-machine-response-time">7. PLC Scan Time and Machine Response Time</a><ul>
+<li><a href="#example-a-clamp-fixture">Example: A clamp fixture</a></li>
+<li><a href="#can-a-plc-miss-a-short-input-pulse">Can a PLC miss a short input pulse?</a></li>
+</ul>
+</li>
+<li><a href="#8-common-scan-time-and-watchdog-problems">8. Common Scan-Time and Watchdog Problems</a></li>
+<li><a href="#9-practical-troubleshooting-procedure">9. Practical Troubleshooting Procedure</a><ul>
+<li><a href="#a-when-scan-time-is-high">A. When scan time is high</a></li>
+<li><a href="#b-when-a-watchdog-fault-occurs">B. When a watchdog fault occurs</a></li>
+<li><a href="#c-when-machine-response-is-slow-but-scan-time-looks-normal">C. When machine response is slow but scan time looks normal</a></li>
+</ul>
+</li>
+<li><a href="#10-how-to-optimize-scan-time-safely">10. How to Optimize Scan Time Safely</a></li>
+<li><a href="#11-platform-differences">11. Platform Differences</a></li>
+<li><a href="#12-interview-questions-and-answers">12. Interview Questions and Answers</a></li>
+<li><a href="#13-practical-study-exercise">13. Practical Study Exercise</a></li>
+<li><a href="#14-final-mental-model">14. Final Mental Model</a></li>
+<li><a href="#next-topic-03_diagnostics">Next Topic: 03_Diagnostics</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\02_Auto_Tech\01_PLC\02_Scan_Cycle\04_Scan_Time</code></p>
+<p>Scan time determines how quickly a PLC can repeatedly acquire information, execute its control logic, and update its outputs. It affects machine response, sequence timing, diagnostic behavior, and the ability to meet real-time control requirements.</p>
+<p>The important distinction is that a PLC can execute its program correctly and still respond too slowly for the application. Correct logic is only one part of a working control system.</p>
+<h2 id="1-what-is-scan-time">1. What Is Scan Time?</h2>
+<p>Scan time is the time taken by a PLC to execute a defined cycle of its control operation. In a traditional cyclic PLC, this generally involves acquiring inputs, executing the program, and updating outputs, along with system overhead.</p>
+<p>The precise definition depends on the PLC family and how its tasks are configured. Modern PLCs may use continuous, periodic, event-driven, and other scheduled tasks rather than one universal scan sequence.</p>
+<p>A simplified traditional scan cycle is:</p>
+<pre><code>        +----------------------+
+        | Input Acquisition    |
+        +----------+-----------+
+                   |
+                   v
+        +----------------------+
+        | Program Execution    |
+        +----------+-----------+
+                   |
+                   v
+        +----------------------+
+        | Output Update        |
+        +----------+-----------+
+                   |
+                   v
+        +----------------------+
+        | System Overhead      |
+        | Communications       |
+        | Diagnostics          |
+        +----------+-----------+
+                   |
+                   v
+             Next Cycle
+</code></pre>
+<p>This is a conceptual model. Actual input/output updates and communication processing may occur asynchronously or at different intervals.</p>
+<p>For example, if a PLC completes a defined cyclic operation in 8 ms, it may repeat that operation approximately 125 times per second.</p>
+<div class="math-display">\[ \text{Cycles per second} \approx \frac{1000}{\text{Cycle time in ms}} \]</div>
+<p>For an 8 ms cycle:</p>
+<div class="math-display">\[ \frac{1000}{8}=125\text{ cycles/s} \]</div>
+<p>This calculation describes the cycle rate, not necessarily how frequently every physical input is sampled or every output is updated.</p>
+<h2 id="2-important-timing-terminology">2. Important Timing Terminology</h2>
+<p>Several timing values appear in PLC diagnostics. They are related, but they do not mean the same thing.</p>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Program execution time</td>
+<td>Time spent executing a specific program or task</td>
+<td>Identifies computational workload</td>
+</tr>
+<tr>
+<td>Scan or cycle time</td>
+<td>Time associated with a cyclic controller execution cycle</td>
+<td>Indicates how frequently cyclic processing repeats</td>
+</tr>
+<tr>
+<td>Task period</td>
+<td>Configured interval between scheduled executions of a periodic task</td>
+<td>Determines when the task is intended to run</td>
+</tr>
+<tr>
+<td>I/O update interval</td>
+<td>Interval at which I/O data is transferred or refreshed</td>
+<td>Affects how quickly field changes reach the controller</td>
+</tr>
+<tr>
+<td>Watchdog time</td>
+<td>Allowed execution-time limit monitored by the controller or task</td>
+<td>Helps detect overruns or abnormal execution</td>
+</tr>
+<tr>
+<td>Response time</td>
+<td>Time between a real-world event and the corresponding system response</td>
+<td>Determines actual machine responsiveness</td>
+</tr>
+<tr>
+<td>Jitter</td>
+<td>Variation in execution timing or task start times</td>
+<td>Affects timing consistency</td>
+</tr>
+<tr>
+<td>Minimum scan time</td>
+<td>Lowest recorded scan or cycle time</td>
+<td>Shows best observed performance</td>
+</tr>
+<tr>
+<td>Average scan time</td>
+<td>Mean recorded scan or cycle time</td>
+<td>Shows typical performance</td>
+</tr>
+<tr>
+<td>Maximum scan time</td>
+<td>Highest recorded scan or cycle time during the observation period</td>
+<td>Helps reveal worst observed delays</td>
+</tr>
+</tbody>
+</table>
+<p>Example: A PLC might have an average scan time of 6 ms and a maximum of 18 ms. Looking only at the average hides the occasional long cycle that could delay a machine sequence.</p>
+<p>Also, a task period of 10 ms does not automatically mean the program takes 10 ms to execute. A task may be scheduled every 10 ms and finish in 2 ms, leaving time before its next scheduled execution.</p>
+<h2 id="3-what-determines-scan-time">3. What Determines Scan Time?</h2>
+<p>The controller's workload and scheduling determine how much processing time is required.</p>
+<table>
+<thead>
+<tr>
+<th>Factor</th>
+<th>Effect on execution time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Program size</td>
+<td>More instructions can require more processing</td>
+</tr>
+<tr>
+<td>Logic complexity</td>
+<td>Complex calculations and conditional logic may increase execution time</td>
+</tr>
+<tr>
+<td>Loops</td>
+<td>Large or unbounded loops can consume excessive CPU time</td>
+</tr>
+<tr>
+<td>Indirect or indexed addressing</td>
+<td>May require additional processing compared with simpler access</td>
+</tr>
+<tr>
+<td>Data handling</td>
+<td>Large data copies, array operations, and structure processing add workload</td>
+</tr>
+<tr>
+<td>Mathematical operations</td>
+<td>Complex calculations can increase execution time</td>
+</tr>
+<tr>
+<td>Communications</td>
+<td>Communication processing may consume resources or affect task scheduling</td>
+</tr>
+<tr>
+<td>Multiple tasks</td>
+<td>Competing tasks and task priorities affect execution opportunities</td>
+</tr>
+<tr>
+<td>Motion and interrupt processing</td>
+<td>High-priority or frequent tasks can affect other workloads</td>
+</tr>
+<tr>
+<td>Diagnostics and monitoring</td>
+<td>Online monitoring, trending, and debugging may add overhead, depending on the platform</td>
+</tr>
+<tr>
+<td>Program organization</td>
+<td>Repeated calculations or inefficient routines can waste execution time</td>
+</tr>
+<tr>
+<td>CPU utilization</td>
+<td>Heavy controller workload can affect scheduling and performance</td>
+</tr>
+</tbody>
+</table>
+<p>A large program does not necessarily have a poor scan time. Efficient code on a suitable CPU can execute more quickly than a smaller but inefficient program on a heavily loaded controller.</p>
+<p>For maintenance work, compare actual execution measurements rather than judging performance by the number of ladder rungs.</p>
+<h2 id="4-why-does-scan-time-vary">4. Why Does Scan Time Vary?</h2>
+<p>Scan time is not always constant.</p>
+<p>Consider a program with several conditional routines:</p>
+<pre><code>Main Routine
+    |
+    +--&gt; Check Safety Status
+    |
+    +--&gt; Check Robot Status
+    |
+    +--&gt; IF Fault Detected
+    |       |
+    |       +--&gt; Execute Fault Handling
+    |
+    +--&gt; IF Production Active
+            |
+            +--&gt; Execute Production Sequence
+</code></pre>
+<p>When the machine is idle, some routines may execute less frequently or not execute at all. During production, additional calculations, communication handling, or fault processing may increase the workload.</p>
+<p>The result is variation in execution time.</p>
+<h3 id="jitter">Jitter</h3>
+<p>Jitter is the variation in timing from one execution to another.</p>
+<p>For example:</p>
+<table>
+<thead>
+<tr>
+<th>Cycle</th>
+<th>Execution time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>5 ms</td>
+</tr>
+<tr>
+<td>2</td>
+<td>6 ms</td>
+</tr>
+<tr>
+<td>3</td>
+<td>5 ms</td>
+</tr>
+<tr>
+<td>4</td>
+<td>14 ms</td>
+</tr>
+<tr>
+<td>5</td>
+<td>6 ms</td>
+</tr>
+</tbody>
+</table>
+<p>The 14 ms cycle is an important observation. Even though most cycles are fast, the occasional delay may matter when coordinating with robots, motion systems, or time-sensitive machine operations.</p>
+<p>When investigating timing problems, record minimum, average, maximum, and, where available, the distribution of observed times.</p>
+<h2 id="5-what-is-a-watchdog-timer">5. What Is a Watchdog Timer?</h2>
+<p>A watchdog is a monitoring mechanism that checks whether a controller or task completes its execution within an allowed time.</p>
+<p>Its purpose is to detect conditions such as excessive execution time, a stuck execution path, or a task that fails to complete as expected.</p>
+<p>For example:</p>
+<pre><code>Task Starts
+    |
+    v
+Program Executes
+    |
+    +---- Completes Within Limit ----&gt; Normal Operation
+    |
+    +---- Exceeds Allowed Limit -----&gt; Watchdog Fault/Action
+</code></pre>
+<p>The actual response depends on the PLC model, task configuration, and fault-handling settings. Possible outcomes include a task fault, controller fault, transition to a defined fault state, or configured output behavior.</p>
+<p>There is no universal watchdog limit for all PLCs. The relevant limit may be a controller default, a configured task watchdog, or another platform-specific timing constraint.</p>
+<h3 id="watchdog-versus-process-timer">Watchdog versus process timer</h3>
+<table>
+<thead>
+<tr>
+<th>Watchdog</th>
+<th>Process timer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Monitors execution duration or task completion</td>
+<td>Measures time as part of application logic</td>
+</tr>
+<tr>
+<td>Detects execution overruns or abnormal execution</td>
+<td>Controls or monitors a process sequence</td>
+</tr>
+<tr>
+<td>May trigger a controller or task fault</td>
+<td>May set a program bit or trigger an application alarm</td>
+</tr>
+<tr>
+<td>Related to controller execution integrity</td>
+<td>Related to machine behavior</td>
+</tr>
+</tbody>
+</table>
+<p>Example: A clamp is expected to extend within 2 seconds.</p>
+<ul>
+<li>A process timer can trigger a clamp-extension timeout alarm if the limit is exceeded.</li>
+<li>A watchdog can detect that PLC execution itself exceeded an allowed execution-time limit.</li>
+</ul>
+<p>These are entirely different failures. One concerns the machine process; the other concerns controller execution.</p>
+<p>A watchdog is also not automatically a safety function. Machine safety must be designed and validated through the appropriate safety architecture and risk assessment.</p>
+<h2 id="6-cycle-time-limits-and-task-overruns">6. Cycle-Time Limits and Task Overruns</h2>
+<p>Every PLC has practical execution limits determined by its hardware, firmware, task configuration, and application requirements.</p>
+<p>For a periodic task, suppose the intended period is 10 ms and the task normally completes in 3 ms.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Task period</td>
+<td>10 ms</td>
+</tr>
+<tr>
+<td>Normal execution time</td>
+<td>3 ms</td>
+</tr>
+<tr>
+<td>Time remaining before next scheduled release</td>
+<td>Approximately 7 ms</td>
+</tr>
+</tbody>
+</table>
+<p>Now suppose an unusual condition causes execution to take 12 ms.</p>
+<p>The task has exceeded its intended 10 ms period. Depending on the controller and task configuration, this can cause a missed deadline, an overrun indication, delayed execution, or a watchdog fault.</p>
+<p>Do not assume every PLC handles overruns identically.</p>
+<h3 id="why-the-limit-matters">Why the limit matters</h3>
+<ul>
+<li>A periodic task may fail to meet its intended schedule.</li>
+<li>Time-sensitive calculations may use older-than-expected data.</li>
+<li>Other tasks may experience scheduling delays.</li>
+<li>Motion or coordinated machine operations may lose timing consistency.</li>
+<li>A watchdog may trigger if its applicable limit is exceeded.</li>
+</ul>
+<p>A scan time below the watchdog threshold does not prove the application meets its real-time requirements. The machine may require a response within a much shorter deadline than the watchdog permits.</p>
+<h2 id="7-plc-scan-time-and-machine-response-time">7. PLC Scan Time and Machine Response Time</h2>
+<p>This is one of the most important distinctions in industrial troubleshooting.</p>
+<p>Scan time measures controller execution timing. Response time measures the delay from a real-world event to the resulting action.</p>
+<p>The complete response path may be:</p>
+<pre><code>Sensor Changes State
+        |
+        v
+Sensor/Input Filtering
+        |
+        v
+Input Module or Network Update
+        |
+        v
+Wait for Relevant PLC Task
+        |
+        v
+Program Executes Logic
+        |
+        v
+Output Image or Output Command Updates
+        |
+        v
+Output Module or Network Update
+        |
+        v
+Actuator Responds
+        |
+        v
+Feedback Confirms Movement
+</code></pre>
+<p>Every stage can contribute delay.</p>
+<p>A conceptual response-time budget is:</p>
+<div class="math-display">\[ \begin{aligned} T\_{\text{response}} \approx {}&amp; T\_{\text{sensor}} + T\_{\text{input filter}}\\\ &amp;+T\_{\text{input update/wait}}+T\_{\text{task wait}}\\\ &amp;+T\_{\text{logic}}+T\_{\text{output update}}\\\ &amp;+T\_{\text{actuator}} \end{aligned} \]</div>
+<p>This is a budgeting model, not a universal exact equation. Some delays overlap, and the timing architecture varies by PLC and I/O system. Avoid double-counting overlapping stages.</p>
+<h3 id="example-a-clamp-fixture">Example: A clamp fixture</h3>
+<p>A proximity sensor detects that a component is present. The PLC must then command a clamp valve.</p>
+<p>Assume, for illustration:</p>
+<table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>Illustrative delay</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Input filtering and acquisition</td>
+<td>2 ms</td>
+</tr>
+<tr>
+<td>Wait for the next relevant program execution</td>
+<td>8 ms</td>
+</tr>
+<tr>
+<td>Logic execution</td>
+<td>2 ms</td>
+</tr>
+<tr>
+<td>Output transfer</td>
+<td>3 ms</td>
+</tr>
+<tr>
+<td>Valve and actuator response</td>
+<td>45 ms</td>
+</tr>
+<tr>
+<td>Approximate total</td>
+<td>60 ms</td>
+</tr>
+</tbody>
+</table>
+<p>Even if the PLC logic executes in only 2 ms, the overall response is approximately 60 ms under these assumptions.</p>
+<p>The actuator accounts for most of the delay. Optimizing the PLC program alone would have limited effect.</p>
+<p>These numbers are illustrative, not specifications for any particular sensor, PLC, or valve.</p>
+<h3 id="can-a-plc-miss-a-short-input-pulse">Can a PLC miss a short input pulse?</h3>
+<p>Yes. A physical input pulse may be too short for the configured input filtering, acquisition interval, or controller's input-processing method.</p>
+<p>Reducing scan time may help in some configurations, but it does not guarantee detection. Depending on the application, a high-speed input, hardware counter, interrupt/event input, or other appropriate capture mechanism may be required.</p>
+<h2 id="8-common-scan-time-and-watchdog-problems">8. Common Scan-Time and Watchdog Problems</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Investigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Scan time suddenly increases</td>
+<td>New logic, loops, data handling, communications, or increased workload</td>
+<td>Compare current and previous diagnostics</td>
+</tr>
+<tr>
+<td>Watchdog fault occurs</td>
+<td>Task exceeds its permitted execution time or fails to complete</td>
+<td>Record the fault code and inspect task execution</td>
+</tr>
+<tr>
+<td>Machine responds intermittently slowly</td>
+<td>Scan-time variation, task scheduling, I/O updates, or network delays</td>
+<td>Compare maximum timing, jitter, and I/O timing</td>
+</tr>
+<tr>
+<td>Machine responds slowly despite low scan time</td>
+<td>Sensor filtering, remote I/O, task period, output transfer, or actuator delay</td>
+<td>Measure the full response path</td>
+</tr>
+<tr>
+<td>Short sensor pulses are missed</td>
+<td>Input filtering or acquisition is too slow for the pulse</td>
+<td>Check the input module specifications and capture method</td>
+</tr>
+<tr>
+<td>Problem appears after a program change</td>
+<td>Additional execution load, changed task structure, or new logic path</td>
+<td>Compare timing before and after the change</td>
+</tr>
+<tr>
+<td>Fault occurs only during production</td>
+<td>Workload-dependent logic, communications, motion activity, or task contention</td>
+<td>Examine timing under representative operating conditions</td>
+</tr>
+</tbody>
+</table>
+<h2 id="9-practical-troubleshooting-procedure">9. Practical Troubleshooting Procedure</h2>
+<h3 id="a-when-scan-time-is-high">A. When scan time is high</h3>
+<ol>
+<li>Read the PLC's current, minimum, maximum, and average scan or task execution measurements, where available.</li>
+<li>Check whether the delay affects the entire controller cycle or only a particular task.</li>
+<li>Inspect recently changed logic, loops, repeated calculations, and large data operations.</li>
+<li>Check task periods, priorities, communications load, and diagnostic activity.</li>
+<li>Compare measurements during idle operation and normal production.</li>
+<li>Establish a baseline and acceptance limit appropriate to the application.</li>
+</ol>
+<h3 id="b-when-a-watchdog-fault-occurs">B. When a watchdog fault occurs</h3>
+<ol>
+<li>Record the exact fault code, timestamp, controller state, and affected task.</li>
+<li>Check the applicable watchdog configuration and task scheduling.</li>
+<li>Review recent program changes and execution paths that may run longer under certain conditions.</li>
+<li>Check for unbounded loops, unexpected data conditions, or excessive processing load.</li>
+<li>Compare diagnostics with a known-good baseline.</li>
+<li>Make changes through the approved change-control process and validate them under controlled conditions.</li>
+</ol>
+<p>Do not blindly increase the watchdog limit to make the alarm disappear. That can conceal the underlying problem or allow an application to miss its timing requirements.</p>
+<h3 id="c-when-machine-response-is-slow-but-scan-time-looks-normal">C. When machine response is slow but scan time looks normal</h3>
+<p>Check the sensor, input filter, I/O update interval, task scheduling, output update, communication path, actuator, and feedback. A controller with a healthy scan time can still sit inside a slow control path.</p>
+<h2 id="10-how-to-optimize-scan-time-safely">10. How to Optimize Scan Time Safely</h2>
+<ul>
+<li>Simplify logic while preserving the original behavior.</li>
+<li>Eliminate unnecessary repeated calculations and data copying.</li>
+<li>Avoid unbounded loops and uncontrolled execution paths.</li>
+<li>Use continuous, periodic, or event-driven tasks appropriately for the PLC platform and application.</li>
+<li>Review communications and diagnostic workloads when measurements indicate they matter.</li>
+<li>Use vendor-provided execution and task diagnostics.</li>
+<li>Measure before and after each change.</li>
+<li>Define acceptable maximum execution time and response-time requirements.</li>
+<li>Validate sequencing, interlocks, fault handling, and safety behavior after changes.</li>
+</ul>
+<p>A shorter scan is not automatically a better design. A stable, predictable 8 ms execution cycle may be more useful than a system that usually executes in 3 ms but occasionally takes 25 ms, depending on the application.</p>
+<h2 id="11-platform-differences">11. Platform Differences</h2>
+<p>The concepts are broadly shared across PLC manufacturers, but terminology and scheduling behavior differ.</p>
+<table>
+<thead>
+<tr>
+<th>Platform family</th>
+<th>General point to understand</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Siemens SIMATIC</td>
+<td>Execution organization, cyclic processing, interrupts, and process-image arrangements depend on the CPU and configuration</td>
+</tr>
+<tr>
+<td>Rockwell Automation Logix</td>
+<td>Continuous, periodic, and event tasks may be used; task priorities and watchdog configuration matter</td>
+</tr>
+<tr>
+<td>Mitsubishi MELSEC</td>
+<td>Scan processing and interrupt/task behavior depend on the CPU family and program configuration</td>
+</tr>
+</tbody>
+</table>
+<p>Do not assume that a parameter with the same name has identical behavior across manufacturers. When troubleshooting a real machine, use the exact controller model, firmware, task configuration, and relevant manual.</p>
+<h2 id="12-interview-questions-and-answers">12. Interview Questions and Answers</h2>
+<p>Q1. What is PLC scan time?</p>
+<p>The time associated with a PLC's cyclic execution operation. In a traditional cyclic PLC, this generally includes input processing, program execution, and output processing, with platform-specific overhead.</p>
+<p>Q2. Why does scan time vary?</p>
+<p>Because execution workload, conditional routines, communication activity, task scheduling, interrupts, and diagnostics can change over time.</p>
+<p>Q3. What is the function of a watchdog?</p>
+<p>It monitors whether controller or task execution completes within an allowed time and can trigger a fault response when the applicable limit is exceeded.</p>
+<p>Q4. What is the difference between a watchdog and a timer instruction?</p>
+<p>A watchdog monitors execution duration or task completion. A timer instruction measures time for application logic, such as a cylinder timeout or sequence delay.</p>
+<p>Q5. Does a low scan time guarantee fast machine response?</p>
+<p>No. Input filtering, I/O updates, task scheduling, network delays, output hardware, and actuator response can dominate the total delay.</p>
+<p>Q6. Why is maximum scan time important?</p>
+<p>It reveals the longest observed execution cycle and can expose occasional delays hidden by the average. It is especially relevant to timing-sensitive applications.</p>
+<p>Q7. Can a watchdog fault indicate a program problem?</p>
+<p>Yes. Excessive loops, unexpectedly heavy execution paths, or other processing problems can contribute. The exact cause must be confirmed using controller diagnostics.</p>
+<p>Q8. Will reducing scan time always solve missed input pulses?</p>
+<p>No. The input module's filter and acquisition behavior may be the limiting factor. Hardware capture mechanisms may be necessary.</p>
+<p>Q9. Is the watchdog limit the same as the task period?</p>
+<p>No. The task period is the intended scheduling interval. The watchdog is an execution-time monitoring limit. Their configuration and relationship depend on the controller.</p>
+<p>Q10. Is a PLC watchdog a safety guarantee?</p>
+<p>No. It is an execution-monitoring mechanism, not a substitute for a properly designed and validated machine-safety system.</p>
+<h2 id="13-practical-study-exercise">13. Practical Study Exercise</h2>
+<p>For a PLC system you can inspect safely, collect the following information without changing live production settings:</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Information to record</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Controller</td>
+<td>Manufacturer, exact model, firmware</td>
+</tr>
+<tr>
+<td>Execution timing</td>
+<td>Current, minimum, average, and maximum scan/task time, where available</td>
+</tr>
+<tr>
+<td>Task scheduling</td>
+<td>Task type, period, priority, execution time</td>
+</tr>
+<tr>
+<td>Watchdog</td>
+<td>Configured limit and relevant fault history</td>
+</tr>
+<tr>
+<td>Input path</td>
+<td>Module type, configured filter, remote I/O update interval</td>
+</tr>
+<tr>
+<td>Output path</td>
+<td>Local or remote output, update interval, actuator type</td>
+</tr>
+<tr>
+<td>Timing faults</td>
+<td>Fault code, timestamp, operating condition</td>
+</tr>
+<tr>
+<td>Baseline</td>
+<td>Normal operation versus the condition in which the problem occurs</td>
+</tr>
+</tbody>
+</table>
+<p>Do not deliberately provoke watchdog faults or test timing limits on a running production machine. Use an approved test environment or controlled maintenance procedure.</p>
+<h2 id="14-final-mental-model">14. Final Mental Model</h2>
+<ul>
+<li>Scan time: How long the relevant cyclic controller execution takes.</li>
+<li>Task period: How frequently a scheduled task is intended to run.</li>
+<li>Watchdog: Whether execution stays within its allowed time limit.</li>
+<li>Jitter: How much execution timing varies.</li>
+<li>Response time: How long the complete path takes from a physical event to the machine's response.</li>
+<li>Cycle-time limit: A timing boundary that the controller or application must respect to operate correctly.</li>
+</ul>
+<p>The essential maintenance lesson is this: do not diagnose every slow machine as a slow PLC. Separate controller execution, task scheduling, I/O transfer, communications, and actuator behavior before deciding where the delay originates.</p>
+<h1 id="next-topic-03_diagnostics">Next Topic: 03_Diagnostics</h1>
+<p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\02_Auto_Tech\01_PLC\03_Diagnostics</code></p>
+<p>Topic: Diagnostics: Diagnostic buffer, LEDs, fault codes</p>
+<p>This topic will cover how to use controller status LEDs, diagnostic buffers, fault codes, and module/network indicators to identify faults systematically rather than replacing components based on guesswork.</p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Network Fault: Protocol Settings, Mapping and Timeouts</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Network Fault: Protocol Settings, Mapping and Timeouts</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-of-industrial-protocol-troubleshooting">1. Purpose of Industrial Protocol Troubleshooting</a></li>
+<li><a href="#2-where-protocol-troubleshooting-fits">2. Where Protocol Troubleshooting Fits</a></li>
+<li><a href="#3-what-is-an-industrial-communication-protocol">3. What Is an Industrial Communication Protocol?</a></li>
+<li><a href="#4-common-industrial-protocols">4. Common Industrial Protocols</a></li>
+<li><a href="#5-protocol-compatibility">5. Protocol Compatibility</a><ul>
+<li><a href="#51-client-server-and-producer-consumer-models">5.1 Client-server and producer-consumer models</a></li>
+</ul>
+</li>
+<li><a href="#6-protocol-settings-and-parameters">6. Protocol Settings and Parameters</a></li>
+<li><a href="#7-connection-establishment-and-communication-states">7. Connection Establishment and Communication States</a><ul>
+<li><a href="#71-interpreting-communication-states">7.1 Interpreting communication states</a></li>
+</ul>
+</li>
+<li><a href="#8-data-mapping">8. Data Mapping</a><ul>
+<li><a href="#81-common-mapping-errors">8.1 Common mapping errors</a></li>
+<li><a href="#82-example-plc-tag-to-hmi-display">8.2 Example: PLC tag to HMI display</a></li>
+<li><a href="#83-modbus-register-mapping">8.3 Modbus register mapping</a></li>
+<li><a href="#84-example-of-an-incorrect-register-address">8.4 Example of an incorrect register address</a></li>
+</ul>
+</li>
+<li><a href="#9-data-types-byte-order-and-scaling">9. Data Types, Byte Order and Scaling</a><ul>
+<li><a href="#91-common-data-types">9.1 Common data types</a></li>
+<li><a href="#92-byte-order">9.2 Byte order</a></li>
+<li><a href="#93-scaling">9.3 Scaling</a></li>
+</ul>
+</li>
+<li><a href="#10-cyclic-data-polling-and-update-intervals">10. Cyclic Data, Polling and Update Intervals</a><ul>
+<li><a href="#101-request-packet-interval-and-update-time">10.1 Request Packet Interval and update time</a></li>
+<li><a href="#102-example">10.2 Example</a></li>
+<li><a href="#103-common-update-interval-problems">10.3 Common update-interval problems</a></li>
+</ul>
+</li>
+<li><a href="#11-timeouts-retries-and-communication-recovery">11. Timeouts, Retries and Communication Recovery</a><ul>
+<li><a href="#111-why-timeouts-occur">11.1 Why timeouts occur</a></li>
+<li><a href="#112-timeout-troubleshooting-method">11.2 Timeout troubleshooting method</a></li>
+</ul>
+</li>
+<li><a href="#12-tcp-and-udp-port-troubleshooting">12. TCP and UDP Port Troubleshooting</a><ul>
+<li><a href="#121-diagnostic-distinction">12.1 Diagnostic distinction</a></li>
+</ul>
+</li>
+<li><a href="#13-protocol-specific-troubleshooting">13. Protocol-Specific Troubleshooting</a><ul>
+<li><a href="#131-ethernetip">13.1 EtherNet/IP</a></li>
+<li><a href="#132-profinet">13.2 PROFINET</a></li>
+<li><a href="#133-modbus-tcp">13.3 Modbus TCP</a></li>
+<li><a href="#134-opc-ua">13.4 OPC UA</a></li>
+<li><a href="#135-serial-protocols-such-as-modbus-rtu">13.5 Serial protocols such as Modbus RTU</a></li>
+</ul>
+</li>
+<li><a href="#14-device-naming-and-endpoint-mapping">14. Device Naming and Endpoint Mapping</a><ul>
+<li><a href="#141-common-naming-and-mapping-faults">14.1 Common naming and mapping faults</a></li>
+<li><a href="#142-verification">14.2 Verification</a></li>
+</ul>
+</li>
+<li><a href="#15-intermittent-protocol-communication">15. Intermittent Protocol Communication</a><ul>
+<li><a href="#possible-causes">Possible causes</a></li>
+<li><a href="#diagnostic-approach">Diagnostic approach</a></li>
+</ul>
+</li>
+<li><a href="#16-practical-industrial-breakdown-scenarios">16. Practical Industrial Breakdown Scenarios</a><ul>
+<li><a href="#scenario-1-ping-works-but-hmi-values-are-unavailable">Scenario 1: Ping works, but HMI values are unavailable</a></li>
+<li><a href="#scenario-2-scada-shows-an-incorrect-speed-value">Scenario 2: SCADA shows an incorrect speed value</a></li>
+<li><a href="#scenario-3-plc-reports-an-io-connection-timeout">Scenario 3: PLC reports an I/O connection timeout</a></li>
+<li><a href="#scenario-4-modbus-tcp-reads-the-wrong-value">Scenario 4: Modbus TCP reads the wrong value</a></li>
+<li><a href="#scenario-5-communication-drops-during-high-traffic">Scenario 5: Communication drops during high traffic</a></li>
+</ul>
+</li>
+<li><a href="#17-preventive-maintenance-checklist">17. Preventive Maintenance Checklist</a><ul>
+<li><a href="#protocol-configuration">Protocol configuration</a></li>
+<li><a href="#timing-and-communication-health">Timing and communication health</a></li>
+<li><a href="#recovery-and-documentation">Recovery and documentation</a></li>
+</ul>
+</li>
+<li><a href="#18-protocol-breakdown-record-template">18. Protocol Breakdown Record Template</a></li>
+<li><a href="#19-interview-questions-and-answers">19. Interview Questions and Answers</a><ul>
+<li><a href="#q1-why-can-ping-succeed-while-plc-communication-fails">Q1. Why can ping succeed while PLC communication fails?</a></li>
+<li><a href="#q2-what-is-data-mapping">Q2. What is data mapping?</a></li>
+<li><a href="#q3-what-is-a-protocol-timeout">Q3. What is a protocol timeout?</a></li>
+<li><a href="#q4-why-should-timeout-values-not-be-increased-blindly">Q4. Why should timeout values not be increased blindly?</a></li>
+<li><a href="#q5-what-is-the-difference-between-tcp-and-udp">Q5. What is the difference between TCP and UDP?</a></li>
+<li><a href="#q6-what-is-the-difference-between-a-protocol-connection-fault-and-a-mapping-fault">Q6. What is the difference between a protocol connection fault and a mapping fault?</a></li>
+<li><a href="#q7-why-can-modbus-data-be-incorrect-even-when-the-request-succeeds">Q7. Why can Modbus data be incorrect even when the request succeeds?</a></li>
+<li><a href="#q8-what-is-rpi-in-ethernetip">Q8. What is RPI in EtherNet/IP?</a></li>
+<li><a href="#q9-what-should-be-checked-when-profinet-communication-fails">Q9. What should be checked when PROFINET communication fails?</a></li>
+<li><a href="#q10-how-should-intermittent-protocol-faults-be-investigated">Q10. How should intermittent protocol faults be investigated?</a></li>
+<li><a href="#q11-what-is-the-difference-between-raw-data-and-an-engineering-value">Q11. What is the difference between raw data and an engineering value?</a></li>
+<li><a href="#q12-what-should-be-verified-after-correcting-a-protocol-fault">Q12. What should be verified after correcting a protocol fault?</a></li>
+</ul>
+</li>
+<li><a href="#20-completion-checklist">20. Completion Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\19_Breakdown\06_Network_Fault\05_Protocol</code></p>
+<h2 id="1-purpose-of-industrial-protocol-troubleshooting">1. Purpose of Industrial Protocol Troubleshooting</h2>
+<p>An industrial network can have healthy cables, active switch ports, correct IP addresses, and successful ping responses while the actual PLC, HMI, robot, CNC, VFD, or SCADA application still fails to communicate.</p>
+<p>This happens because network connectivity and protocol communication are different things.</p>
+<p>An industrial protocol defines how devices exchange information, identify data, interpret commands, handle requests, and report errors. Even when two devices can reach each other over Ethernet, communication may fail because of incorrect protocol settings, data mapping, addressing, connection limits, incompatible configurations, or timeouts.</p>
+<p>Typical symptoms include:</p>
+<ul>
+<li>HMI displays stale or incorrect PLC values.</li>
+<li>SCADA tags show bad quality, errors, or communication loss.</li>
+<li>PLC reports an I/O connection fault.</li>
+<li>Robot or CNC controller loses communication with another device.</li>
+<li>VFD receives no command or reference from the PLC.</li>
+<li>PLC communication works intermittently under high traffic.</li>
+<li>A device responds to ping but its programming or monitoring software cannot connect.</li>
+<li>Values appear shifted, swapped, scaled incorrectly, or inconsistent between systems.</li>
+<li>Communication fails after a firmware, program, device, or network configuration change.</li>
+</ul>
+<p>The main troubleshooting objective is to identify which part of the communication chain is failing: protocol compatibility, endpoint configuration, data mapping, connection establishment, cyclic updates, timeout handling, or application logic.</p>
+<h2 id="2-where-protocol-troubleshooting-fits">2. Where Protocol Troubleshooting Fits</h2>
+<pre><code>Physical Layer
+Cable / Connector / Signal
+          ↓
+Data Link Layer
+Ethernet / MAC / Switching / VLAN
+          ↓
+Network Layer
+IP Address / Subnet / Routing
+          ↓
+Transport Layer
+TCP / UDP / Ports
+          ↓
+Industrial Protocol
+Connection / Requests / Responses / Data Mapping
+          ↓
+Application
+PLC Logic / HMI Tags / SCADA / Robot / CNC / Drive
+</code></pre>
+<p>A failure at any layer can appear as a protocol communication problem. Troubleshooting should therefore verify the lower layers before making protocol-specific changes.</p>
+<table>
+<thead>
+<tr>
+<th>Layer or area</th>
+<th>Example fault</th>
+<th>Diagnostic direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Physical</td>
+<td>Damaged cable</td>
+<td>Link LEDs and cable testing</td>
+</tr>
+<tr>
+<td>Data link</td>
+<td>Wrong VLAN</td>
+<td>Switch configuration</td>
+</tr>
+<tr>
+<td>Network</td>
+<td>Wrong IP address</td>
+<td>Address and subnet verification</td>
+</tr>
+<tr>
+<td>Transport</td>
+<td>Required TCP port blocked</td>
+<td>Connection and firewall diagnostics</td>
+</tr>
+<tr>
+<td>Protocol</td>
+<td>Incompatible connection settings</td>
+<td>Protocol-specific diagnostics</td>
+</tr>
+<tr>
+<td>Mapping</td>
+<td>Wrong register or tag address</td>
+<td>Compare data definitions</td>
+</tr>
+<tr>
+<td>Application</td>
+<td>PLC logic does not update a value</td>
+<td>Check program execution and tag logic</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-what-is-an-industrial-communication-protocol">3. What Is an Industrial Communication Protocol?</h2>
+<p>A communication protocol is a defined set of rules that allows devices to exchange information consistently.</p>
+<p>It can define:</p>
+<ul>
+<li>How a device is identified.</li>
+<li>How a connection is established.</li>
+<li>How data requests and responses are structured.</li>
+<li>How values are addressed.</li>
+<li>How data types are represented.</li>
+<li>How cyclic or event-driven updates operate.</li>
+<li>How errors and timeouts are reported.</li>
+<li>How communication is recovered after a failure.</li>
+</ul>
+<p>A protocol may operate over Ethernet, serial communication, or another transport. The word protocol does not automatically mean Ethernet or TCP/IP.</p>
+<h2 id="4-common-industrial-protocols">4. Common Industrial Protocols</h2>
+<table>
+<thead>
+<tr>
+<th>Protocol</th>
+<th>Common use</th>
+<th>Important troubleshooting areas</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EtherNet/IP</td>
+<td>PLCs, remote I/O, drives, robots, and industrial devices</td>
+<td>CIP connections, assemblies, RPI, connection limits, device configuration</td>
+</tr>
+<tr>
+<td>PROFINET</td>
+<td>PLCs, distributed I/O, drives, and automation equipment</td>
+<td>Device name, IP configuration, controller-device relationship, I/O status, update time</td>
+</tr>
+<tr>
+<td>Modbus TCP</td>
+<td>PLCs, meters, drives, gateways, and SCADA</td>
+<td>TCP port, unit identifier where relevant, function code, register address, data format</td>
+</tr>
+<tr>
+<td>Modbus RTU</td>
+<td>Serial devices such as meters and drives</td>
+<td>Baud rate, parity, stop bits, station address, wiring, termination</td>
+</tr>
+<tr>
+<td>OPC UA</td>
+<td>SCADA, industrial servers, gateways, and higher-level systems</td>
+<td>Endpoint URL, certificates, security policy, authentication, namespace and node IDs</td>
+</tr>
+<tr>
+<td>PROFIBUS DP</td>
+<td>PLCs and distributed I/O over serial fieldbus</td>
+<td>Station address, baud rate, termination, bus diagnostics, device configuration</td>
+</tr>
+<tr>
+<td>CANopen</td>
+<td>Drives, sensors, motion devices, and embedded automation</td>
+<td>Node ID, bitrate, network termination, object dictionary, heartbeat</td>
+</tr>
+<tr>
+<td>CC-Link</td>
+<td>PLCs and distributed industrial devices</td>
+<td>Station settings, network parameters, refresh mapping, communication status</td>
+</tr>
+<tr>
+<td>S7 communication</td>
+<td>Siemens PLC communication and data access</td>
+<td>Connection configuration, access permissions, data blocks, addressing, compatibility</td>
+</tr>
+<tr>
+<td>FANUC or manufacturer-specific interfaces</td>
+<td>CNC, robots, and machine integration</td>
+<td>Supported interface, enabled options, data access, configured endpoints</td>
+</tr>
+</tbody>
+</table>
+<p>Important: Protocol names can cover different communication models and implementations. Verify the actual protocol variant, device firmware, controller software, and supported features before assuming that two products are fully compatible.</p>
+<h2 id="5-protocol-compatibility">5. Protocol Compatibility</h2>
+<p>Two devices being Ethernet-compatible does not mean they can automatically exchange meaningful industrial data.</p>
+<p>Compatibility depends on several factors:</p>
+<ul>
+<li>Both devices support the required protocol.</li>
+<li>The required communication role is supported by each device.</li>
+<li>The correct interface or service is enabled.</li>
+<li>Both sides use compatible connection parameters.</li>
+<li>The data format and mapping agree.</li>
+<li>The required protocol features or licensing options are available.</li>
+<li>The device firmware and engineering software support the selected configuration.</li>
+</ul>
+<p>For example, a PLC may support Modbus TCP client communication but not expose the specific server functionality expected by another device. Both products may support Modbus TCP in some form, yet the intended communication arrangement still fails.</p>
+<h3 id="51-client-server-and-producer-consumer-models">5.1 Client-server and producer-consumer models</h3>
+<p>Some protocols use a client-server arrangement:</p>
+<ul>
+<li>The client initiates a request.</li>
+<li>The server processes the request.</li>
+<li>The server returns a response.</li>
+</ul>
+<p>Other industrial communication models use cyclic I/O connections, producer-consumer data exchange, or combinations of these approaches.</p>
+<p>Do not apply one protocol's troubleshooting model to every other protocol. Determine how the specific connection is designed to operate.</p>
+<h2 id="6-protocol-settings-and-parameters">6. Protocol Settings and Parameters</h2>
+<p>Protocol configuration must agree with the device's capabilities and the approved machine design. The names of settings differ across manufacturers, but the underlying concepts are similar.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Purpose</th>
+<th>Typical fault</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Protocol enable</td>
+<td>Activates the required communication service</td>
+<td>Service is disabled</td>
+</tr>
+<tr>
+<td>Client/server role</td>
+<td>Defines which device initiates or responds to requests</td>
+<td>Both devices configured for incompatible roles</td>
+</tr>
+<tr>
+<td>Device name</td>
+<td>Identifies a device in supported industrial networks</td>
+<td>Name missing, duplicated, or incorrect</td>
+</tr>
+<tr>
+<td>IP address</td>
+<td>Identifies the network endpoint</td>
+<td>Wrong address or duplicate IP</td>
+</tr>
+<tr>
+<td>TCP/UDP port</td>
+<td>Identifies the transport service</td>
+<td>Wrong port or traffic blocked</td>
+</tr>
+<tr>
+<td>Station or node address</td>
+<td>Identifies a device on a fieldbus or serial network</td>
+<td>Duplicate or incorrect address</td>
+</tr>
+<tr>
+<td>Connection path</td>
+<td>Identifies the route to a controller, module, or data object</td>
+<td>Incorrect slot, path, or endpoint</td>
+</tr>
+<tr>
+<td>Assembly or I/O instance</td>
+<td>Defines a data structure for supported cyclic I/O protocols</td>
+<td>Incorrect input, output, or configuration instance</td>
+</tr>
+<tr>
+<td>RPI or update time</td>
+<td>Sets a requested or configured cyclic data update interval</td>
+<td>Unsuitable update configuration or excessive traffic</td>
+</tr>
+<tr>
+<td>Register or tag address</td>
+<td>Identifies the data to read or write</td>
+<td>Incorrect address or offset</td>
+</tr>
+<tr>
+<td>Data type</td>
+<td>Defines how bytes are interpreted</td>
+<td>Integer, floating-point, or Boolean mismatch</td>
+</tr>
+<tr>
+<td>Byte order</td>
+<td>Defines byte sequence interpretation for multi-byte values</td>
+<td>Incorrect byte swapping</td>
+</tr>
+<tr>
+<td>Timeout</td>
+<td>Defines how long a request or response may take</td>
+<td>Timeout too short or device unresponsive</td>
+</tr>
+<tr>
+<td>Retry count</td>
+<td>Determines how many attempts are made after a failure</td>
+<td>Excessive retries or insufficient recovery</td>
+</tr>
+<tr>
+<td>Security settings</td>
+<td>Control authentication, encryption, and access</td>
+<td>Certificate, credential, or policy mismatch</td>
+</tr>
+</tbody>
+</table>
+<p>Rule: Record the existing configuration before making changes. Do not increase every timeout, reduce every update rate, or enable every protocol option as a substitute for diagnosing the actual fault.</p>
+<h2 id="7-connection-establishment-and-communication-states">7. Connection Establishment and Communication States</h2>
+<p>Industrial protocols often have several communication states. A device may be physically connected without having an established protocol session.</p>
+<p>A generic connection sequence may look like this:</p>
+<pre><code>Physical Link Established
+          ↓
+IP Connectivity Available
+          ↓
+Protocol Endpoint Reachable
+          ↓
+Connection Request Accepted
+          ↓
+Protocol Session / I/O Connection Established
+          ↓
+Data Exchange Active
+          ↓
+Data Valid and Updating
+</code></pre>
+<p>This is a conceptual sequence, not a universal protocol state machine. Some protocols use connectionless messages, cyclic producer-consumer exchange, or other mechanisms.</p>
+<h3 id="71-interpreting-communication-states">7.1 Interpreting communication states</h3>
+<table>
+<thead>
+<tr>
+<th>Observed state</th>
+<th>Possible meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Device offline</td>
+<td>Physical, network, power, or device-level problem</td>
+</tr>
+<tr>
+<td>Endpoint unreachable</td>
+<td>Routing, IP, firewall, or endpoint issue</td>
+</tr>
+<tr>
+<td>Connection refused</td>
+<td>Service may be unavailable, disabled, or listening on another port</td>
+</tr>
+<tr>
+<td>Connection timeout</td>
+<td>No response within the configured time; cause may be network, device, or application related</td>
+</tr>
+<tr>
+<td>Session established but data invalid</td>
+<td>Mapping, permissions, data type, or application problem</td>
+</tr>
+<tr>
+<td>I/O connection fault</td>
+<td>Cyclic connection parameters, device state, connection capacity, or network issue</td>
+</tr>
+<tr>
+<td>Data stale</td>
+<td>Updates stopped, polling failed, or application cache is not refreshed</td>
+</tr>
+<tr>
+<td>Bad quality</td>
+<td>The source or communication layer reports that the value cannot be trusted</td>
+</tr>
+<tr>
+<td>Intermittent connection</td>
+<td>Unstable network, device resets, overload, resource limits, or unsuitable timeout settings</td>
+</tr>
+</tbody>
+</table>
+<p>A particular alarm text must be interpreted according to the protocol and manufacturer's diagnostic documentation. Similar wording can represent different internal states across products.</p>
+<h2 id="8-data-mapping">8. Data Mapping</h2>
+<p>Data mapping defines how a value in one device or application corresponds to a value in another device or application.</p>
+<p>For example, a PLC may expose a motor-running status, while an HMI tag is configured to read that status. The communication connection can be healthy, but the HMI can still show the wrong value if the tag points to the wrong address.</p>
+<h3 id="81-common-mapping-errors">8.1 Common mapping errors</h3>
+<ul>
+<li>Wrong PLC tag name.</li>
+<li>Incorrect data-block or register address.</li>
+<li>Incorrect offset or starting address.</li>
+<li>Incorrect input/output assembly instance.</li>
+<li>Incorrect number of bytes or words.</li>
+<li>Incorrect data type.</li>
+<li>Wrong signed or unsigned interpretation.</li>
+<li>Incorrect byte or word order.</li>
+<li>Wrong scaling factor.</li>
+<li>Incorrect Boolean bit position.</li>
+<li>Read and write addresses accidentally reversed.</li>
+<li>HMI or SCADA tag points to an old controller.</li>
+<li>PLC program changed but the external mapping was not updated.</li>
+</ul>
+<h3 id="82-example-plc-tag-to-hmi-display">8.2 Example: PLC tag to HMI display</h3>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Example configuration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC tag</td>
+<td><code>Motor_Speed_Actual</code></td>
+</tr>
+<tr>
+<td>PLC data type</td>
+<td><code>REAL</code></td>
+</tr>
+<tr>
+<td>HMI tag</td>
+<td><code>Motor_Speed_Actual_HMI</code></td>
+</tr>
+<tr>
+<td>HMI source</td>
+<td>PLC tag <code>Motor_Speed_Actual</code></td>
+</tr>
+<tr>
+<td>Expected unit</td>
+<td>RPM</td>
+</tr>
+<tr>
+<td>Expected range</td>
+<td>Based on motor and machine specification</td>
+</tr>
+<tr>
+<td>Validation</td>
+<td>Compare HMI value with PLC online value and an independent reference where appropriate</td>
+</tr>
+</tbody>
+</table>
+<p>The names above are illustrative. Actual tags, units, and expected ranges must come from the machine's program and design documentation.</p>
+<h3 id="83-modbus-register-mapping">8.3 Modbus register mapping</h3>
+<p>Modbus devices often expose data through register addresses. Common data areas include:</p>
+<ul>
+<li>Coils: single-bit values that can be read or written.</li>
+<li>Discrete inputs: single-bit input values.</li>
+<li>Input registers: 16-bit values intended for input data.</li>
+<li>Holding registers: 16-bit values commonly used for readable or writable data.</li>
+</ul>
+<p>Supported functions depend on the device. Not every device supports every register area or function code.</p>
+<p>Addressing trap: Documentation may use human-readable references such as <code>40001</code>, while software may request a zero-based register offset such as <code>0</code>. Other tools may use different notation. Confirm the manufacturer's addressing convention rather than subtracting one automatically.</p>
+<h3 id="84-example-of-an-incorrect-register-address">8.4 Example of an incorrect register address</h3>
+<p>A drive manual specifies a holding register at a particular documented address. The SCADA driver uses a different offset convention, causing it to read the neighbouring register.</p>
+<p>Possible symptoms:</p>
+<ul>
+<li>A status word appears as a speed reference.</li>
+<li>The value is always zero.</li>
+<li>The returned value looks plausible but changes unexpectedly.</li>
+<li>A write command affects an unintended parameter.</li>
+</ul>
+<p>Troubleshooting:</p>
+<ol>
+<li>Verify the exact device model and manual revision.</li>
+<li>Confirm the required Modbus function code.</li>
+<li>Determine whether the software expects a one-based reference or zero-based offset.</li>
+<li>Confirm the data length and data type.</li>
+<li>Read a known, safe, documented value.</li>
+<li>Validate the result against the device's local display or diagnostic interface.</li>
+</ol>
+<p>Never experiment with arbitrary write addresses on a live drive or controller. An incorrect write can change a parameter or command an unintended operation.</p>
+<h2 id="9-data-types-byte-order-and-scaling">9. Data Types, Byte Order and Scaling</h2>
+<p>Correct communication requires more than receiving bytes. Both sides must interpret those bytes consistently.</p>
+<h3 id="91-common-data-types">9.1 Common data types</h3>
+<table>
+<thead>
+<tr>
+<th>Data type</th>
+<th>Typical meaning</th>
+<th>Common risk</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Boolean</td>
+<td>True/false or on/off</td>
+<td>Wrong bit mapping or inverted logic</td>
+</tr>
+<tr>
+<td>INT</td>
+<td>Signed integer</td>
+<td>Unsigned/signed interpretation mismatch</td>
+</tr>
+<tr>
+<td>UINT</td>
+<td>Unsigned integer</td>
+<td>Negative-looking or unexpectedly large values if interpreted incorrectly</td>
+</tr>
+<tr>
+<td>DINT / UDINT</td>
+<td>32-bit signed/unsigned integer</td>
+<td>Wrong word order or length</td>
+</tr>
+<tr>
+<td>REAL / FLOAT</td>
+<td>Floating-point value</td>
+<td>Incorrect byte order, unsupported format, or wrong length</td>
+</tr>
+<tr>
+<td>STRING</td>
+<td>Text</td>
+<td>Length, encoding, or layout mismatch</td>
+</tr>
+<tr>
+<td>Status word</td>
+<td>Packed diagnostic or state bits</td>
+<td>Incorrect bit interpretation</td>
+</tr>
+<tr>
+<td>Timestamp</td>
+<td>Date/time information</td>
+<td>Format, time zone, or resolution mismatch</td>
+</tr>
+</tbody>
+</table>
+<p>Exact names and supported sizes depend on the platform and protocol.</p>
+<h3 id="92-byte-order">9.2 Byte order</h3>
+<p>For multi-byte values, byte order defines the sequence in which bytes are transmitted or stored.</p>
+<p>A 32-bit value may be represented by four bytes. Different systems or protocol implementations may arrange these bytes differently.</p>
+<p>Possible consequences:</p>
+<ul>
+<li>A correct value appears extremely large or small.</li>
+<li>A floating-point value appears nonsensical.</li>
+<li>A counter jumps unexpectedly.</li>
+<li>Two devices interpret the same register data differently.</li>
+</ul>
+<p>Some systems also distinguish byte order within a 16-bit word from the ordering of multiple words. Verify the exact convention required by the device.</p>
+<h3 id="93-scaling">9.3 Scaling</h3>
+<p>A transmitted raw value may need to be converted into an engineering value.</p>
+<p>For a linear scale:</p>
+<div class="math-display">\[ \text{Engineering Value} = \frac{\text{Raw Value}-\text{Raw Minimum}} {\text{Raw Maximum}-\text{Raw Minimum}} \times (\text{Engineering Maximum}-\text{Engineering Minimum}) +\text{Engineering Minimum} \]</div>
+<p>Example: a raw value of <code>5000</code> represents the midpoint of a configured raw range of <code>0</code> to <code>10000</code>, which maps to <code>0</code> to <code>100</code> units.</p>
+<div class="math-display">\[ \text{Engineering Value} = \frac{5000-0}{10000-0}\times(100-0)+0 =50 \]</div>
+<p>The engineering value is <code>50</code> units.</p>
+<p>If the HMI displays <code>5000</code> instead of <code>50</code>, the raw data may be correct while the scaling is missing. If the value is <code>5</code>, the scaling or decimal-point configuration may be wrong.</p>
+<p>Do not assume every protocol provides scaled engineering values. The scaling may be performed in the PLC, device, gateway, HMI, or SCADA application.</p>
+<h2 id="10-cyclic-data-polling-and-update-intervals">10. Cyclic Data, Polling and Update Intervals</h2>
+<p>Industrial data may be exchanged cyclically or through request-response polling.</p>
+<p>Cyclic exchange: Data is updated at a configured interval or according to the protocol's communication mechanism.</p>
+<p>Polling: A client requests data from a device at a scheduled interval.</p>
+<p>Event-driven exchange: Data is sent or reported when a configured event or condition occurs.</p>
+<p>These models have different timing and diagnostic considerations.</p>
+<h3 id="101-request-packet-interval-and-update-time">10.1 Request Packet Interval and update time</h3>
+<p>Some protocols, such as EtherNet/IP, use a Requested Packet Interval (RPI) for supported cyclic I/O connections. Other protocols use different update-time parameters.</p>
+<p>A shorter interval may improve update responsiveness, but it can increase network traffic, processing load, and communication resource usage. A longer interval may reduce traffic but increase data age and response delay.</p>
+<h3 id="102-example">10.2 Example</h3>
+<p>Suppose a monitoring application polls a device every <code>500 ms</code>.</p>
+<ul>
+<li>Expected polling frequency: 2 requests per second, assuming one request per interval.</li>
+<li>If the device responds within <code>20 ms</code>, communication is normally much faster than the polling interval.</li>
+<li>If the device occasionally takes longer than the configured timeout, requests may fail even if the device later recovers.</li>
+</ul>
+<p>Actual traffic depends on the protocol, number of tags, grouping, retries, and driver implementation. A single polling interval does not necessarily equal the total network load.</p>
+<h3 id="103-common-update-interval-problems">10.3 Common update-interval problems</h3>
+<ul>
+<li>Update interval too short for device capacity.</li>
+<li>Too many individual requests instead of efficient grouped reads.</li>
+<li>Too many clients polling the same device.</li>
+<li>Excessive retries after a device becomes unavailable.</li>
+<li>Polling intervals inconsistent with application requirements.</li>
+<li>Communication settings changed without updating the other endpoint.</li>
+</ul>
+<p>Use manufacturer recommendations and measured performance when selecting update intervals.</p>
+<h2 id="11-timeouts-retries-and-communication-recovery">11. Timeouts, Retries and Communication Recovery</h2>
+<p>A timeout is the maximum permitted waiting period for a defined operation or response. Its meaning depends on the protocol and application.</p>
+<p>Examples include:</p>
+<ul>
+<li>TCP connection timeout.</li>
+<li>Application request-response timeout.</li>
+<li>PLC I/O connection watchdog.</li>
+<li>HMI communication timeout.</li>
+<li>SCADA polling timeout.</li>
+<li>Serial response timeout.</li>
+<li>Device heartbeat timeout.</li>
+</ul>
+<p>These timers are not interchangeable. Increasing a timeout in one layer does not necessarily fix a failure in another layer.</p>
+<h3 id="111-why-timeouts-occur">11.1 Why timeouts occur</h3>
+<ul>
+<li>Device is powered off or restarting.</li>
+<li>Network packets are lost or delayed.</li>
+<li>A firewall blocks traffic.</li>
+<li>The service is disabled or busy.</li>
+<li>The device cannot handle the configured request rate.</li>
+<li>The request is malformed or unsupported.</li>
+<li>The connection parameters do not match.</li>
+<li>The response takes longer than the configured timeout.</li>
+<li>A cyclic I/O connection exceeds its watchdog limit.</li>
+<li>A gateway or intermediate system is unavailable.</li>
+</ul>
+<h3 id="112-timeout-troubleshooting-method">11.2 Timeout troubleshooting method</h3>
+<ol>
+<li>Identify the exact alarm and the component reporting it.</li>
+<li>Determine whether it is a connection timeout, request timeout, or cyclic watchdog.</li>
+<li>Check whether the endpoint is reachable.</li>
+<li>Verify the protocol service, port, and configuration.</li>
+<li>Inspect request rate, response latency, device load, and communication errors where available.</li>
+<li>Check logs for device resets, link events, or connection failures.</li>
+<li>Compare timeout and retry settings with the approved design.</li>
+<li>Adjust parameters only when evidence shows they are unsuitable.</li>
+<li>Verify recovery and data freshness after the change.</li>
+</ol>
+<p>Important: Increasing a timeout can hide a slow response without correcting its cause. A long timeout can also delay fault detection and machine recovery.</p>
+<h2 id="12-tcp-and-udp-port-troubleshooting">12. TCP and UDP Port Troubleshooting</h2>
+<p>Industrial protocols may use TCP, UDP, or both. The required transport and port depend on the protocol, device role, and enabled services.</p>
+<p>TCP provides a connection-oriented byte stream. UDP sends datagrams without establishing a TCP-style connection.</p>
+<table>
+<thead>
+<tr>
+<th>Protocol or service</th>
+<th>Common port or transport</th>
+<th>Important qualification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Modbus TCP</td>
+<td>TCP 502</td>
+<td>Common standard port; devices may allow configurable alternatives</td>
+</tr>
+<tr>
+<td>EtherNet/IP explicit messaging</td>
+<td>TCP 44818</td>
+<td>Commonly used for explicit messaging</td>
+</tr>
+<tr>
+<td>EtherNet/IP I/O traffic</td>
+<td>UDP 2222</td>
+<td>Commonly used for cyclic I/O; actual configuration and topology matter</td>
+</tr>
+<tr>
+<td>OPC UA</td>
+<td>TCP 4840</td>
+<td>Common default, but the endpoint may use another port</td>
+</tr>
+<tr>
+<td>PROFINET</td>
+<td>Multiple Ethernet, IP, and real-time mechanisms</td>
+<td>Not adequately diagnosed by checking one TCP port</td>
+</tr>
+<tr>
+<td>S7 communication</td>
+<td>Commonly TCP 102 for relevant services</td>
+<td>Supported services and access requirements vary</td>
+</tr>
+<tr>
+<td>Modbus RTU</td>
+<td>Serial communication</td>
+<td>No TCP or UDP port applies to the serial link</td>
+</tr>
+</tbody>
+</table>
+<p>Port numbers are common defaults, not proof that a particular device uses that service. Verify the manufacturer's configuration and network requirements.</p>
+<h3 id="121-diagnostic-distinction">12.1 Diagnostic distinction</h3>
+<ul>
+<li>Ping succeeds: ICMP reachability works, if permitted.</li>
+<li>TCP connection succeeds: A TCP connection can be established to that endpoint and port.</li>
+<li>Protocol request succeeds: The application request is accepted and receives an appropriate response.</li>
+<li>Data mapping is correct: The returned value represents the intended information.</li>
+<li>Application works: The PLC, HMI, SCADA, or other system performs the intended function.</li>
+</ul>
+<p>Each step proves something different.</p>
+<p>On Windows PowerShell, a TCP port test can be performed with:</p>
+<pre><code>Test-NetConnection 192.168.10.10 -Port 502
+</code></pre>
+<p>Replace the example address and port with the approved target and required service. A failed TCP test does not establish whether the cause is a firewall, unavailable service, routing problem, or unsupported transport.</p>
+<h2 id="13-protocol-specific-troubleshooting">13. Protocol-Specific Troubleshooting</h2>
+<h3 id="131-ethernetip">13.1 EtherNet/IP</h3>
+<p>Common in Allen-Bradley and other supported industrial automation systems.</p>
+<p>Check:</p>
+<ul>
+<li>Controller and device IP configuration.</li>
+<li>Device identity and supported protocol capabilities.</li>
+<li>Input, output, and configuration assembly settings where applicable.</li>
+<li>Connection path and module configuration.</li>
+<li>Requested Packet Interval and connection watchdog.</li>
+<li>Available connection capacity.</li>
+<li>Device firmware and electronic keying settings where applicable.</li>
+<li>Controller I/O tree diagnostics and device fault codes.</li>
+</ul>
+<p>A device can respond to ping while its EtherNet/IP I/O connection remains faulted. The protocol connection, configuration, or cyclic data exchange must be checked separately.</p>
+<h3 id="132-profinet">13.2 PROFINET</h3>
+<p>Common in Siemens and other compatible automation systems.</p>
+<p>Check:</p>
+<ul>
+<li>Controller and device configuration.</li>
+<li>Configured PROFINET device name.</li>
+<li>IP address and network assignment.</li>
+<li>Correct device identity and topology.</li>
+<li>Hardware configuration and module layout.</li>
+<li>Input/output module consistency.</li>
+<li>Device diagnostics and I/O update status.</li>
+<li>Update-time and watchdog configuration.</li>
+<li>Firmware and engineering configuration compatibility.</li>
+</ul>
+<p>A device name mismatch can prevent the intended PROFINET relationship from being established even when the Ethernet link is active.</p>
+<h3 id="133-modbus-tcp">13.3 Modbus TCP</h3>
+<p>Check:</p>
+<ul>
+<li>Client/server roles.</li>
+<li>IP address and TCP port.</li>
+<li>Supported function codes.</li>
+<li>Register or coil addresses.</li>
+<li>Address offset convention.</li>
+<li>Number of registers requested.</li>
+<li>Data type and byte/word order.</li>
+<li>Device-specific restrictions on simultaneous connections.</li>
+<li>Request timing and timeout behaviour.</li>
+</ul>
+<p>If communication succeeds but values are wrong, investigate mapping and interpretation before changing network settings.</p>
+<h3 id="134-opc-ua">13.4 OPC UA</h3>
+<p>Check:</p>
+<ul>
+<li>Server endpoint URL.</li>
+<li>Server availability.</li>
+<li>Security policy and message security mode.</li>
+<li>Certificates and certificate trust.</li>
+<li>User authentication and authorization.</li>
+<li>Namespace and node identifiers.</li>
+<li>Subscription interval and monitored-item settings.</li>
+<li>Session and subscription timeout behaviour.</li>
+</ul>
+<p>A TCP connection to an OPC UA server does not prove that certificate validation, authentication, or node access will succeed.</p>
+<h3 id="135-serial-protocols-such-as-modbus-rtu">13.5 Serial protocols such as Modbus RTU</h3>
+<p>For serial communication, Ethernet IP troubleshooting does not apply directly to the fieldbus link.</p>
+<p>Check:</p>
+<ul>
+<li>Baud rate.</li>
+<li>Data bits.</li>
+<li>Parity.</li>
+<li>Stop bits.</li>
+<li>Station address.</li>
+<li>Cable polarity and wiring.</li>
+<li>Termination and biasing where applicable.</li>
+<li>Request-response timing.</li>
+<li>Duplicate station addresses.</li>
+<li>Serial converter configuration.</li>
+</ul>
+<p>Two devices may be electrically connected but unable to interpret each other's serial messages if their communication parameters differ.</p>
+<h2 id="14-device-naming-and-endpoint-mapping">14. Device Naming and Endpoint Mapping</h2>
+<p>A device name, IP address, protocol endpoint, and data identifier are different concepts.</p>
+<p>For example, an application may refer to a PLC by its configured name while the network connection uses its IP address. A data access layer may then identify a particular tag or register inside the PLC.</p>
+<pre><code>Configured Device Identity
+          ↓
+Network Endpoint
+          ↓
+Protocol Connection
+          ↓
+Data Object / Tag / Register
+          ↓
+Application Value
+</code></pre>
+<p>A problem at any level can prevent the application from obtaining the intended value.</p>
+<h3 id="141-common-naming-and-mapping-faults">14.1 Common naming and mapping faults</h3>
+<ul>
+<li>Duplicate device names where uniqueness is required.</li>
+<li>Device renamed without updating the engineering configuration.</li>
+<li>Old IP address retained in an HMI or SCADA project.</li>
+<li>Wrong controller selected in the engineering software.</li>
+<li>Incorrect OPC UA namespace or node identifier.</li>
+<li>Incorrect PLC tag path.</li>
+<li>Incorrect register offset.</li>
+<li>Device replacement with a different model or module layout.</li>
+</ul>
+<h3 id="142-verification">14.2 Verification</h3>
+<ol>
+<li>Identify the physical device.</li>
+<li>Verify its configured name and network address.</li>
+<li>Confirm the software connects to the intended endpoint.</li>
+<li>Verify the protocol connection state.</li>
+<li>Read a known, safe value.</li>
+<li>Compare the value with the source device.</li>
+<li>Confirm the application displays the correct data.</li>
+</ol>
+<p>Never assume that a successful connection means the correct controller or data object has been selected.</p>
+<h2 id="15-intermittent-protocol-communication">15. Intermittent Protocol Communication</h2>
+<p>Intermittent faults are harder to diagnose because a quick test may show everything working normally.</p>
+<h3 id="possible-causes">Possible causes</h3>
+<ul>
+<li>Network congestion or packet loss.</li>
+<li>Intermittent physical-layer faults.</li>
+<li>Device restart or watchdog recovery.</li>
+<li>Excessive request rate.</li>
+<li>Controller or device resource limits.</li>
+<li>Too many simultaneous clients.</li>
+<li>Unstable power.</li>
+<li>Protocol connection limits.</li>
+<li>Incorrect timeout and retry configuration.</li>
+<li>Application thread or driver delays.</li>
+<li>Redundant-network topology changes.</li>
+</ul>
+<h3 id="diagnostic-approach">Diagnostic approach</h3>
+<ul>
+<li>Record the fault timestamp and duration.</li>
+<li>Capture the exact error message.</li>
+<li>Check controller, switch, HMI, SCADA, and device logs around the same time.</li>
+<li>Compare the fault with link changes and device restarts.</li>
+<li>Check response latency and request frequency where supported.</li>
+<li>Review the number of active connections.</li>
+<li>Verify whether data is lost, delayed, or merely displayed as stale.</li>
+<li>Use an approved network capture or port-mirroring procedure when necessary.</li>
+</ul>
+<p>Do not change several protocol settings simultaneously. That makes it difficult to determine which change affected the problem.</p>
+<h2 id="16-practical-industrial-breakdown-scenarios">16. Practical Industrial Breakdown Scenarios</h2>
+<h3 id="scenario-1-ping-works-but-hmi-values-are-unavailable">Scenario 1: Ping works, but HMI values are unavailable</h3>
+<p>Observed condition: The PLC responds to ping, but HMI tags show communication errors.</p>
+<p>Investigation:</p>
+<ol>
+<li>Verify the HMI's configured PLC endpoint.</li>
+<li>Confirm the correct protocol driver is selected.</li>
+<li>Check protocol-specific connection diagnostics.</li>
+<li>Verify credentials, access permissions, and required services.</li>
+<li>Confirm tag names and addresses.</li>
+<li>Compare the PLC's online values with the HMI display.</li>
+<li>Inspect timeout and polling settings if the problem persists.</li>
+</ol>
+<p>Possible root causes: Wrong protocol driver, incorrect endpoint, blocked service, permission issue, or incorrect tag mapping.</p>
+<p>Verification: Confirm that required HMI values update correctly and remain stable.</p>
+<h3 id="scenario-2-scada-shows-an-incorrect-speed-value">Scenario 2: SCADA shows an incorrect speed value</h3>
+<p>Observed condition: The drive operates normally, but SCADA displays an implausible speed.</p>
+<p>Investigation:</p>
+<ol>
+<li>Verify the register or tag mapped to actual speed.</li>
+<li>Check the register address and offset convention.</li>
+<li>Confirm whether the data is signed or unsigned.</li>
+<li>Check byte order and word order for multi-register values.</li>
+<li>Verify scaling and engineering units.</li>
+<li>Compare the result with the drive's local display and approved reference.</li>
+</ol>
+<p>Possible root causes: Wrong register, data-type mismatch, incorrect byte order, or scaling error.</p>
+<p>Verification: Confirm the SCADA value matches the intended source data and engineering units.</p>
+<h3 id="scenario-3-plc-reports-an-io-connection-timeout">Scenario 3: PLC reports an I/O connection timeout</h3>
+<p>Observed condition: A remote I/O adapter is reachable at the IP level, but the PLC reports a connection fault.</p>
+<p>Investigation:</p>
+<ol>
+<li>Verify the remote I/O device identity.</li>
+<li>Inspect the PLC's module or I/O connection diagnostics.</li>
+<li>Check input/output data configuration and module layout.</li>
+<li>Confirm the connection path and supported protocol settings.</li>
+<li>Review update intervals and watchdog settings.</li>
+<li>Check switch port errors and network events.</li>
+<li>Verify the device's power and internal diagnostic status.</li>
+</ol>
+<p>Possible root causes: Configuration mismatch, incompatible module layout, unsuitable connection timing, resource limits, or intermittent network traffic.</p>
+<p>Verification: Confirm the I/O connection is established, data updates correctly, and the controller reports healthy I/O status.</p>
+<h3 id="scenario-4-modbus-tcp-reads-the-wrong-value">Scenario 4: Modbus TCP reads the wrong value</h3>
+<p>Observed condition: The SCADA connection succeeds, but the displayed parameter does not match the device display.</p>
+<p>Investigation:</p>
+<ol>
+<li>Verify the exact register specified by the device manual.</li>
+<li>Check the Modbus function code.</li>
+<li>Confirm zero-based or one-based addressing.</li>
+<li>Check the number of registers read.</li>
+<li>Confirm the data type and byte order.</li>
+<li>Verify scaling and units.</li>
+<li>Test a documented read-only value where available.</li>
+</ol>
+<p>Possible root causes: Incorrect register mapping, wrong function code, address offset error, or incorrect data interpretation.</p>
+<p>Verification: Confirm the returned value agrees with the device's documented data representation.</p>
+<h3 id="scenario-5-communication-drops-during-high-traffic">Scenario 5: Communication drops during high traffic</h3>
+<p>Observed condition: Protocol communication is stable at low activity but fails when many tags or devices are active.</p>
+<p>Investigation:</p>
+<ol>
+<li>Check switch interface statistics and network traffic.</li>
+<li>Review polling frequency and the number of individual requests.</li>
+<li>Check controller and device connection limits.</li>
+<li>Review timeout and retry logs.</li>
+<li>Check whether multiple clients access the same device.</li>
+<li>Compare the observed load with the manufacturer's limits.</li>
+<li>Optimize polling or grouping only after identifying the limiting resource.</li>
+</ol>
+<p>Possible root causes: Excessive polling, connection capacity limits, device processing load, congestion, or retry amplification.</p>
+<p>Verification: Confirm communication remains stable under representative operating load without sacrificing required data freshness.</p>
+<h2 id="17-preventive-maintenance-checklist">17. Preventive Maintenance Checklist</h2>
+<h3 id="protocol-configuration">Protocol configuration</h3>
+<ul>
+<li>Record the protocol and supported communication role for each device.</li>
+<li>Document endpoint addresses, ports, names, and connection paths.</li>
+<li>Maintain current PLC, HMI, SCADA, and device mappings.</li>
+<li>Record register, tag, assembly, or node identifiers as applicable.</li>
+<li>Document data types, scaling, byte order, and engineering units.</li>
+<li>Verify configuration after device replacement or firmware changes.</li>
+</ul>
+<h3 id="timing-and-communication-health">Timing and communication health</h3>
+<ul>
+<li>Review timeouts, retries, watchdogs, and update intervals.</li>
+<li>Check protocol connection status and device diagnostic alarms.</li>
+<li>Monitor stale data, bad-quality tags, and failed requests.</li>
+<li>Investigate repeated reconnects and intermittent faults.</li>
+<li>Check connection capacity and polling load where supported.</li>
+<li>Validate communication under representative production conditions.</li>
+</ul>
+<h3 id="recovery-and-documentation">Recovery and documentation</h3>
+<ul>
+<li>Save approved configuration backups before changes.</li>
+<li>Record the original settings and exact error messages.</li>
+<li>Change one relevant parameter at a time where practical.</li>
+<li>Verify source values against displayed values.</li>
+<li>Test the required application function after repair.</li>
+<li>Document the confirmed root cause and corrective action.</li>
+</ul>
+<h2 id="18-protocol-breakdown-record-template">18. Protocol Breakdown Record Template</h2>
+<pre><code>Machine / Line:
+Device Name:
+Device Manufacturer / Model:
+Controller or Engineering Software:
+Firmware / Software Version:
+
+Protocol:
+Communication Role:
+Source Device:
+Destination Device:
+Source IP / Address:
+Destination IP / Address:
+TCP / UDP / Serial:
+Port / Station Address:
+Device Name / Endpoint:
+Connection Path:
+
+Tag / Register / Assembly:
+Data Type:
+Byte / Word Order:
+Scaling / Engineering Unit:
+Update Interval:
+Timeout:
+Retry Count:
+Watchdog / RPI, if applicable:
+
+Reported Alarm:
+Exact Error Text:
+Fault Timestamp:
+Physical Link Status:
+IP Reachability:
+Protocol Connection Status:
+Data Quality:
+Data Update Status:
+Observed Value:
+Expected Value:
+
+Configuration Before Repair:
+Configuration After Repair:
+Confirmed Root Cause:
+Corrective Action:
+Source Value Verified:
+Application Function Verified:
+Production Function Verified:
+
+Technician:
+Work Order:
+Date:
+</code></pre>
+<h2 id="19-interview-questions-and-answers">19. Interview Questions and Answers</h2>
+<h3 id="q1-why-can-ping-succeed-while-plc-communication-fails">Q1. Why can ping succeed while PLC communication fails?</h3>
+<p>Ping tests ICMP reachability. PLC communication may require a separate protocol service, correct connection configuration, permissions, data mapping, and application functionality.</p>
+<h3 id="q2-what-is-data-mapping">Q2. What is data mapping?</h3>
+<p>Data mapping defines how data in one system corresponds to tags, registers, bits, or objects in another system.</p>
+<h3 id="q3-what-is-a-protocol-timeout">Q3. What is a protocol timeout?</h3>
+<p>A timeout is the permitted waiting period for a defined communication operation. If the required response or event does not occur within that period, the operation is reported as timed out.</p>
+<h3 id="q4-why-should-timeout-values-not-be-increased-blindly">Q4. Why should timeout values not be increased blindly?</h3>
+<p>A longer timeout may hide a slow or failing endpoint and delay fault detection without resolving the actual cause.</p>
+<h3 id="q5-what-is-the-difference-between-tcp-and-udp">Q5. What is the difference between TCP and UDP?</h3>
+<p>TCP provides a connection-oriented byte stream with transport-level reliability mechanisms. UDP sends datagrams without establishing a TCP-style connection. The required transport depends on the protocol.</p>
+<h3 id="q6-what-is-the-difference-between-a-protocol-connection-fault-and-a-mapping-fault">Q6. What is the difference between a protocol connection fault and a mapping fault?</h3>
+<p>A connection fault means the required communication relationship is not established or maintained. A mapping fault occurs when communication exists but the application accesses or interprets the wrong data.</p>
+<h3 id="q7-why-can-modbus-data-be-incorrect-even-when-the-request-succeeds">Q7. Why can Modbus data be incorrect even when the request succeeds?</h3>
+<p>The request may use the wrong function code, register address, offset convention, data type, byte order, or scaling.</p>
+<h3 id="q8-what-is-rpi-in-ethernetip">Q8. What is RPI in EtherNet/IP?</h3>
+<p>Requested Packet Interval is a parameter used for supported cyclic I/O connections to specify a requested data transmission interval.</p>
+<h3 id="q9-what-should-be-checked-when-profinet-communication-fails">Q9. What should be checked when PROFINET communication fails?</h3>
+<p>Check the device name, IP configuration, controller and device configuration, topology, module layout, device diagnostics, update settings, and firmware compatibility.</p>
+<h3 id="q10-how-should-intermittent-protocol-faults-be-investigated">Q10. How should intermittent protocol faults be investigated?</h3>
+<p>Correlate timestamps and logs across the PLC, switch, device, HMI, and SCADA. Examine link events, device restarts, request load, timeouts, and protocol diagnostics before changing settings.</p>
+<h3 id="q11-what-is-the-difference-between-raw-data-and-an-engineering-value">Q11. What is the difference between raw data and an engineering value?</h3>
+<p>Raw data is the transmitted or stored representation. An engineering value is the interpreted result after applying the correct data type, scaling, and units.</p>
+<h3 id="q12-what-should-be-verified-after-correcting-a-protocol-fault">Q12. What should be verified after correcting a protocol fault?</h3>
+<p>Confirm the intended endpoint is connected, the required data is updating correctly, values are interpreted properly, alarms clear as expected, and the actual machine function is healthy.</p>
+<h2 id="20-completion-checklist">20. Completion Checklist</h2>
+<ul>
+<li>Understand protocol roles and compatibility.</li>
+<li>Distinguish physical, IP, transport, protocol, mapping, and application faults.</li>
+<li>Identify common industrial protocols and their diagnostic requirements.</li>
+<li>Interpret connection states and communication alarms.</li>
+<li>Verify data tags, registers, assemblies, and device identifiers.</li>
+<li>Diagnose data-type, byte-order, and scaling errors.</li>
+<li>Understand cyclic updates, polling, and update intervals.</li>
+<li>Diagnose timeout, retry, and watchdog problems.</li>
+<li>Distinguish TCP and UDP communication requirements.</li>
+<li>Understand common EtherNet/IP, PROFINET, Modbus, and OPC UA faults.</li>
+<li>Verify endpoint names, connection paths, and access permissions.</li>
+<li>Correlate logs and timing for intermittent faults.</li>
+<li>Record the confirmed root cause and validate the complete application.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\19_Breakdown\06_Network_Fault\06_Device - Device: Device health and name</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

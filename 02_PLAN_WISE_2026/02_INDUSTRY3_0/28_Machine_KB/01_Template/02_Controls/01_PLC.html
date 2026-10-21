@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01. PLC: Model, Program, I/O</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">01. PLC: Model, Program, I/O</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-of-plc-documentation-in-a-machine-knowledge-base">1. Purpose of PLC Documentation in a Machine Knowledge Base</a></li>
+<li><a href="#2-plc-system-architecture">2. PLC System Architecture</a></li>
+<li><a href="#3-plc-identification-and-model">3. PLC Identification and Model</a><ul>
+<li><a href="#31-information-to-capture">3.1 Information to capture</a></li>
+<li><a href="#32-model-versus-firmware-versus-software">3.2 Model versus firmware versus software</a></li>
+<li><a href="#33-manufacturer-and-platform-examples">3.3 Manufacturer and platform examples</a></li>
+</ul>
+</li>
+<li><a href="#4-plc-hardware-configuration">4. PLC Hardware Configuration</a><ul>
+<li><a href="#41-common-hardware-components">4.1 Common hardware components</a></li>
+<li><a href="#42-rack-slot-and-module-identification">4.2 Rack, slot, and module identification</a></li>
+</ul>
+</li>
+<li><a href="#5-plc-program-documentation">5. PLC Program Documentation</a><ul>
+<li><a href="#51-program-information-to-capture">5.1 Program information to capture</a></li>
+<li><a href="#52-source-project-versus-uploaded-controller-image">5.2 Source project versus uploaded controller image</a></li>
+<li><a href="#53-backup-verification">5.3 Backup verification</a></li>
+<li><a href="#54-uploading-and-downloading-programs">5.4 Uploading and downloading programs</a></li>
+</ul>
+</li>
+<li><a href="#6-plc-programming-languages-and-program-structure">6. PLC Programming Languages and Program Structure</a><ul>
+<li><a href="#61-common-program-components">6.1 Common program components</a></li>
+<li><a href="#62-document-the-program-structure">6.2 Document the program structure</a></li>
+</ul>
+</li>
+<li><a href="#7-plc-io-fundamentals">7. PLC I/O Fundamentals</a></li>
+<li><a href="#8-digital-inputs">8. Digital Inputs</a><ul>
+<li><a href="#81-digital-input-record">8.1 Digital input record</a></li>
+<li><a href="#82-pnp-and-npn-sensors">8.2 PNP and NPN sensors</a></li>
+<li><a href="#83-interpreting-a-digital-input">8.3 Interpreting a digital input</a></li>
+</ul>
+</li>
+<li><a href="#9-digital-outputs">9. Digital Outputs</a><ul>
+<li><a href="#91-digital-output-record">9.1 Digital output record</a></li>
+<li><a href="#92-output-troubleshooting">9.2 Output troubleshooting</a></li>
+</ul>
+</li>
+<li><a href="#10-analog-inputs-and-outputs">10. Analog Inputs and Outputs</a><ul>
+<li><a href="#101-analog-input-record">10.1 Analog input record</a></li>
+<li><a href="#102-scaling-example-for-a-420-ma-transmitter">10.2 Scaling example for a 4–20 mA transmitter</a></li>
+<li><a href="#103-why-analog-signal-records-matter">10.3 Why analog signal records matter</a></li>
+</ul>
+</li>
+<li><a href="#11-plc-addressing-and-tag-names">11. PLC Addressing and Tag Names</a><ul>
+<li><a href="#111-addressing-examples">11.1 Addressing examples</a></li>
+<li><a href="#112-symbolic-tags">11.2 Symbolic tags</a></li>
+<li><a href="#113-tag-to-device-mapping">11.3 Tag-to-device mapping</a></li>
+</ul>
+</li>
+<li><a href="#12-plc-io-list-and-signal-register">12. PLC I/O List and Signal Register</a><ul>
+<li><a href="#121-recommended-io-register">12.1 Recommended I/O register</a></li>
+<li><a href="#122-example-signal-register">12.2 Example signal register</a></li>
+</ul>
+</li>
+<li><a href="#13-plc-operating-modes-and-execution">13. PLC Operating Modes and Execution</a><ul>
+<li><a href="#131-scan-cycle-concept">13.1 Scan cycle concept</a></li>
+<li><a href="#132-why-execution-behavior-matters">13.2 Why execution behavior matters</a></li>
+</ul>
+</li>
+<li><a href="#14-plc-interlocks-and-permissives">14. PLC Interlocks and Permissives</a></li>
+<li><a href="#15-plc-communication-and-connected-devices">15. PLC Communication and Connected Devices</a><ul>
+<li><a href="#151-communication-register">15.1 Communication register</a></li>
+</ul>
+</li>
+<li><a href="#16-plc-alarms-and-diagnostics">16. PLC Alarms and Diagnostics</a></li>
+<li><a href="#17-plc-change-management">17. PLC Change Management</a></li>
+<li><a href="#18-plc-fault-diagnosis-method">18. PLC Fault-Diagnosis Method</a><ul>
+<li><a href="#181-controller-not-communicating">18.1 Controller not communicating</a></li>
+<li><a href="#182-input-signal-is-not-changing">18.2 Input signal is not changing</a></li>
+<li><a href="#183-output-command-is-active-but-the-actuator-does-not-operate">18.3 Output command is active but the actuator does not operate</a></li>
+</ul>
+</li>
+<li><a href="#19-practical-plc-case-studies">19. Practical PLC Case Studies</a><ul>
+<li><a href="#case-1-sensor-is-healthy-but-the-plc-input-remains-off">Case 1: Sensor is healthy, but the PLC input remains OFF</a></li>
+<li><a href="#case-2-plc-output-is-on-but-a-pneumatic-clamp-does-not-extend">Case 2: PLC output is ON, but a pneumatic clamp does not extend</a></li>
+<li><a href="#case-3-replacement-plc-has-the-same-model-but-will-not-accept-the-project">Case 3: Replacement PLC has the same model but will not accept the project</a></li>
+<li><a href="#case-4-a-backup-exists-but-cannot-support-recovery">Case 4: A backup exists but cannot support recovery</a></li>
+</ul>
+</li>
+<li><a href="#20-machine-knowledge-base-template-for-plcs">20. Machine Knowledge Base Template for PLCs</a><ul>
+<li><a href="#a-plc-identity">A. PLC identity</a></li>
+<li><a href="#b-engineering-project">B. Engineering project</a></li>
+<li><a href="#c-hardware-inventory">C. Hardware inventory</a></li>
+<li><a href="#d-io-documentation">D. I/O documentation</a></li>
+<li><a href="#e-communication-and-dependencies">E. Communication and dependencies</a></li>
+<li><a href="#f-maintenance-and-change-history">F. Maintenance and change history</a></li>
+</ul>
+</li>
+<li><a href="#21-recommended-plc-documentation-folder-structure">21. Recommended PLC Documentation Folder Structure</a></li>
+<li><a href="#22-final-plc-documentation-checklist">22. Final PLC Documentation Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-of-plc-documentation-in-a-machine-knowledge-base">1. Purpose of PLC Documentation in a Machine Knowledge Base</h2>
+<p>A Programmable Logic Controller (PLC) is an industrial controller that executes a control program to operate machinery based on input signals, internal logic, communication data, and configured operating conditions.</p>
+<p>In a machine knowledge base, the PLC record must answer five essential questions:</p>
+<ul>
+<li>Identity: Which PLC is installed, and where is it located?</li>
+<li>Hardware: What CPU, I/O modules, communication modules, and expansion units are installed?</li>
+<li>Program: Which application is running, what software and firmware does it require, and where is its approved backup?</li>
+<li>I/O: Which physical signals enter and leave the PLC, and which machine devices do they represent?</li>
+<li>Recovery: How can the controller and its program be restored safely if hardware fails or data is lost?</li>
+</ul>
+<p>A PLC record should allow a maintenance engineer to identify the installed controller, understand its relationship to the machine, locate the correct program and drawings, troubleshoot signals, and plan a controlled recovery.</p>
+<p>Important distinction: A PLC model number alone is not enough to identify a machine's control system. Two controllers of the same model may run different programs, use different firmware, have different I/O configurations, and control entirely different processes.</p>
+<h2 id="2-plc-system-architecture">2. PLC System Architecture</h2>
+<p>A typical PLC-based machine contains a controller, input and output modules, a power supply, communication interfaces, field devices, and engineering software.</p>
+<pre><code>Sensors and Field Inputs
+          ↓
+Input Modules / Remote I/O
+          ↓
+       PLC CPU
+          ↓
+Control Program and Logic
+          ↓
+Output Modules / Communication
+          ↓
+Contactors, Valves, Drives, Robots
+          ↓
+Machine Process
+          ↓
+Feedback from Sensors and Devices
+</code></pre>
+<p>The exact architecture varies. Some machines use local I/O mounted beside the CPU. Others use distributed I/O over industrial networks, communication-based drives, remote controllers, or integrated safety controllers.</p>
+<p>The machine knowledge base should document the actual installed architecture rather than assuming every signal is wired directly to the main PLC.</p>
+<h2 id="3-plc-identification-and-model">3. PLC Identification and Model</h2>
+<p>The first task is to identify the installed PLC accurately.</p>
+<h3 id="31-information-to-capture">3.1 Information to capture</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>What to record</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine ID</td>
+<td>Unique identifier of the machine</td>
+</tr>
+<tr>
+<td>PLC tag</td>
+<td>Unique controller reference used in drawings</td>
+</tr>
+<tr>
+<td>Manufacturer</td>
+<td>Siemens, Rockwell Automation, Mitsubishi Electric, or another manufacturer</td>
+</tr>
+<tr>
+<td>Product family</td>
+<td>Controller family or platform</td>
+</tr>
+<tr>
+<td>Exact model</td>
+<td>Complete CPU catalog or order number</td>
+</tr>
+<tr>
+<td>Serial number</td>
+<td>Hardware-specific serial number, where available</td>
+</tr>
+<tr>
+<td>Firmware version</td>
+<td>Installed controller firmware</td>
+</tr>
+<tr>
+<td>Hardware revision</td>
+<td>Hardware revision, if applicable</td>
+</tr>
+<tr>
+<td>IP address</td>
+<td>Configured address for Ethernet-connected devices</td>
+</tr>
+<tr>
+<td>Network identity</td>
+<td>Device name, node address, or other relevant identifier</td>
+</tr>
+<tr>
+<td>Physical location</td>
+<td>Panel ID, rack, slot, or mounting position</td>
+</tr>
+<tr>
+<td>Engineering software</td>
+<td>Software and version used to configure the controller</td>
+</tr>
+<tr>
+<td>Program identity</td>
+<td>Approved project name and version</td>
+</tr>
+<tr>
+<td>Backup reference</td>
+<td>Location of the controlled backup</td>
+</tr>
+<tr>
+<td>Drawing reference</td>
+<td>Electrical schematic and PLC hardware configuration references</td>
+</tr>
+</tbody>
+</table>
+<p>Do not record passwords, private keys, or other authentication secrets in an ordinary machine knowledge base. Store credentials only in the plant's approved secure credential-management system.</p>
+<h3 id="32-model-versus-firmware-versus-software">3.2 Model versus firmware versus software</h3>
+<p>These are different attributes.</p>
+<ul>
+<li>Model: Identifies the controller hardware family or exact product.</li>
+<li>Firmware: The internal software version running on the PLC CPU.</li>
+<li>Engineering software: The tool used to configure, program, diagnose, and maintain the PLC.</li>
+<li>Application program: The machine-specific logic executed by the controller.</li>
+<li>Hardware configuration: The configured CPU, modules, addresses, communication interfaces, and related settings.</li>
+</ul>
+<p>A controller can have a compatible hardware model but still be incompatible with a project because of firmware, software version, library, or configuration differences.</p>
+<h3 id="33-manufacturer-and-platform-examples">3.3 Manufacturer and platform examples</h3>
+<table>
+<thead>
+<tr>
+<th>Manufacturer</th>
+<th>Example platform or family</th>
+<th>Common engineering environment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Siemens</td>
+<td>SIMATIC S7-1200, S7-1500</td>
+<td>TIA Portal</td>
+</tr>
+<tr>
+<td>Siemens</td>
+<td>SIMATIC S7-300, S7-400</td>
+<td>STEP 7 Classic or applicable supported tools</td>
+</tr>
+<tr>
+<td>Rockwell Automation</td>
+<td>CompactLogix, ControlLogix</td>
+<td>Studio 5000 Logix Designer</td>
+</tr>
+<tr>
+<td>Mitsubishi Electric</td>
+<td>MELSEC iQ-F, iQ-R</td>
+<td>GX Works3</td>
+</tr>
+<tr>
+<td>Mitsubishi Electric</td>
+<td>MELSEC Q series</td>
+<td>GX Works2 or the applicable supported tool</td>
+</tr>
+<tr>
+<td>Omron</td>
+<td>NX/NJ and other supported PLC families</td>
+<td>Sysmac Studio or applicable platform software</td>
+</tr>
+<tr>
+<td>Schneider Electric</td>
+<td>Modicon M-series and other supported platforms</td>
+<td>Applicable EcoStruxure engineering software</td>
+</tr>
+</tbody>
+</table>
+<p>These are examples, not a universal compatibility matrix. The exact PLC model determines which engineering software, firmware, communication interface, and project format are supported.</p>
+<h2 id="4-plc-hardware-configuration">4. PLC Hardware Configuration</h2>
+<p>The CPU is only one part of a PLC system. A controller rack or station may contain several modules that collectively implement the machine's control functions.</p>
+<h3 id="41-common-hardware-components">4.1 Common hardware components</h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+<th>Documentation requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CPU</td>
+<td>Executes the application program</td>
+<td>Exact model, firmware, serial number</td>
+</tr>
+<tr>
+<td>Power supply</td>
+<td>Supplies the PLC system</td>
+<td>Model, input/output ratings, source</td>
+</tr>
+<tr>
+<td>Digital input module</td>
+<td>Receives ON/OFF signals</td>
+<td>Model, channel count, addressing</td>
+</tr>
+<tr>
+<td>Digital output module</td>
+<td>Commands discrete devices</td>
+<td>Model, channel count, output type</td>
+</tr>
+<tr>
+<td>Analog input module</td>
+<td>Measures analog signals</td>
+<td>Model, range, resolution, channel mapping</td>
+</tr>
+<tr>
+<td>Analog output module</td>
+<td>Produces analog command signals</td>
+<td>Model, range, channel mapping</td>
+</tr>
+<tr>
+<td>Communication module</td>
+<td>Provides network or fieldbus connectivity</td>
+<td>Model, protocol, configuration</td>
+</tr>
+<tr>
+<td>Remote I/O adapter</td>
+<td>Connects distributed I/O to the controller</td>
+<td>Model, network identity, assigned I/O</td>
+</tr>
+<tr>
+<td>Memory or storage module</td>
+<td>Stores supported program or configuration data</td>
+<td>Model and applicable recovery requirements</td>
+</tr>
+<tr>
+<td>Safety controller or module</td>
+<td>Executes safety-related control functions</td>
+<td>Exact model, safety configuration, validation records</td>
+</tr>
+</tbody>
+</table>
+<p>Not every system contains every component. Record only the modules installed in the actual machine.</p>
+<h3 id="42-rack-slot-and-module-identification">4.2 Rack, slot, and module identification</h3>
+<p>For modular PLCs, document the rack or station arrangement and each module's position.</p>
+<p>Example:</p>
+<table>
+<thead>
+<tr>
+<th>Rack or station</th>
+<th>Slot or position</th>
+<th>Device</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Main rack</td>
+<td>CPU position</td>
+<td>PLC CPU</td>
+<td>Executes machine program</td>
+</tr>
+<tr>
+<td>Main rack</td>
+<td>Slot 1</td>
+<td>Digital input module</td>
+<td>Receives discrete field signals</td>
+</tr>
+<tr>
+<td>Main rack</td>
+<td>Slot 2</td>
+<td>Digital output module</td>
+<td>Commands discrete devices</td>
+</tr>
+<tr>
+<td>Main rack</td>
+<td>Slot 3</td>
+<td>Analog input module</td>
+<td>Receives process measurements</td>
+</tr>
+<tr>
+<td>Remote station</td>
+<td>Adapter position</td>
+<td>Remote I/O adapter</td>
+<td>Exchanges data with main controller</td>
+</tr>
+</tbody>
+</table>
+<p>The entries above are illustrative. Actual slot numbers, module order, and addressing must be copied from the installed configuration and controlled drawings.</p>
+<p>A module replacement can affect addressing, channel mapping, configuration compatibility, and diagnostics. Replacing a failed module with a visually similar unit without checking its exact catalog number and configuration can introduce additional faults.</p>
+<h2 id="5-plc-program-documentation">5. PLC Program Documentation</h2>
+<p>The PLC application program contains the logic that determines how the machine responds to inputs, internal states, commands, timers, counters, alarms, and feedback.</p>
+<p>A program backup is useful only when its identity, compatibility, integrity, and relationship to the installed machine are known.</p>
+<h3 id="51-program-information-to-capture">5.1 Program information to capture</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Project name</td>
+<td>Identifies the engineering project</td>
+</tr>
+<tr>
+<td>Application name</td>
+<td>Identifies the machine-control application</td>
+</tr>
+<tr>
+<td>Project revision</td>
+<td>Records the approved version or revision</td>
+</tr>
+<tr>
+<td>Last approved change</td>
+<td>Links the program to a controlled modification</td>
+</tr>
+<tr>
+<td>Controller target</td>
+<td>Identifies the intended PLC model</td>
+</tr>
+<tr>
+<td>Firmware requirement</td>
+<td>Records the compatible or required firmware</td>
+</tr>
+<tr>
+<td>Engineering software version</td>
+<td>Identifies the tool used to open and maintain the project</td>
+</tr>
+<tr>
+<td>Backup location</td>
+<td>Identifies the approved storage location</td>
+</tr>
+<tr>
+<td>Backup date</td>
+<td>Records when the backup was created</td>
+</tr>
+<tr>
+<td>Backup type</td>
+<td>Project source, upload, archive, or other defined package</td>
+</tr>
+<tr>
+<td>Validation status</td>
+<td>Records whether the backup has been checked</td>
+</tr>
+<tr>
+<td>Change history</td>
+<td>Records approved modifications and their reasons</td>
+</tr>
+<tr>
+<td>Restore procedure</td>
+<td>References the approved recovery instructions</td>
+</tr>
+</tbody>
+</table>
+<p>Use the plant's approved naming and version-control conventions. A filename such as <code>PLC_FINAL_NEW_LATEST_2</code> is not a dependable version-control system, despite humanity's ongoing efforts to make it one.</p>
+<h3 id="52-source-project-versus-uploaded-controller-image">5.2 Source project versus uploaded controller image</h3>
+<p>An engineering project saved on a computer and a program uploaded from a PLC are not always equivalent.</p>
+<p>Depending on the platform, an upload may not contain all original source information, comments, symbolic names, external libraries, source files, or documentation needed for full engineering maintenance.</p>
+<p>For this reason, record the backup type explicitly:</p>
+<ul>
+<li>Native engineering project: The maintained project used by the engineering software.</li>
+<li>Controller upload or extracted project: A copy obtained from the installed controller, subject to platform limitations.</li>
+<li>Controller memory or firmware backup: A platform-specific recovery image or data set, where supported.</li>
+<li>Archive package: A packaged project containing the required configuration and associated files.</li>
+<li>Exported source or reports: Individual program blocks, tag lists, configuration exports, or reports.</li>
+</ul>
+<p>Do not assume that every PLC supports every backup method. Confirm the manufacturer's instructions and the installed platform's capabilities.</p>
+<h3 id="53-backup-verification">5.3 Backup verification</h3>
+<p>A reliable PLC backup process should include:</p>
+<ol>
+<li>Identify the machine and controller.</li>
+<li>Confirm the running controller model, firmware, and project identity where available.</li>
+<li>Follow the approved procedure to obtain the backup.</li>
+<li>Save the backup in the controlled location using the required naming convention.</li>
+<li>Record the backup date, source, version, and responsible person or role.</li>
+<li>Verify file integrity using the organization's approved method.</li>
+<li>Confirm that the backup can be opened with the required engineering software, where this can be checked safely.</li>
+<li>Verify that associated hardware configuration, libraries, device descriptions, and required project dependencies are available.</li>
+<li>Record whether the backup has been tested for recovery or merely archived.</li>
+<li>Protect the backup against unauthorized changes and accidental deletion.</li>
+</ol>
+<p>Opening a project successfully does not prove that it can be restored to the installed controller or that the restored program will operate the machine correctly.</p>
+<h3 id="54-uploading-and-downloading-programs">5.4 Uploading and downloading programs</h3>
+<ul>
+<li>Upload: Transfers available program or configuration data from the controller to an engineering environment, subject to platform limitations.</li>
+<li>Download: Transfers a project, configuration, or program from the engineering environment to the controller.</li>
+<li>Online monitoring: Allows the engineer to observe supported controller states, variables, or logic execution.</li>
+<li>Compare: Identifies differences between available project and controller data, within the comparison capabilities of the platform.</li>
+</ul>
+<p>Downloading can change machine behavior and interrupt production. It must follow the approved change-control procedure, with the required permissions, backups, machine-state controls, validation, and rollback plan.</p>
+<p>Never download an unverified project to a production PLC merely to see whether it works.</p>
+<h2 id="6-plc-programming-languages-and-program-structure">6. PLC Programming Languages and Program Structure</h2>
+<p>PLC programs may use one or more languages defined by IEC 61131-3 and supported by the specific controller.</p>
+<table>
+<thead>
+<tr>
+<th>Language</th>
+<th>Abbreviation</th>
+<th>Typical use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ladder Diagram</td>
+<td>LD</td>
+<td>Relay-like logic, permissives, interlocks, maintenance troubleshooting</td>
+</tr>
+<tr>
+<td>Function Block Diagram</td>
+<td>FBD</td>
+<td>Connecting functional blocks for control and signal processing</td>
+</tr>
+<tr>
+<td>Structured Text</td>
+<td>ST</td>
+<td>Calculations, complex conditions, data processing, reusable logic</td>
+</tr>
+<tr>
+<td>Sequential Function Chart</td>
+<td>SFC</td>
+<td>Organizing processes into steps and transitions, where supported</td>
+</tr>
+<tr>
+<td>Instruction List</td>
+<td>IL</td>
+<td>Legacy instruction-based programming on platforms that support it</td>
+</tr>
+</tbody>
+</table>
+<p>Language availability and implementation vary by platform and software version. Instruction List is a legacy language and is not supported as a standard programming language by many modern environments.</p>
+<h3 id="61-common-program-components">6.1 Common program components</h3>
+<p>A PLC project may contain:</p>
+<ul>
+<li>Main or cyclic program routines.</li>
+<li>Subroutines and reusable functions.</li>
+<li>Function blocks and associated data.</li>
+<li>Global and local variables.</li>
+<li>Input/output mappings.</li>
+<li>Timers and counters.</li>
+<li>Alarm and fault-handling logic.</li>
+<li>Machine sequence logic.</li>
+<li>Communication routines.</li>
+<li>Motion or drive interfaces.</li>
+<li>Diagnostic and maintenance functions.</li>
+<li>Safety-related logic, where applicable and supported by the safety architecture.</li>
+</ul>
+<h3 id="62-document-the-program-structure">6.2 Document the program structure</h3>
+<p>For maintainability, record the names and purposes of the important program components rather than documenting only the project filename.</p>
+<table>
+<thead>
+<tr>
+<th>Program component</th>
+<th>Purpose to record</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Main routine</td>
+<td>Overall execution structure</td>
+</tr>
+<tr>
+<td>Auto sequence</td>
+<td>Automatic operating sequence</td>
+</tr>
+<tr>
+<td>Manual mode</td>
+<td>Authorized manual operation logic</td>
+</tr>
+<tr>
+<td>I/O mapping</td>
+<td>Relationship between physical signals and program variables</td>
+</tr>
+<tr>
+<td>Alarm handling</td>
+<td>Fault detection, alarm generation, and reset conditions</td>
+</tr>
+<tr>
+<td>Communication logic</td>
+<td>Data exchange with HMIs, drives, robots, or other controllers</td>
+</tr>
+<tr>
+<td>Diagnostics</td>
+<td>Health monitoring and fault identification</td>
+</tr>
+<tr>
+<td>Motion control</td>
+<td>Axis commands, feedback, and motion-state handling</td>
+</tr>
+<tr>
+<td>Safety interface</td>
+<td>Interface with the approved safety system</td>
+</tr>
+<tr>
+<td>Data handling</td>
+<td>Recipes, production counters, measurement values, or retained data</td>
+</tr>
+</tbody>
+</table>
+<p>A safety interface routine in a standard PLC program does not automatically make that PLC safety-rated. Safety functions must be implemented and validated using the designated safety architecture and applicable requirements.</p>
+<h2 id="7-plc-io-fundamentals">7. PLC I/O Fundamentals</h2>
+<p>I/O means input/output. It describes how the controller receives information from the machine and sends commands to equipment.</p>
+<ul>
+<li>Inputs report conditions, measurements, or device states to the PLC.</li>
+<li>Outputs transmit commands or control signals from the PLC to devices.</li>
+<li>Internal variables store or calculate values within the controller.</li>
+<li>Network variables exchange data with other controllers, drives, HMIs, robots, and industrial devices.</li>
+</ul>
+<p>A critical maintenance task is mapping each relevant signal to its physical device, controller address, program variable, and machine function.</p>
+<h2 id="8-digital-inputs">8. Digital Inputs</h2>
+<p>Digital inputs represent discrete states, commonly ON/OFF or TRUE/FALSE.</p>
+<p>Typical examples include:</p>
+<ul>
+<li>Proximity sensors.</li>
+<li>Limit switches.</li>
+<li>Pushbuttons.</li>
+<li>Pressure switches.</li>
+<li>Part-present sensors.</li>
+<li>Contactor feedback contacts.</li>
+<li>Drive-ready and fault signals.</li>
+<li>Guard-door status signals.</li>
+</ul>
+<h3 id="81-digital-input-record">8.1 Digital input record</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Signal ID</td>
+<td>Unique identifier for the signal</td>
+</tr>
+<tr>
+<td>PLC tag</td>
+<td>Program variable name</td>
+</tr>
+<tr>
+<td>Physical address</td>
+<td>Actual module and channel address</td>
+</tr>
+<tr>
+<td>Device tag</td>
+<td>Sensor or contact identifier</td>
+</tr>
+<tr>
+<td>Signal description</td>
+<td>What the signal represents</td>
+</tr>
+<tr>
+<td>Normal state</td>
+<td>Expected state under the documented condition</td>
+</tr>
+<tr>
+<td>Electrical type</td>
+<td>PNP, NPN, dry contact, or other applicable type</td>
+</tr>
+<tr>
+<td>Supply voltage</td>
+<td>Required signal or device supply</td>
+</tr>
+<tr>
+<td>Terminal reference</td>
+<td>Wiring terminal or connector reference</td>
+</tr>
+<tr>
+<td>Drawing reference</td>
+<td>Electrical schematic reference</td>
+</tr>
+<tr>
+<td>Diagnostic notes</td>
+<td>Expected behavior and fault checks</td>
+</tr>
+</tbody>
+</table>
+<h3 id="82-pnp-and-npn-sensors">8.2 PNP and NPN sensors</h3>
+<p>PNP and NPN describe common transistor output arrangements used in industrial sensors.</p>
+<ul>
+<li>PNP output: Commonly sources current toward the positive supply when ON.</li>
+<li>NPN output: Commonly sinks current toward the zero-volt reference when ON.</li>
+</ul>
+<p>The PLC input module and field device must be electrically compatible. The wiring arrangement must match the manufacturer's specifications.</p>
+<p>Do not identify a sensor's output type from its housing or wire colors alone. Verify the model, wiring diagram, and installed circuit.</p>
+<h3 id="83-interpreting-a-digital-input">8.3 Interpreting a digital input</h3>
+<p>Suppose a sensor detects a component at a fixture.</p>
+<p>The PLC input may indicate that the component is present. However, the signal alone does not prove that the component is correctly positioned, clamped, identified, or safe to process.</p>
+<p>The control program may require several signals and additional conditions before allowing the next sequence step.</p>
+<p>When troubleshooting, distinguish between:</p>
+<ol>
+<li>The physical condition.</li>
+<li>The sensor's electrical output.</li>
+<li>The signal received at the PLC channel.</li>
+<li>The program variable representing that signal.</li>
+<li>The logic conditions that use the variable.</li>
+</ol>
+<p>This separation helps locate the fault instead of replacing the sensor whenever the machine refuses to cycle.</p>
+<h2 id="9-digital-outputs">9. Digital Outputs</h2>
+<p>Digital outputs command discrete devices through the applicable output module, interface relay, or connected control system.</p>
+<p>Typical loads include:</p>
+<ul>
+<li>Solenoid valves.</li>
+<li>Interposing relays.</li>
+<li>Contactor coils.</li>
+<li>Indicator lamps.</li>
+<li>Buzzer circuits.</li>
+<li>Pneumatic clamp commands.</li>
+<li>Drive enable or reset interfaces, where designed.</li>
+<li>Digital command interfaces to other equipment.</li>
+</ul>
+<h3 id="91-digital-output-record">9.1 Digital output record</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Signal ID</td>
+<td>Unique output identifier</td>
+</tr>
+<tr>
+<td>PLC tag</td>
+<td>Program variable name</td>
+</tr>
+<tr>
+<td>Physical address</td>
+<td>Output module and channel</td>
+</tr>
+<tr>
+<td>Device tag</td>
+<td>Actuator, relay, or interface identifier</td>
+</tr>
+<tr>
+<td>Function</td>
+<td>Intended machine action</td>
+</tr>
+<tr>
+<td>Electrical type</td>
+<td>Relay, transistor, or other applicable output type</td>
+</tr>
+<tr>
+<td>Rated output</td>
+<td>Manufacturer-specified electrical limits</td>
+</tr>
+<tr>
+<td>Interposing device</td>
+<td>Relay, contactor, or interface module, if fitted</td>
+</tr>
+<tr>
+<td>Feedback signal</td>
+<td>Relevant confirmation of the commanded action</td>
+</tr>
+<tr>
+<td>Drawing reference</td>
+<td>Wiring and circuit reference</td>
+</tr>
+</tbody>
+</table>
+<p>A PLC output turning ON does not prove that the connected actuator operated.</p>
+<p>For example, an output may energize a relay command, but the relay may have failed, the downstream fuse may be open, the valve coil may be defective, or the actuator may be mechanically stuck.</p>
+<p>Where applicable, document both the command and its feedback.</p>
+<h3 id="92-output-troubleshooting">9.2 Output troubleshooting</h3>
+<p>For a command that does not produce the expected machine action, examine the following using approved diagnostic and electrical procedures:</p>
+<ul>
+<li>Whether the program conditions permit the output.</li>
+<li>Whether the output variable is being commanded.</li>
+<li>Whether the output channel indicates the expected state.</li>
+<li>Whether the module has diagnostic faults.</li>
+<li>Whether the field supply and protective device are healthy.</li>
+<li>Whether the interface relay or contactor operates as designed.</li>
+<li>Whether the actuator receives the correct command and can move.</li>
+<li>Whether the feedback signal confirms the action.</li>
+</ul>
+<p>Do not force an output or bypass an interlock merely to test an actuator. Such actions can create unexpected movement or hazardous conditions.</p>
+<h2 id="10-analog-inputs-and-outputs">10. Analog Inputs and Outputs</h2>
+<p>Analog I/O handles continuously varying measurements or commands.</p>
+<p>Common industrial signal ranges include:</p>
+<ul>
+<li>4–20 mA.</li>
+<li>0–20 mA.</li>
+<li>0–10 V.</li>
+<li>Other voltage or current ranges supported by the installed module.</li>
+</ul>
+<p>Examples include pressure transmitters, temperature transmitters, position feedback, flow measurement, and speed references.</p>
+<h3 id="101-analog-input-record">10.1 Analog input record</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC tag</td>
+<td>Program variable name</td>
+</tr>
+<tr>
+<td>Physical address</td>
+<td>Analog module and channel</td>
+</tr>
+<tr>
+<td>Device tag</td>
+<td>Transmitter or measurement device</td>
+</tr>
+<tr>
+<td>Signal type</td>
+<td>Current, voltage, resistance, or supported input type</td>
+</tr>
+<tr>
+<td>Configured range</td>
+<td>Range configured in the module</td>
+</tr>
+<tr>
+<td>Engineering range</td>
+<td>Physical range represented by the signal</td>
+</tr>
+<tr>
+<td>Engineering units</td>
+<td>Bar, °C, mm, rpm, or other units</td>
+</tr>
+<tr>
+<td>Scaling method</td>
+<td>Program or module conversion method</td>
+</tr>
+<tr>
+<td>Alarm limits</td>
+<td>Approved high/low limits, where applicable</td>
+</tr>
+<tr>
+<td>Drawing reference</td>
+<td>Wiring and instrument connection reference</td>
+</tr>
+</tbody>
+</table>
+<h3 id="102-scaling-example-for-a-420-ma-transmitter">10.2 Scaling example for a 4–20 mA transmitter</h3>
+<p>Assume a pressure transmitter is configured for 0–10 bar over a 4–20 mA signal range.</p>
+<p>The engineering value can be calculated using:</p>
+<div class="math-display">\[ PV = \frac{I-4}{20-4}\times 10 \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(PV\)</span> is the pressure in bar.</li>
+<li><span class="math-inline">\(I\)</span> is the measured current in milliamperes.</li>
+</ul>
+<p>If the measured signal is 12 mA:</p>
+<div class="math-display">\[ PV = \frac{12-4}{16}\times 10 = 5\text{ bar} \]</div>
+<p>This example assumes linear scaling and a correctly configured transmitter and analog input channel.</p>
+<p>In a real PLC, the raw input may be represented by a manufacturer-specific digital count rather than a direct current value. The program must convert the raw count into the engineering range using the configured module characteristics.</p>
+<h3 id="103-why-analog-signal-records-matter">10.3 Why analog signal records matter</h3>
+<p>An incorrect scaling range can produce an incorrect displayed value even when the sensor and wiring are functioning properly.</p>
+<p>For example, a pressure transmitter may generate a valid current signal, but an incorrect raw-count conversion could cause the HMI to display an incorrect pressure.</p>
+<p>The knowledge base should link the transmitter's model and range, the PLC channel configuration, the scaling logic, and the HMI tag.</p>
+<h2 id="11-plc-addressing-and-tag-names">11. PLC Addressing and Tag Names</h2>
+<p>A physical I/O channel and a PLC program tag are related, but they are not necessarily the same identifier.</p>
+<h3 id="111-addressing-examples">11.1 Addressing examples</h3>
+<table>
+<thead>
+<tr>
+<th>Platform</th>
+<th>Illustrative reference</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Siemens</td>
+<td><code>%I0.0</code></td>
+<td>Example digital input address</td>
+</tr>
+<tr>
+<td>Siemens</td>
+<td><code>%Q0.0</code></td>
+<td>Example digital output address</td>
+</tr>
+<tr>
+<td>Rockwell Automation</td>
+<td><code>Local:1:I.Data.0</code></td>
+<td>Example input data reference for a module in a local chassis</td>
+</tr>
+<tr>
+<td>Rockwell Automation</td>
+<td><code>Local:2:O.Data.0</code></td>
+<td>Example output data reference for a module in a local chassis</td>
+</tr>
+<tr>
+<td>Mitsubishi Electric</td>
+<td><code>X0</code></td>
+<td>Example input device reference</td>
+</tr>
+<tr>
+<td>Mitsubishi Electric</td>
+<td><code>Y0</code></td>
+<td>Example output device reference</td>
+</tr>
+</tbody>
+</table>
+<p>These are illustrative conventions, not universal mappings. Exact syntax and availability depend on the controller family, configuration, addressing mode, and project.</p>
+<h3 id="112-symbolic-tags">11.2 Symbolic tags</h3>
+<p>A symbolic tag gives a signal a meaningful name.</p>
+<p>For example:</p>
+<ul>
+<li><code>DI_Clamp_Extended</code></li>
+<li><code>DI_Part_Present</code></li>
+<li><code>DO_Clamp_Extend</code></li>
+<li><code>AI_Hydraulic_Pressure</code></li>
+<li><code>PLC_Auto_Mode_Active</code></li>
+</ul>
+<p>Good tags should be readable, unique within their required scope, and consistent with the plant's naming convention.</p>
+<p>Avoid ambiguous names such as <code>M1</code>, <code>BIT_12</code>, or <code>SENSOR_NEW</code> unless they are formally defined by the established naming standard.</p>
+<h3 id="113-tag-to-device-mapping">11.3 Tag-to-device mapping</h3>
+<p>A useful machine knowledge base maps the following relationship:</p>
+<pre><code>Physical Device
+      ↓
+Terminal and Cable
+      ↓
+PLC Module and Channel
+      ↓
+PLC Address or Symbolic Tag
+      ↓
+Program Logic
+      ↓
+HMI Display or Alarm
+      ↓
+Machine Function
+</code></pre>
+<p>Not every system uses a direct physical PLC channel. A networked drive, remote I/O station, or another controller may provide the signal. Document the actual route.</p>
+<h2 id="12-plc-io-list-and-signal-register">12. PLC I/O List and Signal Register</h2>
+<p>The I/O list is one of the most useful maintenance records because it connects electrical drawings, physical devices, PLC configuration, program logic, and machine behavior.</p>
+<h3 id="121-recommended-io-register">12.1 Recommended I/O register</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine ID</td>
+<td>Identifies the machine</td>
+</tr>
+<tr>
+<td>PLC tag</td>
+<td>Identifies the controller</td>
+</tr>
+<tr>
+<td>Signal ID</td>
+<td>Unique signal reference</td>
+</tr>
+<tr>
+<td>Signal name</td>
+<td>Symbolic program name</td>
+</tr>
+<tr>
+<td>I/O type</td>
+<td>DI, DO, AI, AO, or network data</td>
+</tr>
+<tr>
+<td>Physical address</td>
+<td>Module, channel, or configured data location</td>
+</tr>
+<tr>
+<td>Device tag</td>
+<td>Sensor, actuator, or instrument ID</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>Functional meaning</td>
+</tr>
+<tr>
+<td>Normal state or range</td>
+<td>Expected operating value or condition</td>
+</tr>
+<tr>
+<td>Electrical characteristics</td>
+<td>Signal type and voltage/current range</td>
+</tr>
+<tr>
+<td>Terminal reference</td>
+<td>Physical connection reference</td>
+</tr>
+<tr>
+<td>Program reference</td>
+<td>Routine, block, or logic location</td>
+</tr>
+<tr>
+<td>HMI reference</td>
+<td>Displayed value, command, or alarm</td>
+</tr>
+<tr>
+<td>Drawing reference</td>
+<td>Applicable electrical schematic</td>
+</tr>
+<tr>
+<td>Diagnostic notes</td>
+<td>Expected behavior and troubleshooting information</td>
+</tr>
+</tbody>
+</table>
+<h3 id="122-example-signal-register">12.2 Example signal register</h3>
+<p>The following entries are fictional examples.</p>
+<table>
+<thead>
+<tr>
+<th>Signal ID</th>
+<th>I/O type</th>
+<th>PLC tag</th>
+<th>Device</th>
+<th>Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SIG-001</code></td>
+<td>DI</td>
+<td><code>DI_Part_Present</code></td>
+<td><code>B1</code></td>
+<td>Indicates part presence</td>
+</tr>
+<tr>
+<td><code>SIG-002</code></td>
+<td>DI</td>
+<td><code>DI_Clamp_Extended</code></td>
+<td><code>B2</code></td>
+<td>Indicates clamp extension</td>
+</tr>
+<tr>
+<td><code>SIG-003</code></td>
+<td>DO</td>
+<td><code>DO_Clamp_Extend</code></td>
+<td><code>YV1</code></td>
+<td>Commands clamp extension</td>
+</tr>
+<tr>
+<td><code>SIG-004</code></td>
+<td>AI</td>
+<td><code>AI_Pressure</code></td>
+<td><code>PT1</code></td>
+<td>Reads process pressure</td>
+</tr>
+<tr>
+<td><code>SIG-005</code></td>
+<td>DO</td>
+<td><code>DO_Cycle_Lamp</code></td>
+<td><code>HL1</code></td>
+<td>Commands cycle-status lamp</td>
+</tr>
+</tbody>
+</table>
+<p>The example does not define safe machine logic or actual I/O addresses. The installed drawings and program determine the real signal mapping.</p>
+<h2 id="13-plc-operating-modes-and-execution">13. PLC Operating Modes and Execution</h2>
+<p>A PLC's operating mode affects how it executes its application and responds to program changes.</p>
+<p>Common concepts include:</p>
+<ul>
+<li>Run: The controller executes the application according to the platform's operating rules.</li>
+<li>Program or Stop: Application execution is stopped or restricted, depending on the platform and mode.</li>
+<li>Remote mode: The controller may accept certain commands from an authorized engineering system, depending on configuration.</li>
+<li>Faulted state: The controller has encountered a condition affecting its operation.</li>
+<li>Startup or recovery state: The controller is starting, restoring, or validating its operating condition.</li>
+</ul>
+<p>Names and behavior vary between manufacturers. Always use the installed platform's documentation.</p>
+<h3 id="131-scan-cycle-concept">13.1 Scan cycle concept</h3>
+<p>Many PLCs execute application logic in repeated processing cycles. A simplified model is:</p>
+<ol>
+<li>Acquire or update input data according to the platform's I/O architecture.</li>
+<li>Execute the applicable program logic.</li>
+<li>Update outputs according to the execution model.</li>
+<li>Perform communication, diagnostics, and system tasks as scheduled.</li>
+<li>Repeat the applicable execution cycle.</li>
+</ol>
+<p>Actual execution can involve multiple tasks, asynchronous communication, interrupts, distributed I/O updates, motion tasks, and safety-related processing. Not every controller follows a single simple scan sequence.</p>
+<h3 id="132-why-execution-behavior-matters">13.2 Why execution behavior matters</h3>
+<p>A sensor may change state between input updates, a task may execute at a configured interval, or communication data may arrive asynchronously.</p>
+<p>These timing effects can influence:</p>
+<ul>
+<li>Short pulses.</li>
+<li>High-speed counting.</li>
+<li>Motion control.</li>
+<li>Networked device status.</li>
+<li>Timer behavior.</li>
+<li>Sequence transitions.</li>
+<li>Alarm response.</li>
+</ul>
+<p>Document special tasks, periodic execution, high-speed inputs, and communication dependencies when they are important to machine behavior.</p>
+<h2 id="14-plc-interlocks-and-permissives">14. PLC Interlocks and Permissives</h2>
+<p>A permissive is a condition that must be satisfied before an operation is allowed. An interlock prevents or restricts an operation when a specified condition is not satisfied.</p>
+<p>Examples include:</p>
+<ul>
+<li>A clamp must be confirmed in the required position before machining.</li>
+<li>A drive must report ready before a motion command is accepted.</li>
+<li>A part must be present before a process cycle begins.</li>
+<li>A machine must be in an approved operating mode before automatic operation is enabled.</li>
+<li>A process measurement must be within an approved range before a sequence advances.</li>
+</ul>
+<p>Record the relevant signal, its purpose, the condition it affects, and the diagnostic method.</p>
+<p>Do not document an interlock merely as "PLC condition." State the actual functional requirement.</p>
+<p>Safety distinction: Ordinary PLC interlocks are not automatically safety-rated functions. Personnel protection must rely on the designated safety system and validated safety measures, not on an assumption that standard PLC logic will prevent hazardous motion.</p>
+<h2 id="15-plc-communication-and-connected-devices">15. PLC Communication and Connected Devices</h2>
+<p>A PLC may communicate with:</p>
+<ul>
+<li>HMIs and industrial PCs.</li>
+<li>Remote I/O stations.</li>
+<li>VFDs and servo drives.</li>
+<li>Robots and CNC controllers.</li>
+<li>Industrial Ethernet switches.</li>
+<li>SCADA systems and historians.</li>
+<li>Barcode readers and vision systems.</li>
+<li>Measurement and test equipment.</li>
+<li>Other PLCs or supervisory controllers.</li>
+</ul>
+<p>The machine knowledge base should identify each important connection and its role.</p>
+<h3 id="151-communication-register">15.1 Communication register</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Device ID</td>
+<td>Unique identity of the connected device</td>
+</tr>
+<tr>
+<td>Device type</td>
+<td>HMI, drive, robot, remote I/O, or other equipment</td>
+</tr>
+<tr>
+<td>PLC interface</td>
+<td>Port, module, or communication interface</td>
+</tr>
+<tr>
+<td>Protocol</td>
+<td>Applicable industrial communication protocol</td>
+</tr>
+<tr>
+<td>Network identity</td>
+<td>IP address, node ID, device name, or equivalent</td>
+</tr>
+<tr>
+<td>Data exchanged</td>
+<td>Commands, feedback, status, or measurements</td>
+</tr>
+<tr>
+<td>Update requirement</td>
+<td>Configured update interval or timing requirement, where relevant</td>
+</tr>
+<tr>
+<td>Diagnostic method</td>
+<td>Approved status indicators, diagnostic pages, or tools</td>
+</tr>
+<tr>
+<td>Drawing reference</td>
+<td>Network topology or electrical drawing</td>
+</tr>
+<tr>
+<td>Recovery dependency</td>
+<td>Required configuration, device file, or project backup</td>
+</tr>
+</tbody>
+</table>
+<p>Avoid assuming that a network failure is a PLC hardware failure. Verify power, link status, configuration, addressing, and protocol diagnostics before replacing equipment.</p>
+<p>For cybersecurity, document approved access methods and authorized engineering stations. Do not expose controller passwords or sensitive network credentials in the general machine record.</p>
+<h2 id="16-plc-alarms-and-diagnostics">16. PLC Alarms and Diagnostics</h2>
+<p>A useful PLC knowledge base records how the controller and program identify abnormal conditions.</p>
+<p>Examples include:</p>
+<ul>
+<li>CPU or hardware faults.</li>
+<li>I/O module faults.</li>
+<li>Communication timeouts.</li>
+<li>Sensor plausibility errors.</li>
+<li>Drive faults.</li>
+<li>Sequence timeouts.</li>
+<li>Unexpected feedback states.</li>
+<li>Analog values outside configured limits.</li>
+<li>Controller memory or application faults.</li>
+</ul>
+<p>For each important alarm, record:</p>
+<ul>
+<li>Alarm ID and description.</li>
+<li>Trigger condition.</li>
+<li>Relevant PLC tag or diagnostic reference.</li>
+<li>Machine function affected.</li>
+<li>Required checks.</li>
+<li>Approved reset or recovery procedure.</li>
+<li>Whether the fault requires engineering support.</li>
+</ul>
+<p>Avoid recording only the HMI alarm text. The alarm should be traceable to the PLC logic, physical signal, connected equipment, or diagnostic source that produces it.</p>
+<p>Do not reset a fault without understanding whether it indicates a hazardous condition or a failed process step.</p>
+<h2 id="17-plc-change-management">17. PLC Change Management</h2>
+<p>PLC modifications can affect machine timing, motion, product quality, safety interfaces, and communication with other equipment.</p>
+<p>A controlled change should include:</p>
+<ol>
+<li>A defined problem statement or engineering requirement.</li>
+<li>Authorization under the plant's change-control process.</li>
+<li>Identification of the affected controller and application.</li>
+<li>A verified pre-change backup.</li>
+<li>Review of hardware, firmware, software, and library compatibility.</li>
+<li>Assessment of production and safety risks.</li>
+<li>An approved test and validation plan.</li>
+<li>A defined rollback or recovery plan.</li>
+<li>Controlled implementation by authorized personnel.</li>
+<li>Functional verification and required safety validation.</li>
+<li>Updated project files, drawings, and machine knowledge base.</li>
+<li>Recorded revision, date, approval, and change description.</li>
+</ol>
+<p>The backup and final project should be clearly distinguished. A pre-change backup must not be silently overwritten by the modified version.</p>
+<h2 id="18-plc-fault-diagnosis-method">18. PLC Fault-Diagnosis Method</h2>
+<p>Use a structured process that separates symptoms, electrical conditions, communication, and program logic.</p>
+<h3 id="181-controller-not-communicating">18.1 Controller not communicating</h3>
+<ol>
+<li>Confirm the actual symptom and which devices are affected.</li>
+<li>Check available CPU status and diagnostic information.</li>
+<li>Verify the relevant power supply and controller status through approved methods.</li>
+<li>Check the network path, link status, addressing, and communication configuration.</li>
+<li>Determine whether the fault affects the controller itself or only a connected device.</li>
+<li>Compare the observed configuration with the approved record.</li>
+<li>Correct the verified fault and confirm communication recovery.</li>
+<li>Record the cause and action.</li>
+</ol>
+<h3 id="182-input-signal-is-not-changing">18.2 Input signal is not changing</h3>
+<ol>
+<li>Identify the physical device and intended process condition.</li>
+<li>Check whether the device is mechanically able to detect the condition.</li>
+<li>Confirm the device's supply and output using approved procedures.</li>
+<li>Trace the signal through the wiring, terminal, and I/O channel.</li>
+<li>Check module diagnostics and the program variable.</li>
+<li>Verify the logic that consumes the input.</li>
+<li>Restore normal operation and validate the relevant sequence.</li>
+</ol>
+<h3 id="183-output-command-is-active-but-the-actuator-does-not-operate">18.3 Output command is active but the actuator does not operate</h3>
+<ol>
+<li>Confirm the intended command and operating conditions.</li>
+<li>Check whether the PLC program is commanding the output.</li>
+<li>Check module status and relevant diagnostics.</li>
+<li>Identify the downstream interface and electrical supply.</li>
+<li>Follow approved isolation and verification procedures before physical inspection or electrical testing.</li>
+<li>Check the actuator and feedback path using the approved method.</li>
+<li>Confirm that the machine returns to its expected state after the repair.</li>
+</ol>
+<p>Never bypass safety functions or force outputs to make the machine move during diagnosis.</p>
+<h2 id="19-practical-plc-case-studies">19. Practical PLC Case Studies</h2>
+<h3 id="case-1-sensor-is-healthy-but-the-plc-input-remains-off">Case 1: Sensor is healthy, but the PLC input remains OFF</h3>
+<p>Situation: A part-present sensor's indicator changes when the part is positioned, but the PLC program variable remains OFF.</p>
+<p>Investigation: The technician verifies the configured input channel, sensor output type, terminal assignment, wiring, and input module diagnostics.</p>
+<p>Possible findings: An open conductor, incorrect terminal assignment, incompatible sensor output, incorrect module configuration, or a failed channel.</p>
+<p>Lesson: A sensor indicator does not prove that the PLC is receiving the signal.</p>
+<h3 id="case-2-plc-output-is-on-but-a-pneumatic-clamp-does-not-extend">Case 2: PLC output is ON, but a pneumatic clamp does not extend</h3>
+<p>Situation: The PLC command is active, but the clamp does not move.</p>
+<p>Investigation: The output channel, interface relay, field supply, valve circuit, pneumatic supply, and relevant feedback are examined under the approved procedure.</p>
+<p>Possible findings: Failed interface relay, open circuit, faulty valve coil, inadequate pneumatic supply, mechanical obstruction, or missing required conditions.</p>
+<p>Lesson: The output command and the physical machine response are separate points in the control chain.</p>
+<h3 id="case-3-replacement-plc-has-the-same-model-but-will-not-accept-the-project">Case 3: Replacement PLC has the same model but will not accept the project</h3>
+<p>Situation: A replacement CPU has the same general model family, but the engineering project reports compatibility issues.</p>
+<p>Investigation: The technician checks the exact catalog number, firmware, engineering software version, hardware configuration, and required libraries.</p>
+<p>Possible findings: Incompatible firmware, a different hardware revision, missing project dependencies, or a configuration mismatch.</p>
+<p>Lesson: Hardware-family similarity does not guarantee project compatibility.</p>
+<h3 id="case-4-a-backup-exists-but-cannot-support-recovery">Case 4: A backup exists but cannot support recovery</h3>
+<p>Situation: The stored PLC backup opens, but required symbols, configuration files, or project dependencies are missing.</p>
+<p>Investigation: The backup type and completeness were never recorded, and no recovery validation had been performed.</p>
+<p>Corrective action: Establish a controlled backup package that includes all required supported project files, version information, compatibility details, and recovery instructions. Test recovery using an approved non-production environment or procedure where feasible.</p>
+<p>Lesson: An archived file is not automatically a recoverable machine-control system.</p>
+<h2 id="20-machine-knowledge-base-template-for-plcs">20. Machine Knowledge Base Template for PLCs</h2>
+<h3 id="a-plc-identity">A. PLC identity</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Record</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine ID</td>
+<td></td>
+</tr>
+<tr>
+<td>PLC tag</td>
+<td></td>
+</tr>
+<tr>
+<td>Manufacturer</td>
+<td></td>
+</tr>
+<tr>
+<td>Product family</td>
+<td></td>
+</tr>
+<tr>
+<td>Exact CPU model</td>
+<td></td>
+</tr>
+<tr>
+<td>Serial number</td>
+<td></td>
+</tr>
+<tr>
+<td>Firmware version</td>
+<td></td>
+</tr>
+<tr>
+<td>Hardware revision</td>
+<td></td>
+</tr>
+<tr>
+<td>Panel ID and location</td>
+<td></td>
+</tr>
+<tr>
+<td>Network identity</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="b-engineering-project">B. Engineering project</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Record</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Project name</td>
+<td></td>
+</tr>
+<tr>
+<td>Application revision</td>
+<td></td>
+</tr>
+<tr>
+<td>Engineering software and version</td>
+<td></td>
+</tr>
+<tr>
+<td>Required libraries or device descriptions</td>
+<td></td>
+</tr>
+<tr>
+<td>Hardware configuration reference</td>
+<td></td>
+</tr>
+<tr>
+<td>Approved backup location</td>
+<td></td>
+</tr>
+<tr>
+<td>Backup date and type</td>
+<td></td>
+</tr>
+<tr>
+<td>Backup verification status</td>
+<td></td>
+</tr>
+<tr>
+<td>Last approved modification</td>
+<td></td>
+</tr>
+<tr>
+<td>Recovery procedure reference</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="c-hardware-inventory">C. Hardware inventory</h3>
+<table>
+<thead>
+<tr>
+<th>Device tag</th>
+<th>Module or device model</th>
+<th>Rack, slot, or position</th>
+<th>Function</th>
+<th>Drawing reference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="d-io-documentation">D. I/O documentation</h3>
+<table>
+<thead>
+<tr>
+<th>Signal ID</th>
+<th>I/O type</th>
+<th>PLC tag</th>
+<th>Physical address</th>
+<th>Device tag</th>
+<th>Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="e-communication-and-dependencies">E. Communication and dependencies</h3>
+<table>
+<thead>
+<tr>
+<th>Connected device</th>
+<th>Protocol</th>
+<th>Network identity</th>
+<th>Data exchanged</th>
+<th>Diagnostic reference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="f-maintenance-and-change-history">F. Maintenance and change history</h3>
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Controller or program revision</th>
+<th>Change or fault</th>
+<th>Action taken</th>
+<th>Validation status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Use controlled registers or linked records if the tables become too large. A machine with hundreds of I/O points should not depend on an incomplete manually typed summary.</p>
+<h2 id="21-recommended-plc-documentation-folder-structure">21. Recommended PLC Documentation Folder Structure</h2>
+<p>A practical structure for a machine knowledge base is:</p>
+<pre><code>PLC/
+    01_Identity/
+        PLC_Identification
+        CPU_Firmware
+        Hardware_Inventory
+    02_Program/
+        Approved_Project
+        Program_Structure
+        Revision_History
+        Libraries_Dependencies
+    03_IO/
+        IO_List
+        IO_Mapping
+        Analog_Scaling
+        Signal_Diagnostics
+    04_Communication/
+        Network_Connections
+        Device_Configuration
+        Communication_Diagnostics
+    05_Backup_Recovery/
+        Backup_Register
+        Compatibility_Record
+        Recovery_Procedure
+        Recovery_Validation
+    06_Maintenance/
+        Fault_History
+        Diagnostic_Records
+        Change_Control
+        Functional_Validation
+    07_Drawings/
+        Electrical_Schematics
+        Hardware_Configuration
+        Network_Drawings
+</code></pre>
+<p>This is a suggested organizational structure. Follow the plant's document-control, access-control, and file-naming standards where they already exist.</p>
+<h2 id="22-final-plc-documentation-checklist">22. Final PLC Documentation Checklist</h2>
+<ul>
+<li>Exact CPU model and installed firmware are recorded.</li>
+<li>Controller identity and physical location are confirmed.</li>
+<li>Power supply, racks, slots, modules, and remote I/O are documented.</li>
+<li>Engineering software and version requirements are recorded.</li>
+<li>The running application and approved project revision are identified.</li>
+<li>Backup type, location, date, and verification status are recorded.</li>
+<li>Required libraries and hardware configuration dependencies are identified.</li>
+<li>Digital and analog I/O are mapped to devices and physical addresses.</li>
+<li>Signal names follow a consistent naming convention.</li>
+<li>Analog scaling ranges and engineering units are documented.</li>
+<li>Important program routines and machine sequences are identified.</li>
+<li>Communication links and connected equipment are documented.</li>
+<li>Alarms and diagnostic references are traceable.</li>
+<li>Safety-related functions are distinguished from ordinary PLC logic.</li>
+<li>Program changes follow approved change control.</li>
+<li>Recovery instructions and validation requirements are available.</li>
+<li>The knowledge base matches the installed machine and controlled drawings.</li>
+</ul>
+<p>The objective is not merely to list the PLC model. It is to create a reliable link between the physical controller, its program, every important signal, the machine function, and the recovery process.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\28_Machine_KB\01_Template\02_Controls\02_HMI - HMI: Screens and alarms</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

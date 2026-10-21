@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01. CPU: Processor, RUN/STOP Modes</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">01. CPU: Processor, RUN/STOP Modes</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-main-functions-of-a-plc-cpu">2. Main functions of a PLC CPU</a></li>
+<li><a href="#3-where-the-cpu-fits-in-a-plc-system">3. Where the CPU fits in a PLC system</a><ul>
+<li><a href="#cpu-versus-other-plc-components">CPU versus other PLC components</a></li>
+</ul>
+</li>
+<li><a href="#4-how-the-cpu-executes-a-plc-program">4. How the CPU executes a PLC program</a><ul>
+<li><a href="#step-1-input-processing">Step 1: Input processing</a></li>
+<li><a href="#step-2-program-execution">Step 2: Program execution</a></li>
+<li><a href="#step-3-output-update">Step 3: Output update</a></li>
+<li><a href="#step-4-repeat-execution">Step 4: Repeat execution</a></li>
+</ul>
+</li>
+<li><a href="#5-scan-time-and-execution-time">5. Scan time and execution time</a></li>
+<li><a href="#6-what-are-plc-operating-modes">6. What are PLC operating modes?</a><ul>
+<li><a href="#run-mode">RUN mode</a></li>
+<li><a href="#stop-mode">STOP mode</a></li>
+<li><a href="#program-mode">PROGRAM mode</a></li>
+<li><a href="#remote-run-and-remote-program">REMOTE RUN and REMOTE PROGRAM</a></li>
+<li><a href="#test-or-debugging-modes">Test or debugging modes</a></li>
+</ul>
+</li>
+<li><a href="#7-run-versus-stop-versus-program">7. RUN versus STOP versus PROGRAM</a></li>
+<li><a href="#8-examples-from-industrial-maintenance">8. Examples from industrial maintenance</a><ul>
+<li><a href="#example-a-plc-in-run-machine-not-running">Example A: PLC in RUN, machine not running</a></li>
+<li><a href="#example-b-plc-in-stop-outputs-behave-unexpectedly">Example B: PLC in STOP, outputs behave unexpectedly</a></li>
+<li><a href="#example-c-cpu-fault-or-watchdog-fault">Example C: CPU fault or watchdog fault</a></li>
+</ul>
+</li>
+<li><a href="#9-runstop-modes-and-machine-safety">9. RUN/STOP modes and machine safety</a></li>
+<li><a href="#10-common-plc-cpu-indicators">10. Common PLC CPU indicators</a></li>
+<li><a href="#11-cpu-troubleshooting-checklist">11. CPU troubleshooting checklist</a></li>
+<li><a href="#12-interview-questions-and-answers">12. Interview questions and answers</a></li>
+<li><a href="#13-practical-exercise">13. Practical exercise</a></li>
+<li><a href="#14-final-mental-model">14. Final mental model</a></li>
+<li><a href="#next-topic-02_memory-load-work-and-retentive-memory">Next topic: 02_Memory: Load, Work and Retentive Memory</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\02_Auto_Tech\01_PLC\01_Architecture\</code></p>
+<h2 id="1-definition">1. Definition</h2>
+<p>A Central Processing Unit (CPU) is the processing unit of a Programmable Logic Controller (PLC). It executes the control program, evaluates logic, processes data, manages operating modes, and coordinates communication with the PLC's I/O modules and other devices.</p>
+<p>In industrial automation, the CPU determines how the PLC responds to field signals, sequence conditions, timers, counters, alarms, and commands.</p>
+<p>For example, in a robotic welding line, the CPU may evaluate whether a part is present, the fixture is clamped, the robot is ready, and the safety system permits operation before allowing the next sequence step.</p>
+<p>The CPU executes the control logic, but it cannot guarantee that the physical machine behaves as commanded. Sensors, wiring, I/O modules, actuators, drives, networks, and mechanical systems must also operate correctly.</p>
+<h2 id="2-main-functions-of-a-plc-cpu">2. Main functions of a PLC CPU</h2>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Description</th>
+<th>Industrial example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Program execution</td>
+<td>Executes the user control program</td>
+<td>Runs conveyor sequencing logic</td>
+</tr>
+<tr>
+<td>Input processing</td>
+<td>Makes input states available to the control program</td>
+<td>Reads clamp-closed confirmation</td>
+</tr>
+<tr>
+<td>Logic evaluation</td>
+<td>Evaluates Boolean conditions, instructions, and expressions</td>
+<td>Checks robot-ready and fixture-clamped conditions</td>
+</tr>
+<tr>
+<td>Output control</td>
+<td>Updates output commands according to program execution and platform behavior</td>
+<td>Commands a contactor or solenoid</td>
+</tr>
+<tr>
+<td>Data processing</td>
+<td>Performs calculations and manipulates variables</td>
+<td>Scales a pressure measurement</td>
+</tr>
+<tr>
+<td>Timing and counting</td>
+<td>Executes timer and counter instructions</td>
+<td>Monitors conveyor dwell time</td>
+</tr>
+<tr>
+<td>Diagnostics</td>
+<td>Detects and reports supported hardware, program, and communication faults</td>
+<td>Reports an I/O module fault</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>Exchanges data with HMIs, drives, remote I/O, robots, and supervisory systems</td>
+<td>Receives drive status over EtherNet/IP</td>
+</tr>
+<tr>
+<td>Mode management</td>
+<td>Controls whether the user program executes and whether modifications are permitted</td>
+<td>RUN versus PROGRAM mode</td>
+</tr>
+</tbody>
+</table>
+<p>The exact functions, scheduling, and execution behavior depend on the PLC family and configuration.</p>
+<h2 id="3-where-the-cpu-fits-in-a-plc-system">3. Where the CPU fits in a PLC system</h2>
+<p>A modular PLC typically contains a power supply, CPU, I/O modules, and communication interfaces.</p>
+<pre><code>FIELD DEVICES
+    |
+    v
+INPUT MODULES
+    |
+    v
+PLC CPU
+    |
+    +---- Executes program
+    |
+    +---- Evaluates logic
+    |
+    +---- Processes data
+    |
+    +---- Manages diagnostics
+    |
+    v
+OUTPUT MODULES
+    |
+    v
+ACTUATORS AND MACHINES
+
+CPU &lt;----&gt; HMI / VFD / ROBOT / REMOTE I/O / SCADA
+</code></pre>
+<p>This diagram is conceptual. Integrated PLCs may combine the CPU, power supply, and I/O in one unit. Networked systems may also use distributed I/O and intelligent field devices.</p>
+<h3 id="cpu-versus-other-plc-components">CPU versus other PLC components</h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Primary responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Power supply</td>
+<td>Provides the required electrical power to PLC components</td>
+</tr>
+<tr>
+<td>CPU</td>
+<td>Executes the control program and manages controller operation</td>
+</tr>
+<tr>
+<td>Input module</td>
+<td>Receives electrical signals from field devices</td>
+</tr>
+<tr>
+<td>Output module</td>
+<td>Sends electrical commands to field devices or interface circuits</td>
+</tr>
+<tr>
+<td>Communication module</td>
+<td>Provides network connectivity or specialized communication</td>
+</tr>
+<tr>
+<td>Memory</td>
+<td>Stores program instructions, configuration, and data</td>
+</tr>
+<tr>
+<td>HMI</td>
+<td>Provides an operator interface for monitoring and commands</td>
+</tr>
+</tbody>
+</table>
+<p>A failed input module can cause missing input data even when the CPU is healthy. Similarly, a CPU in RUN mode does not prove that the output modules, field wiring, or actuators are functioning correctly.</p>
+<h2 id="4-how-the-cpu-executes-a-plc-program">4. How the CPU executes a PLC program</h2>
+<p>Many PLCs use a cyclic execution model, often called the scan cycle. However, modern controllers can also execute periodic, event-triggered, interrupt-driven, and independently scheduled tasks.</p>
+<p>A simplified cyclic model is:</p>
+<pre><code>START SCAN
+    |
+    v
+READ / UPDATE INPUT DATA
+    |
+    v
+EXECUTE CONTROL PROGRAM
+    |
+    v
+UPDATE OUTPUT DATA
+    |
+    v
+COMMUNICATIONS AND SYSTEM TASKS
+    |
+    v
+REPEAT
+</code></pre>
+<p>The exact order varies by controller. Some systems update I/O asynchronously, use immediate I/O instructions, or execute multiple tasks at different priorities.</p>
+<h3 id="step-1-input-processing">Step 1: Input processing</h3>
+<p>The controller obtains the input information used by the program.</p>
+<p>Example:</p>
+<ul>
+<li><code>PART_PRESENT = TRUE</code></li>
+<li><code>CLAMP_CLOSED = TRUE</code></li>
+<li><code>ROBOT_READY = FALSE</code></li>
+</ul>
+<p>These values represent the controller's available signal states, not necessarily independent proof of the physical conditions.</p>
+<h3 id="step-2-program-execution">Step 2: Program execution</h3>
+<p>The CPU executes the configured program and evaluates the conditions that govern machine operation.</p>
+<p>Illustrative logic:</p>
+<pre><code>IF PART_PRESENT
+AND CLAMP_CLOSED
+AND ROBOT_READY
+AND SAFETY_PERMISSIVE
+THEN
+    ALLOW_WELD_SEQUENCE
+END_IF
+</code></pre>
+<p>This is conceptual pseudocode, not valid syntax for every PLC platform. Actual safety functions must be implemented in the approved safety architecture rather than relying on an ordinary Boolean condition alone.</p>
+<h3 id="step-3-output-update">Step 3: Output update</h3>
+<p>The controller updates output commands according to its execution model.</p>
+<p>For example:</p>
+<ul>
+<li>Turn on a valve command.</li>
+<li>Request a conveyor run.</li>
+<li>Set a robot handshake bit.</li>
+<li>Send a speed reference to a drive.</li>
+</ul>
+<p>The output command is only one stage in the physical response. Electrical output hardware and the receiving device must operate correctly.</p>
+<h3 id="step-4-repeat-execution">Step 4: Repeat execution</h3>
+<p>The CPU continues executing its scheduled tasks while operating normally.</p>
+<p>If a controller completes a particular cyclic task every 10 ms, that task's cycle time is 10 ms. This does not mean that every signal, network update, or physical response occurs exactly every 10 ms.</p>
+<h2 id="5-scan-time-and-execution-time">5. Scan time and execution time</h2>
+<p>Scan time is the time taken to execute a particular cyclic control task or scan, according to the controller's terminology.</p>
+<p>It can be affected by:</p>
+<ul>
+<li>Program size and complexity.</li>
+<li>Number and type of instructions.</li>
+<li>Communication and system-task load.</li>
+<li>Number of scheduled tasks and their priorities.</li>
+<li>Interrupts and event-triggered execution.</li>
+<li>I/O update architecture.</li>
+<li>Controller model and performance.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Scan time</td>
+<td>Duration of a scan or cyclic task execution</td>
+</tr>
+<tr>
+<td>Task period</td>
+<td>Configured interval at which a periodic task is scheduled</td>
+</tr>
+<tr>
+<td>Input update time</td>
+<td>Time required for a new physical input state to become available to the program</td>
+</tr>
+<tr>
+<td>Output update time</td>
+<td>Time required for an output command to be applied at the relevant output interface</td>
+</tr>
+<tr>
+<td>End-to-end response time</td>
+<td>Time from a physical event to the corresponding system response</td>
+</tr>
+</tbody>
+</table>
+<p>These values are related but not identical.</p>
+<p>For example, a sensor may change state immediately after the relevant input data has been sampled. The CPU may not evaluate the new state until the next applicable execution opportunity. The output module, network, actuator, and mechanical system add their own delays.</p>
+<p>For high-speed applications, use the controller's task configuration, I/O architecture, timing documentation, and measured diagnostics rather than assuming that scan time equals total machine response time.</p>
+<h2 id="6-what-are-plc-operating-modes">6. What are PLC operating modes?</h2>
+<p>PLC operating modes determine whether the user program executes, whether modifications are allowed, and how the controller manages its operation.</p>
+<p>Common concepts include RUN, STOP, PROGRAM, REMOTE RUN, REMOTE PROGRAM, and test or debugging modes. Exact names and behavior vary by manufacturer and model.</p>
+<h3 id="run-mode">RUN mode</h3>
+<p>In RUN mode, the controller normally executes its configured control program.</p>
+<p>Typical behavior:</p>
+<ul>
+<li>Control tasks execute according to their schedules.</li>
+<li>Inputs are processed.</li>
+<li>Outputs are updated according to the configured execution model.</li>
+<li>Communication and diagnostics operate according to configuration.</li>
+<li>The machine can respond to program commands and field signals.</li>
+</ul>
+<p>RUN does not mean the machine is necessarily running. The PLC can be in RUN mode while the machine is stopped because of a missing permissive, an active fault, an operator stop request, or an incomplete sequence.</p>
+<h3 id="stop-mode">STOP mode</h3>
+<p>In STOP mode, the controller generally stops normal execution of the user control program or the relevant tasks.</p>
+<p>Depending on the platform and configuration:</p>
+<ul>
+<li>Program execution may stop.</li>
+<li>Communication and diagnostics may remain active.</li>
+<li>Outputs may turn OFF, hold their previous state, or follow configured behavior.</li>
+<li>Some system tasks may continue running.</li>
+<li>Certain outputs or specialized functions may have distinct stop-state behavior.</li>
+</ul>
+<p>Never assume that all outputs automatically turn OFF in every STOP condition. Output behavior depends on the controller, module, configuration, and application design. Verify the manufacturer's documentation and the approved machine design.</p>
+<h3 id="program-mode">PROGRAM mode</h3>
+<p>On some PLC families, PROGRAM mode is used for program editing, downloading, configuration, or other engineering activities. Normal user-program execution is generally stopped.</p>
+<p>PROGRAM and STOP are not universally interchangeable terms. Their exact behavior depends on the controller family.</p>
+<h3 id="remote-run-and-remote-program">REMOTE RUN and REMOTE PROGRAM</h3>
+<p>Some controllers support remote mode selection, allowing authorized software or supervisory mechanisms to select an operating mode.</p>
+<p>The precise mode names and permitted actions depend on the platform and controller configuration.</p>
+<p>Remote mode control is operationally important because a controller can be changed from an engineering workstation without directly operating the physical key switch.</p>
+<h3 id="test-or-debugging-modes">Test or debugging modes</h3>
+<p>Some PLC environments provide modes for testing, online monitoring, simulation, or debugging. These may alter how logic, I/O, or program modifications behave.</p>
+<p>They should not be treated as ordinary production modes. Confirm the exact behavior before using them on live equipment.</p>
+<h2 id="7-run-versus-stop-versus-program">7. RUN versus STOP versus PROGRAM</h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>RUN</th>
+<th>STOP</th>
+<th>PROGRAM</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Normal user-program execution</td>
+<td>Normally active</td>
+<td>Normally stopped</td>
+<td>Normally stopped</td>
+</tr>
+<tr>
+<td>Online monitoring</td>
+<td>Generally available</td>
+<td>Often available</td>
+<td>Often available</td>
+</tr>
+<tr>
+<td>Program editing</td>
+<td>Platform-dependent restrictions</td>
+<td>May be permitted</td>
+<td>Commonly used for editing</td>
+</tr>
+<tr>
+<td>Output behavior</td>
+<td>Determined by executed logic and configuration</td>
+<td>Platform- and configuration-dependent</td>
+<td>Platform- and configuration-dependent</td>
+</tr>
+<tr>
+<td>Production operation</td>
+<td>Possible if machine conditions permit</td>
+<td>Normal control operation is generally interrupted</td>
+<td>Normal control operation is generally interrupted</td>
+</tr>
+<tr>
+<td>Typical use</td>
+<td>Normal automatic or manual control</td>
+<td>Stopping user-program execution</td>
+<td>Engineering and program modification</td>
+</tr>
+</tbody>
+</table>
+<p>The table describes general behavior. It is not a substitute for the manual of a specific PLC.</p>
+<h2 id="8-examples-from-industrial-maintenance">8. Examples from industrial maintenance</h2>
+<h3 id="example-a-plc-in-run-machine-not-running">Example A: PLC in RUN, machine not running</h3>
+<p>A conveyor is stopped, but the PLC shows RUN mode.</p>
+<p>Possible causes:</p>
+<ul>
+<li>Stop command remains active.</li>
+<li>Safety system has not granted permission.</li>
+<li>Drive-ready feedback is missing.</li>
+<li>A sequence permissive is FALSE.</li>
+<li>A fault is latched.</li>
+<li>An operator has not initiated the cycle.</li>
+<li>The PLC output command is not being generated.</li>
+</ul>
+<p>Correct troubleshooting approach:</p>
+<ol>
+<li>Confirm the controller's mode and health.</li>
+<li>Check the relevant input and status tags.</li>
+<li>Check active faults and alarms.</li>
+<li>Examine the sequence conditions.</li>
+<li>Verify the output command.</li>
+<li>Follow the electrical circuit and drive diagnostics.</li>
+</ol>
+<p>Do not switch the CPU to STOP merely because the machine has stopped. A stopped machine and a stopped controller are different conditions.</p>
+<h3 id="example-b-plc-in-stop-outputs-behave-unexpectedly">Example B: PLC in STOP, outputs behave unexpectedly</h3>
+<p>Suppose the PLC enters STOP mode during troubleshooting, but a device remains energized.</p>
+<p>Possible explanations include:</p>
+<ul>
+<li>The output module is configured to hold its last state.</li>
+<li>An output is supplied through a circuit independent of the PLC.</li>
+<li>A different controller or relay is commanding the device.</li>
+<li>Stored energy or a separate power supply is maintaining the condition.</li>
+<li>The observed signal is not the output assumed to be under CPU control.</li>
+</ul>
+<p>Treat this as a safety-critical condition. Follow the approved isolation procedure, identify the actual energy source, and verify the circuit rather than assuming the CPU mode guarantees a safe machine state.</p>
+<h3 id="example-c-cpu-fault-or-watchdog-fault">Example C: CPU fault or watchdog fault</h3>
+<p>A controller may detect an execution or system fault and stop or alter program execution according to its design.</p>
+<p>Potential causes can include:</p>
+<ul>
+<li>Excessive execution time.</li>
+<li>Task watchdog expiration.</li>
+<li>Invalid program operations.</li>
+<li>Hardware or firmware problems.</li>
+<li>Memory or configuration faults.</li>
+<li>Communication or module faults that affect controller operation.</li>
+</ul>
+<p>The correct investigation is to retrieve the controller's diagnostic information, identify the exact fault code and task context, review recent program or configuration changes, and follow the manufacturer's troubleshooting instructions.</p>
+<p>Do not assume every CPU fault has the same cause or that cycling power is an acceptable corrective action.</p>
+<h2 id="9-runstop-modes-and-machine-safety">9. RUN/STOP modes and machine safety</h2>
+<p>Operating mode is not the same thing as the machine's safety state.</p>
+<p>For example:</p>
+<ul>
+<li>A CPU in RUN may control a machine that is safely stopped by a safety system.</li>
+<li>A CPU in STOP may leave certain outputs energized, depending on configuration.</li>
+<li>A standard PLC output may not be an approved safety function.</li>
+<li>A machine can contain stored electrical, pneumatic, hydraulic, gravitational, or mechanical energy even when the PLC is not executing its program.</li>
+</ul>
+<p>Before working on equipment, apply the applicable lockout/tagout or energy-isolation procedure, control stored energy, and verify the safe state.</p>
+<p>Never use the CPU's operating mode as the sole method of isolating hazardous energy.</p>
+<h2 id="10-common-plc-cpu-indicators">10. Common PLC CPU indicators</h2>
+<p>Many PLCs provide LEDs or diagnostic displays that indicate controller state.</p>
+<table>
+<thead>
+<tr>
+<th>Indicator</th>
+<th>Possible meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RUN</td>
+<td>Controller is executing the user program or is in its run state</td>
+</tr>
+<tr>
+<td>STOP or PROG</td>
+<td>Controller is not in normal RUN mode</td>
+</tr>
+<tr>
+<td>OK or SYS</td>
+<td>General controller health or system status</td>
+</tr>
+<tr>
+<td>FAULT or ERR</td>
+<td>A controller or system fault is present</td>
+</tr>
+<tr>
+<td>I/O</td>
+<td>I/O-related status, where supported</td>
+</tr>
+<tr>
+<td>COMM or NET</td>
+<td>Communication status</td>
+</tr>
+<tr>
+<td>BAT</td>
+<td>Battery-related status on platforms that use a battery</td>
+</tr>
+</tbody>
+</table>
+<p>Indicator labels, colors, and flashing patterns vary by manufacturer and model. A single LED is not enough to diagnose the fault reliably.</p>
+<p>For maintenance, record the exact LED pattern, controller model, diagnostic code, operating mode, and relevant software status before changing anything.</p>
+<h2 id="11-cpu-troubleshooting-checklist">11. CPU troubleshooting checklist</h2>
+<p>When investigating a PLC-related breakdown, proceed systematically.</p>
+<ol>
+<li>Identify the controller. Record manufacturer, model, firmware, and project identity.</li>
+<li>Check the operating mode. Confirm whether it is RUN, STOP, PROGRAM, or another platform-specific mode.</li>
+<li>Check controller health. Inspect diagnostic indicators, fault codes, task status, and available logs.</li>
+<li>Check I/O status. Confirm that expected input and output states are visible in the correct module and tag.</li>
+<li>Check program execution. Review task status, sequence state, active conditions, and relevant logic.</li>
+<li>Check communication. Verify the status of required drives, robots, remote I/O, and HMI connections.</li>
+<li>Check recent changes. Review program downloads, hardware changes, network modifications, and configuration updates.</li>
+<li>Verify physical behavior. Use approved electrical and mechanical diagnostic procedures to confirm whether the hardware responds as expected.</li>
+</ol>
+<p>Avoid unnecessary mode changes, power cycles, or program downloads before recording diagnostic evidence. Those actions can erase useful fault context or introduce additional risk.</p>
+<h2 id="12-interview-questions-and-answers">12. Interview questions and answers</h2>
+<p>Q1. What is the function of a PLC CPU?</p>
+<p>The CPU executes the control program, processes data, coordinates scheduled tasks, manages operating modes, and supports diagnostics and communication.</p>
+<p>Q2. What is a PLC scan cycle?</p>
+<p>A scan cycle is a repeated execution process in which the controller processes input information, executes control logic, and updates outputs according to its architecture and configuration.</p>
+<p>Q3. What is the difference between RUN and STOP mode?</p>
+<p>RUN mode normally allows the user program to execute. STOP mode generally interrupts normal user-program execution. The exact output behavior and other functions depend on the controller and its configuration.</p>
+<p>Q4. If the CPU is in RUN, why might a motor remain stopped?</p>
+<p>The program may not be issuing a run command because a permissive is missing, a fault is active, the sequence is incomplete, or the required input condition has not been satisfied. Electrical, drive, and mechanical faults are also possible.</p>
+<p>Q5. Does STOP mode guarantee that all PLC outputs are OFF?</p>
+<p>No. Output behavior depends on the PLC family, module configuration, and application design. Some outputs may hold their state, follow a configured stop value, or be affected by external circuits.</p>
+<p>Q6. What is a watchdog fault?</p>
+<p>A watchdog fault occurs when an execution or system operation exceeds a defined time limit or fails to meet the controller's expected timing requirements. The exact response depends on the PLC platform and fault configuration.</p>
+<p>Q7. Why should the PLC mode be checked before troubleshooting?</p>
+<p>The mode determines whether the user program is executing normally. Without knowing the operating mode, it is difficult to distinguish a logic problem from a controller-state or execution problem.</p>
+<h2 id="13-practical-exercise">13. Practical exercise</h2>
+<p>Use a training PLC, simulation environment, or approved test setup.</p>
+<ul>
+<li>Identify the PLC CPU model and firmware version.</li>
+<li>Locate its operating-mode selector or software mode indication.</li>
+<li>Record the meaning of its RUN, STOP, and fault indicators from the manual.</li>
+<li>Observe the controller in RUN mode.</li>
+<li>Monitor one input, one internal program tag, and one output.</li>
+<li>Observe the effect of a normal input-state change on the program.</li>
+<li>Study the manufacturer's documented behavior when the controller enters STOP.</li>
+<li>Identify the configured output behavior in STOP mode.</li>
+<li>Locate the controller's diagnostic and fault-history information.</li>
+<li>Record the difference between CPU mode, machine state, and safety state.</li>
+</ul>
+<p>Do not change modes or test output behavior on a production machine without authorization and an approved test procedure.</p>
+<h2 id="14-final-mental-model">14. Final mental model</h2>
+<p>The CPU is the execution engine of the PLC. Its operating mode determines whether normal control logic is executing, while the actual machine response depends on the program, I/O, communication, electrical circuits, and physical equipment.</p>
+<pre><code>FIELD INPUTS
+     |
+     v
+INPUT PROCESSING
+     |
+     v
+CPU OPERATING MODE
+     |
+     +---- RUN: Normal program execution
+     |
+     +---- STOP / PROGRAM: Normal execution stopped
+     |
+     v
+PROGRAM LOGIC
+     |
+     v
+OUTPUT COMMANDS
+     |
+     v
+ELECTRICAL AND MECHANICAL RESPONSE
+</code></pre>
+<p>The central distinction is this: CPU mode describes the controller's execution state; machine state describes what the equipment is doing; safety state describes whether hazardous operation and energy are controlled. They are related, but they are not interchangeable.</p>
+<h1 id="next-topic-02_memory-load-work-and-retentive-memory">Next topic: 02_Memory: Load, Work and Retentive Memory</h1>
+<p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\02_Auto_Tech\01_PLC\01_Architecture\</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

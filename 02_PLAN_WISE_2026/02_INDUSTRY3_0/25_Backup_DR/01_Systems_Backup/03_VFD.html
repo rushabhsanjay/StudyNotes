@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VFD Backup and Disaster Recovery</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">VFD Backup and Disaster Recovery</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and scope</a></li>
+<li><a href="#2-essential-terminology">2. Essential terminology</a></li>
+<li><a href="#3-what-must-be-backed-up">3. What must be backed up?</a></li>
+<li><a href="#4-vfd-backup-architecture">4. VFD backup architecture</a></li>
+<li><a href="#5-vfd-backup-methods">5. VFD backup methods</a><ul>
+<li><a href="#51-engineering-software-backup">5.1 Engineering software backup</a></li>
+<li><a href="#52-keypad-or-operator-panel-backup">5.2 Keypad or operator-panel backup</a></li>
+<li><a href="#53-parameter-export-to-a-file">5.3 Parameter export to a file</a></li>
+<li><a href="#54-manual-parameter-recording">5.4 Manual parameter recording</a></li>
+</ul>
+</li>
+<li><a href="#6-critical-vfd-parameters-and-their-recovery-significance">6. Critical VFD parameters and their recovery significance</a></li>
+<li><a href="#7-motor-data-and-parameter-compatibility">7. Motor data and parameter compatibility</a><ul>
+<li><a href="#71-motor-nameplate-data">7.1 Motor nameplate data</a></li>
+<li><a href="#72-control-mode-compatibility">7.2 Control mode compatibility</a></li>
+<li><a href="#73-autotuning-and-motor-identification">7.3 Autotuning and motor identification</a></li>
+</ul>
+</li>
+<li><a href="#8-vfd-backup-frequency-and-triggers">8. VFD backup frequency and triggers</a></li>
+<li><a href="#9-backup-integrity-storage-and-version-control">9. Backup integrity, storage, and version control</a><ul>
+<li><a href="#91-validation-levels">9.1 Validation levels</a></li>
+<li><a href="#92-version-naming">9.2 Version naming</a></li>
+<li><a href="#93-storage-architecture">9.3 Storage architecture</a></li>
+</ul>
+</li>
+<li><a href="#10-vfd-restoration-procedure">10. VFD restoration procedure</a><ul>
+<li><a href="#101-pre-restoration-checklist">10.1 Pre-restoration checklist</a></li>
+<li><a href="#102-restoration-sequence">10.2 Restoration sequence</a></li>
+<li><a href="#103-electrical-safety-considerations">10.3 Electrical safety considerations</a></li>
+</ul>
+</li>
+<li><a href="#11-post-restoration-verification">11. Post-restoration verification</a><ul>
+<li><a href="#111-functional-verification-checklist">11.1 Functional verification checklist</a></li>
+<li><a href="#112-special-attention-to-safety-functions">11.2 Special attention to safety functions</a></li>
+</ul>
+</li>
+<li><a href="#12-common-disaster-recovery-scenarios">12. Common disaster-recovery scenarios</a><ul>
+<li><a href="#121-vfd-failure-during-production">12.1 VFD failure during production</a></li>
+<li><a href="#122-incorrect-parameter-modification">12.2 Incorrect parameter modification</a></li>
+<li><a href="#123-motor-replacement">12.3 Motor replacement</a></li>
+<li><a href="#124-plc-or-communication-replacement">12.4 PLC or communication replacement</a></li>
+<li><a href="#125-firmware-upgrade-or-obsolescence-migration">12.5 Firmware upgrade or obsolescence migration</a></li>
+</ul>
+</li>
+<li><a href="#13-vfd-backup-troubleshooting">13. VFD backup troubleshooting</a></li>
+<li><a href="#14-practical-maintenance-implementation">14. Practical maintenance implementation</a><ul>
+<li><a href="#141-vfd-backup-register">14.1 VFD backup register</a></li>
+<li><a href="#142-example-folder-structure">14.2 Example folder structure</a></li>
+<li><a href="#143-work-order-integration">14.3 Work-order integration</a></li>
+</ul>
+</li>
+<li><a href="#15-recovery-drills-and-audit">15. Recovery drills and audit</a><ul>
+<li><a href="#151-recovery-drill">15.1 Recovery drill</a></li>
+<li><a href="#152-audit-checklist">15.2 Audit checklist</a></li>
+</ul>
+</li>
+<li><a href="#16-backup-management-kpis">16. Backup management KPIs</a></li>
+<li><a href="#17-interview-questions-and-technical-answers">17. Interview questions and technical answers</a></li>
+<li><a href="#18-final-engineering-principles">18. Final engineering principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-and-scope">1. Purpose and scope</h2>
+<p>A Variable Frequency Drive (VFD), also called a variable speed drive or inverter in many industrial applications, controls motor speed and torque by varying the electrical supply delivered to the motor.</p>
+<p>A VFD backup preserves the configuration, operating parameters, application settings, and other required data needed to recover the drive after a drive failure, parameter corruption, accidental modification, firmware change, or equipment replacement.</p>
+<p>In industrial maintenance, a VFD replacement is not simply a matter of installing another drive with the same power rating. The replacement must also be configured for the correct motor, control method, PLC interface, protection settings, and machine behavior.</p>
+<p>The objectives of VFD backup and disaster recovery are to:</p>
+<ul>
+<li>Restore the approved drive configuration after failure.</li>
+<li>Reduce production downtime during drive replacement.</li>
+<li>Preserve motor and application-specific settings.</li>
+<li>Recover PLC communication and control integration.</li>
+<li>Prevent incorrect parameters from damaging equipment.</li>
+<li>Support obsolescence migration and drive modernization.</li>
+<li>Maintain traceable configuration and change records.</li>
+</ul>
+<p>Core principle: A VFD backup is useful only when it is associated with the correct drive, motor, application, firmware requirements, and approved parameter revision.</p>
+<h2 id="2-essential-terminology">2. Essential terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+<th>Industrial example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VFD</td>
+<td>Electronic drive that controls AC motor operation by varying output frequency and voltage</td>
+<td>Conveyor motor speed control</td>
+</tr>
+<tr>
+<td>Parameter set</td>
+<td>Configured values governing drive behavior</td>
+<td>Acceleration time, motor current, and control mode</td>
+</tr>
+<tr>
+<td>Parameter upload</td>
+<td>Retrieving supported parameters from a drive into engineering software or a storage device</td>
+<td>Reading the existing drive configuration</td>
+</tr>
+<tr>
+<td>Parameter download</td>
+<td>Transferring saved parameters into a drive</td>
+<td>Restoring a replacement drive</td>
+</tr>
+<tr>
+<td>Drive firmware</td>
+<td>Embedded software operating the drive</td>
+<td>Drive firmware version and revision</td>
+</tr>
+<tr>
+<td>Motor nameplate data</td>
+<td>Manufacturer-defined electrical and operating ratings</td>
+<td>Rated voltage, current, frequency, speed, and power</td>
+</tr>
+<tr>
+<td>Autotuning</td>
+<td>Drive procedure used to identify motor characteristics for supported control modes</td>
+<td>Motor identification for vector control</td>
+</tr>
+<tr>
+<td>Control mode</td>
+<td>Method used by the drive to regulate motor operation</td>
+<td>V/f, sensorless vector, or encoder-based vector control</td>
+</tr>
+<tr>
+<td>Parameter archive</td>
+<td>Saved configuration package associated with a specific drive</td>
+<td>Engineering-software backup file</td>
+</tr>
+<tr>
+<td>Golden parameter set</td>
+<td>Approved reference configuration for a defined drive and application</td>
+<td>Released parameters for a production conveyor</td>
+</tr>
+<tr>
+<td>RPO</td>
+<td>Recovery Point Objective</td>
+<td>Maximum acceptable loss of recent configuration changes</td>
+</tr>
+<tr>
+<td>RTO</td>
+<td>Recovery Time Objective</td>
+<td>Target time to restore the drive's required service</td>
+</tr>
+<tr>
+<td>Functional test</td>
+<td>Verification that the restored drive performs its required functions</td>
+<td>Checking speed reference, direction, and fault response</td>
+</tr>
+<tr>
+<td>Commissioning</td>
+<td>Configuration and verification required to place the drive into service</td>
+<td>Motor setup and controlled operational testing</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-what-must-be-backed-up">3. What must be backed up?</h2>
+<p>A complete VFD recovery package may include the parameter set, hardware identification, motor information, communication configuration, and commissioning records. The exact contents depend on the drive family and engineering tools.</p>
+<table>
+<thead>
+<tr>
+<th>Backup item</th>
+<th>Typical contents</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Drive identity</td>
+<td>Manufacturer, model, frame size, and serial number</td>
+<td>Identifies the original equipment</td>
+</tr>
+<tr>
+<td>Parameter set</td>
+<td>Frequency limits, ramps, protection settings, and control parameters</td>
+<td>Restores the approved behavior</td>
+</tr>
+<tr>
+<td>Motor nameplate data</td>
+<td>Rated voltage, current, power, frequency, and speed</td>
+<td>Supports correct motor configuration</td>
+</tr>
+<tr>
+<td>Control configuration</td>
+<td>V/f or vector mode, torque limits, and control-source settings</td>
+<td>Restores the intended control method</td>
+</tr>
+<tr>
+<td>Motor identification data</td>
+<td>Autotune results or motor-model information where supported</td>
+<td>May be required for vector-control performance</td>
+</tr>
+<tr>
+<td>PLC interface settings</td>
+<td>Fieldbus address, communication profile, and control-word mapping</td>
+<td>Restores automation integration</td>
+</tr>
+<tr>
+<td>I/O configuration</td>
+<td>Digital input functions and analog input/output assignments</td>
+<td>Restores external commands and feedback</td>
+</tr>
+<tr>
+<td>Network configuration</td>
+<td>IP address, device name, and relevant network parameters</td>
+<td>Restores communication where applicable</td>
+</tr>
+<tr>
+<td>Firmware information</td>
+<td>Installed firmware and approved target version</td>
+<td>Supports compatibility checks</td>
+</tr>
+<tr>
+<td>Safety configuration</td>
+<td>Supported safety-related settings and verification records</td>
+<td>Supports required safety-system recovery</td>
+</tr>
+<tr>
+<td>Engineering files</td>
+<td>Parameter exports, project files, and software-specific archives</td>
+<td>Supports controlled restoration</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Wiring diagrams, terminal assignments, and drive manuals</td>
+<td>Supports installation and troubleshooting</td>
+</tr>
+<tr>
+<td>Test records</td>
+<td>Commissioning results, fault checks, and motor verification</td>
+<td>Establishes the approved baseline</td>
+</tr>
+<tr>
+<td>Change history</td>
+<td>Previous and current revisions, approvals, and change reasons</td>
+<td>Supports traceability and rollback</td>
+</tr>
+</tbody>
+</table>
+<p>Not every drive supports exporting every internal value. Some parameters may be read-only, automatically calculated, dependent on hardware, or excluded from a standard archive.</p>
+<h2 id="4-vfd-backup-architecture">4. VFD backup architecture</h2>
+<pre><code>Installed VFD and motor
+        ↓
+Identify drive model, firmware and application
+        ↓
+Retrieve the approved parameter set
+        ↓
+Capture motor and communication configuration
+        ↓
+Record special functions and dependencies
+        ↓
+Create a versioned backup package
+        ↓
+Validate file integrity and configuration identity
+        ↓
+Store in the controlled engineering repository
+        ↓
+Create an independent recovery copy
+        ↓
+Test the restoration procedure
+        ↓
+Record verification and recovery results
+</code></pre>
+<p>The drive, motor, and machine application must be treated as a connected system. A parameter set from another conveyor may contain a different motor current limit, braking configuration, or control interface even if the drives look identical.</p>
+<h2 id="5-vfd-backup-methods">5. VFD backup methods</h2>
+<h3 id="51-engineering-software-backup">5.1 Engineering software backup</h3>
+<p>The preferred method is to save the drive configuration using the manufacturer's supported engineering software.</p>
+<p>Typical workflow:</p>
+<ol>
+<li>Identify the installed drive and connected motor.</li>
+<li>Connect through a supported engineering interface.</li>
+<li>Read the current parameter set from the drive.</li>
+<li>Save the configuration to a controlled project or archive.</li>
+<li>Record the drive model, firmware, motor data, and communication settings.</li>
+<li>Compare the retrieved values with the approved configuration.</li>
+<li>Include the necessary software version and dependencies.</li>
+<li>Save the archive under a controlled revision.</li>
+<li>Verify that the file can be reopened and interpreted correctly.</li>
+</ol>
+<p>Examples of manufacturer engineering environments include Siemens Startdrive or applicable STARTER versions, Rockwell Automation DriveTools or Connected Components Workbench for supported drives, Mitsubishi FR Configurator or FR Configurator2 for supported models, and Schneider Electric SoMove for compatible equipment.</p>
+<p>The exact software depends on the drive family and generation. Software that supports one series may not support another, even within the same manufacturer's product range.</p>
+<h3 id="52-keypad-or-operator-panel-backup">5.2 Keypad or operator-panel backup</h3>
+<p>Some VFDs support parameter copying through a detachable keypad, operator panel, or dedicated memory device.</p>
+<p>This method can be useful when an engineering PC is unavailable, but it has limitations:</p>
+<ul>
+<li>The copying device may support only specific drive families.</li>
+<li>Firmware or hardware compatibility may be required.</li>
+<li>Some parameters may not be transferred.</li>
+<li>Drive-specific identification or calculated data may need separate verification.</li>
+<li>A copied parameter set may not preserve network settings or all special-function configuration.</li>
+</ul>
+<p>Record the copying method and confirm the manufacturer's supported compatibility rules before relying on it for recovery.</p>
+<h3 id="53-parameter-export-to-a-file">5.3 Parameter export to a file</h3>
+<p>Depending on the engineering software, parameters may be exported into a vendor-specific archive, text file, spreadsheet, or other supported format.</p>
+<p>A readable export is useful for comparison and audit, but it may not be sufficient to restore every setting. Some file formats omit metadata, calculated values, firmware dependencies, or software-specific information.</p>
+<p>Preserve the native project or archive when available, and use readable parameter exports as supporting documentation.</p>
+<h3 id="54-manual-parameter-recording">5.4 Manual parameter recording</h3>
+<p>Manual recording can support recovery for older drives or situations where software access is unavailable.</p>
+<p>Record at least:</p>
+<ul>
+<li>Drive model and firmware.</li>
+<li>Motor nameplate values.</li>
+<li>Control mode.</li>
+<li>Command and speed-reference sources.</li>
+<li>Acceleration and deceleration times.</li>
+<li>Minimum and maximum frequency.</li>
+<li>Current and torque limits.</li>
+<li>Digital and analog input/output functions.</li>
+<li>Communication settings.</li>
+<li>Braking and stopping configuration.</li>
+<li>Relevant protection and fault-response settings.</li>
+</ul>
+<p>Manual recording is more vulnerable to transcription errors and missing parameters. It should not replace a supported electronic archive when one is available.</p>
+<h2 id="6-critical-vfd-parameters-and-their-recovery-significance">6. Critical VFD parameters and their recovery significance</h2>
+<p>VFD parameter numbers vary by manufacturer and model. Always use the correct drive manual rather than assuming that the same parameter number has the same meaning across different product families.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter group</th>
+<th>Typical settings</th>
+<th>Recovery risk if incorrect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Motor data</td>
+<td>Rated voltage, current, frequency, speed, and power</td>
+<td>Motor overheating, poor torque, or incorrect motor modeling</td>
+</tr>
+<tr>
+<td>Frequency limits</td>
+<td>Minimum and maximum output frequency</td>
+<td>Incorrect machine speed or operation outside approved limits</td>
+</tr>
+<tr>
+<td>Acceleration/deceleration</td>
+<td>Ramp times and ramp profiles</td>
+<td>Mechanical shock, overcurrent, or DC-bus overvoltage</td>
+</tr>
+<tr>
+<td>Control mode</td>
+<td>V/f, sensorless vector, or closed-loop vector</td>
+<td>Incorrect torque response or unstable operation</td>
+</tr>
+<tr>
+<td>Command source</td>
+<td>Keypad, terminals, PLC, or network</td>
+<td>Drive may not respond to intended commands</td>
+</tr>
+<tr>
+<td>Speed reference</td>
+<td>Analog input, preset speeds, network reference, or keypad</td>
+<td>Wrong or unavailable speed command</td>
+</tr>
+<tr>
+<td>Digital inputs</td>
+<td>Run, reverse, reset, preset speed, and other assigned functions</td>
+<td>Incorrect control behavior</td>
+</tr>
+<tr>
+<td>Analog inputs</td>
+<td>Signal range, scaling, filtering, and function assignment</td>
+<td>Incorrect speed or process reference</td>
+</tr>
+<tr>
+<td>Analog outputs</td>
+<td>Output function, scaling, and range</td>
+<td>Incorrect feedback to PLC or instrumentation</td>
+</tr>
+<tr>
+<td>Current and torque limits</td>
+<td>Motor current, torque limits, and related protection settings</td>
+<td>Overheating, nuisance trips, or insufficient torque</td>
+</tr>
+<tr>
+<td>Braking</td>
+<td>Braking resistor settings, DC injection, and stopping method</td>
+<td>Excessive stopping time or braking-system damage</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>Protocol, address, baud rate, IP settings, and control mapping</td>
+<td>Loss of PLC control and feedback</td>
+</tr>
+<tr>
+<td>Restart behavior</td>
+<td>Power-up, reset, and restart settings</td>
+<td>Unexpected motor restart or failure to restart</td>
+</tr>
+<tr>
+<td>Fault response</td>
+<td>Fault handling, reset behavior, and trip configuration</td>
+<td>Unsafe or unreliable response to abnormal conditions</td>
+</tr>
+<tr>
+<td>PID control</td>
+<td>Feedback source, gains, limits, and setpoint</td>
+<td>Unstable or incorrect process regulation</td>
+</tr>
+<tr>
+<td>Energy functions</td>
+<td>Sleep, energy optimization, or automatic tuning where supported</td>
+<td>Unexpected application behavior</td>
+</tr>
+<tr>
+<td>Safety-related configuration</td>
+<td>Supported safety functions and related parameters</td>
+<td>Safety function may not meet the required design</td>
+</tr>
+</tbody>
+</table>
+<h2 id="7-motor-data-and-parameter-compatibility">7. Motor data and parameter compatibility</h2>
+<p>A drive configuration must match the motor and application. The correct drive rating alone does not guarantee correct operation.</p>
+<h3 id="71-motor-nameplate-data">7.1 Motor nameplate data</h3>
+<p>Record the actual motor nameplate values and verify them against the approved design.</p>
+<table>
+<thead>
+<tr>
+<th>Motor data</th>
+<th>Meaning</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rated power</td>
+<td>Motor's rated mechanical output</td>
+<td>Helps verify drive and application sizing</td>
+</tr>
+<tr>
+<td>Rated voltage</td>
+<td>Voltage specified for the motor's connection and operating condition</td>
+<td>Supports correct motor configuration</td>
+</tr>
+<tr>
+<td>Rated current</td>
+<td>Motor's rated current under specified conditions</td>
+<td>Supports current limits and motor protection</td>
+</tr>
+<tr>
+<td>Rated frequency</td>
+<td>Rated supply frequency</td>
+<td>Establishes the motor's nominal operating point</td>
+</tr>
+<tr>
+<td>Rated speed</td>
+<td>Nameplate speed under rated conditions</td>
+<td>Supports speed estimation and motor modeling</td>
+</tr>
+<tr>
+<td>Power factor</td>
+<td>Relationship between real and apparent electrical power</td>
+<td>May be required by the drive's motor model</td>
+</tr>
+<tr>
+<td>Efficiency</td>
+<td>Motor efficiency at the specified operating point</td>
+<td>May be required by supported optimization or modeling functions</td>
+</tr>
+<tr>
+<td>Connection</td>
+<td>Star/delta or other specified connection</td>
+<td>Must match the actual wiring and voltage rating</td>
+</tr>
+</tbody>
+</table>
+<p>Never copy motor data from a similar-looking motor without confirming the actual nameplate and connection.</p>
+<h3 id="72-control-mode-compatibility">7.2 Control mode compatibility</h3>
+<table>
+<thead>
+<tr>
+<th>Control mode</th>
+<th>General behavior</th>
+<th>Recovery consideration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>V/f control</td>
+<td>Controls voltage relative to output frequency according to a selected characteristic</td>
+<td>Verify motor data, voltage boost, frequency limits, and ramp settings</td>
+</tr>
+<tr>
+<td>Sensorless vector</td>
+<td>Estimates motor behavior to regulate torque and speed without a shaft encoder</td>
+<td>Verify motor data, control settings, and any required motor identification procedure</td>
+</tr>
+<tr>
+<td>Closed-loop vector</td>
+<td>Uses encoder or other supported feedback for tighter control</td>
+<td>Verify feedback hardware, scaling, direction, and control configuration</td>
+</tr>
+<tr>
+<td>Torque control</td>
+<td>Regulates torque according to the supported drive mode</td>
+<td>Verify torque limits, control references, and application requirements</td>
+</tr>
+<tr>
+<td>PID process control</td>
+<td>Uses process feedback to regulate a variable such as pressure or flow</td>
+<td>Verify sensor scaling, feedback direction, gains, and limits</td>
+</tr>
+</tbody>
+</table>
+<p>The available modes and their names vary by product. A replacement drive may support a different set of control methods or require a different configuration procedure.</p>
+<h3 id="73-autotuning-and-motor-identification">7.3 Autotuning and motor identification</h3>
+<p>Autotuning may be necessary after drive replacement, motor replacement, or a change in the motor-control configuration.</p>
+<p>Before performing it:</p>
+<ul>
+<li>Verify that the drive and motor support the selected tuning method.</li>
+<li>Confirm the motor nameplate data.</li>
+<li>Review the manufacturer's requirements for stationary or rotating tuning.</li>
+<li>Ensure the machine is in the required safe condition.</li>
+<li>Isolate or disconnect the mechanical load if the procedure requires it and the machine design permits it.</li>
+<li>Record the original configuration and follow the approved commissioning procedure.</li>
+</ul>
+<p>Do not run rotating autotuning on a coupled machine unless the procedure and machine conditions explicitly permit it. Autotuning is a commissioning operation, not a harmless button that makes unknown parameters correct.</p>
+<h2 id="8-vfd-backup-frequency-and-triggers">8. VFD backup frequency and triggers</h2>
+<table>
+<thead>
+<tr>
+<th>Trigger</th>
+<th>Required backup action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>New drive commissioning</td>
+<td>Create the initial approved parameter archive</td>
+</tr>
+<tr>
+<td>Parameter modification</td>
+<td>Save the released configuration after verification</td>
+</tr>
+<tr>
+<td>Motor replacement</td>
+<td>Recheck motor data and archive the approved configuration</td>
+</tr>
+<tr>
+<td>Drive replacement</td>
+<td>Preserve the old drive configuration and create a verified target configuration</td>
+</tr>
+<tr>
+<td>Firmware update</td>
+<td>Preserve the pre-update state and verify the post-update configuration</td>
+</tr>
+<tr>
+<td>PLC or fieldbus change</td>
+<td>Back up the revised drive communication settings</td>
+</tr>
+<tr>
+<td>Braking-system modification</td>
+<td>Record the approved braking and stopping configuration</td>
+</tr>
+<tr>
+<td>Safety-related modification</td>
+<td>Follow the applicable safety change and validation process</td>
+</tr>
+<tr>
+<td>Obsolescence migration</td>
+<td>Preserve source and target drive configurations separately</td>
+</tr>
+<tr>
+<td>Periodic audit</td>
+<td>Verify backup currency, integrity, and restoration readiness</td>
+</tr>
+</tbody>
+</table>
+<p>For critical production drives, back up after every approved parameter change. Define periodic checks and restore tests based on risk, equipment criticality, and plant policy.</p>
+<h2 id="9-backup-integrity-storage-and-version-control">9. Backup integrity, storage, and version control</h2>
+<h3 id="91-validation-levels">9.1 Validation levels</h3>
+<table>
+<thead>
+<tr>
+<th>Validation level</th>
+<th>What it confirms</th>
+<th>What remains unverified</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>File existence</td>
+<td>Backup is present</td>
+<td>Completeness and correctness</td>
+</tr>
+<tr>
+<td>File integrity</td>
+<td>File matches its recorded checksum</td>
+<td>Correct drive identity and parameter values</td>
+</tr>
+<tr>
+<td>Archive opening</td>
+<td>Engineering software can read the archive</td>
+<td>Compatibility with the installed drive</td>
+</tr>
+<tr>
+<td>Parameter review</td>
+<td>Values match the approved baseline</td>
+<td>Actual machine behavior</td>
+</tr>
+<tr>
+<td>Compatibility check</td>
+<td>Drive model and firmware support the configuration</td>
+<td>Successful restoration</td>
+</tr>
+<tr>
+<td>Restore test</td>
+<td>Backup can be transferred in the tested environment</td>
+<td>Untested field conditions</td>
+</tr>
+<tr>
+<td>Functional verification</td>
+<td>Required drive and motor functions work correctly</td>
+<td>Safety validation not included in the test</td>
+</tr>
+</tbody>
+</table>
+<p>A SHA-256 checksum can detect unexpected file changes relative to the recorded checksum. It does not prove that the parameter set is correct for the intended drive.</p>
+<h3 id="92-version-naming">9.2 Version naming</h3>
+<p>Use a controlled naming convention.</p>
+<pre><code>MACHINE_ID_DRIVE_TAG_REVISION_DATE
+LINE1059_VFD03_R006_20261017
+</code></pre>
+<p>The example is illustrative. Use the plant's approved asset identifiers and revision rules.</p>
+<p>Maintain a record of:</p>
+<ul>
+<li>Machine and drive tag.</li>
+<li>Drive manufacturer and exact model.</li>
+<li>Serial number and firmware.</li>
+<li>Motor identification and nameplate data.</li>
+<li>Parameter archive revision.</li>
+<li>Engineering software version.</li>
+<li>Backup timestamp.</li>
+<li>Change or work-order reference.</li>
+<li>Checksum where required.</li>
+<li>Storage location.</li>
+<li>Approval and validation status.</li>
+</ul>
+<h3 id="93-storage-architecture">9.3 Storage architecture</h3>
+<p>Use independent recovery copies rather than relying exclusively on the engineering PC.</p>
+<pre><code>Primary engineering repository
+        ↓
+Independent backup repository
+        ↓
+Offline or isolated recovery copy
+</code></pre>
+<p>Apply the 3-2-1 principle where practical: at least three copies, two storage types or platforms, and one off-site or isolated copy.</p>
+<p>Protect backup repositories with access controls, suitable retention policies, and security measures. Store passwords, encryption keys, and sensitive credentials under the plant's approved security procedures.</p>
+<h2 id="10-vfd-restoration-procedure">10. VFD restoration procedure</h2>
+<p>Restoring a VFD means more than downloading parameters. The drive must be electrically compatible, configured for the correct motor, connected to the intended control system, and tested under controlled conditions.</p>
+<h3 id="101-pre-restoration-checklist">10.1 Pre-restoration checklist</h3>
+<ul>
+<li>Identify the failed drive and its machine tag.</li>
+<li>Record the original drive model, power rating, firmware, and serial number where available.</li>
+<li>Confirm the replacement drive's electrical and application compatibility.</li>
+<li>Verify the motor nameplate data and motor connection.</li>
+<li>Retrieve the latest approved parameter archive.</li>
+<li>Verify the archive's integrity and revision.</li>
+<li>Confirm the required engineering software and interface.</li>
+<li>Check PLC communication, I/O assignments, and speed-reference configuration.</li>
+<li>Identify braking hardware, feedback devices, filters, and other application-specific equipment.</li>
+<li>Review safety requirements and the approved isolation procedure.</li>
+<li>Obtain the required maintenance and production authorization.</li>
+<li>Record any parameters that must be configured manually or recalculated.</li>
+</ul>
+<h3 id="102-restoration-sequence">10.2 Restoration sequence</h3>
+<ol>
+<li>Diagnose the failure and confirm whether the drive needs replacement or reconfiguration.</li>
+<li>Place the equipment in the approved safe state and isolate hazardous energy according to the site procedure.</li>
+<li>Verify the replacement drive model, electrical ratings, motor compatibility, and required options.</li>
+<li>Confirm that the parameter archive belongs to the intended machine and application.</li>
+<li>Install the drive and required accessories according to the manufacturer's instructions.</li>
+<li>Verify power wiring, motor wiring, grounding, protective devices, and control connections.</li>
+<li>Configure the drive using the supported engineering method.</li>
+<li>Check parameters that depend on hardware, firmware, motor characteristics, or the control interface.</li>
+<li>Configure communication addresses and PLC control mapping.</li>
+<li>Verify motor data and perform motor identification if required.</li>
+<li>Complete pre-start checks and review active faults.</li>
+<li>Test the drive under the approved conditions, initially without load where the design and procedure permit.</li>
+<li>Verify direction, reference scaling, ramp behavior, current, feedback, and fault handling.</li>
+<li>Test the machine application and relevant interlocks.</li>
+<li>Obtain release authorization and archive the verified configuration.</li>
+</ol>
+<p>The exact procedure varies by manufacturer and model. Some drives require parameter initialization, power cycling, or additional commissioning steps. Follow the applicable drive manual.</p>
+<h3 id="103-electrical-safety-considerations">10.3 Electrical safety considerations</h3>
+<ul>
+<li>Follow the plant's lockout/tagout and electrical isolation procedures.</li>
+<li>Verify the absence of hazardous voltage using approved methods.</li>
+<li>Observe the manufacturer's DC-bus discharge waiting time.</li>
+<li>Confirm that the DC bus is discharged before accessing relevant terminals.</li>
+<li>Follow appropriate arc-flash and electrical PPE requirements.</li>
+<li>Do not disconnect a motor or switch output wiring while the drive is operating unless the system is specifically designed and approved for that operation.</li>
+<li>Do not bypass guards, interlocks, or safety functions to complete a test.</li>
+<li>Use authorized personnel for electrical work and commissioning.</li>
+</ul>
+<p>VFD DC-bus capacitors can retain dangerous energy after input power is removed. A dark display is not proof that the drive is safe to open.</p>
+<h2 id="11-post-restoration-verification">11. Post-restoration verification</h2>
+<h3 id="111-functional-verification-checklist">11.1 Functional verification checklist</h3>
+<ul>
+<li>Correct drive model and firmware identified.</li>
+<li>Correct motor nameplate data configured.</li>
+<li>Approved control mode selected.</li>
+<li>Minimum and maximum frequency verified.</li>
+<li>Acceleration and deceleration ramps verified.</li>
+<li>Run and stop commands operate as intended.</li>
+<li>Direction command behaves correctly.</li>
+<li>Speed reference and scaling are correct.</li>
+<li>Digital and analog I/O functions are correct.</li>
+<li>PLC communication and control-word mapping are correct.</li>
+<li>Feedback values and drive status are correct.</li>
+<li>Current and torque limits are appropriate.</li>
+<li>Braking behavior is correct for the application.</li>
+<li>Faults and alarm responses are verified.</li>
+<li>Restart behavior meets the approved design.</li>
+<li>Relevant machine interlocks and safety functions are verified.</li>
+<li>Required loaded operation and process checks are completed.</li>
+<li>Final parameter archive and commissioning record are saved.</li>
+</ul>
+<h3 id="112-special-attention-to-safety-functions">11.2 Special attention to safety functions</h3>
+<p>Some drives include safety-related functions such as Safe Torque Off (STO) or other drive-integrated safety capabilities.</p>
+<p>A standard parameter backup may not preserve every safety-related configuration or its validation evidence. Follow the applicable manufacturer's procedure and the machine's approved safety lifecycle.</p>
+<p>After safety-related work, perform the required verification and validation. A successful parameter download or a drive that runs normally does not prove that the safety functions operate correctly.</p>
+<h2 id="12-common-disaster-recovery-scenarios">12. Common disaster-recovery scenarios</h2>
+<h3 id="121-vfd-failure-during-production">12.1 VFD failure during production</h3>
+<p>Situation: The drive trips repeatedly or fails to power up.</p>
+<ol>
+<li>Review the fault history and electrical diagnostics.</li>
+<li>Determine whether the cause is the drive, motor, wiring, supply, cooling, or load.</li>
+<li>Verify that replacement is justified.</li>
+<li>Retrieve the approved parameter archive.</li>
+<li>Confirm replacement-drive compatibility.</li>
+<li>Restore and verify the required configuration.</li>
+<li>Test the motor and machine under the approved procedure.</li>
+<li>Record the failure cause, recovery time, and final backup revision.</li>
+</ol>
+<p>Replacing the drive without investigating the original failure can destroy the replacement just as efficiently as the original. Short circuits, motor faults, blocked loads, and supply problems must be considered.</p>
+<h3 id="122-incorrect-parameter-modification">12.2 Incorrect parameter modification</h3>
+<p>Situation: A change to the frequency limit, acceleration ramp, or control source causes unexpected operation.</p>
+<ol>
+<li>Place the machine in a safe state.</li>
+<li>Identify the changed parameters and their change history.</li>
+<li>Preserve the current configuration for investigation.</li>
+<li>Retrieve the previous approved parameter set.</li>
+<li>Compare the current and approved values.</li>
+<li>Restore the approved configuration under authorization.</li>
+<li>Verify the affected functions and related interlocks.</li>
+<li>Record the event and corrective action.</li>
+</ol>
+<p>Do not automatically restore the entire archive if only a small number of parameters changed. A full restoration could overwrite other legitimate configuration updates.</p>
+<h3 id="123-motor-replacement">12.3 Motor replacement</h3>
+<p>Situation: A failed motor is replaced while the original VFD remains installed.</p>
+<ul>
+<li>Verify the new motor's nameplate data and connection.</li>
+<li>Confirm that the drive is correctly sized for the replacement motor.</li>
+<li>Reconfigure the motor parameters as required.</li>
+<li>Check the control mode and tuning requirements.</li>
+<li>Verify thermal protection and relevant current limits.</li>
+<li>Perform required motor identification and commissioning.</li>
+<li>Save a new approved parameter archive.</li>
+</ul>
+<p>The original drive backup remains useful as a historical record, but it may no longer represent the approved configuration for the new motor.</p>
+<h3 id="124-plc-or-communication-replacement">12.4 PLC or communication replacement</h3>
+<p>Situation: The PLC, communication module, or industrial network configuration changes.</p>
+<ul>
+<li>Verify the protocol and supported drive interface.</li>
+<li>Check node address, IP settings, and communication parameters.</li>
+<li>Confirm control-word and status-word mapping.</li>
+<li>Verify speed-reference scaling and units.</li>
+<li>Check command-source selection.</li>
+<li>Test communication-loss behavior and recovery.</li>
+<li>Update the drive archive and network documentation.</li>
+</ul>
+<p>A drive can be electrically healthy and still appear faulty to the operator because the PLC no longer communicates with it.</p>
+<h3 id="125-firmware-upgrade-or-obsolescence-migration">12.5 Firmware upgrade or obsolescence migration</h3>
+<p>Situation: The drive is upgraded or replaced with a newer generation.</p>
+<ol>
+<li>Preserve the original drive configuration and identification.</li>
+<li>Record the original firmware and hardware options.</li>
+<li>Confirm compatibility with the target drive and software.</li>
+<li>Create a separate target configuration.</li>
+<li>Review parameter changes, removed functions, and new defaults.</li>
+<li>Revalidate motor control, braking, I/O, communication, and fault behavior.</li>
+<li>Complete the required commissioning and acceptance tests.</li>
+<li>Retain both source and target backups with clear revision records.</li>
+</ol>
+<p>Parameter numbers and meanings may change between drive generations. Blindly copying parameter values can produce an invalid or unsafe configuration.</p>
+<h2 id="13-vfd-backup-troubleshooting">13. VFD backup troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Corrective action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Parameter upload fails</td>
+<td>Wrong interface, access restrictions, or incompatible software</td>
+<td>Verify connection, permissions, and software support</td>
+</tr>
+<tr>
+<td>Archive will not open</td>
+<td>Software-version mismatch or file corruption</td>
+<td>Use a compatible software version and retrieve a verified archive</td>
+</tr>
+<tr>
+<td>Download is rejected</td>
+<td>Incorrect drive model or firmware incompatibility</td>
+<td>Check the target model and supported transfer method</td>
+</tr>
+<tr>
+<td>Motor runs at the wrong speed</td>
+<td>Incorrect reference source, scaling, or frequency limits</td>
+<td>Verify the reference path and parameter configuration</td>
+</tr>
+<tr>
+<td>Motor direction is incorrect</td>
+<td>Wiring, command mapping, or direction configuration differs</td>
+<td>Verify the approved electrical design and control configuration</td>
+</tr>
+<tr>
+<td>Drive trips on overcurrent</td>
+<td>Motor or load fault, incorrect parameters, or unsuitable ramp</td>
+<td>Diagnose the cause before changing settings</td>
+</tr>
+<tr>
+<td>Drive trips on overvoltage during stopping</td>
+<td>Deceleration too aggressive, regenerative energy, or braking-system issue</td>
+<td>Check the application and approved braking design</td>
+</tr>
+<tr>
+<td>PLC cannot control the drive</td>
+<td>Incorrect network settings, command source, or control-word mapping</td>
+<td>Verify communication and command configuration</td>
+</tr>
+<tr>
+<td>Feedback is incorrect</td>
+<td>Wrong scaling, signal assignment, or data mapping</td>
+<td>Compare drive and PLC values with the approved interface specification</td>
+</tr>
+<tr>
+<td>Drive runs after power restoration unexpectedly</td>
+<td>Restart settings or external command state are unsuitable</td>
+<td>Verify restart behavior and machine safety requirements</td>
+</tr>
+<tr>
+<td>Replacement drive behaves differently</td>
+<td>Hardware, firmware, motor model, or control mode differs</td>
+<td>Review compatibility and recommission as required</td>
+</tr>
+<tr>
+<td>Backup does not restore a special function</td>
+<td>Function depends on hardware options or separate configuration</td>
+<td>Identify the missing dependency and restore it through the approved procedure</td>
+</tr>
+</tbody>
+</table>
+<h2 id="14-practical-maintenance-implementation">14. Practical maintenance implementation</h2>
+<h3 id="141-vfd-backup-register">14.1 VFD backup register</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine ID</td>
+<td>Plant-approved equipment identifier</td>
+</tr>
+<tr>
+<td>Drive tag</td>
+<td>Unique VFD identification</td>
+</tr>
+<tr>
+<td>Manufacturer and model</td>
+<td>Exact drive model and product series</td>
+</tr>
+<tr>
+<td>Serial number</td>
+<td>Installed drive identification where available</td>
+</tr>
+<tr>
+<td>Firmware</td>
+<td>Installed firmware revision</td>
+</tr>
+<tr>
+<td>Motor tag</td>
+<td>Connected motor identifier</td>
+</tr>
+<tr>
+<td>Motor rating</td>
+<td>Approved nameplate data</td>
+</tr>
+<tr>
+<td>Control mode</td>
+<td>Configured operating mode</td>
+</tr>
+<tr>
+<td>Command source</td>
+<td>Keypad, terminals, PLC, or network</td>
+</tr>
+<tr>
+<td>Speed reference</td>
+<td>Actual reference source and scaling</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>Protocol, address, and interface details</td>
+</tr>
+<tr>
+<td>Approved revision</td>
+<td>Released parameter-set revision</td>
+</tr>
+<tr>
+<td>Last backup date</td>
+<td>Actual completed date</td>
+</tr>
+<tr>
+<td>Last restore test</td>
+<td>Actual completed test date</td>
+</tr>
+<tr>
+<td>Backup location</td>
+<td>Controlled repository</td>
+</tr>
+<tr>
+<td>Independent copy</td>
+<td>Secondary or isolated storage location</td>
+</tr>
+<tr>
+<td>Criticality</td>
+<td>Risk-based equipment classification</td>
+</tr>
+<tr>
+<td>RTO/RPO</td>
+<td>Approved recovery targets</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Current, overdue, failed, or under review</td>
+</tr>
+<tr>
+<td>Responsible owner</td>
+<td>Assigned maintenance or engineering role</td>
+</tr>
+</tbody>
+</table>
+<h3 id="142-example-folder-structure">14.2 Example folder structure</h3>
+<pre><code>VFD_BACKUP_SYSTEM/
+    01_ASSET_REGISTER/
+    02_APPROVED_PARAMETERS/
+        MACHINE_1059/
+            VFD_03/
+                NATIVE_ARCHIVE/
+                PARAMETER_EXPORTS/
+                MOTOR_DATA/
+                COMMUNICATION_SETTINGS/
+                FIRMWARE_INFORMATION/
+                WIRING_AND_MANUALS/
+                COMMISSIONING_RECORDS/
+                CHANGE_HISTORY/
+                RECOVERY_PROCEDURE/
+    03_INDEPENDENT_RECOVERY_COPIES/
+    04_RESTORE_TEST_RECORDS/
+    05_ENGINEERING_SOFTWARE/
+    06_DISASTER_RECOVERY_PROCEDURES/
+</code></pre>
+<p>Use the approved plant repository, access controls, and retention rules. Do not store passwords or sensitive credentials in ordinary parameter spreadsheets.</p>
+<h3 id="143-work-order-integration">14.3 Work-order integration</h3>
+<p>For a drive breakdown or planned parameter change:</p>
+<ol>
+<li>Identify the VFD and connected motor.</li>
+<li>Review the current approved parameter revision.</li>
+<li>Capture a pre-change archive where practical.</li>
+<li>Complete the authorized repair or configuration change.</li>
+<li>Perform the required functional and protection checks.</li>
+<li>Save the verified post-change configuration.</li>
+<li>Update the backup register and work-order record.</li>
+<li>Confirm that the independent recovery copy is current.</li>
+<li>Document unresolved compatibility or obsolescence risks.</li>
+</ol>
+<p>This links the physical drive, motor, configuration, and maintenance history into one traceable recovery process.</p>
+<h2 id="15-recovery-drills-and-audit">15. Recovery drills and audit</h2>
+<h3 id="151-recovery-drill">15.1 Recovery drill</h3>
+<p>A recovery drill demonstrates that the parameter archive and supporting resources can restore the intended drive configuration.</p>
+<ol>
+<li>Select a suitable spare drive, test setup, or approved nonproduction environment.</li>
+<li>Retrieve a released archive from the controlled repository.</li>
+<li>Verify the archive's integrity, revision, and drive compatibility.</li>
+<li>Confirm the required engineering software and interface.</li>
+<li>Follow the documented restoration procedure.</li>
+<li>Verify the restored parameter set and relevant configuration.</li>
+<li>Conduct the required functional checks under controlled conditions.</li>
+<li>Measure the recovery time.</li>
+<li>Record errors, missing dependencies, and deviations.</li>
+<li>Correct the recovery package and repeat the test when necessary.</li>
+</ol>
+<p>Do not experiment with parameter restoration on a live production drive merely to test the backup. Use an approved test environment or a formally authorized recovery exercise.</p>
+<h3 id="152-audit-checklist">15.2 Audit checklist</h3>
+<ul>
+<li>Critical VFDs are listed in the installed-base register.</li>
+<li>Approved parameter archives exist for required drives.</li>
+<li>Motor nameplate data is recorded and verified.</li>
+<li>Firmware and engineering-software versions are documented.</li>
+<li>Communication and control-source settings are recorded.</li>
+<li>Required hardware options and dependencies are identified.</li>
+<li>Independent recovery copies are maintained.</li>
+<li>Backup integrity and revision currency are checked.</li>
+<li>Restoration procedures are documented.</li>
+<li>Restore tests are performed at the defined interval.</li>
+<li>Recovery time is measured against approved targets.</li>
+<li>Parameter changes trigger the required backup updates.</li>
+<li>Obsolete drives have documented migration and rollback plans.</li>
+<li>Safety-related configurations have the required validation records.</li>
+</ul>
+<h2 id="16-backup-management-kpis">16. Backup management KPIs</h2>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Calculation</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backup coverage</td>
+<td>VFDs with required backups divided by VFDs requiring backups, multiplied by 100%</td>
+<td>Measures backup availability</td>
+</tr>
+<tr>
+<td>Backup currency</td>
+<td>VFDs with current approved archives divided by VFDs requiring archives, multiplied by 100%</td>
+<td>Measures revision accuracy</td>
+</tr>
+<tr>
+<td>Restore-test success</td>
+<td>Successful restore tests divided by completed restore tests, multiplied by 100%</td>
+<td>Measures demonstrated recoverability</td>
+</tr>
+<tr>
+<td>Backup compliance</td>
+<td>Backups completed on time divided by backups scheduled, multiplied by 100%</td>
+<td>Measures process adherence</td>
+</tr>
+<tr>
+<td>Average recovery time</td>
+<td>Total measured recovery time divided by recovery events</td>
+<td>Measures recovery performance</td>
+</tr>
+<tr>
+<td>Missing-dependency rate</td>
+<td>Recovery packages missing required dependencies divided by packages audited, multiplied by 100%</td>
+<td>Identifies incomplete packages</td>
+</tr>
+</tbody>
+</table>
+<p>For example, if 90 of 100 required VFDs have current, verified backups:</p>
+<div class="math-display">\[ \text{Backup coverage}=\frac{90}{100}\times100=90\\% \]</div>
+<p>Coverage does not prove that the drive can be restored successfully. Compatibility, parameter correctness, required hardware, and functional verification must be considered separately.</p>
+<h2 id="17-interview-questions-and-technical-answers">17. Interview questions and technical answers</h2>
+<p>1. Why is a VFD backup important?</p>
+<p>It preserves the approved drive configuration and reduces recovery time after failure, replacement, or incorrect parameter changes.</p>
+<p>2. Is the same parameter set suitable for every VFD of the same power rating?</p>
+<p>No. The motor, control mode, application, I/O configuration, communication interface, braking requirements, firmware, and hardware options may differ.</p>
+<p>3. What is the difference between uploading and downloading VFD parameters?</p>
+<p>Uploading retrieves supported parameter data from the drive. Downloading transfers saved parameters to the target drive.</p>
+<p>4. Why must motor nameplate data be recorded?</p>
+<p>Motor parameters influence the drive's motor model, current limits, protection, and control performance. Incorrect data can cause poor operation or equipment damage.</p>
+<p>5. Why can a replacement VFD behave differently after downloading the original parameters?</p>
+<p>The replacement may have different firmware, hardware options, parameter definitions, default values, or supported functions. The restored configuration must be reviewed and commissioned.</p>
+<p>6. Why should the pre-change backup be preserved?</p>
+<p>It provides a rollback point and allows engineers to compare the original configuration with the modified one during troubleshooting.</p>
+<p>7. What is the difference between a parameter archive and a restoration test?</p>
+<p>An archive stores configuration data. A restoration test demonstrates that the data can be restored and verified in the tested environment.</p>
+<p>8. What must be checked after a drive replacement?</p>
+<p>Verify electrical compatibility, motor data, control mode, command and speed references, PLC communication, I/O, braking, protection settings, and required machine functionality.</p>
+<p>9. Why is the drive's fault history useful during recovery?</p>
+<p>It can help distinguish a drive failure from a motor fault, supply problem, excessive load, cooling issue, or incorrect parameter configuration.</p>
+<p>10. Does a successful parameter download prove that the VFD is ready for production?</p>
+<p>No. Required commissioning, functional tests, protection checks, communication verification, and applicable safety validation must be completed before release.</p>
+<h2 id="18-final-engineering-principles">18. Final engineering principles</h2>
+<ul>
+<li>Preserve the native parameter archive and supporting configuration records.</li>
+<li>Identify the exact drive, motor, firmware, and application.</li>
+<li>Back up before significant changes and after approved changes.</li>
+<li>Verify replacement compatibility before transferring parameters.</li>
+<li>Recheck motor data, command sources, references, I/O, and communication.</li>
+<li>Treat firmware migration as an engineering change, not a routine file copy.</li>
+<li>Maintain independent recovery copies and controlled revision records.</li>
+<li>Test restoration using an appropriate, approved environment.</li>
+<li>Follow electrical isolation requirements and the manufacturer's procedures.</li>
+<li>Release the drive only after required commissioning and verification.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\25_Backup_DR\01_Systems_Backup\04_Servo - Servo</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

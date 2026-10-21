@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>03_Wiring_Signals - Wiring &amp; signals: Shielding, supply, signal check</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">03_Wiring_Signals - Wiring &amp; signals: Shielding, supply, signal check</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-of-encoder-wiring-and-signal-integrity">1. Purpose of encoder wiring and signal integrity</a></li>
+<li><a href="#2-main-encoder-wiring-connections">2. Main encoder wiring connections</a></li>
+<li><a href="#3-encoder-supply-voltage">3. Encoder supply voltage</a><ul>
+<li><a href="#31-why-supply-compatibility-matters">3.1 Why supply compatibility matters</a></li>
+<li><a href="#32-practical-supply-measurement">3.2 Practical supply measurement</a></li>
+</ul>
+</li>
+<li><a href="#4-encoder-output-types">4. Encoder output types</a><ul>
+<li><a href="#41-differential-line-driver-output">4.1 Differential line-driver output</a></li>
+<li><a href="#42-single-ended-output">4.2 Single-ended output</a></li>
+<li><a href="#43-push-pull-htl-output">4.3 Push-pull / HTL output</a></li>
+<li><a href="#44-ttl-compatible-output">4.4 TTL-compatible output</a></li>
+<li><a href="#45-open-collector-output">4.5 Open-collector output</a></li>
+</ul>
+</li>
+<li><a href="#5-incremental-encoder-signals-a-b-and-z">5. Incremental encoder signals: A, B and Z</a><ul>
+<li><a href="#51-channel-a-and-channel-b">5.1 Channel A and channel B</a></li>
+<li><a href="#52-channel-z-or-index">5.2 Channel Z or index</a></li>
+<li><a href="#53-complementary-signals">5.3 Complementary signals</a></li>
+</ul>
+</li>
+<li><a href="#6-absolute-encoder-wiring-and-communication">6. Absolute encoder wiring and communication</a></li>
+<li><a href="#7-shielding-and-electromagnetic-interference">7. Shielding and electromagnetic interference</a><ul>
+<li><a href="#71-what-a-cable-shield-does">7.1 What a cable shield does</a></li>
+<li><a href="#72-correct-shield-termination">7.2 Correct shield termination</a></li>
+<li><a href="#73-protective-earth-versus-cable-shield">7.3 Protective earth versus cable shield</a></li>
+</ul>
+</li>
+<li><a href="#8-cable-routing-and-physical-installation">8. Cable routing and physical installation</a></li>
+<li><a href="#9-termination-and-receiver-compatibility">9. Termination and receiver compatibility</a></li>
+<li><a href="#10-tools-for-checking-encoder-wiring-and-signals">10. Tools for checking encoder wiring and signals</a><ul>
+<li><a href="#101-important-measurement-precautions">10.1 Important measurement precautions</a></li>
+</ul>
+</li>
+<li><a href="#11-checking-incremental-encoder-signals">11. Checking incremental encoder signals</a><ul>
+<li><a href="#step-1-check-supply">Step 1: Check supply</a></li>
+<li><a href="#step-2-inspect-the-physical-wiring">Step 2: Inspect the physical wiring</a></li>
+<li><a href="#step-3-check-a-and-b">Step 3: Check A and B</a></li>
+<li><a href="#step-4-check-z-if-fitted">Step 4: Check Z if fitted</a></li>
+<li><a href="#step-5-check-behavior-at-speed">Step 5: Check behavior at speed</a></li>
+<li><a href="#step-6-compare-with-receiver-diagnostics">Step 6: Compare with receiver diagnostics</a></li>
+</ul>
+</li>
+<li><a href="#12-encoder-resolution-frequency-and-plc-input-limits">12. Encoder resolution, frequency, and PLC input limits</a></li>
+<li><a href="#13-encoder-signal-faults-and-symptoms">13. Encoder signal faults and symptoms</a></li>
+<li><a href="#14-practical-fault-finding-procedure">14. Practical fault-finding procedure</a></li>
+<li><a href="#15-plc-and-servo-drive-integration">15. PLC and servo-drive integration</a><ul>
+<li><a href="#arrangement-a-encoder-connected-to-a-servo-drive">Arrangement A: Encoder connected to a servo drive</a></li>
+<li><a href="#arrangement-b-encoder-connected-to-a-plc-high-speed-counter">Arrangement B: Encoder connected to a PLC high-speed counter</a></li>
+</ul>
+</li>
+<li><a href="#16-safety-during-inspection-and-testing">16. Safety during inspection and testing</a></li>
+<li><a href="#17-interview-questions-and-answers">17. Interview questions and answers</a></li>
+<li><a href="#18-practical-exercises">18. Practical exercises</a><ul>
+<li><a href="#exercise-1-feedback-fault-when-a-nearby-drive-starts">Exercise 1: Feedback fault when a nearby drive starts</a></li>
+<li><a href="#exercise-2-encoder-counts-fail-at-high-speed">Exercise 2: Encoder counts fail at high speed</a></li>
+<li><a href="#exercise-3-absolute-encoder-fails-after-cable-replacement">Exercise 3: Absolute encoder fails after cable replacement</a></li>
+<li><a href="#exercise-4-create-an-encoder-wiring-record">Exercise 4: Create an encoder wiring record</a></li>
+</ul>
+</li>
+<li><a href="#19-final-mental-model">19. Final mental model</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\02_Auto_Tech\06_Servo_Motion\03_Encoder\03_Wiring_Signals</code></p>
+<h2 id="1-purpose-of-encoder-wiring-and-signal-integrity">1. Purpose of encoder wiring and signal integrity</h2>
+<p>An encoder measures rotary or linear motion and sends information to a servo drive, PLC, motion controller, or measurement system. Correct wiring ensures that the receiver interprets the position and speed accurately.</p>
+<p>Encoder wiring must satisfy three independent requirements:</p>
+<ol>
+<li>Electrical compatibility: The encoder's supply voltage and output type must match the receiver.</li>
+<li>Signal integrity: The cable must transmit clean signals without excessive attenuation, noise, or distortion.</li>
+<li>Electromagnetic compatibility (EMC): Shielding, grounding, bonding, and cable routing must limit interference from industrial equipment.</li>
+</ol>
+<p>A wiring fault can cause feedback alarms, incorrect position, speed fluctuations, unstable servo control, or intermittent machine stoppages.</p>
+<p>In an automotive production line, a robot axis may operate normally at low speed but develop encoder faults when a nearby servo motor, welding gun, or high-power drive operates. The encoder may be healthy; the installation may be the problem.</p>
+<h2 id="2-main-encoder-wiring-connections">2. Main encoder wiring connections</h2>
+<p>An encoder connection may contain the following conductors.</p>
+<table>
+<thead>
+<tr>
+<th>Connection</th>
+<th>Function</th>
+<th>Important check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Supply positive, such as +V</td>
+<td>Powers the encoder electronics</td>
+<td>Correct voltage and polarity</td>
+</tr>
+<tr>
+<td>0 V / supply return</td>
+<td>Provides the supply return path</td>
+<td>Correct connection and voltage drop</td>
+</tr>
+<tr>
+<td>A and B</td>
+<td>Incremental position pulses</td>
+<td>Correct phase relationship and signal levels</td>
+</tr>
+<tr>
+<td>Z / index</td>
+<td>Reference pulse on supported incremental encoders</td>
+<td>Correct pulse presence and expected frequency</td>
+</tr>
+<tr>
+<td>A̅, B̅, Z̅ or A−, B−, Z−</td>
+<td>Complementary outputs for supported differential interfaces</td>
+<td>Correct differential receiver and pair wiring</td>
+</tr>
+<tr>
+<td>Clock and data conductors</td>
+<td>Carry serial communication on supported absolute encoders</td>
+<td>Correct protocol, polarity, and interface</td>
+</tr>
+<tr>
+<td>Shield</td>
+<td>Reduces coupling of electromagnetic interference into the cable</td>
+<td>Correct shield termination and bonding</td>
+</tr>
+<tr>
+<td>Protective earth (PE)</td>
+<td>Provides protective bonding for equipment as designed</td>
+<td>Follow the equipment's grounding scheme</td>
+</tr>
+</tbody>
+</table>
+<p>Not every encoder uses every connection. Some provide incremental pulses, some provide serial absolute-position data, and some support more than one interface.</p>
+<p>Never identify a connector pinout from wire colour alone. Use the exact encoder and drive manuals, including the connector part number and cable specification.</p>
+<h2 id="3-encoder-supply-voltage">3. Encoder supply voltage</h2>
+<p>Encoders are designed for particular supply-voltage ranges. Depending on the model, the supply may be 5 V DC, 12 V DC, 24 V DC, or another specified range.</p>
+<p>The correct value must come from the manufacturer's documentation.</p>
+<h3 id="31-why-supply-compatibility-matters">3.1 Why supply compatibility matters</h3>
+<p>Suppose an encoder requires a regulated 5 V supply. Applying 24 V can damage the encoder electronics.</p>
+<p>Conversely, supplying an encoder that requires 24 V with only 5 V may prevent startup or produce unreliable signals.</p>
+<p>Supply checks should include:</p>
+<ul>
+<li>Correct nominal voltage and permitted tolerance.</li>
+<li>Correct polarity.</li>
+<li>Supply current capacity.</li>
+<li>Voltage measured at the encoder connector, not just at the source.</li>
+<li>Voltage drop across long cables and connectors.</li>
+<li>Supply stability during motor acceleration and switching events.</li>
+<li>Correct connection of supply return and signal reference where specified.</li>
+</ul>
+<p>A voltage that appears correct with the encoder disconnected may drop under load because of a damaged conductor, loose terminal, or inadequate supply.</p>
+<h3 id="32-practical-supply-measurement">3.2 Practical supply measurement</h3>
+<ol>
+<li>Identify the exact supply pins from the manufacturer's wiring diagram.</li>
+<li>Confirm that the equipment can be measured safely.</li>
+<li>Measure the supply at the encoder connector using an appropriate meter.</li>
+<li>Compare the reading with the permitted voltage range.</li>
+<li>If the fault is intermittent, measure under the conditions that produce the fault.</li>
+<li>Check for supply dips when the servo drive, brake, or nearby equipment switches.</li>
+</ol>
+<p>Do not probe an unidentified connector. An encoder connector may contain supply, communication, or other conductors with different electrical characteristics.</p>
+<h2 id="4-encoder-output-types">4. Encoder output types</h2>
+<p>The receiver must be compatible with the encoder's electrical output. The words incremental encoder describe how position is represented, not necessarily how the electrical signals are transmitted.</p>
+<h3 id="41-differential-line-driver-output">4.1 Differential line-driver output</h3>
+<p>A differential encoder transmits a signal using two conductors for each signal, such as A+ and A−.</p>
+<p>The receiver evaluates the voltage difference between the pair:</p>
+<div class="math-display">\[ V\_{\text{diff}}=V\_{A+}-V\_{A-} \]</div>
+<p>Noise coupled similarly into both conductors can be rejected by a suitable differential receiver, within its specified common-mode range and other limits.</p>
+<p>Typical industrial differential interfaces include RS-422-compatible line drivers and receivers.</p>
+<p>Advantages:</p>
+<ul>
+<li>Good noise immunity.</li>
+<li>Suitable for many high-speed encoder applications.</li>
+<li>Useful for longer cable runs when correctly designed.</li>
+</ul>
+<p>Requirements:</p>
+<ul>
+<li>Correct differential receiver.</li>
+<li>Appropriate twisted-pair cable.</li>
+<li>Correct termination where required.</li>
+<li>Compatible voltage levels and common-mode limits.</li>
+<li>Correct pair polarity and cable pinout.</li>
+</ul>
+<p>A− is not the same thing as 0 V. It is the complementary signal output. Connecting it to ground can damage equipment or prevent correct signal reception.</p>
+<h3 id="42-single-ended-output">4.2 Single-ended output</h3>
+<p>A single-ended output represents a signal relative to a common reference, commonly the specified 0 V connection.</p>
+<p>It may be suitable for short cable runs and compatible inputs, but it is generally more sensitive to ground-reference differences and electrical interference than a well-designed differential interface.</p>
+<p>The maximum cable length and operating frequency depend on the output circuitry, cable capacitance, receiver, and installation conditions.</p>
+<h3 id="43-push-pull-htl-output">4.3 Push-pull / HTL output</h3>
+<p>Push-pull outputs actively drive the signal high and low. HTL commonly refers to higher-level incremental encoder signals, often used with 10–30 V-class industrial interfaces, depending on the actual specification.</p>
+<p>Advantages can include compatibility with suitable industrial high-speed inputs and good signal margins in the intended voltage range.</p>
+<p>However, HTL and TTL are not interchangeable. The receiver must accept the encoder's actual voltage levels, output current, switching frequency, and circuit arrangement.</p>
+<h3 id="44-ttl-compatible-output">4.4 TTL-compatible output</h3>
+<p>TTL-compatible encoder outputs commonly operate at lower voltage levels. Some are implemented with differential line drivers; others use different output arrangements.</p>
+<p>Do not assume that every TTL-labelled encoder has the same electrical interface or connector assignment.</p>
+<h3 id="45-open-collector-output">4.5 Open-collector output</h3>
+<p>An open-collector output requires an appropriate external pull-up or receiver arrangement.</p>
+<p>The signal transitions depend on the output transistor, pull-up resistance, cable capacitance, and receiver load. Incorrect pull-up selection can cause slow edges or overload the output.</p>
+<p>Use only the manufacturer's specified interface circuit.</p>
+<h2 id="5-incremental-encoder-signals-a-b-and-z">5. Incremental encoder signals: A, B and Z</h2>
+<p>An incremental encoder generates pulses as its shaft moves.</p>
+<pre><code>A signal:  __----____----____----
+B signal:  ____----____----____--
+Z signal:  ____________--________
+</code></pre>
+<p>This is a simplified conceptual representation, not a precise timing diagram.</p>
+<h3 id="51-channel-a-and-channel-b">5.1 Channel A and channel B</h3>
+<p>Channels A and B are typically phase-shifted by approximately 90 electrical degrees in a quadrature encoder.</p>
+<p>The relative phase determines the direction according to the encoder and receiver convention.</p>
+<ul>
+<li>If A leads B, the receiver interprets one direction.</li>
+<li>If B leads A, the receiver interprets the opposite direction.</li>
+</ul>
+<p>The actual forward/reverse convention depends on wiring, configuration, and the device's definition of positive motion.</p>
+<h3 id="52-channel-z-or-index">5.2 Channel Z or index</h3>
+<p>Z provides a reference or index pulse on encoders that support it.</p>
+<p>It can be used to identify a repeatable shaft reference or assist with homing and position-reference procedures.</p>
+<p>The number of Z pulses per revolution and their relationship to A/B signals must be verified from the encoder specification. Do not assume every model has exactly one index pulse per revolution.</p>
+<h3 id="53-complementary-signals">5.3 Complementary signals</h3>
+<p>A differential encoder may provide A+, A−, B+, B−, and optionally Z+, Z−.</p>
+<p>For each pair, the signals are complementary within the specified electrical limits.</p>
+<p>A differential receiver detects the difference between the two conductors. This improves noise rejection when the wiring and receiver are designed correctly.</p>
+<h2 id="6-absolute-encoder-wiring-and-communication">6. Absolute encoder wiring and communication</h2>
+<p>Absolute encoders provide position information encoded as an absolute value rather than requiring the receiver to reconstruct all position changes from incremental pulses since startup.</p>
+<p>Their interfaces can include:</p>
+<ul>
+<li>SSI.</li>
+<li>BiSS-C.</li>
+<li>EnDat.</li>
+<li>HIPERFACE and HIPERFACE DSL.</li>
+<li>Manufacturer-specific serial interfaces.</li>
+<li>Fieldbus-based or integrated feedback arrangements.</li>
+</ul>
+<p>These interfaces are not interchangeable merely because their cables have a similar number of conductors.</p>
+<p>Depending on the interface, wiring may carry clock, data, power, reference, or additional communication signals. Some systems use differential clock/data pairs, while others use different physical-layer arrangements.</p>
+<p>Troubleshooting should check:</p>
+<ol>
+<li>Correct encoder and drive compatibility.</li>
+<li>Correct cable and connector pinout.</li>
+<li>Supply voltage and current.</li>
+<li>Communication wiring and polarity.</li>
+<li>Protocol selection and parameterization.</li>
+<li>Feedback status, communication errors, and data-validity diagnostics.</li>
+<li>Firmware or configuration compatibility where relevant.</li>
+</ol>
+<p>Some interfaces include error-detection mechanisms such as checksums or CRCs. Use the drive's diagnostic information and the protocol documentation to interpret errors.</p>
+<h2 id="7-shielding-and-electromagnetic-interference">7. Shielding and electromagnetic interference</h2>
+<p>Encoder signals can be affected by electromagnetic interference (EMI) generated by:</p>
+<ul>
+<li>Servo motor power cables.</li>
+<li>Variable-frequency drives (VFDs).</li>
+<li>Contactors and relays.</li>
+<li>Welding equipment.</li>
+<li>Solenoids and brake circuits.</li>
+<li>High-current conductors.</li>
+<li>Poorly bonded machine structures.</li>
+<li>Switching power supplies.</li>
+</ul>
+<p>The interference can couple into the encoder cable through electric fields, magnetic fields, or common impedance in grounding and bonding paths.</p>
+<h3 id="71-what-a-cable-shield-does">7.1 What a cable shield does</h3>
+<p>A conductive shield around the signal conductors reduces the coupling of external interference into the cable when properly designed and terminated.</p>
+<p>The shield is not a substitute for protective earth, and it does not correct every EMC problem. Cable construction, routing, connector design, grounding, and bonding all matter.</p>
+<h3 id="72-correct-shield-termination">7.2 Correct shield termination</h3>
+<p>For many industrial servo feedback cables, the manufacturer's EMC design uses a low-impedance, often 360-degree shield connection at the drive or cabinet entry. Depending on the equipment and bonding arrangement, both ends may need to be bonded.</p>
+<p>There is no universal rule that the shield must always be grounded at one end or always at both ends.</p>
+<p>Follow the exact drive and encoder manufacturer's instructions. The correct arrangement depends on the interface, frequency range, machine bonding, and EMC design.</p>
+<p>Important practices:</p>
+<ul>
+<li>Use the specified shielded cable.</li>
+<li>Maintain a short, low-impedance shield connection as specified.</li>
+<li>Use the intended EMC clamp or connector shell arrangement.</li>
+<li>Maintain suitable equipotential bonding between machine sections and the cabinet.</li>
+<li>Do not replace a proper shield termination with a long, thin drain-wire pigtail where a high-frequency 360-degree connection is specified.</li>
+<li>Do not use the cable shield as the normal supply-return conductor or as a substitute for PE.</li>
+</ul>
+<h3 id="73-protective-earth-versus-cable-shield">7.3 Protective earth versus cable shield</h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Protective earth (PE)</th>
+<th>Cable shield</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Primary purpose</td>
+<td>Electrical shock protection and protective bonding</td>
+<td>Reduction of electromagnetic interference</td>
+</tr>
+<tr>
+<td>Carries normal operating current?</td>
+<td>Not intended to carry normal load current</td>
+<td>Not intended to be the normal signal or supply return</td>
+</tr>
+<tr>
+<td>Fault-current role</td>
+<td>Part of the protective fault-current path as designed</td>
+<td>Not a replacement for the protective-earth conductor</td>
+</tr>
+<tr>
+<td>Connection method</td>
+<td>According to electrical and safety requirements</td>
+<td>According to the equipment's EMC instructions</td>
+</tr>
+<tr>
+<td>Can one replace the other?</td>
+<td>No</td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<p>Both are important, but they serve different purposes.</p>
+<h2 id="8-cable-routing-and-physical-installation">8. Cable routing and physical installation</h2>
+<p>Encoder cables should be routed to limit electrical interference and mechanical damage.</p>
+<pre><code>Preferred arrangement
+
+[Servo Drive] ===== Motor power cable ===== [Servo Motor]
+      |
+      +--------- Encoder cable ------------ [Feedback connector]
+                   Separate route
+</code></pre>
+<p>The diagram shows separate routes conceptually. Actual separation distances and permitted cable arrangements must follow the equipment's installation instructions.</p>
+<p>Practical rules:</p>
+<ul>
+<li>Separate feedback cables from motor power cables and other high-interference wiring.</li>
+<li>Use designated cable ducts or partitions where appropriate.</li>
+<li>If signal and power cables must cross, crossing at approximately 90 degrees can reduce coupling.</li>
+<li>Avoid long parallel runs close to VFD output cables.</li>
+<li>Use twisted pairs for interfaces that specify them.</li>
+<li>Use flex-rated cables for robot axes and moving equipment.</li>
+<li>Observe the specified minimum bend radius.</li>
+<li>Provide strain relief at connectors and moving points.</li>
+<li>Protect cables from oil, coolant, sharp edges, welding spatter, heat, and abrasion.</li>
+<li>Avoid unapproved splices or substitutions.</li>
+<li>Use the specified connector shell and cable-entry arrangement.</li>
+</ul>
+<p>For a robotic line, a feedback cable may pass through dress packs, energy chains, or moving joints. Repeated flexing can cause intermittent conductor breaks that are difficult to detect with a stationary continuity test.</p>
+<h2 id="9-termination-and-receiver-compatibility">9. Termination and receiver compatibility</h2>
+<p>A signal may be correct at the encoder but corrupted by the time it reaches the receiver.</p>
+<p>Potential causes include:</p>
+<ul>
+<li>Wrong cable impedance or type.</li>
+<li>Incorrect termination.</li>
+<li>Excessive cable length.</li>
+<li>Excessive input capacitance.</li>
+<li>Receiver input not compatible with the encoder output.</li>
+<li>Loose or oxidized connectors.</li>
+<li>Damaged twisted pairs.</li>
+<li>Poor shield termination.</li>
+<li>Incorrect signal polarity.</li>
+</ul>
+<p>For high-speed differential links, termination is generally selected to match the specified cable and receiver design. A termination resistor should not be added or removed arbitrarily because it can alter signal amplitude, loading, and waveform quality.</p>
+<p>The manufacturer's wiring guide determines whether termination is required, where it belongs, and which value is appropriate.</p>
+<h2 id="10-tools-for-checking-encoder-wiring-and-signals">10. Tools for checking encoder wiring and signals</h2>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Suitable checks</th>
+<th>Limitations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Digital multimeter</td>
+<td>Supply voltage, polarity, continuity, resistance checks on isolated wiring</td>
+<td>Usually cannot reveal pulse quality or short-duration interference</td>
+</tr>
+<tr>
+<td>Oscilloscope</td>
+<td>Pulse amplitude, timing, noise, ringing, missing transitions</td>
+<td>Requires correct probes, grounding, bandwidth, and measurement setup</td>
+</tr>
+<tr>
+<td>Differential probe</td>
+<td>Differential waveform measurement</td>
+<td>Must be rated for the signal and electrical environment</td>
+</tr>
+<tr>
+<td>Encoder diagnostic software</td>
+<td>Drive-reported feedback status, errors, position, speed, and supported diagnostics</td>
+<td>Depends on drive capabilities and available parameters</td>
+</tr>
+<tr>
+<td>Suitable logic analyzer</td>
+<td>Digital timing and protocol inspection</td>
+<td>Input voltage limits and sampling rate must match the signal</td>
+</tr>
+<tr>
+<td>Cable tester</td>
+<td>Conductor continuity and wiring faults</td>
+<td>Does not prove correct high-speed signal integrity</td>
+</tr>
+</tbody>
+</table>
+<h3 id="101-important-measurement-precautions">10.1 Important measurement precautions</h3>
+<ul>
+<li>Confirm the signal type before connecting a measuring instrument.</li>
+<li>Use a differential probe or suitable differential measurement arrangement for differential signals.</li>
+<li>Do not connect an oscilloscope's grounded probe clip to an arbitrary differential output conductor.</li>
+<li>Do not connect a low-voltage logic analyzer directly to a 12 V or 24 V industrial signal unless a properly rated interface is used.</li>
+<li>Verify the instrument's voltage, common-mode, and bandwidth limits.</li>
+<li>Isolate power before continuity or resistance testing.</li>
+<li>Never short encoder outputs while probing.</li>
+</ul>
+<p>A multimeter reading alone cannot prove that an encoder produces clean pulses at operating speed.</p>
+<h2 id="11-checking-incremental-encoder-signals">11. Checking incremental encoder signals</h2>
+<p>A useful signal check examines electrical levels, timing, phase relationship, and behavior as speed changes.</p>
+<h3 id="step-1-check-supply">Step 1: Check supply</h3>
+<p>Verify supply voltage at the encoder connector under the relevant operating conditions.</p>
+<h3 id="step-2-inspect-the-physical-wiring">Step 2: Inspect the physical wiring</h3>
+<p>Check connector seating, pins, cable damage, strain relief, shield termination, and routing.</p>
+<h3 id="step-3-check-a-and-b">Step 3: Check A and B</h3>
+<p>Using suitable equipment, confirm that A and B transition cleanly and that their phase relationship is plausible for quadrature signals.</p>
+<p>For a differential output, inspect the differential signals using the correct measurement method.</p>
+<h3 id="step-4-check-z-if-fitted">Step 4: Check Z if fitted</h3>
+<p>Move the encoder through sufficient rotation to determine whether the index signal occurs as specified.</p>
+<h3 id="step-5-check-behavior-at-speed">Step 5: Check behavior at speed</h3>
+<p>Compare signal quality at low and higher speeds, within the permitted operating range. Missing transitions at higher speed may indicate an input-frequency limit, poor signal integrity, or a measurement setup problem.</p>
+<h3 id="step-6-compare-with-receiver-diagnostics">Step 6: Compare with receiver diagnostics</h3>
+<p>Check the drive or high-speed-counter diagnostic values against expected movement.</p>
+<p>If the encoder produces a specified number of pulses per revolution, the expected count can be estimated from the encoder resolution and the receiver's decoding method.</p>
+<h2 id="12-encoder-resolution-frequency-and-plc-input-limits">12. Encoder resolution, frequency, and PLC input limits</h2>
+<p>Encoder resolution is often specified in pulses per revolution (PPR) or cycles per revolution. The terminology varies, so check the datasheet carefully.</p>
+<p>For an incremental encoder with <span class="math-inline">\(N\)</span> cycles per revolution and shaft speed <span class="math-inline">\(R\)</span> RPM, the channel-cycle frequency is:</p>
+<div class="math-display">\[ f=\frac{N R}{60} \]</div>
+<p>For example, an encoder with 2,500 cycles per revolution operating at 3,000 RPM produces:</p>
+<div class="math-display">\[ f=\frac{2500\times3000}{60}=125{,}000\text{ Hz} \]</div>
+<p>That is 125 kHz per channel.</p>
+<p>A quadrature receiver using x4 decoding may count four edges per cycle, producing up to 500,000 counts per second in this example, assuming all four edges are decoded.</p>
+<p>Do not confuse cycles, pulses, edges, and counts. Encoder manufacturers and PLC modules may define PPR or resolution differently.</p>
+<p>The receiver must support the resulting signal frequency and count rate. Ordinary PLC digital inputs can miss high-speed transitions because their scan and input-filter behavior may not be suitable.</p>
+<p>Use a compatible high-speed counter (HSC), dedicated motion module, or supported drive interface when required.</p>
+<h2 id="13-encoder-signal-faults-and-symptoms">13. Encoder signal faults and symptoms</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible causes</th>
+<th>Checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Encoder not detected</td>
+<td>Missing supply, incorrect pinout, damaged cable, incompatible interface</td>
+<td>Check manual, supply, cable, connector and drive compatibility</td>
+</tr>
+<tr>
+<td>Position jumps</td>
+<td>Noise, intermittent conductor, loose connector, poor shield termination</td>
+<td>Inspect cable movement, shield, waveform and diagnostics</td>
+</tr>
+<tr>
+<td>Direction is reversed</td>
+<td>A/B phase convention, configuration, swapped pairs</td>
+<td>Verify wiring and positive-direction settings</td>
+</tr>
+<tr>
+<td>Position counts correctly at low speed but fails at high speed</td>
+<td>Receiver frequency limit, poor signal edges, excessive cable capacitance</td>
+<td>Check signal waveform, cable specification and receiver limits</td>
+</tr>
+<tr>
+<td>Feedback alarm when VFD starts</td>
+<td>EMC coupling, bonding issue, poor routing, supply disturbance</td>
+<td>Inspect cable routes, shield terminations, bonding and supply behavior</td>
+</tr>
+<tr>
+<td>Absolute position invalid after startup</td>
+<td>Communication error, incompatible protocol, power issue, configuration mismatch</td>
+<td>Check encoder-drive compatibility, supply, protocol and diagnostic codes</td>
+</tr>
+<tr>
+<td>Z index missing</td>
+<td>Incorrect wiring, faulty channel, wrong signal level, insufficient rotation during test</td>
+<td>Check the specified index output and test conditions</td>
+</tr>
+<tr>
+<td>Intermittent faults during robot movement</td>
+<td>Flex-cable damage, connector strain, intermittent shielding</td>
+<td>Inspect the dress pack, cable bend radius and connectors</td>
+</tr>
+<tr>
+<td>Drive reports excessive following error</td>
+<td>Corrupted feedback, mechanical binding, excessive demand, poor tuning</td>
+<td>Correlate feedback diagnostics with motor current and mechanical condition</td>
+</tr>
+<tr>
+<td>Signal amplitude is too low</td>
+<td>Supply problem, wrong receiver load, excessive cable losses, damaged output</td>
+<td>Verify electrical specification and measure correctly</td>
+</tr>
+<tr>
+<td>False counts at standstill</td>
+<td>Noise, floating input, incorrect termination, unsuitable input filter</td>
+<td>Check grounding, cable routing, receiver configuration and signal levels</td>
+</tr>
+</tbody>
+</table>
+<h2 id="14-practical-fault-finding-procedure">14. Practical fault-finding procedure</h2>
+<p>Use a consistent sequence rather than replacing the encoder immediately.</p>
+<ol>
+<li>Record the alarm. Capture the drive code, timestamp, machine condition, and whether the fault occurs at startup, at speed, or during movement.</li>
+<li>Identify the exact hardware. Record encoder model, drive model, cable part number, and interface type.</li>
+<li>Verify compatibility. Confirm supply voltage, output type or communication protocol, connector assignment, and receiver capability.</li>
+<li>Inspect the cable. Look for damage, contamination, loose connectors, excessive bending, and incorrect routing.</li>
+<li>Check the supply. Measure the specified supply at the appropriate connector under relevant conditions.</li>
+<li>Verify shielding and bonding. Compare the installation with the manufacturer's EMC instructions.</li>
+<li>Check signal quality. Use appropriate measurement equipment and compare results with the interface specification.</li>
+<li>Review configuration. Check encoder type, resolution, protocol, direction, scaling, and relevant drive parameters.</li>
+<li>Validate mechanically. Check coupling, backlash, shaft movement, and any load-related issue.</li>
+<li>Perform a controlled test. After restoring guards and required safety functions, validate the result at low speed before returning the machine to normal operation.</li>
+</ol>
+<p>A fault that disappears after resetting may still be present. Record the evidence before clearing alarms, or useful diagnostic information may be lost.</p>
+<h2 id="15-plc-and-servo-drive-integration">15. PLC and servo-drive integration</h2>
+<p>There are two common arrangements for using encoder feedback.</p>
+<h3 id="arrangement-a-encoder-connected-to-a-servo-drive">Arrangement A: Encoder connected to a servo drive</h3>
+<pre><code>Motion Controller
+       |
+       | Motion command
+       v
+   Servo Drive &lt;------ Encoder
+       |
+       | Motor power
+       v
+   Servo Motor
+</code></pre>
+<p>The drive uses the supported feedback interface to control the motor. This is common in industrial servo systems.</p>
+<h3 id="arrangement-b-encoder-connected-to-a-plc-high-speed-counter">Arrangement B: Encoder connected to a PLC high-speed counter</h3>
+<pre><code>Incremental Encoder
+       |
+       | A / B / Z
+       v
+PLC High-Speed Counter
+       |
+       v
+Position / Speed Logic
+</code></pre>
+<p>This is useful for measuring conveyor movement, counting parts, tracking positions, or performing supported position-based operations.</p>
+<p>Important considerations:</p>
+<ul>
+<li>Match the encoder output to the HSC input type.</li>
+<li>Check maximum input frequency and count rate.</li>
+<li>Confirm x1, x2, or x4 decoding behavior.</li>
+<li>Configure input filtering appropriately.</li>
+<li>Check A/B direction convention and Z handling.</li>
+<li>Verify voltage levels and common-reference requirements.</li>
+<li>Use a suitable differential receiver when needed.</li>
+</ul>
+<p>Do not arbitrarily connect one encoder output to multiple receivers in parallel. The electrical loading, termination, isolation, and manufacturer-supported connection arrangement must be verified.</p>
+<h2 id="16-safety-during-inspection-and-testing">16. Safety during inspection and testing</h2>
+<p>Encoder circuits may operate at low voltage, but the surrounding servo equipment can contain hazardous energy.</p>
+<ul>
+<li>Follow the machine's lockout/tagout and electrical safety procedure before inspecting or modifying wiring.</li>
+<li>Verify the absence of voltage where required.</li>
+<li>Observe the manufacturer's DC-bus discharge time before working on the servo drive.</li>
+<li>Secure vertical or gravity-loaded axes before disconnecting feedback, motor power, or brake wiring.</li>
+<li>Do not disconnect or reconnect feedback cables while energized unless the manufacturer explicitly permits it.</li>
+<li>Do not megger an encoder cable while the encoder or drive electronics remain connected. Disconnect sensitive equipment and follow the specified insulation-test procedure.</li>
+<li>Do not bypass encoder or drive faults to keep production running.</li>
+<li>After repair, restore covers, connectors, protective bonding, guards, and safety functions before controlled validation.</li>
+</ul>
+<h2 id="17-interview-questions-and-answers">17. Interview questions and answers</h2>
+<p>1. Why does an encoder need a compatible power supply?</p>
+<p>Its internal electronics and output circuitry are designed for a specified voltage range. Incorrect supply voltage or polarity can prevent operation or damage the encoder.</p>
+<p>2. What is the purpose of A and B signals?</p>
+<p>They provide quadrature pulse information. Their relative phase allows the receiver to determine direction and count movement.</p>
+<p>3. What is the purpose of the Z signal?</p>
+<p>It provides an index or reference event on encoders that support it. The exact pulse count and use depend on the encoder specification.</p>
+<p>4. What is the difference between single-ended and differential signals?</p>
+<p>Single-ended signals are interpreted relative to a reference. Differential receivers evaluate the difference between two signal conductors and can reject common-mode noise within their specified operating range.</p>
+<p>5. Why is A− not the same as 0 V?</p>
+<p>A− is the complementary signal conductor in a differential interface. It must be connected to the matching receiver input, not treated as the supply return.</p>
+<p>6. Why are encoder cables shielded?</p>
+<p>Shielding reduces the coupling of electromagnetic interference into the signal conductors when the cable and terminations are correctly designed.</p>
+<p>7. Should a cable shield always be grounded at one end?</p>
+<p>No. The correct shield arrangement depends on the equipment and EMC design. Many industrial servo systems specify low-impedance bonding at both ends or at defined EMC connection points.</p>
+<p>8. Why must encoder cables be separated from motor power cables?</p>
+<p>Motor switching currents can generate interference that corrupts feedback signals. Separation and correct routing reduce this coupling.</p>
+<p>9. Why might an encoder work at low speed but fail at high speed?</p>
+<p>The receiver may exceed its input-frequency limit, or the cable and signal interface may not preserve clean transitions at the higher frequency.</p>
+<p>10. Why can a multimeter fail to identify an encoder signal problem?</p>
+<p>A multimeter generally does not reveal pulse timing, short noise spikes, edge distortion, or missing transitions at high speed.</p>
+<p>11. What is the role of a high-speed counter?</p>
+<p>It counts rapid digital transitions using hardware designed for higher input frequencies than ordinary PLC scan-based inputs can reliably handle.</p>
+<p>12. Why must absolute encoder protocols be matched?</p>
+<p>Different protocols use different communication methods, timing, signaling, and data formats. Similar-looking cables do not make the protocols interchangeable.</p>
+<p>13. What is a common cause of intermittent encoder faults on a robot?</p>
+<p>Damaged conductors or shielding in moving cables, loose connectors, and poor strain relief are common possibilities.</p>
+<p>14. Can the cable shield replace protective earth?</p>
+<p>No. Protective earth serves an electrical safety function; the shield serves an EMC function.</p>
+<p>15. Why should an encoder cable not be megger-tested while connected to the electronics?</p>
+<p>An insulation tester can apply a voltage that damages sensitive encoder or drive circuits. Follow the manufacturer's isolation and test instructions.</p>
+<p>16. What should be checked after replacing an encoder cable?</p>
+<p>Verify the exact cable and pinout, output interface, supply, shield termination, connector seating, configuration, and signal behavior before controlled validation.</p>
+<h2 id="18-practical-exercises">18. Practical exercises</h2>
+<h3 id="exercise-1-feedback-fault-when-a-nearby-drive-starts">Exercise 1: Feedback fault when a nearby drive starts</h3>
+<p>A servo axis runs normally until a nearby VFD starts, after which the servo reports an encoder fault.</p>
+<p>Investigate:</p>
+<ul>
+<li>Whether the encoder and motor cables are routed together.</li>
+<li>Whether the specified shield clamps and bonding points are installed.</li>
+<li>Whether the encoder supply dips during switching.</li>
+<li>Whether the feedback waveform degrades at the time of the fault.</li>
+<li>Whether the problem follows a specific operating condition.</li>
+</ul>
+<p>Do not conclude that the encoder itself is defective until the electrical installation has been checked.</p>
+<h3 id="exercise-2-encoder-counts-fail-at-high-speed">Exercise 2: Encoder counts fail at high speed</h3>
+<p>An incremental encoder counts correctly at low speed but reports an incorrect position at high speed.</p>
+<p>Calculate the expected channel frequency and decoded count rate. Compare both against the encoder output specification and receiver input limits. Then inspect waveform quality, cable type, and input configuration.</p>
+<h3 id="exercise-3-absolute-encoder-fails-after-cable-replacement">Exercise 3: Absolute encoder fails after cable replacement</h3>
+<p>The motor reports an encoder communication alarm after a cable is replaced.</p>
+<p>Check the exact cable part number, connector pinout, communication pairs, supply and return, shielding, and protocol compatibility. Verify that the replacement cable is suitable for the particular feedback interface.</p>
+<h3 id="exercise-4-create-an-encoder-wiring-record">Exercise 4: Create an encoder wiring record</h3>
+<p>For one production machine, record:</p>
+<table>
+<thead>
+<tr>
+<th>Record field</th>
+<th>Information required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine and axis</td>
+<td>Machine identifier and axis name</td>
+</tr>
+<tr>
+<td>Encoder</td>
+<td>Manufacturer and exact model</td>
+</tr>
+<tr>
+<td>Supply</td>
+<td>Nominal voltage and permitted range</td>
+</tr>
+<tr>
+<td>Interface</td>
+<td>Incremental, absolute, or other supported type</td>
+</tr>
+<tr>
+<td>Output / protocol</td>
+<td>Differential, single-ended, SSI, BiSS-C, EnDat, or specified interface</td>
+</tr>
+<tr>
+<td>Resolution</td>
+<td>Manufacturer-defined resolution and units</td>
+</tr>
+<tr>
+<td>Cable</td>
+<td>Approved part number, length, and flex rating where applicable</td>
+</tr>
+<tr>
+<td>Receiver</td>
+<td>Drive, PLC HSC, or supported communication module</td>
+</tr>
+<tr>
+<td>Shielding</td>
+<td>Manufacturer-specified termination and bonding scheme</td>
+</tr>
+<tr>
+<td>Diagnostics</td>
+<td>Relevant drive alarms and signal checks</td>
+</tr>
+<tr>
+<td>Reference</td>
+<td>Exact manual or wiring diagram revision</td>
+</tr>
+</tbody>
+</table>
+<p>This record prevents a future replacement from becoming an exercise in connector archaeology.</p>
+<h2 id="19-final-mental-model">19. Final mental model</h2>
+<p>Encoder wiring depends on three fundamentals:</p>
+<ul>
+<li>Power: The supply voltage, polarity, and current capacity must match the encoder.</li>
+<li>Signals: The output interface, receiver, frequency capability, and communication protocol must be compatible.</li>
+<li>Installation: Cable routing, shielding, grounding, bonding, and mechanical protection must preserve signal integrity.</li>
+</ul>
+<p>When an encoder fault occurs, check the model-specific wiring, supply, cable, receiver, and signal quality before replacing parts. For high-speed or intermittent faults, use appropriate diagnostics and measurement tools rather than relying on continuity alone.</p>
+<p>Next topic: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\02_Auto_Tech\06_Servo_Motion\04_Positioning</code></p>
+<p>04_Positioning - Positioning</p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

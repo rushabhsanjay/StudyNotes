@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLC Fault: CPU Mode, Fault LEDs, and Memory</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">PLC Fault: CPU Mode, Fault LEDs, and Memory</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-understand-the-plc-cpus-role">2. Understand the PLC CPU's Role</a></li>
+<li><a href="#3-plc-operating-modes">3. PLC Operating Modes</a><ul>
+<li><a href="#31-why-a-plc-enters-stop">3.1 Why a PLC enters STOP</a></li>
+<li><a href="#32-run-mode-does-not-guarantee-correct-machine-operation">3.2 RUN mode does not guarantee correct machine operation</a></li>
+</ul>
+</li>
+<li><a href="#4-cpu-status-leds">4. CPU Status LEDs</a><ul>
+<li><a href="#41-steady-versus-flashing-indications">4.1 Steady versus flashing indications</a></li>
+</ul>
+</li>
+<li><a href="#5-diagnostic-buffer-and-fault-information">5. Diagnostic Buffer and Fault Information</a><ul>
+<li><a href="#51-why-diagnostic-history-matters">5.1 Why diagnostic history matters</a></li>
+<li><a href="#52-fault-warning-and-alarm-are-different">5.2 Fault, warning, and alarm are different</a></li>
+</ul>
+</li>
+<li><a href="#6-program-execution-and-scan-cycle-problems">6. Program Execution and Scan-Cycle Problems</a><ul>
+<li><a href="#61-scan-time">6.1 Scan time</a></li>
+<li><a href="#62-watchdog-timer">6.2 Watchdog timer</a></li>
+<li><a href="#63-watchdog-troubleshooting">6.3 Watchdog troubleshooting</a></li>
+</ul>
+</li>
+<li><a href="#7-plc-memory-fundamentals">7. PLC Memory Fundamentals</a><ul>
+<li><a href="#71-common-memory-categories">7.1 Common memory categories</a></li>
+<li><a href="#72-volatile-and-nonvolatile-memory">7.2 Volatile and nonvolatile memory</a></li>
+<li><a href="#73-retentive-versus-non-retentive-data">7.3 Retentive versus non-retentive data</a></li>
+</ul>
+</li>
+<li><a href="#8-memory-related-faults">8. Memory-Related Faults</a><ul>
+<li><a href="#81-symptoms-to-investigate">8.1 Symptoms to investigate</a></li>
+</ul>
+</li>
+<li><a href="#9-program-backup-and-integrity">9. Program Backup and Integrity</a><ul>
+<li><a href="#91-what-to-preserve">9.1 What to preserve</a></li>
+<li><a href="#92-source-project-versus-upload">9.2 Source project versus upload</a></li>
+<li><a href="#93-before-downloading-a-project">9.3 Before downloading a project</a></li>
+</ul>
+</li>
+<li><a href="#10-cpu-fault-troubleshooting-workflow">10. CPU Fault Troubleshooting Workflow</a><ul>
+<li><a href="#step-1-make-the-machine-safe">Step 1: Make the machine safe</a></li>
+<li><a href="#step-2-observe-without-disturbing-evidence">Step 2: Observe without disturbing evidence</a></li>
+<li><a href="#step-3-confirm-the-supply">Step 3: Confirm the supply</a></li>
+<li><a href="#step-4-read-the-diagnostics">Step 4: Read the diagnostics</a></li>
+<li><a href="#step-5-identify-the-fault-category">Step 5: Identify the fault category</a></li>
+<li><a href="#step-6-compare-with-recent-changes">Step 6: Compare with recent changes</a></li>
+<li><a href="#step-7-correct-the-verified-cause">Step 7: Correct the verified cause</a></li>
+<li><a href="#step-8-recover-according-to-the-fault-procedure">Step 8: Recover according to the fault procedure</a></li>
+<li><a href="#step-9-verify-operation">Step 9: Verify operation</a></li>
+<li><a href="#step-10-document-the-outcome">Step 10: Document the outcome</a></li>
+</ul>
+</li>
+<li><a href="#11-platform-specific-considerations">11. Platform-Specific Considerations</a></li>
+<li><a href="#12-practical-breakdown-example-plc-in-stop">12. Practical Breakdown Example: PLC in STOP</a></li>
+<li><a href="#13-practical-breakdown-example-retentive-data-lost">13. Practical Breakdown Example: Retentive Data Lost</a></li>
+<li><a href="#14-resetting-and-restarting-the-cpu">14. Resetting and Restarting the CPU</a></li>
+<li><a href="#15-common-troubleshooting-mistakes">15. Common Troubleshooting Mistakes</a></li>
+<li><a href="#16-cpu-fault-recording-template">16. CPU Fault Recording Template</a></li>
+<li><a href="#17-interview-questions-and-answers">17. Interview Questions and Answers</a><ul>
+<li><a href="#q1-what-is-the-function-of-a-plc-cpu">Q1. What is the function of a PLC CPU?</a></li>
+<li><a href="#q2-what-is-the-difference-between-run-and-stop">Q2. What is the difference between RUN and STOP?</a></li>
+<li><a href="#q3-why-should-the-diagnostic-buffer-be-checked-before-resetting-the-cpu">Q3. Why should the diagnostic buffer be checked before resetting the CPU?</a></li>
+<li><a href="#q4-what-is-a-watchdog-fault">Q4. What is a watchdog fault?</a></li>
+<li><a href="#q5-what-is-retentive-memory">Q5. What is retentive memory?</a></li>
+<li><a href="#q6-can-a-plc-be-in-run-and-still-have-a-machine-breakdown">Q6. Can a PLC be in RUN and still have a machine breakdown?</a></li>
+<li><a href="#q7-what-should-be-checked-before-downloading-a-plc-program">Q7. What should be checked before downloading a PLC program?</a></li>
+<li><a href="#q8-why-is-an-uploaded-plc-project-not-always-a-complete-backup">Q8. Why is an uploaded PLC project not always a complete backup?</a></li>
+<li><a href="#q9-what-is-the-correct-response-to-a-cpu-fault-led">Q9. What is the correct response to a CPU fault LED?</a></li>
+<li><a href="#q10-when-should-a-cpu-be-replaced">Q10. When should a CPU be replaced?</a></li>
+</ul>
+</li>
+<li><a href="#18-completion-criteria">18. Completion Criteria</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\19_Breakdown\02_PLC_Fault\02_CPU</code></p>
+<h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>The PLC Central Processing Unit (CPU) executes the control program, processes input data, updates outputs, manages communication, and monitors the controller's operating condition.</p>
+<p>When a PLC-related machine breakdown occurs, the CPU's operating mode, status indicators, diagnostic information, and memory condition provide important evidence about the fault.</p>
+<p>The objective is to determine whether the CPU is operating normally, has stopped executing the program, has entered a fault state, has lost required configuration or program data, or is experiencing a hardware or firmware problem.</p>
+<p>This topic covers:</p>
+<ul>
+<li>PLC operating modes and transitions.</li>
+<li>CPU status and fault LEDs.</li>
+<li>Diagnostic buffers and fault codes.</li>
+<li>Program execution and scan-cycle behavior.</li>
+<li>Memory types, retention, and program integrity.</li>
+<li>Watchdog and execution faults.</li>
+<li>Communication and configuration faults that appear to be CPU problems.</li>
+<li>Safe recovery, program backup, and post-repair verification.</li>
+</ul>
+<h2 id="2-understand-the-plc-cpus-role">2. Understand the PLC CPU's Role</h2>
+<p>A PLC CPU performs several major functions.</p>
+<ul>
+<li>Reads input states from local or remote I/O.</li>
+<li>Executes logic, function blocks, instructions, and sequence operations.</li>
+<li>Updates output commands according to the program and configured behavior.</li>
+<li>Handles communication with HMIs, drives, remote I/O, and other controllers.</li>
+<li>Monitors system diagnostics, execution timing, and certain hardware conditions.</li>
+<li>Maintains program, configuration, and data according to the controller's memory architecture.</li>
+</ul>
+<p>A simplified execution model is:</p>
+<pre><code>Power-Up and Startup Checks
+    ↓
+Load or Validate Required Configuration
+    ↓
+Initialize the Controller
+    ↓
+Read or Update Input Data
+    ↓
+Execute Control Program
+    ↓
+Update Output Data
+    ↓
+Perform System and Communication Tasks
+    ↓
+Repeat According to the Controller Architecture
+</code></pre>
+<p>This is a conceptual model. Some PLCs use cyclic scans, while others support scheduled tasks, event-driven execution, asynchronous communications, process-image updates, and other execution mechanisms.</p>
+<p>A CPU may be powered and communicating while its program is not executing normally. Therefore, power ON, communication established, and CPU running are three different conditions.</p>
+<h2 id="3-plc-operating-modes">3. PLC Operating Modes</h2>
+<p>Operating modes determine whether the controller executes its application program, permits modifications, or remains in a diagnostic or stopped condition.</p>
+<p>Exact mode names and behavior depend on the manufacturer, CPU model, firmware, and project configuration.</p>
+<table>
+<thead>
+<tr>
+<th>Mode or state</th>
+<th>General meaning</th>
+<th>Maintenance consideration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RUN</td>
+<td>The application executes according to the controller's configured execution model</td>
+<td>Confirm that the relevant tasks and program sections are executing without faults</td>
+</tr>
+<tr>
+<td>STOP</td>
+<td>Normal application execution is stopped</td>
+<td>Outputs may change state according to configuration and hardware behavior</td>
+</tr>
+<tr>
+<td>PROGRAM</td>
+<td>Common programming or editing state on some PLC platforms</td>
+<td>Do not assume outputs or sequences behave as they do in RUN</td>
+</tr>
+<tr>
+<td>REMOTE RUN</td>
+<td>Controller can operate in RUN through an engineering tool or authorized remote command</td>
+<td>Confirm mode ownership and authorization before making changes</td>
+</tr>
+<tr>
+<td>REMOTE STOP</td>
+<td>Controller has been commanded to stop through a supported interface</td>
+<td>Identify why it stopped and who or what issued the command</td>
+</tr>
+<tr>
+<td>STARTUP</td>
+<td>Controller is initializing after power-up or a restart</td>
+<td>Startup may be delayed by configuration, hardware, or program-related issues</td>
+</tr>
+<tr>
+<td>FAULT</td>
+<td>A detected condition prevents normal execution or affects controller operation</td>
+<td>Read diagnostics before attempting recovery</td>
+</tr>
+<tr>
+<td>MAINTENANCE or diagnostic state</td>
+<td>A manufacturer-specific state associated with service or recovery</td>
+<td>Follow the exact CPU documentation</td>
+</tr>
+</tbody>
+</table>
+<p>Some platforms do not use all these mode names. For example, Siemens commonly uses <code>RUN</code> and <code>STOP</code>, Rockwell Automation uses controller modes such as <code>Run</code> and <code>Program</code>, and Mitsubishi terminology depends on the PLC family and engineering environment.</p>
+<h3 id="31-why-a-plc-enters-stop">3.1 Why a PLC enters STOP</h3>
+<p>Possible reasons include:</p>
+<ul>
+<li>A serious program execution error.</li>
+<li>A configured startup or hardware diagnostic failure.</li>
+<li>A watchdog timeout.</li>
+<li>Invalid or incompatible configuration.</li>
+<li>A memory or program integrity problem.</li>
+<li>An explicit STOP command.</li>
+<li>A mode change initiated by an authorized programming device.</li>
+<li>A controller-specific fault requiring recovery.</li>
+</ul>
+<p>Do not assume every STOP condition is a hardware failure. A PLC may be healthy but stopped because of an engineering command, commissioning procedure, or configured operating policy.</p>
+<h3 id="32-run-mode-does-not-guarantee-correct-machine-operation">3.2 RUN mode does not guarantee correct machine operation</h3>
+<p>A PLC can remain in RUN while the machine malfunctions because of:</p>
+<ul>
+<li>Incorrect sequence conditions.</li>
+<li>Sensor faults.</li>
+<li>Missing field power.</li>
+<li>I/O module faults.</li>
+<li>Communication loss to a remote device.</li>
+<li>A drive or servo fault.</li>
+<li>Incorrect setpoints or configuration.</li>
+<li>A permissive or interlock that remains unsatisfied.</li>
+<li>A logic error that does not cause a CPU-level fault.</li>
+</ul>
+<p>If the CPU is in RUN, continue investigating the program, I/O, communications, field devices, and machine conditions instead of replacing the CPU without evidence.</p>
+<h2 id="4-cpu-status-leds">4. CPU Status LEDs</h2>
+<p>Status LEDs provide a fast initial indication of controller condition. They must be interpreted using the documentation for the exact hardware model.</p>
+<p>Common indicators include:</p>
+<table>
+<thead>
+<tr>
+<th>LED or indicator</th>
+<th>General purpose</th>
+<th>What to investigate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POWER or PWR</td>
+<td>Indicates a power-related condition</td>
+<td>Supply voltage, power module, backplane, or device-specific power status</td>
+</tr>
+<tr>
+<td>RUN</td>
+<td>Indicates execution or operating state</td>
+<td>Controller mode and whether the application is executing</td>
+</tr>
+<tr>
+<td>STOP or PROG</td>
+<td>Indicates a stopped or programming state on supported models</td>
+<td>Mode selection, engineering command, and diagnostic information</td>
+</tr>
+<tr>
+<td>ERROR or ERR</td>
+<td>Indicates a detected error on supported models</td>
+<td>Fault code, diagnostic buffer, configuration, or program error</td>
+</tr>
+<tr>
+<td>FAULT</td>
+<td>Indicates a controller fault on supported models</td>
+<td>Fault type, severity, and required recovery procedure</td>
+</tr>
+<tr>
+<td>SF or system fault</td>
+<td>Indicates a system-level diagnostic condition on certain platforms</td>
+<td>Hardware diagnostics, configuration, module status, and diagnostic buffer</td>
+</tr>
+<tr>
+<td>BF or bus fault</td>
+<td>Indicates a bus or communication-related condition on certain platforms</td>
+<td>Network topology, bus configuration, remote I/O, and device status</td>
+</tr>
+<tr>
+<td>MAINT or maintenance</td>
+<td>Indicates a maintenance-related condition on supported hardware</td>
+<td>Manufacturer-specific maintenance information</td>
+</tr>
+<tr>
+<td>LINK or ACT</td>
+<td>Indicates network link or traffic activity</td>
+<td>Physical network connection and communication diagnostics</td>
+</tr>
+</tbody>
+</table>
+<p>The names and meanings are not universal. A red LED on one device may indicate a specific fault, while another model may use the same color for a different condition.</p>
+<h3 id="41-steady-versus-flashing-indications">4.1 Steady versus flashing indications</h3>
+<p>A steady LED may indicate a persistent state or fault, while flashing may indicate startup, a warning, communication activity, or a particular fault code.</p>
+<p>The meaning depends on:</p>
+<ul>
+<li>LED name.</li>
+<li>Color.</li>
+<li>Steady or flashing state.</li>
+<li>Flashing pattern and frequency.</li>
+<li>CPU model.</li>
+<li>Firmware version.</li>
+<li>Other simultaneously active indicators.</li>
+</ul>
+<p>Record the exact indication before resetting the PLC. A restart may remove temporary evidence that would otherwise help identify the original fault.</p>
+<h2 id="5-diagnostic-buffer-and-fault-information">5. Diagnostic Buffer and Fault Information</h2>
+<p>The diagnostic buffer or controller log stores events and diagnostic information generated by the CPU and associated system components.</p>
+<p>Depending on the platform, it may contain:</p>
+<ul>
+<li>Startup and shutdown events.</li>
+<li>CPU mode changes.</li>
+<li>Module faults.</li>
+<li>Hardware configuration errors.</li>
+<li>Communication errors.</li>
+<li>Program execution faults.</li>
+<li>Watchdog events.</li>
+<li>Memory or integrity-related errors.</li>
+<li>Time-stamped diagnostic messages.</li>
+<li>Information about the affected instruction, task, or module.</li>
+</ul>
+<h3 id="51-why-diagnostic-history-matters">5.1 Why diagnostic history matters</h3>
+<p>Suppose a machine stops and the CPU is found in STOP. Restarting it immediately may restore production, but it can also erase or obscure important evidence.</p>
+<p>A better approach is to capture:</p>
+<ol>
+<li>The current CPU mode.</li>
+<li>All relevant LED states.</li>
+<li>The diagnostic buffer or fault log.</li>
+<li>The exact fault code and description.</li>
+<li>The time of the first fault.</li>
+<li>Any preceding warnings or events.</li>
+<li>The machine condition when the fault occurred.</li>
+<li>Recent program, hardware, or wiring changes.</li>
+</ol>
+<p>The first recorded event may be more important than the final alarm. For example, a remote I/O communication fault may appear before the sequence timeout that ultimately stops the machine.</p>
+<h3 id="52-fault-warning-and-alarm-are-different">5.2 Fault, warning, and alarm are different</h3>
+<ul>
+<li>Fault: A detected condition that may prevent normal operation or affect a component.</li>
+<li>Warning: A condition requiring attention that may not stop execution.</li>
+<li>Alarm: A message generated by a controller, HMI, drive, or supervisory system to communicate a condition.</li>
+</ul>
+<p>An HMI alarm does not automatically identify the underlying root cause. The message may describe the consequence of a different fault.</p>
+<h2 id="6-program-execution-and-scan-cycle-problems">6. Program Execution and Scan-Cycle Problems</h2>
+<p>Many PLCs repeatedly process inputs, execute application logic, and update outputs. However, task scheduling and I/O updates vary by platform.</p>
+<h3 id="61-scan-time">6.1 Scan time</h3>
+<p>Scan time is the time associated with a controller's execution cycle or a particular program task, depending on the platform.</p>
+<p>It can be affected by:</p>
+<ul>
+<li>Program size and complexity.</li>
+<li>Instruction execution time.</li>
+<li>Communication and system overhead.</li>
+<li>Interrupts and higher-priority tasks.</li>
+<li>Data processing and indirect addressing.</li>
+<li>Diagnostic operations.</li>
+<li>Task configuration.</li>
+<li>Controller loading.</li>
+</ul>
+<p>A longer scan time is not automatically a fault. The key is whether execution remains within the applicable timing requirements and whether deadlines or watchdog limits are exceeded.</p>
+<h3 id="62-watchdog-timer">6.2 Watchdog timer</h3>
+<p>A watchdog monitors whether the controller or a program task completes within a configured time limit.</p>
+<p>If execution exceeds the permitted time, the controller may generate a fault, stop a task, or take another configured action.</p>
+<p>Possible causes include:</p>
+<ul>
+<li>Unexpectedly long loops.</li>
+<li>Excessive program execution.</li>
+<li>Incorrect task configuration.</li>
+<li>Recursion or repetitive execution in systems that support it.</li>
+<li>Unexpected instruction behavior.</li>
+<li>High-priority task interference.</li>
+<li>A programming change that increases execution time.</li>
+</ul>
+<h3 id="63-watchdog-troubleshooting">6.3 Watchdog troubleshooting</h3>
+<ol>
+<li>Record the exact watchdog or task fault.</li>
+<li>Identify the affected task and execution context.</li>
+<li>Review recent logic changes.</li>
+<li>Examine scan-time or task-time diagnostics.</li>
+<li>Identify loops, repetitive processing, or computationally expensive routines.</li>
+<li>Compare execution time with the controller's documented limits.</li>
+<li>Correct the verified cause.</li>
+<li>Test the program under representative operating conditions.</li>
+</ol>
+<p>Do not simply increase the watchdog setting to suppress a fault. The configured limit may protect the process from unsafe or unacceptable control delays.</p>
+<h2 id="7-plc-memory-fundamentals">7. PLC Memory Fundamentals</h2>
+<p>PLC memory holds the application program, hardware configuration, working data, and other information required for controller operation.</p>
+<p>The actual architecture depends on the PLC family.</p>
+<h3 id="71-common-memory-categories">7.1 Common memory categories</h3>
+<table>
+<thead>
+<tr>
+<th>Memory type</th>
+<th>Typical contents</th>
+<th>Maintenance significance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Program memory</td>
+<td>Application logic, functions, and program organization</td>
+<td>Program corruption, missing code, or an incorrect download may affect operation</td>
+</tr>
+<tr>
+<td>Working memory</td>
+<td>Data used during program execution</td>
+<td>Volatile data may be lost when power is removed, depending on the platform</td>
+</tr>
+<tr>
+<td>Retentive memory</td>
+<td>Data configured to survive certain restarts or power losses</td>
+<td>Retention behavior must be confirmed from the controller configuration</td>
+</tr>
+<tr>
+<td>Nonvolatile memory</td>
+<td>Data stored so it can persist without continuous power</td>
+<td>May store programs, configuration, or selected data depending on the hardware</td>
+</tr>
+<tr>
+<td>Load memory</td>
+<td>Stored program and configuration data on supported platforms</td>
+<td>May be located on internal or removable storage</td>
+</tr>
+<tr>
+<td>Process image or I/O data</td>
+<td>Cached or organized representation of input and output states</td>
+<td>Stale or unexpected values may result from I/O updates, configuration, or communication issues</td>
+</tr>
+<tr>
+<td>Diagnostic memory</td>
+<td>Fault history and diagnostic information</td>
+<td>Valuable for troubleshooting and root-cause analysis</td>
+</tr>
+<tr>
+<td>Clock and system data</td>
+<td>Time, counters, status information, or system variables</td>
+<td>Incorrect settings may affect timestamps, scheduling, or program behavior</td>
+</tr>
+</tbody>
+</table>
+<p>These categories are conceptual and do not map one-to-one onto every manufacturer's physical memory architecture.</p>
+<h3 id="72-volatile-and-nonvolatile-memory">7.2 Volatile and nonvolatile memory</h3>
+<p>Volatile memory generally requires power to retain its contents unless the platform provides an additional retention mechanism.</p>
+<p>Nonvolatile memory retains stored data without continuous power, subject to the device's storage technology and specifications.</p>
+<p>A PLC may use a combination of internal memory, removable memory cards, battery-backed retention, capacitor-backed retention, or other mechanisms.</p>
+<p>Never assume that all PLC data is retained after power loss.</p>
+<h3 id="73-retentive-versus-non-retentive-data">7.3 Retentive versus non-retentive data</h3>
+<p>Retentive data may include selected counters, recipe values, accumulated production counts, or machine state variables, depending on the application.</p>
+<p>Non-retentive data may include temporary sequence flags, intermediate calculation values, or startup-initialized variables.</p>
+<p>The actual behavior depends on the program, controller, variable configuration, and restart type.</p>
+<p>Before replacing a CPU, downloading a program, or performing a memory reset, establish which data must be preserved.</p>
+<h2 id="8-memory-related-faults">8. Memory-Related Faults</h2>
+<p>Memory-related issues can cause startup errors, program integrity faults, missing configuration, or unexpected machine behavior.</p>
+<p>Potential causes include:</p>
+<ul>
+<li>Corrupted or invalid program data.</li>
+<li>Incompatible project or firmware version.</li>
+<li>Incomplete or incorrect download.</li>
+<li>Unsupported hardware configuration.</li>
+<li>Missing or defective memory card where required.</li>
+<li>Failed retention battery on hardware that uses one.</li>
+<li>Insufficient memory capacity.</li>
+<li>Invalid retentive-data configuration.</li>
+<li>Hardware deterioration.</li>
+<li>Incorrect program or configuration loaded during maintenance.</li>
+</ul>
+<h3 id="81-symptoms-to-investigate">8.1 Symptoms to investigate</h3>
+<ul>
+<li>CPU fails to complete startup.</li>
+<li>Program cannot be loaded or verified.</li>
+<li>Controller reports a memory or integrity error.</li>
+<li>A memory card is not recognized.</li>
+<li>Retentive values are unexpectedly lost.</li>
+<li>Controller configuration differs from the approved project.</li>
+<li>A recent download coincides with the first failure.</li>
+<li>The controller repeatedly enters a fault state.</li>
+</ul>
+<p>Do not immediately clear memory or reload a program. First capture the error and determine whether the original program and required data are available for recovery.</p>
+<h2 id="9-program-backup-and-integrity">9. Program Backup and Integrity</h2>
+<p>A reliable PLC backup is a core maintenance control, not an optional administrative task.</p>
+<p>A useful backup strategy should preserve the approved application, relevant configuration, and recovery information according to site policy.</p>
+<h3 id="91-what-to-preserve">9.1 What to preserve</h3>
+<ul>
+<li>Correct PLC project file.</li>
+<li>Hardware configuration.</li>
+<li>CPU and I/O configuration.</li>
+<li>Program blocks and supporting libraries.</li>
+<li>Relevant device configurations.</li>
+<li>Firmware and engineering-software compatibility information.</li>
+<li>Retentive-data handling requirements.</li>
+<li>Approved communication settings, stored securely.</li>
+<li>Version history and change records.</li>
+<li>Date and result of the last verified backup.</li>
+</ul>
+<p>Do not store passwords or other secrets in ordinary maintenance notes. Use approved credential-management procedures.</p>
+<h3 id="92-source-project-versus-upload">9.2 Source project versus upload</h3>
+<p>A project uploaded from a PLC is not always equivalent to the original engineering project.</p>
+<p>Depending on the platform and access rights, an upload may omit comments, symbolic information, source files, libraries, or other engineering metadata. Some controllers may not permit a complete source recovery from the running hardware.</p>
+<p>For this reason, preserve the approved engineering project and verify that it is usable for recovery.</p>
+<h3 id="93-before-downloading-a-project">9.3 Before downloading a project</h3>
+<ul>
+<li>Confirm the target PLC identity and model.</li>
+<li>Confirm the correct machine and project version.</li>
+<li>Check firmware and hardware compatibility.</li>
+<li>Preserve the current program and diagnostic evidence.</li>
+<li>Assess the machine's safe state and required downtime.</li>
+<li>Understand whether the download will stop execution or change outputs.</li>
+<li>Obtain the required authorization.</li>
+<li>Confirm the backup and rollback plan.</li>
+</ul>
+<p>A wrong download can create a second breakdown while attempting to repair the first one.</p>
+<h2 id="10-cpu-fault-troubleshooting-workflow">10. CPU Fault Troubleshooting Workflow</h2>
+<h3 id="step-1-make-the-machine-safe">Step 1: Make the machine safe</h3>
+<p>Determine whether the machine must be stopped or isolated. Follow the site's safety procedures, especially where unexpected movement or loss of control could create a hazard.</p>
+<h3 id="step-2-observe-without-disturbing-evidence">Step 2: Observe without disturbing evidence</h3>
+<p>Record the CPU mode, LEDs, alarms, and fault timestamps. Avoid a power cycle or reset before collecting the available diagnostics unless immediate action is required for safety.</p>
+<h3 id="step-3-confirm-the-supply">Step 3: Confirm the supply</h3>
+<p>Check the CPU's required supply and relevant power-module status. A CPU that appears faulty may simply be receiving an incorrect or unstable supply.</p>
+<h3 id="step-4-read-the-diagnostics">Step 4: Read the diagnostics</h3>
+<p>Use the supported engineering tool or controller interface to read fault codes, diagnostic buffers, task status, and module diagnostics.</p>
+<h3 id="step-5-identify-the-fault-category">Step 5: Identify the fault category</h3>
+<p>Determine whether the evidence points toward:</p>
+<ul>
+<li>Power or hardware.</li>
+<li>CPU operating mode.</li>
+<li>Program execution.</li>
+<li>Memory or configuration.</li>
+<li>I/O or backplane.</li>
+<li>Communication.</li>
+<li>External field equipment.</li>
+<li>An explicit operator or engineering command.</li>
+</ul>
+<h3 id="step-6-compare-with-recent-changes">Step 6: Compare with recent changes</h3>
+<p>Review program downloads, firmware changes, module replacement, wiring work, power interruptions, and configuration modifications.</p>
+<h3 id="step-7-correct-the-verified-cause">Step 7: Correct the verified cause</h3>
+<p>Apply the approved corrective action. Avoid changing multiple unrelated variables at once because this makes the actual cause difficult to establish.</p>
+<h3 id="step-8-recover-according-to-the-fault-procedure">Step 8: Recover according to the fault procedure</h3>
+<p>Use the manufacturer's recovery procedure for the exact CPU and fault. Acknowledging a fault, resetting a controller, changing mode, and cycling power are different actions with different consequences.</p>
+<h3 id="step-9-verify-operation">Step 9: Verify operation</h3>
+<p>Confirm the controller mode, diagnostic state, I/O operation, communications, sequence behavior, and required machine interlocks.</p>
+<h3 id="step-10-document-the-outcome">Step 10: Document the outcome</h3>
+<p>Record the original fault, evidence, root cause, corrective action, program or configuration changes, and verification results.</p>
+<h2 id="11-platform-specific-considerations">11. Platform-Specific Considerations</h2>
+<p>Different PLC families provide different operating modes, LED patterns, memory arrangements, and diagnostic tools.</p>
+<table>
+<thead>
+<tr>
+<th>PLC platform</th>
+<th>Engineering environment</th>
+<th>Areas to investigate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Siemens S7-1500</td>
+<td>TIA Portal</td>
+<td>CPU diagnostics, diagnostic buffer, operating mode, module status, startup behavior, and project compatibility</td>
+</tr>
+<tr>
+<td>Siemens S7-1200</td>
+<td>TIA Portal</td>
+<td>CPU status, diagnostic information, program and hardware configuration, and supported memory-card behavior</td>
+</tr>
+<tr>
+<td>Rockwell CompactLogix</td>
+<td>Studio 5000 Logix Designer</td>
+<td>Controller mode, major and minor faults, controller properties, task diagnostics, and project compatibility</td>
+</tr>
+<tr>
+<td>Rockwell ControlLogix</td>
+<td>Studio 5000 Logix Designer</td>
+<td>Controller fault information, chassis and module status, task execution, and redundancy-related conditions where applicable</td>
+</tr>
+<tr>
+<td>Mitsubishi FX family</td>
+<td>GX Works2 or GX Works3, depending on model</td>
+<td>CPU status, error codes, program execution, memory configuration, and supported diagnostic functions</td>
+</tr>
+<tr>
+<td>Mitsubishi iQ-R</td>
+<td>GX Works3</td>
+<td>CPU diagnostics, module diagnostics, program execution, system configuration, and fault history</td>
+</tr>
+</tbody>
+</table>
+<p>Exact functions and procedures depend on the model, firmware, software version, and installed modules. Do not apply an LED interpretation or recovery sequence from a different CPU merely because it belongs to the same manufacturer.</p>
+<h2 id="12-practical-breakdown-example-plc-in-stop">12. Practical Breakdown Example: PLC in STOP</h2>
+<p>Machine condition: An automated assembly station stops, and the HMI displays a sequence fault.</p>
+<p>Initial observations:</p>
+<ul>
+<li>PLC CPU is powered.</li>
+<li>CPU is in STOP.</li>
+<li>A system error indicator is active.</li>
+<li>Several downstream outputs are inactive.</li>
+<li>The HMI records a sequence timeout.</li>
+</ul>
+<p>Incorrect response: Immediately switch the PLC to RUN and assume the problem is solved if the machine restarts.</p>
+<p>Correct investigation:</p>
+<ol>
+<li>Record the CPU model, mode, and LED indications.</li>
+<li>Capture the diagnostic buffer and exact fault description.</li>
+<li>Check whether a recent download or hardware change occurred.</li>
+<li>Determine whether the first fault is a CPU execution fault, configuration fault, module fault, or another condition.</li>
+<li>Follow the documented diagnostic procedure for that fault.</li>
+<li>Correct the verified cause.</li>
+<li>Return the CPU to service only through the authorized procedure.</li>
+<li>Verify the required inputs, outputs, interlocks, communications, and machine sequence.</li>
+<li>Record the root cause and the verification evidence.</li>
+</ol>
+<p>Possible conclusion: If diagnostics identify an unsupported or inconsistent hardware configuration following a module replacement, the issue may be configuration-related rather than a defective CPU. The appropriate correction is to restore a compatible, approved configuration and verify the system.</p>
+<p>The actual cause must come from the recorded diagnostic evidence, not from the symptom alone.</p>
+<h2 id="13-practical-breakdown-example-retentive-data-lost">13. Practical Breakdown Example: Retentive Data Lost</h2>
+<p>Machine condition: After a power interruption, a production counter or machine state value returns to an unexpected value.</p>
+<p>Possible causes:</p>
+<ul>
+<li>The variable was configured as non-retentive.</li>
+<li>The restart behavior initializes the value.</li>
+<li>The program contains startup logic that resets it.</li>
+<li>Retention hardware or settings have failed.</li>
+<li>The wrong program or configuration was loaded.</li>
+<li>The application stores the value externally and the external data was unavailable.</li>
+</ul>
+<p>Diagnostic procedure:</p>
+<ol>
+<li>Identify the affected variable and its intended behavior.</li>
+<li>Review the program and variable retention settings.</li>
+<li>Check the controller's documented behavior for the type of restart that occurred.</li>
+<li>Inspect relevant startup logic and initialization routines.</li>
+<li>Review diagnostic history and recent changes.</li>
+<li>Verify whether an approved external record or backup contains the required value.</li>
+<li>Correct the configuration or logic through the approved change process.</li>
+<li>Test power-loss and restart behavior under a controlled, authorized procedure.</li>
+</ol>
+<p>Do not change a production counter or sequence-state value manually without understanding the machine's process requirements. An apparently harmless data correction can create a tracking or sequence-integrity problem.</p>
+<h2 id="14-resetting-and-restarting-the-cpu">14. Resetting and Restarting the CPU</h2>
+<p>A reset is not a universal fix. PLC platforms provide different reset types, including fault acknowledgement, controller restart, memory reset, and restoration procedures.</p>
+<p>Before taking action, determine:</p>
+<ul>
+<li>Whether the machine is in a safe state.</li>
+<li>Whether the diagnostic evidence has been captured.</li>
+<li>Whether the program and configuration are backed up.</li>
+<li>Whether the fault requires acknowledgement or a more substantial recovery.</li>
+<li>Whether retentive data could be affected.</li>
+<li>Whether outputs or motion devices may behave differently after restart.</li>
+<li>Whether authorization is required.</li>
+<li>Whether a formal restart checklist applies.</li>
+</ul>
+<p>Never perform a memory reset simply to clear an error. Depending on the PLC, this may erase program or configuration data and make the machine more difficult to recover.</p>
+<p>After a reset or restart, verify the controller's state and machine behavior rather than treating a cleared LED as proof of a successful repair.</p>
+<h2 id="15-common-troubleshooting-mistakes">15. Common Troubleshooting Mistakes</h2>
+<ul>
+<li>Treating every STOP state as a failed CPU.</li>
+<li>Ignoring the exact fault code and diagnostic history.</li>
+<li>Assuming RUN means every program task is operating correctly.</li>
+<li>Restarting before recording the original fault.</li>
+<li>Confusing an HMI sequence timeout with the root cause.</li>
+<li>Reloading a program without confirming the target PLC and project version.</li>
+<li>Assuming an uploaded program is a complete engineering backup.</li>
+<li>Ignoring the distinction between retentive and non-retentive variables.</li>
+<li>Performing a memory reset without understanding its consequences.</li>
+<li>Increasing a watchdog limit without investigating excessive execution time.</li>
+<li>Changing multiple program and hardware parameters simultaneously.</li>
+<li>Returning the machine to production without testing affected interlocks and sequences.</li>
+<li>Replacing the CPU without verifying supply, backplane, configuration, and module conditions.</li>
+</ul>
+<h2 id="16-cpu-fault-recording-template">16. CPU Fault Recording Template</h2>
+<pre><code>Machine / Station:
+PLC Manufacturer and Model:
+CPU Part Number:
+Firmware Version:
+Engineering Software and Version:
+
+Date and Time:
+Machine Operating Condition:
+CPU Mode:
+POWER LED:
+RUN / STOP / PROG LED:
+ERROR / FAULT LED:
+Other Relevant LED States:
+
+HMI Alarm:
+Exact CPU Fault Code:
+Diagnostic Buffer Entries:
+First Recorded Fault:
+Recent Program / Hardware / Firmware Changes:
+
+Supply Condition:
+Module and Backplane Status:
+Program Execution / Task Status:
+Memory or Configuration Status:
+Communication Status:
+
+Verified Root Cause:
+Corrective Action:
+Program or Configuration Changes:
+Backup / Version Reference:
+Recovery Procedure Used:
+
+Post-Repair CPU Mode:
+Diagnostic Status:
+I/O Verification:
+Communication Verification:
+Sequence / Interlock Verification:
+Machine Restart Result:
+
+Downtime:
+Follow-up Action:
+Maintenance Record Reference:
+</code></pre>
+<h2 id="17-interview-questions-and-answers">17. Interview Questions and Answers</h2>
+<h3 id="q1-what-is-the-function-of-a-plc-cpu">Q1. What is the function of a PLC CPU?</h3>
+<p>It executes the control application, processes I/O data, manages supported communication functions, and monitors controller operation and diagnostics.</p>
+<h3 id="q2-what-is-the-difference-between-run-and-stop">Q2. What is the difference between RUN and STOP?</h3>
+<p>RUN indicates that the controller is in its running mode and executes the application according to its architecture. STOP indicates that normal application execution is stopped. The precise behavior depends on the PLC platform.</p>
+<h3 id="q3-why-should-the-diagnostic-buffer-be-checked-before-resetting-the-cpu">Q3. Why should the diagnostic buffer be checked before resetting the CPU?</h3>
+<p>It preserves information about the fault, its timing, and potentially preceding events. Resetting first may remove or obscure evidence needed to identify the root cause.</p>
+<h3 id="q4-what-is-a-watchdog-fault">Q4. What is a watchdog fault?</h3>
+<p>It is a fault associated with execution exceeding a configured time limit or failing to meet a monitored timing requirement. Causes may include excessive execution time, task configuration, or program logic problems.</p>
+<h3 id="q5-what-is-retentive-memory">Q5. What is retentive memory?</h3>
+<p>It is memory or data configured to retain its contents across specified operating events, such as certain power losses or restarts. Retention behavior depends on the PLC hardware and configuration.</p>
+<h3 id="q6-can-a-plc-be-in-run-and-still-have-a-machine-breakdown">Q6. Can a PLC be in RUN and still have a machine breakdown?</h3>
+<p>Yes. The cause may be incorrect logic, unsatisfied interlocks, missing I/O signals, remote I/O communication loss, field power failure, or a drive or actuator fault.</p>
+<h3 id="q7-what-should-be-checked-before-downloading-a-plc-program">Q7. What should be checked before downloading a PLC program?</h3>
+<p>Confirm the target controller, project version, hardware configuration, firmware compatibility, backup, machine-safe condition, authorization, and recovery plan.</p>
+<h3 id="q8-why-is-an-uploaded-plc-project-not-always-a-complete-backup">Q8. Why is an uploaded PLC project not always a complete backup?</h3>
+<p>The upload may not contain the original source files, comments, symbolic information, libraries, or engineering metadata needed to reproduce the approved project fully.</p>
+<h3 id="q9-what-is-the-correct-response-to-a-cpu-fault-led">Q9. What is the correct response to a CPU fault LED?</h3>
+<p>Record the exact indication, obtain the diagnostic information for the specific CPU model, identify the fault category, correct the verified cause, and follow the approved recovery procedure.</p>
+<h3 id="q10-when-should-a-cpu-be-replaced">Q10. When should a CPU be replaced?</h3>
+<p>When diagnostic evidence and approved testing establish a hardware failure or an unrecoverable condition attributable to the CPU, after ruling out relevant supply, configuration, firmware, backplane, and connected-module problems.</p>
+<h2 id="18-completion-criteria">18. Completion Criteria</h2>
+<ul>
+<li>Explain the purpose of the PLC CPU.</li>
+<li>Distinguish RUN, STOP, startup, and fault states.</li>
+<li>Interpret CPU LEDs using the correct hardware documentation.</li>
+<li>Read and preserve diagnostic-buffer information.</li>
+<li>Explain scan time and watchdog behavior.</li>
+<li>Distinguish program memory, working memory, retentive data, and nonvolatile storage.</li>
+<li>Explain why a PLC may stop after a configuration or program fault.</li>
+<li>Understand the risks of reset, restart, and program download.</li>
+<li>Verify backups and project compatibility before recovery.</li>
+<li>Diagnose a CPU fault systematically instead of replacing parts by guesswork.</li>
+<li>Verify I/O, communications, interlocks, and machine operation after recovery.</li>
+<li>Record the original fault, verified root cause, corrective action, and test results.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\19_Breakdown\02_PLC_Fault\03_IO - I/O: Modules, wiring, sensors</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MTTR - Mean Time To Repair</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">MTTR - Mean Time To Repair</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-mttr-formula">2. MTTR Formula</a><ul>
+<li><a href="#example-1-electrical-breakdowns">Example 1: Electrical breakdowns</a></li>
+<li><a href="#example-2-plc-power-supply-failures">Example 2: PLC power-supply failures</a></li>
+</ul>
+</li>
+<li><a href="#3-define-the-mttr-measurement-boundary">3. Define the MTTR Measurement Boundary</a></li>
+<li><a href="#4-active-repair-time-versus-total-downtime">4. Active Repair Time Versus Total Downtime</a></li>
+<li><a href="#5-what-should-be-included-in-repair-time">5. What Should Be Included in Repair Time?</a></li>
+<li><a href="#6-calculating-mttr-from-multiple-breakdown-events">6. Calculating MTTR From Multiple Breakdown Events</a></li>
+<li><a href="#7-mttr-for-different-industrial-assets">7. MTTR for Different Industrial Assets</a><ul>
+<li><a href="#plc-and-remote-io">PLC and remote I/O</a></li>
+<li><a href="#vfd-and-motor-control">VFD and motor control</a></li>
+<li><a href="#cnc-machine">CNC machine</a></li>
+<li><a href="#industrial-robot">Industrial robot</a></li>
+</ul>
+</li>
+<li><a href="#8-mttr-and-mtbf-relationship">8. MTTR and MTBF Relationship</a><ul>
+<li><a href="#example">Example</a></li>
+</ul>
+</li>
+<li><a href="#9-mttr-and-availability">9. MTTR and Availability</a><ul>
+<li><a href="#example_1">Example</a></li>
+</ul>
+</li>
+<li><a href="#10-mttr-and-maintenance-performance">10. MTTR and Maintenance Performance</a></li>
+<li><a href="#11-data-collection-for-mttr">11. Data Collection for MTTR</a></li>
+<li><a href="#12-mttr-from-sap-maintenance-records">12. MTTR From SAP Maintenance Records</a></li>
+<li><a href="#13-mttr-calculation-in-excel">13. MTTR Calculation in Excel</a><ul>
+<li><a href="#handling-missing-data">Handling missing data</a></li>
+</ul>
+</li>
+<li><a href="#14-mttr-in-power-bi">14. MTTR in Power BI</a><ul>
+<li><a href="#example-dax-measures">Example DAX measures</a></li>
+</ul>
+</li>
+<li><a href="#15-average-versus-median-repair-time">15. Average Versus Median Repair Time</a></li>
+<li><a href="#16-reducing-mttr-through-engineering">16. Reducing MTTR Through Engineering</a><ul>
+<li><a href="#improve-fault-diagnosis">Improve fault diagnosis</a></li>
+<li><a href="#improve-spare-parts-readiness">Improve spare-parts readiness</a></li>
+<li><a href="#improve-repair-execution">Improve repair execution</a></li>
+<li><a href="#improve-system-design">Improve system design</a></li>
+</ul>
+</li>
+<li><a href="#17-common-mttr-reporting-errors">17. Common MTTR Reporting Errors</a></li>
+<li><a href="#18-practical-mttr-report-template">18. Practical MTTR Report Template</a></li>
+<li><a href="#19-mttr-interview-questions-and-answers">19. MTTR Interview Questions and Answers</a><ul>
+<li><a href="#what-is-mttr">What is MTTR?</a></li>
+<li><a href="#what-is-the-difference-between-mttr-and-downtime">What is the difference between MTTR and downtime?</a></li>
+<li><a href="#can-mttr-be-reduced-without-improving-reliability">Can MTTR be reduced without improving reliability?</a></li>
+<li><a href="#does-a-lower-mttr-always-mean-better-maintenance">Does a lower MTTR always mean better maintenance?</a></li>
+<li><a href="#why-can-active-repair-mttr-be-low-while-production-downtime-is-high">Why can active repair MTTR be low while production downtime is high?</a></li>
+<li><a href="#why-should-mttr-be-reported-by-failure-category">Why should MTTR be reported by failure category?</a></li>
+<li><a href="#how-does-mttr-affect-availability">How does MTTR affect availability?</a></li>
+<li><a href="#what-is-the-best-way-to-reduce-mttr-for-a-plc-or-cnc-breakdown">What is the best way to reduce MTTR for a PLC or CNC breakdown?</a></li>
+</ul>
+</li>
+<li><a href="#20-practical-checklist">20. Practical Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>MTTR (Mean Time To Repair) is a maintenance performance metric that measures the average time required to repair a failed asset and restore it to the required working condition, according to a defined measurement scope.</p>
+<p>In industrial maintenance, MTTR helps answer a practical question: when equipment fails, how long does it take to get it working again?</p>
+<p>It is used for:</p>
+<ul>
+<li>PLC, CNC, HMI, VFD, and servo-system breakdowns.</li>
+<li>Robot controller and industrial network failures.</li>
+<li>Electrical panel, sensor, actuator, and power-supply failures.</li>
+<li>Production-machine and test-bench breakdowns.</li>
+<li>Maintenance-team performance analysis.</li>
+<li>Spare-parts, vendor-support, and repair-process improvement.</li>
+</ul>
+<p>Important: MTTR has multiple interpretations in industry. Some organizations use it strictly for active repair time, while others use it for the full restoration interval. Always define which one is being measured before comparing results.</p>
+<h2 id="2-mttr-formula">2. MTTR Formula</h2>
+<p>For active repair time:</p>
+<div class="math-display">\[ MTTR=\frac{\text{Total Active Repair Time}}{\text{Number of Completed Repairs}} \]</div>
+<p>Where:</p>
+<ul>
+<li>Total Active Repair Time: Time actually spent diagnosing, repairing, replacing, adjusting, and verifying the failed item, according to the organization's rules.</li>
+<li>Number of Completed Repairs: Number of distinct repair events included in the calculation.</li>
+<li>MTTR: Average repair duration, normally expressed in minutes or hours.</li>
+</ul>
+<h3 id="example-1-electrical-breakdowns">Example 1: Electrical breakdowns</h3>
+<p>A maintenance technician completes three repairs with active repair durations of 1 hour, 2 hours, and 3 hours.</p>
+<div class="math-display">\[ MTTR=\frac{1+2+3}{3}=2\text{ hours} \]</div>
+<p>The average active repair time is 2 hours per repair.</p>
+<h3 id="example-2-plc-power-supply-failures">Example 2: PLC power-supply failures</h3>
+<p>A PLC power-supply failure takes 45 minutes to diagnose and replace, while another takes 75 minutes.</p>
+<div class="math-display">\[ MTTR=\frac{45+75}{2}=60\text{ minutes} \]</div>
+<p>The observed MTTR is 60 minutes.</p>
+<p>This does not mean every future repair will take exactly one hour. One repair may take 15 minutes, while another may require several hours.</p>
+<h2 id="3-define-the-mttr-measurement-boundary">3. Define the MTTR Measurement Boundary</h2>
+<p>Before collecting data, decide exactly when the repair clock starts and stops.</p>
+<p>A common active-repair definition is:</p>
+<ul>
+<li>Start: Maintenance begins troubleshooting or repair activity.</li>
+<li>Stop: The repair and required functional verification are complete.</li>
+</ul>
+<p>Some systems instead measure the full time from failure occurrence until equipment restoration. This broader measure includes delays and waiting time.</p>
+<p>These two metrics should not be mixed under one label without documenting the difference.</p>
+<table>
+<thead>
+<tr>
+<th>Metric definition</th>
+<th>Included time</th>
+<th>Main purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Active repair MTTR</td>
+<td>Diagnosis, repair, replacement, adjustment, and specified verification</td>
+<td>Improve troubleshooting and repair execution</td>
+</tr>
+<tr>
+<td>Restoration time</td>
+<td>Defined interval from failure detection or response start until function is restored</td>
+<td>Measure the full recovery process</td>
+</tr>
+<tr>
+<td>Mean down time (MDT)</td>
+<td>Defined unavailable interval, potentially including repair and delays</td>
+<td>Understand overall equipment unavailability</td>
+</tr>
+<tr>
+<td>Response time</td>
+<td>Time from failure notification to maintenance response</td>
+<td>Measure response performance</td>
+</tr>
+<tr>
+<td>Waiting time</td>
+<td>Time awaiting parts, vendor, authorization, access, or resources</td>
+<td>Identify process delays</td>
+</tr>
+</tbody>
+</table>
+<p>Terminology differs between organizations and standards. A maintenance dashboard should state the exact start and stop events rather than relying on the abbreviation alone.</p>
+<h2 id="4-active-repair-time-versus-total-downtime">4. Active Repair Time Versus Total Downtime</h2>
+<p>Consider a VFD breakdown on a production machine.</p>
+<table>
+<thead>
+<tr>
+<th>Activity</th>
+<th>Duration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Failure detection and notification</td>
+<td>10 minutes</td>
+</tr>
+<tr>
+<td>Waiting for technician</td>
+<td>25 minutes</td>
+</tr>
+<tr>
+<td>Diagnosis</td>
+<td>20 minutes</td>
+</tr>
+<tr>
+<td>Waiting for spare VFD</td>
+<td>90 minutes</td>
+</tr>
+<tr>
+<td>Replacement and wiring</td>
+<td>35 minutes</td>
+</tr>
+<tr>
+<td>Parameter restoration</td>
+<td>15 minutes</td>
+</tr>
+<tr>
+<td>Functional verification</td>
+<td>15 minutes</td>
+</tr>
+<tr>
+<td>Total elapsed time from notification to restoration</td>
+<td>210 minutes</td>
+</tr>
+</tbody>
+</table>
+<p>If the active repair scope includes diagnosis, replacement, parameter restoration, and functional verification:</p>
+<div class="math-display">\[ MTTR\_{\text{active}}=20+35+15+15 \]</div>
+<div class="math-display">\[ MTTR\_{\text{active}}=85\text{ minutes} \]</div>
+<p>The elapsed restoration interval from notification to restoration is 210 minutes.</p>
+<p>The difference is significant. The technician may perform the repair efficiently while production remains stopped for hours because a spare part is unavailable.</p>
+<p>Both measures are useful, but they answer different questions.</p>
+<h2 id="5-what-should-be-included-in-repair-time">5. What Should Be Included in Repair Time?</h2>
+<p>The inclusion rules should be documented and applied consistently.</p>
+<table>
+<thead>
+<tr>
+<th>Activity</th>
+<th>Active repair MTTR</th>
+<th>Full restoration interval</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fault diagnosis</td>
+<td>Include</td>
+<td>Include</td>
+</tr>
+<tr>
+<td>Component replacement</td>
+<td>Include</td>
+<td>Include</td>
+</tr>
+<tr>
+<td>Parameter restoration</td>
+<td>Include</td>
+<td>Include</td>
+</tr>
+<tr>
+<td>Wiring and connection repair</td>
+<td>Include</td>
+<td>Include</td>
+</tr>
+<tr>
+<td>Required functional testing</td>
+<td>Include if within scope</td>
+<td>Include</td>
+</tr>
+<tr>
+<td>Waiting for spare parts</td>
+<td>Usually exclude from active repair time</td>
+<td>Include</td>
+</tr>
+<tr>
+<td>Waiting for vendor support</td>
+<td>Usually exclude from active repair time</td>
+<td>Include</td>
+</tr>
+<tr>
+<td>Waiting for production authorization</td>
+<td>Usually exclude from active repair time</td>
+<td>Include</td>
+</tr>
+<tr>
+<td>Technician travel or response delay</td>
+<td>Usually exclude from active repair time</td>
+<td>Include if within the defined interval</td>
+</tr>
+<tr>
+<td>Planned maintenance outside the failure event</td>
+<td>Exclude</td>
+<td>Exclude from the failure restoration interval</td>
+</tr>
+</tbody>
+</table>
+<p>The phrase "usually exclude" matters because an organization may choose a different formal definition. Consistency and transparency are more important than pretending every factory uses the same stopwatch rules.</p>
+<h2 id="6-calculating-mttr-from-multiple-breakdown-events">6. Calculating MTTR From Multiple Breakdown Events</h2>
+<p>Suppose a maintenance team records the following repairs for one machine during a month.</p>
+<table>
+<thead>
+<tr>
+<th>Breakdown ID</th>
+<th>Active repair duration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BR-001</td>
+<td>30 minutes</td>
+</tr>
+<tr>
+<td>BR-002</td>
+<td>90 minutes</td>
+</tr>
+<tr>
+<td>BR-003</td>
+<td>60 minutes</td>
+</tr>
+<tr>
+<td>BR-004</td>
+<td>120 minutes</td>
+</tr>
+<tr>
+<td>Total</td>
+<td>300 minutes</td>
+</tr>
+</tbody>
+</table>
+<div class="math-display">\[ MTTR=\frac{300}{4}=75\text{ minutes} \]</div>
+<p>The average active repair time is 75 minutes per completed repair.</p>
+<p>The calculation should use distinct repair events. Multiple work orders, notifications, or alarm messages associated with one breakdown must not automatically be counted as separate repairs.</p>
+<h2 id="7-mttr-for-different-industrial-assets">7. MTTR for Different Industrial Assets</h2>
+<h3 id="plc-and-remote-io">PLC and remote I/O</h3>
+<p>MTTR may include:</p>
+<ul>
+<li>Reading controller and module diagnostics.</li>
+<li>Checking 24 VDC supply and protective devices.</li>
+<li>Inspecting network links and communication status.</li>
+<li>Checking module configuration and firmware compatibility.</li>
+<li>Replacing a failed module.</li>
+<li>Restoring configuration where required.</li>
+<li>Verifying communication and machine sequence.</li>
+</ul>
+<p>A replacement that restores communication in five minutes may still require a longer diagnostic process when the fault is intermittent.</p>
+<h3 id="vfd-and-motor-control">VFD and motor control</h3>
+<p>MTTR may include:</p>
+<ul>
+<li>Reading the trip code and event history.</li>
+<li>Checking input supply and DC bus conditions.</li>
+<li>Inspecting motor wiring and grounding.</li>
+<li>Checking overload, temperature, and cooling conditions.</li>
+<li>Replacing or repairing the drive.</li>
+<li>Restoring validated parameters.</li>
+<li>Running the motor under the required test conditions.</li>
+</ul>
+<p>Do not bypass protective functions just to reduce MTTR. A fast unsafe restart is not successful maintenance.</p>
+<h3 id="cnc-machine">CNC machine</h3>
+<p>MTTR may include:</p>
+<ul>
+<li>Reading the CNC alarm and diagnostic information.</li>
+<li>Identifying the affected axis, spindle, tool changer, or peripheral.</li>
+<li>Checking servo drive, feedback, power, and mechanical conditions.</li>
+<li>Replacing the defective component.</li>
+<li>Restoring parameters or validated data when necessary.</li>
+<li>Performing reference return and functional verification.</li>
+</ul>
+<p>If machine geometry or alignment could have been affected, restoration may require additional checks beyond simply clearing the alarm.</p>
+<h3 id="industrial-robot">Industrial robot</h3>
+<p>MTTR may include:</p>
+<ul>
+<li>Reading controller and servo fault histories.</li>
+<li>Inspecting motor, encoder, brake, and cable conditions.</li>
+<li>Checking power and communication.</li>
+<li>Replacing the defective component.</li>
+<li>Restoring approved configuration or parameters.</li>
+<li>Verifying mastering or calibration when required.</li>
+<li>Testing movement and interlocks under the approved procedure.</li>
+</ul>
+<p>Robot safety circuits and protective devices must remain functional throughout the repair and validation process.</p>
+<h2 id="8-mttr-and-mtbf-relationship">8. MTTR and MTBF Relationship</h2>
+<p>MTBF measures operating time between failures. MTTR measures repair time under its defined scope.</p>
+<p>A system can have:</p>
+<ul>
+<li>High MTBF and high MTTR: failures are infrequent but difficult to repair.</li>
+<li>Low MTBF and low MTTR: failures are frequent but quick to resolve.</li>
+<li>High MTBF and low MTTR: failures are infrequent and recovery is fast.</li>
+<li>Low MTBF and high MTTR: failures are frequent and recovery is slow.</li>
+</ul>
+<p>The third situation is generally desirable, while the fourth is usually a priority for reliability improvement.</p>
+<h3 id="example">Example</h3>
+<p>A machine has an MTBF of 300 operating hours and an active-repair MTTR of 2 hours.</p>
+<div class="math-display">\[ \frac{MTTR}{MTBF}=\frac{2}{300}=0.00667 \]</div>
+<p>The ratio is approximately 0.667%.</p>
+<p>This ratio alone is not the exact downtime percentage because the calculation excludes any restoration delays outside active repair time.</p>
+<h2 id="9-mttr-and-availability">9. MTTR and Availability</h2>
+<p>A commonly used approximation is:</p>
+<div class="math-display">\[ A=\frac{MTBF}{MTBF+MTTR} \]</div>
+<p>This simplified formula assumes that MTBF and MTTR are compatible measures of the operating and restoration cycle.</p>
+<p>If MTTR includes only active repair time but the machine also waits for spares, vendors, and approvals, this formula will generally overstate actual operational availability.</p>
+<h3 id="example_1">Example</h3>
+<p>Suppose:</p>
+<ul>
+<li>MTBF = 200 operating hours.</li>
+<li>Active repair MTTR = 2 hours.</li>
+<li>Average additional restoration delay = 3 hours.</li>
+</ul>
+<p>If the full restoration interval is 5 hours, a simplified inherent-availability calculation based on active repair time would be:</p>
+<div class="math-display">\[ A_i=\frac{200}{200+2}\approx99.01\\% \]</div>
+<p>A simplified operational-availability estimate including the additional restoration delay would be:</p>
+<div class="math-display">\[ A_o\approx\frac{200}{200+5}\approx97.56\\% \]</div>
+<p>These are illustrative estimates. Actual availability calculations must use a clearly defined observation window, downtime categories, and compatible operating-time and restoration-time measurements.</p>
+<h2 id="10-mttr-and-maintenance-performance">10. MTTR and Maintenance Performance</h2>
+<p>MTTR helps identify opportunities to improve the repair process, but it should not be treated as a direct measure of technician skill in isolation.</p>
+<p>A longer repair may be caused by:</p>
+<ul>
+<li>Difficult or intermittent fault diagnosis.</li>
+<li>Incomplete drawings or incorrect documentation.</li>
+<li>Missing PLC, CNC, robot, or VFD backups.</li>
+<li>Unavailable spare parts.</li>
+<li>Obsolete hardware.</li>
+<li>Vendor response delays.</li>
+<li>Poor physical access to equipment.</li>
+<li>Repeated unsuccessful repairs.</li>
+<li>Additional verification required after a complex repair.</li>
+<li>Incomplete failure descriptions or fault histories.</li>
+</ul>
+<p>A short repair may indicate good preparation and effective troubleshooting. It may also indicate that the repair was incomplete or that the required verification was skipped.</p>
+<p>MTTR must be reviewed with repair quality, recurrence, safety compliance, and restoration effectiveness.</p>
+<h2 id="11-data-collection-for-mttr">11. Data Collection for MTTR</h2>
+<p>A reliable MTTR calculation requires timestamps and clear event relationships.</p>
+<table>
+<thead>
+<tr>
+<th>Data field</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Breakdown ID</td>
+<td>Identifies the distinct failure event</td>
+</tr>
+<tr>
+<td>Asset ID</td>
+<td>Identifies the affected equipment</td>
+</tr>
+<tr>
+<td>Failure detected timestamp</td>
+<td>Records when the fault was first identified</td>
+</tr>
+<tr>
+<td>Maintenance response timestamp</td>
+<td>Records when maintenance responded</td>
+</tr>
+<tr>
+<td>Repair start timestamp</td>
+<td>Establishes active repair start</td>
+</tr>
+<tr>
+<td>Repair completion timestamp</td>
+<td>Establishes active repair completion</td>
+</tr>
+<tr>
+<td>Functional restoration timestamp</td>
+<td>Records when the equipment returned to service</td>
+</tr>
+<tr>
+<td>Technician or team</td>
+<td>Supports workload and process analysis</td>
+</tr>
+<tr>
+<td>Failure category</td>
+<td>Enables comparison by failure type</td>
+</tr>
+<tr>
+<td>Root cause</td>
+<td>Supports recurring-failure investigation</td>
+</tr>
+<tr>
+<td>Repair action</td>
+<td>Records work performed</td>
+</tr>
+<tr>
+<td>Spare-part waiting duration</td>
+<td>Identifies material delays</td>
+</tr>
+<tr>
+<td>Vendor waiting duration</td>
+<td>Identifies external support delays</td>
+</tr>
+<tr>
+<td>Verification status</td>
+<td>Confirms the required functional checks</td>
+</tr>
+<tr>
+<td>Timestamp quality</td>
+<td>Flags missing or inconsistent records</td>
+</tr>
+</tbody>
+</table>
+<p>A timestamp must represent the defined event. Work-order creation time is not necessarily the failure time, and work-order closure time is not necessarily the time the machine returned to service.</p>
+<h2 id="12-mttr-from-sap-maintenance-records">12. MTTR From SAP Maintenance Records</h2>
+<p>SAP notifications and work orders can provide much of the maintenance history needed for MTTR reporting, but their timestamps must be interpreted carefully.</p>
+<p>A practical extraction process is:</p>
+<ol>
+<li>Identify the asset and reporting period.</li>
+<li>Extract the relevant breakdown notifications and corrective work orders.</li>
+<li>Link multiple records belonging to the same breakdown.</li>
+<li>Obtain repair start and completion timestamps from reliable records.</li>
+<li>Calculate active repair duration using the agreed definition.</li>
+<li>Obtain the restoration timestamp separately if operational recovery is being measured.</li>
+<li>Identify waiting time for parts, vendors, and other resources.</li>
+<li>Exclude duplicate records and unrelated planned work.</li>
+<li>Validate unusual durations before calculating the average.</li>
+</ol>
+<p>Do not assume that a work order's creation-to-closure duration equals active repair time. A work order may remain open long after the machine has returned to production.</p>
+<h2 id="13-mttr-calculation-in-excel">13. MTTR Calculation in Excel</h2>
+<p>A practical repair-event table might contain the following columns:</p>
+<table>
+<thead>
+<tr>
+<th>Breakdown ID</th>
+<th>Asset ID</th>
+<th>Repair start</th>
+<th>Repair completion</th>
+<th>Active repair minutes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BR-001</td>
+<td>CNC-01</td>
+<td>08:00</td>
+<td>08:30</td>
+<td>30</td>
+</tr>
+<tr>
+<td>BR-002</td>
+<td>CNC-01</td>
+<td>10:00</td>
+<td>11:30</td>
+<td>90</td>
+</tr>
+<tr>
+<td>BR-003</td>
+<td>CNC-01</td>
+<td>13:00</td>
+<td>14:00</td>
+<td>60</td>
+</tr>
+<tr>
+<td>BR-004</td>
+<td>CNC-01</td>
+<td>15:00</td>
+<td>17:00</td>
+<td>120</td>
+</tr>
+</tbody>
+</table>
+<p>If repair start is in column C and repair completion is in column D, the duration in minutes can be calculated in Excel with:</p>
+<pre><code>=(D2-C2)*1440
+</code></pre>
+<p>Excel stores time as a fraction of a day, so multiplying by 1,440 converts days to minutes.</p>
+<p>The formula assumes both cells contain valid Excel date-time values. If repairs can cross midnight, use full date-time values rather than time-only values.</p>
+<p>To calculate the average active repair duration in column E:</p>
+<pre><code>=AVERAGE(E2:E5)
+</code></pre>
+<p>For the example, the result is 75 minutes.</p>
+<h3 id="handling-missing-data">Handling missing data</h3>
+<p>Do not replace missing timestamps with zero or silently treat incomplete records as completed repairs.</p>
+<p>Flag records where:</p>
+<ul>
+<li>Repair completion precedes repair start.</li>
+<li>One of the required timestamps is missing.</li>
+<li>The duration is implausibly long or short.</li>
+<li>The work order remained open after restoration.</li>
+<li>Multiple work orders overlap for the same event.</li>
+<li>The recorded repair duration includes unrelated work.</li>
+</ul>
+<p>A clean MTTR calculation is only as reliable as its event and timestamp data.</p>
+<h2 id="14-mttr-in-power-bi">14. MTTR in Power BI</h2>
+<p>A useful maintenance dashboard separates active repair time from full restoration time.</p>
+<p>Recommended metrics include:</p>
+<ul>
+<li>Mean active repair time.</li>
+<li>Median active repair time.</li>
+<li>Total active repair hours.</li>
+<li>Total elapsed restoration hours.</li>
+<li>Average response time.</li>
+<li>Average spare-parts waiting time.</li>
+<li>Average vendor waiting time.</li>
+<li>Repair duration by asset and failure category.</li>
+<li>Number of completed repairs included in the calculation.</li>
+<li>Percentage of repair events with verified timestamps.</li>
+</ul>
+<h3 id="example-dax-measures">Example DAX measures</h3>
+<p>Assume a table named <code>RepairEvents</code> contains one row per distinct completed repair event and a numeric <code>ActiveRepairMinutes</code> column.</p>
+<pre><code>Total Active Repair Minutes =
+SUM(RepairEvents[ActiveRepairMinutes])
+</code></pre>
+<pre><code>Completed Repair Count =
+COUNTROWS(
+    FILTER(
+        RepairEvents,
+        NOT ISBLANK(RepairEvents[ActiveRepairMinutes])
+            &amp;&amp; RepairEvents[ActiveRepairMinutes] &gt;= 0
+    )
+)
+</code></pre>
+<pre><code>MTTR Minutes =
+DIVIDE(
+    [Total Active Repair Minutes],
+    [Completed Repair Count]
+)
+</code></pre>
+<p>These measures assume that <code>RepairEvents</code> has already been deduplicated and contains only eligible repair events. If the data has multiple rows per repair, calculate duration at the repair-event level before aggregating.</p>
+<p>The report should show the number of repairs and the observation period beside MTTR. An average calculated from two repairs should not be presented as equally robust as one calculated from hundreds of well-documented events.</p>
+<h2 id="15-average-versus-median-repair-time">15. Average Versus Median Repair Time</h2>
+<p>The mean can be strongly affected by a small number of very long repairs.</p>
+<p>Consider the following repair durations:</p>
+<table>
+<thead>
+<tr>
+<th>Repair event</th>
+<th>Duration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>20 minutes</td>
+</tr>
+<tr>
+<td>2</td>
+<td>25 minutes</td>
+</tr>
+<tr>
+<td>3</td>
+<td>30 minutes</td>
+</tr>
+<tr>
+<td>4</td>
+<td>35 minutes</td>
+</tr>
+<tr>
+<td>5</td>
+<td>190 minutes</td>
+</tr>
+</tbody>
+</table>
+<p>The mean is:</p>
+<div class="math-display">\[ MTTR=\frac{20+25+30+35+190}{5}=60\text{ minutes} \]</div>
+<p>The median is 30 minutes.</p>
+<p>The mean of 60 minutes is influenced by the unusually long fifth repair. The median better represents the middle observation, while the mean remains useful for understanding average total repair effort per event.</p>
+<p>For maintenance reporting, consider displaying both:</p>
+<ul>
+<li>Mean MTTR: Useful for aggregate resource and time analysis.</li>
+<li>Median repair duration: Useful for understanding a typical event when durations are skewed.</li>
+<li>Upper percentile: Useful for identifying unusually long repairs and planning recovery capability.</li>
+</ul>
+<p>The median and percentiles supplement MTTR; they do not replace the need to define the metric correctly.</p>
+<h2 id="16-reducing-mttr-through-engineering">16. Reducing MTTR Through Engineering</h2>
+<p>The most effective way to reduce MTTR is to remove avoidable diagnostic and restoration effort without compromising repair quality or safety.</p>
+<h3 id="improve-fault-diagnosis">Improve fault diagnosis</h3>
+<ul>
+<li>Maintain accurate electrical and pneumatic drawings.</li>
+<li>Keep PLC, CNC, robot, HMI, and VFD fault histories accessible.</li>
+<li>Standardize fault descriptions and diagnostic checklists.</li>
+<li>Document known failure signatures and proven fixes.</li>
+<li>Use appropriate test equipment and validated troubleshooting procedures.</li>
+</ul>
+<h3 id="improve-spare-parts-readiness">Improve spare-parts readiness</h3>
+<ul>
+<li>Maintain critical spare-part lists.</li>
+<li>Record installed manufacturer and model numbers.</li>
+<li>Identify obsolete parts and approved successors.</li>
+<li>Keep verified parameters and configurations available.</li>
+<li>Define vendor repair and replacement routes.</li>
+<li>Track spare-part lead times and repair turnaround times.</li>
+</ul>
+<h3 id="improve-repair-execution">Improve repair execution</h3>
+<ul>
+<li>Standardize safe isolation and verification procedures.</li>
+<li>Provide suitable tools and test equipment.</li>
+<li>Train technicians on recurring equipment faults.</li>
+<li>Ensure replacement parts are compatible.</li>
+<li>Use controlled backups before configuration changes.</li>
+<li>Verify the repair under the required operating conditions.</li>
+</ul>
+<h3 id="improve-system-design">Improve system design</h3>
+<p>For repeated failures, consider whether engineering changes can make diagnosis and repair faster.</p>
+<p>Examples include:</p>
+<ul>
+<li>Adding diagnostic indicators or useful fault logging.</li>
+<li>Improving panel access and component labeling.</li>
+<li>Using modular replacement strategies where appropriate.</li>
+<li>Standardizing components across similar machines.</li>
+<li>Providing validated configuration backups.</li>
+<li>Improving network and power diagnostics.</li>
+<li>Eliminating recurring design weaknesses through root-cause actions.</li>
+</ul>
+<p>The aim is not merely to repair faster. It is to reduce avoidable recovery time while ensuring the equipment is correctly restored.</p>
+<h2 id="17-common-mttr-reporting-errors">17. Common MTTR Reporting Errors</h2>
+<ul>
+<li>Counting every alarm message as a separate repair.</li>
+<li>Using work-order creation time as repair start without validation.</li>
+<li>Using work-order closure time as restoration time.</li>
+<li>Mixing active repair duration with spare-part waiting time.</li>
+<li>Including planned maintenance in corrective repair calculations.</li>
+<li>Excluding difficult repairs without a documented rule.</li>
+<li>Treating incomplete repairs as completed events.</li>
+<li>Averaging already-averaged values without considering event counts.</li>
+<li>Comparing different assets without considering complexity and failure type.</li>
+<li>Rewarding short repair times while ignoring repeat failures.</li>
+<li>Failing to account for midnight-crossing timestamps.</li>
+<li>Using inconsistent units such as minutes for one asset and hours for another.</li>
+<li>Reporting a single mean without the number of included events.</li>
+<li>Ignoring safety checks and required functional testing to achieve a lower number.</li>
+</ul>
+<h2 id="18-practical-mttr-report-template">18. Practical MTTR Report Template</h2>
+<table>
+<thead>
+<tr>
+<th>Report field</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reporting period</td>
+<td>January 2026</td>
+</tr>
+<tr>
+<td>Asset ID</td>
+<td>CNC-01</td>
+</tr>
+<tr>
+<td>Metric definition</td>
+<td>Active repair time</td>
+</tr>
+<tr>
+<td>Completed repair events</td>
+<td>4</td>
+</tr>
+<tr>
+<td>Total active repair time</td>
+<td>300 minutes</td>
+</tr>
+<tr>
+<td>MTTR</td>
+<td>75 minutes</td>
+</tr>
+<tr>
+<td>Mean restoration interval</td>
+<td>Report separately</td>
+</tr>
+<tr>
+<td>Main failure category</td>
+<td>Axis drive</td>
+</tr>
+<tr>
+<td>Primary delay category</td>
+<td>Spare availability</td>
+</tr>
+<tr>
+<td>Root-cause status</td>
+<td>Under investigation</td>
+</tr>
+<tr>
+<td>Verification status</td>
+<td>Functional test completed</td>
+</tr>
+<tr>
+<td>Data quality</td>
+<td>Timestamps verified</td>
+</tr>
+<tr>
+<td>Improvement action</td>
+<td>Review critical drive spare coverage</td>
+</tr>
+</tbody>
+</table>
+<p>The values are illustrative. Actual reporting should use verified records and the organization's approved metric definitions.</p>
+<h2 id="19-mttr-interview-questions-and-answers">19. MTTR Interview Questions and Answers</h2>
+<h3 id="what-is-mttr">What is MTTR?</h3>
+<p>MTTR is the average repair duration for a defined population of repair events. The exact meaning depends on whether the organization measures active repair time or a broader restoration interval.</p>
+<h3 id="what-is-the-difference-between-mttr-and-downtime">What is the difference between MTTR and downtime?</h3>
+<p>MTTR may measure only active repair time. Downtime can include the complete period of unavailability, including waiting for parts, technicians, vendors, or authorization.</p>
+<h3 id="can-mttr-be-reduced-without-improving-reliability">Can MTTR be reduced without improving reliability?</h3>
+<p>Yes. Better diagnostics, spare availability, documentation, modular replacement, and repair procedures can shorten recovery time even if the frequency of failures remains unchanged.</p>
+<h3 id="does-a-lower-mttr-always-mean-better-maintenance">Does a lower MTTR always mean better maintenance?</h3>
+<p>No. A lower value may reflect efficient repair, but it can also result from incomplete repairs, skipped verification, or poor event recording. Repeat failures and restoration quality must be monitored.</p>
+<h3 id="why-can-active-repair-mttr-be-low-while-production-downtime-is-high">Why can active repair MTTR be low while production downtime is high?</h3>
+<p>Because the machine may spend most of its downtime waiting for parts, vendor support, or other resources rather than undergoing active repair.</p>
+<h3 id="why-should-mttr-be-reported-by-failure-category">Why should MTTR be reported by failure category?</h3>
+<p>Different failure modes require different diagnostic and repair processes. Separate reporting identifies whether delays come from electronics, mechanical systems, networks, safety circuits, or other causes.</p>
+<h3 id="how-does-mttr-affect-availability">How does MTTR affect availability?</h3>
+<p>Longer restoration times generally reduce availability, all else being equal. The impact depends on failure frequency and the full downtime definition.</p>
+<h3 id="what-is-the-best-way-to-reduce-mttr-for-a-plc-or-cnc-breakdown">What is the best way to reduce MTTR for a PLC or CNC breakdown?</h3>
+<p>Use reliable diagnostics, accurate drawings, validated backups, compatible spare parts, standardized troubleshooting, and proper functional verification. The best intervention depends on the actual cause of delay.</p>
+<h2 id="20-practical-checklist">20. Practical Checklist</h2>
+<ul>
+<li>Define whether MTTR means active repair time or a broader restoration interval.</li>
+<li>Define the start and stop events.</li>
+<li>Record one distinct repair event per qualifying incident.</li>
+<li>Verify timestamps and time units.</li>
+<li>Separate active repair from waiting time.</li>
+<li>Exclude unrelated planned work.</li>
+<li>Validate completed repair events.</li>
+<li>Calculate mean repair duration and report the event count.</li>
+<li>Review the median and unusually long repairs.</li>
+<li>Analyse delay categories and recurring failure modes.</li>
+<li>Verify functional restoration and safety requirements.</li>
+<li>Track improvement without encouraging incomplete repairs or inaccurate reporting.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\22_Maint_Logs\10_Availability - Availability</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01_Arch: SCADA Architecture: Servers, Clients, Drivers, and PLCs</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">01_Arch: SCADA Architecture: Servers, Clients, Drivers, and PLCs</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-what-is-scada-architecture">2. What Is SCADA Architecture?</a></li>
+<li><a href="#3-scada-versus-hmi-versus-plc">3. SCADA Versus HMI Versus PLC</a></li>
+<li><a href="#4-the-main-scada-components">4. The Main SCADA Components</a><ul>
+<li><a href="#41-plc-or-controller">4.1 PLC or controller</a></li>
+<li><a href="#42-communication-driver">4.2 Communication driver</a></li>
+<li><a href="#43-scada-server">4.3 SCADA server</a></li>
+<li><a href="#44-scada-client">4.4 SCADA client</a></li>
+<li><a href="#45-database-and-historian">4.5 Database and historian</a></li>
+</ul>
+</li>
+<li><a href="#5-how-data-travels-through-scada">5. How Data Travels Through SCADA</a><ul>
+<li><a href="#51-read-path-plc-to-operator-screen">5.1 Read path: PLC to operator screen</a></li>
+<li><a href="#52-write-path-operator-command-to-plc">5.2 Write path: operator command to PLC</a></li>
+<li><a href="#53-data-is-not-the-same-as-data-quality">5.3 Data is not the same as data quality</a></li>
+</ul>
+</li>
+<li><a href="#6-single-computer-versus-client-server-architecture">6. Single-Computer Versus Client-Server Architecture</a><ul>
+<li><a href="#61-standalone-architecture">6.1 Standalone architecture</a></li>
+<li><a href="#62-client-server-architecture">6.2 Client-server architecture</a></li>
+</ul>
+</li>
+<li><a href="#7-distributed-scada-architecture">7. Distributed SCADA Architecture</a><ul>
+<li><a href="#why-distribute-components">Why distribute components?</a></li>
+</ul>
+</li>
+<li><a href="#8-communication-drivers-and-protocols">8. Communication Drivers and Protocols</a><ul>
+<li><a href="#direct-driver-versus-opc-server">Direct driver versus OPC server</a></li>
+<li><a href="#why-this-distinction-matters">Why this distinction matters</a></li>
+</ul>
+</li>
+<li><a href="#9-plcs-and-the-scada-data-model">9. PLCs and the SCADA Data Model</a></li>
+<li><a href="#10-polling-update-rates-and-system-performance">10. Polling, Update Rates, and System Performance</a><ul>
+<li><a href="#example">Example</a></li>
+<li><a href="#common-performance-problems">Common performance problems</a></li>
+</ul>
+</li>
+<li><a href="#11-redundancy-and-availability">11. Redundancy and Availability</a></li>
+<li><a href="#12-scada-network-architecture-and-cybersecurity">12. SCADA Network Architecture and Cybersecurity</a></li>
+<li><a href="#13-scada-versus-mes-erp-and-historian">13. SCADA Versus MES, ERP, and Historian</a></li>
+<li><a href="#14-practical-example-automotive-robotic-line">14. Practical Example: Automotive Robotic Line</a><ul>
+<li><a href="#system-requirements">System requirements</a></li>
+<li><a href="#architecture">Architecture</a></li>
+<li><a href="#data-flow">Data flow</a></li>
+<li><a href="#maintenance-investigation">Maintenance investigation</a></li>
+</ul>
+</li>
+<li><a href="#15-common-scada-architecture-faults">15. Common SCADA Architecture Faults</a><ul>
+<li><a href="#troubleshooting-principle">Troubleshooting principle</a></li>
+</ul>
+</li>
+<li><a href="#16-interview-questions-and-answers">16. Interview Questions and Answers</a></li>
+<li><a href="#17-practical-exercises">17. Practical Exercises</a></li>
+<li><a href="#18-final-mental-model">18. Final Mental Model</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>SCADA stands for Supervisory Control and Data Acquisition. It is an industrial system used to monitor processes, collect data, present alarms and trends, and support supervisory control of machines and production systems.</p>
+<p>SCADA architecture describes how PLCs, communication drivers, servers, operator clients, databases, and other components work together.</p>
+<p>In a manufacturing plant, a SCADA system might collect status and production data from multiple PLCs, display it on an operator workstation, record process values in a database, and make historical information available to maintenance and production teams.</p>
+<p>The important thing is understanding not just what each component does, but where data originates, how it travels, where it is stored, and which component is responsible for each operation.</p>
+<h2 id="2-what-is-scada-architecture">2. What Is SCADA Architecture?</h2>
+<p>A typical SCADA system can be represented as follows:</p>
+<pre><code>         Operator / Maintenance Engineer
+                       |
+                       v
+               SCADA Client
+           Screens, alarms, trends
+                       |
+                       v
+                SCADA Server
+        Application and data services
+                       |
+                       v
+            Communication Driver
+          Protocol and data exchange
+                       |
+                       v
+                PLC / Controller
+                       |
+                       v
+            Sensors and Actuators
+                       |
+                       v
+                Physical Machine
+</code></pre>
+<p>Additional components can connect to this architecture:</p>
+<ul>
+<li>Industrial historians for long-term process data.</li>
+<li>SQL databases for structured records.</li>
+<li>Engineering workstations for configuration and maintenance.</li>
+<li>Reporting and analytics systems.</li>
+<li>Industrial network infrastructure.</li>
+<li>Redundant servers for availability.</li>
+<li>Gateways for exchanging data between networks or systems.</li>
+</ul>
+<p>This is a conceptual architecture. Actual products may combine multiple functions in one computer or distribute them across several computers.</p>
+<h2 id="3-scada-versus-hmi-versus-plc">3. SCADA Versus HMI Versus PLC</h2>
+<p>These terms are related, but they describe different roles.</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Main responsibility</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC</td>
+<td>Executes control logic and interacts with field I/O</td>
+<td>ControlLogix controlling a robotic station</td>
+</tr>
+<tr>
+<td>HMI</td>
+<td>Provides an operator interface to a machine or process</td>
+<td>PanelView showing station status</td>
+</tr>
+<tr>
+<td>SCADA</td>
+<td>Provides supervisory monitoring and data acquisition across equipment or processes</td>
+<td>Monitoring several production stations</td>
+</tr>
+<tr>
+<td>SCADA server</td>
+<td>Hosts configured application services and coordinates data access</td>
+<td>A PC running a SCADA application server</td>
+</tr>
+<tr>
+<td>SCADA client</td>
+<td>Provides a user interface to the SCADA system</td>
+<td>An operator workstation</td>
+</tr>
+<tr>
+<td>Driver</td>
+<td>Exchanges data using a supported protocol or communication interface</td>
+<td>A driver communicating with an Allen-Bradley PLC</td>
+</tr>
+<tr>
+<td>Database</td>
+<td>Stores structured records</td>
+<td>SQL Server storing production values</td>
+</tr>
+<tr>
+<td>Historian</td>
+<td>Stores time-series process data for historical analysis</td>
+<td>An industrial process historian</td>
+</tr>
+</tbody>
+</table>
+<p>An HMI can be part of a SCADA system, but a single machine HMI is not automatically a complete SCADA system.</p>
+<p>Likewise, a database is not automatically a historian, and a SCADA server does not automatically perform every data-storage and communication function.</p>
+<h2 id="4-the-main-scada-components">4. The Main SCADA Components</h2>
+<h3 id="41-plc-or-controller">4.1 PLC or controller</h3>
+<p>The PLC is responsible for executing its control program, processing inputs, updating outputs, and managing the programmed machine sequence.</p>
+<p>Typical data includes:</p>
+<ul>
+<li>Machine operating state.</li>
+<li>Sensor feedback.</li>
+<li>Actuator commands and feedback.</li>
+<li>Fault conditions.</li>
+<li>Production counts.</li>
+<li>Process values.</li>
+<li>Cycle status.</li>
+</ul>
+<p>For example, a PLC at a robotic station may publish a station-ready bit, a robot-fault bit, and a cycle counter.</p>
+<p>The PLC remains responsible for the control logic. A SCADA application should not be treated as a replacement for real-time PLC control or safety-rated functions.</p>
+<h3 id="42-communication-driver">4.2 Communication driver</h3>
+<p>A communication driver enables a SCADA application or data service to exchange data with a supported controller or device.</p>
+<p>It handles the communication mechanism required by the configured protocol, which may include reading data, writing permitted values, and reporting communication errors.</p>
+<p>Examples of industrial communication technologies include:</p>
+<ul>
+<li>EtherNet/IP.</li>
+<li>Siemens S7 communication.</li>
+<li>Mitsubishi SLMP or compatible Mitsubishi communication methods.</li>
+<li>Modbus TCP and Modbus RTU.</li>
+<li>OPC UA, where supported.</li>
+</ul>
+<p>These are not interchangeable protocols. The controller, driver, network, and configuration must support the selected communication method.</p>
+<h3 id="43-scada-server">4.3 SCADA server</h3>
+<p>A SCADA server provides configured application services. Depending on the product, these may include:</p>
+<ul>
+<li>Access to process data.</li>
+<li>Alarm processing and distribution.</li>
+<li>Application configuration and runtime services.</li>
+<li>Client connections.</li>
+<li>Data logging or interfaces to external storage.</li>
+<li>User and application services.</li>
+</ul>
+<p>Not every SCADA product places all these functions on one server. Some systems use separate data servers, alarm servers, historians, or redundant server pairs.</p>
+<h3 id="44-scada-client">4.4 SCADA client</h3>
+<p>A SCADA client is the user-facing application used to interact with the SCADA system.</p>
+<p>It can provide:</p>
+<ul>
+<li>Overview screens.</li>
+<li>Equipment detail screens.</li>
+<li>Alarm summaries.</li>
+<li>Trends.</li>
+<li>Production information.</li>
+<li>Authorized supervisory commands.</li>
+<li>Diagnostic views.</li>
+</ul>
+<p>A client may receive data from a server rather than communicating directly with every PLC. However, some architectures support direct client-to-controller communication for particular functions.</p>
+<h3 id="45-database-and-historian">4.5 Database and historian</h3>
+<p>These components store information for later use, but they are not necessarily the same thing.</p>
+<p>A relational database such as SQL Server can store structured records, including production counts, events, maintenance records, and selected process values.</p>
+<p>A historian is specifically designed for time-series process data and may provide compression, retention management, and efficient historical queries.</p>
+<p>A SCADA application can use one or both, depending on the requirements.</p>
+<h2 id="5-how-data-travels-through-scada">5. How Data Travels Through SCADA</h2>
+<p>Understanding the direction of data flow is one of the most important SCADA fundamentals.</p>
+<h3 id="51-read-path-plc-to-operator-screen">5.1 Read path: PLC to operator screen</h3>
+<p>Suppose a PLC contains a Boolean tag indicating that a station is ready.</p>
+<pre><code>PLC tag: Station_Ready
+          |
+          v
+Communication driver reads the tag
+          |
+          v
+SCADA data service updates the value
+          |
+          v
+SCADA client receives or accesses the value
+          |
+          v
+Screen displays READY or NOT READY
+</code></pre>
+<p>The exact route depends on the software architecture. The driver may run on the SCADA server, an OPC server, or another configured computer.</p>
+<h3 id="52-write-path-operator-command-to-plc">5.2 Write path: operator command to PLC</h3>
+<p>Suppose an authorized operator requests a machine cycle.</p>
+<pre><code>Operator presses Start
+          |
+          v
+SCADA client sends configured request
+          |
+          v
+SCADA service and driver process the write
+          |
+          v
+PLC receives the command
+          |
+          v
+PLC validates operating conditions
+          |
+          v
+PLC executes the permitted sequence
+          |
+          v
+Feedback returns to SCADA
+</code></pre>
+<p>The PLC should validate the command and control the sequence. The SCADA client should not bypass the PLC's interlocks or safety functions.</p>
+<h3 id="53-data-is-not-the-same-as-data-quality">5.3 Data is not the same as data quality</h3>
+<p>A displayed value can be incorrect, stale, or unavailable even when the screen itself appears normal.</p>
+<p>A robust system should distinguish between:</p>
+<ul>
+<li>Value: The reported process value.</li>
+<li>Timestamp: When the value was acquired or updated.</li>
+<li>Quality: Whether the value is considered valid.</li>
+<li>Communication state: Whether the data source is reachable and responding.</li>
+<li>Freshness: Whether the value is recent enough for its intended use.</li>
+</ul>
+<p>For example, a screen displaying <code>Station_Ready = TRUE</code> after communication has failed may mislead an operator if the application does not indicate that the value is stale.</p>
+<p>A good SCADA design handles communication loss explicitly rather than leaving old values looking trustworthy.</p>
+<h2 id="6-single-computer-versus-client-server-architecture">6. Single-Computer Versus Client-Server Architecture</h2>
+<p>SCADA systems can be deployed in different physical arrangements.</p>
+<h3 id="61-standalone-architecture">6.1 Standalone architecture</h3>
+<p>In a standalone configuration, a single computer may run the SCADA runtime, communicate with PLCs, display screens, and store selected data.</p>
+<pre><code>       Operator
+           |
+           v
+    SCADA Computer
+    +-------------+
+    | Client      |
+    | Runtime     |
+    | Driver      |
+    | Logging     |
+    +-------------+
+           |
+           v
+          PLC
+</code></pre>
+<p>Advantages:</p>
+<ul>
+<li>Simpler deployment.</li>
+<li>Fewer computers and network dependencies.</li>
+<li>Suitable for small applications.</li>
+</ul>
+<p>Limitations:</p>
+<ul>
+<li>The computer can become a single point of failure.</li>
+<li>Scaling to many clients or controllers can become difficult.</li>
+<li>Maintenance or restart may interrupt several functions at once.</li>
+</ul>
+<h3 id="62-client-server-architecture">6.2 Client-server architecture</h3>
+<p>In a client-server arrangement, the SCADA server provides shared application services while client computers provide operator interfaces.</p>
+<pre><code> Operator A                  Operator B
+     |                           |
+     v                           v
+ SCADA Client A              SCADA Client B
+     |                           |
+     +-------------+-------------+
+                   |
+                   v
+              SCADA Server
+                   |
+                   v
+             PLC Driver / Data
+                   |
+                   v
+              PLC Controllers
+</code></pre>
+<p>Advantages:</p>
+<ul>
+<li>Multiple clients can access shared data and application services.</li>
+<li>Application management can be centralized.</li>
+<li>Operator interfaces can be separated from server functions.</li>
+<li>The architecture can be expanded as requirements grow.</li>
+</ul>
+<p>Limitations:</p>
+<ul>
+<li>More configuration and administration.</li>
+<li>Dependence on server and network availability.</li>
+<li>Greater need for access control, backups, monitoring, and cybersecurity.</li>
+</ul>
+<p>A client-server system is not automatically redundant. If one server provides an essential service and has no failover arrangement, that server can still be a single point of failure.</p>
+<h2 id="7-distributed-scada-architecture">7. Distributed SCADA Architecture</h2>
+<p>Larger plants may distribute functions across several computers and services.</p>
+<p>For example, an installation might include:</p>
+<ul>
+<li>An HMI or visualization server.</li>
+<li>One or more operator clients.</li>
+<li>A communication or OPC server.</li>
+<li>A historian.</li>
+<li>A SQL database.</li>
+<li>An engineering workstation.</li>
+<li>Reporting and analytics services.</li>
+</ul>
+<p>A conceptual arrangement is:</p>
+<pre><code>                  Operator Clients
+                         |
+                         v
+                 Visualization Server
+                         |
+              +----------+----------+
+              |                     |
+              v                     v
+        Data / OPC Server      Alarm Services
+              |
+              v
+       Industrial Controllers
+              |
+              v
+        Machines and I/O
+
+        Visualization / Data Services
+                    |
+                    v
+             Historian / SQL
+                    |
+                    v
+            Reports / Analytics
+</code></pre>
+<p>The diagram separates logical responsibilities, not necessarily physical computers. One computer can host several services, or each service can run on a separate machine.</p>
+<h3 id="why-distribute-components">Why distribute components?</h3>
+<p>Distribution can improve scalability, simplify separation of responsibilities, and support different retention or reporting requirements.</p>
+<p>However, it introduces additional dependencies. A failure in DNS, time synchronization, network routing, authentication, a shared data service, or storage can affect multiple applications even when the PLCs themselves continue controlling the machines.</p>
+<h2 id="8-communication-drivers-and-protocols">8. Communication Drivers and Protocols</h2>
+<p>A communication protocol defines how devices exchange messages. A driver implements the communication behavior required by a particular application or service.</p>
+<p>For example, a SCADA system may use an EtherNet/IP-capable driver to access data from a compatible Allen-Bradley controller.</p>
+<p>The driver must be configured with the correct device, address, communication settings, and data references.</p>
+<table>
+<thead>
+<tr>
+<th>Technology</th>
+<th>Typical role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EtherNet/IP</td>
+<td>Industrial communication commonly used with Allen-Bradley systems</td>
+</tr>
+<tr>
+<td>Siemens S7 communication</td>
+<td>Communication with supported Siemens PLCs</td>
+</tr>
+<tr>
+<td>Mitsubishi SLMP</td>
+<td>Communication with supported Mitsubishi controllers</td>
+</tr>
+<tr>
+<td>Modbus TCP</td>
+<td>Industrial data exchange over TCP/IP</td>
+</tr>
+<tr>
+<td>Modbus RTU</td>
+<td>Serial communication using Modbus</td>
+</tr>
+<tr>
+<td>OPC UA</td>
+<td>Standardized industrial data access and exchange between supported applications</td>
+</tr>
+<tr>
+<td>OPC Classic / DA</td>
+<td>Legacy Windows-based industrial data access technology found in older installations</td>
+</tr>
+</tbody>
+</table>
+<p>Support depends on the specific driver, device, product version, and configuration.</p>
+<h3 id="direct-driver-versus-opc-server">Direct driver versus OPC server</h3>
+<p>Direct driver approach:</p>
+<pre><code>SCADA application
+       |
+       v
+Built-in / configured driver
+       |
+       v
+PLC
+</code></pre>
+<p>The SCADA application uses its own supported driver to communicate with the PLC.</p>
+<p>OPC-based approach:</p>
+<pre><code>SCADA application
+       |
+       v
+OPC client interface
+       |
+       v
+OPC server
+       |
+       v
+PLC
+</code></pre>
+<p>The OPC server provides a data interface to the SCADA application and communicates with the PLC through its supported driver or connection.</p>
+<p>An OPC server can make data available to multiple compatible clients, but that does not mean every OPC server supports every PLC or every feature.</p>
+<h3 id="why-this-distinction-matters">Why this distinction matters</h3>
+<p>If the SCADA application uses an OPC server and the displayed values are invalid, the fault may be in the SCADA tag configuration, OPC client connection, OPC server, PLC driver, or controller communication.</p>
+<p>Troubleshooting becomes easier when the architecture identifies which component owns each connection.</p>
+<h2 id="9-plcs-and-the-scada-data-model">9. PLCs and the SCADA Data Model</h2>
+<p>A SCADA application needs a consistent way to identify data across connected controllers.</p>
+<p>For example, a plant may contain several PLCs, each with its own internal device addresses or controller tags.</p>
+<pre><code>PLC_Station_1010
+    Station_Ready
+    Station_Fault
+    Cycle_Count
+
+PLC_Station_1030
+    Station_Ready
+    Station_Fault
+    Cycle_Count
+
+PLC_Station_1050
+    Station_Ready
+    Station_Fault
+    Cycle_Count
+</code></pre>
+<p>The same tag name can exist in multiple PLCs. Therefore, a complete reference must identify the correct data source as well as the tag.</p>
+<p>A SCADA application may expose these values under a hierarchy such as:</p>
+<pre><code>Plant
+  |
+  +-- Robotic_Line
+        |
+        +-- Station_1010
+        |      +-- Station_Ready
+        |      +-- Station_Fault
+        |
+        +-- Station_1030
+        |      +-- Station_Ready
+        |      +-- Station_Fault
+        |
+        +-- Station_1050
+               +-- Station_Ready
+               +-- Station_Fault
+</code></pre>
+<p>This hierarchy is a logical organization of data. It does not necessarily match the physical network topology or the PLC program structure.</p>
+<p>A well-designed data model helps operators navigate the plant and helps maintenance engineers trace a displayed value back to its source.</p>
+<h2 id="10-polling-update-rates-and-system-performance">10. Polling, Update Rates, and System Performance</h2>
+<p>SCADA applications do not necessarily read every PLC value continuously or at the same rate.</p>
+<p>Data acquisition may use polling, subscriptions, event-driven updates, or a combination, depending on the protocol and product.</p>
+<p>Important timing concepts include:</p>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC scan time</td>
+<td>Time taken by the controller to execute its program cycle or relevant task</td>
+</tr>
+<tr>
+<td>Driver polling interval</td>
+<td>Configured interval for a driver to request data, where polling is used</td>
+</tr>
+<tr>
+<td>HMI refresh interval</td>
+<td>How frequently the application updates a displayed object</td>
+</tr>
+<tr>
+<td>Logging interval</td>
+<td>How frequently values are recorded, where interval-based logging is used</td>
+</tr>
+<tr>
+<td>Network latency</td>
+<td>Time required for data to travel through the communication path</td>
+</tr>
+<tr>
+<td>Data age</td>
+<td>Time elapsed since the source value was acquired or updated</td>
+</tr>
+</tbody>
+</table>
+<p>These intervals are not interchangeable.</p>
+<p>A screen refreshing every 250 ms does not prove that the PLC is being read every 250 ms. The screen may repeatedly display the most recent cached value.</p>
+<h3 id="example">Example</h3>
+<p>Suppose:</p>
+<ul>
+<li>The driver updates a tag every 1 second.</li>
+<li>The client refreshes its screen every 250 ms.</li>
+<li>Historical data is recorded every 5 seconds.</li>
+</ul>
+<p>The screen may refresh four times between driver updates, while the database receives one record every 5 seconds, assuming those configurations are implemented as stated.</p>
+<h3 id="common-performance-problems">Common performance problems</h3>
+<ul>
+<li>Too many tags being polled too frequently.</li>
+<li>Excessive clients or redundant requests.</li>
+<li>Slow or unreliable networks.</li>
+<li>Unnecessary high-frequency logging.</li>
+<li>Database writes taking too long.</li>
+<li>Large screens with many continuously updated objects.</li>
+<li>Excessive alarm or event activity.</li>
+</ul>
+<p>The correct update rates depend on the application. A machine-status display, a fast motion-control signal, and a long-term energy trend do not necessarily require the same acquisition interval.</p>
+<p>SCADA monitoring must not be used as a substitute for time-critical PLC control.</p>
+<h2 id="11-redundancy-and-availability">11. Redundancy and Availability</h2>
+<p>A SCADA system may use redundancy to reduce the impact of a component failure.</p>
+<p>Possible arrangements include:</p>
+<ul>
+<li>Primary and standby SCADA servers.</li>
+<li>Redundant communication paths.</li>
+<li>Redundant network infrastructure.</li>
+<li>Replicated or highly available data storage.</li>
+<li>Backup operator workstations.</li>
+</ul>
+<p>A simplified redundant-server arrangement is:</p>
+<pre><code>             SCADA Clients
+                   |
+                   v
+            Active SCADA Server
+                   |
+          Failover / synchronization
+                   |
+                   v
+            Standby SCADA Server
+                   |
+                   v
+             PLC Controllers
+</code></pre>
+<p>This is conceptual. Actual failover behavior depends on the SCADA product and architecture.</p>
+<p>Redundancy must be engineered and tested. Two servers do not automatically provide uninterrupted service if their configurations are inconsistent, they share a failed dependency, or the failover process is not working.</p>
+<p>Also distinguish availability from data integrity. A system may continue running but lose some historical records or experience a gap during failover.</p>
+<h2 id="12-scada-network-architecture-and-cybersecurity">12. SCADA Network Architecture and Cybersecurity</h2>
+<p>Industrial networks should be designed so that access to controllers is controlled and unnecessary exposure is minimized.</p>
+<p>A common approach separates the industrial control network from enterprise IT networks and uses controlled communication between zones.</p>
+<pre><code>Enterprise IT Network
+          |
+          v
+   Controlled Boundary
+   / Industrial DMZ \
+          |
+          v
+   SCADA / Operations
+          |
+          v
+   Industrial Control
+          |
+          v
+       PLCs / I/O
+</code></pre>
+<p>The exact arrangement depends on the site's cybersecurity architecture.</p>
+<p>Important practices include:</p>
+<ul>
+<li>Segmenting networks according to operational and security requirements.</li>
+<li>Restricting access to PLCs and SCADA servers.</li>
+<li>Using appropriate authentication and authorization.</li>
+<li>Managing remote access through approved secure mechanisms.</li>
+<li>Maintaining software and configuration backups.</li>
+<li>Monitoring system health and communication failures.</li>
+<li>Controlling changes to drivers, PLC programs, and SCADA applications.</li>
+<li>Maintaining an inventory of computers, controllers, software versions, and network dependencies.</li>
+</ul>
+<p>Do not expose PLCs or SCADA services directly to untrusted networks merely to make remote viewing convenient. Convenience is not a cybersecurity architecture.</p>
+<h2 id="13-scada-versus-mes-erp-and-historian">13. SCADA Versus MES, ERP, and Historian</h2>
+<p>These systems can exchange data, but they have different primary responsibilities.</p>
+<table>
+<thead>
+<tr>
+<th>System</th>
+<th>Primary purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC</td>
+<td>Real-time control of equipment</td>
+</tr>
+<tr>
+<td>HMI</td>
+<td>Operator interface for a machine or process</td>
+</tr>
+<tr>
+<td>SCADA</td>
+<td>Supervisory monitoring, control, alarms, and data acquisition</td>
+</tr>
+<tr>
+<td>Historian</td>
+<td>Time-series process-data storage and retrieval</td>
+</tr>
+<tr>
+<td>MES</td>
+<td>Manufacturing execution, production tracking, and operations management</td>
+</tr>
+<tr>
+<td>ERP</td>
+<td>Business processes such as materials, finance, purchasing, and planning</td>
+</tr>
+<tr>
+<td>SQL database</td>
+<td>Structured data storage for supported applications</td>
+</tr>
+</tbody>
+</table>
+<p>For example, a PLC may count completed cycles, SCADA may display and record the count, MES may associate production with an order, and ERP may manage the relevant material and production planning.</p>
+<p>These systems can be integrated, but integration does not make them the same thing.</p>
+<h2 id="14-practical-example-automotive-robotic-line">14. Practical Example: Automotive Robotic Line</h2>
+<p>Consider a production line with three robotic stations. Each station has a PLC, and a SCADA system monitors the line.</p>
+<h3 id="system-requirements">System requirements</h3>
+<ul>
+<li>Display each station's ready and fault status.</li>
+<li>Show selected cycle counters.</li>
+<li>Provide an alarm overview.</li>
+<li>Record selected process values.</li>
+<li>Store production-related records in SQL Server.</li>
+<li>Allow authorized personnel to inspect historical trends.</li>
+</ul>
+<h3 id="architecture">Architecture</h3>
+<pre><code>PLC - Station 1010 ----+
+                       |
+PLC - Station 1030 ----+---- Industrial Network
+                       |            |
+PLC - Station 1050 ----+            v
+                               SCADA Driver
+                                    |
+                                    v
+                              SCADA Server
+                               /         \
+                              v           v
+                       SCADA Client    Data Logging
+                                            |
+                                            v
+                                       SQL Server
+                                            |
+                                            v
+                                      Reports
+</code></pre>
+<p>This is an illustrative arrangement. Depending on the selected software, the driver, SCADA server, and logging services might be combined or deployed separately.</p>
+<h3 id="data-flow">Data flow</h3>
+<ol>
+<li>Each PLC executes its machine-control program.</li>
+<li>The communication layer acquires configured PLC data.</li>
+<li>The SCADA application makes the data available to its clients.</li>
+<li>Operators see machine states and configured alarms.</li>
+<li>Selected values or events are logged.</li>
+<li>SQL Server stores structured records.</li>
+<li>Reports use stored data for production and maintenance analysis.</li>
+</ol>
+<h3 id="maintenance-investigation">Maintenance investigation</h3>
+<p>Suppose Station 1030 shows a fault, but Station 1010 appears normal.</p>
+<p>A maintenance engineer can investigate:</p>
+<ol>
+<li>Whether the Station 1030 PLC reports the fault.</li>
+<li>Whether the driver can read the relevant PLC tag.</li>
+<li>Whether the SCADA server receives a valid, recent value.</li>
+<li>Whether the client displays the correct state.</li>
+<li>Whether the alarm is configured to identify the underlying condition.</li>
+<li>Whether the physical equipment or process is actually faulty.</li>
+</ol>
+<p>This separates the machine fault from a communication or visualization fault.</p>
+<p>A SCADA screen reporting a fault does not automatically mean SCADA caused the fault. It may simply be the first place the problem became visible.</p>
+<h2 id="15-common-scada-architecture-faults">15. Common SCADA Architecture Faults</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible architectural cause</th>
+<th>Investigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>All PLC values are unavailable</td>
+<td>Shared driver, network, or server failure</td>
+<td>Check the shared communication path</td>
+</tr>
+<tr>
+<td>One PLC is unavailable</td>
+<td>Controller-specific connection or network problem</td>
+<td>Check that PLC and its configured connection</td>
+</tr>
+<tr>
+<td>Client cannot connect</td>
+<td>Client/server communication or application configuration</td>
+<td>Check the client connection and server status</td>
+</tr>
+<tr>
+<td>Multiple clients show stale values</td>
+<td>Shared data service or driver issue</td>
+<td>Check source updates and data quality</td>
+</tr>
+<tr>
+<td>Only one screen shows incorrect data</td>
+<td>Client object or tag mapping problem</td>
+<td>Trace the specific object and reference</td>
+</tr>
+<tr>
+<td>Alarms appear late</td>
+<td>Acquisition, processing, communication, or display delay</td>
+<td>Trace the alarm from its source to the client</td>
+</tr>
+<tr>
+<td>Historical records are missing</td>
+<td>Logging service, storage, or database problem</td>
+<td>Check acquisition, logging, and database writes</td>
+</tr>
+<tr>
+<td>SCADA becomes slow</td>
+<td>Excessive polling, client load, or resource constraints</td>
+<td>Review update rates and system performance</td>
+</tr>
+<tr>
+<td>System fails during server maintenance</td>
+<td>Missing or ineffective redundancy</td>
+<td>Review availability design and recovery procedures</td>
+</tr>
+<tr>
+<td>Values look valid after communication loss</td>
+<td>Stale-value handling is inadequate</td>
+<td>Check quality indicators and stale-data behavior</td>
+</tr>
+<tr>
+<td>PLC responds but SCADA does not</td>
+<td>Driver, data mapping, or server configuration problem</td>
+<td>Verify the configured communication and data references</td>
+</tr>
+</tbody>
+</table>
+<h3 id="troubleshooting-principle">Troubleshooting principle</h3>
+<p>Trace the failure from the source toward the display.</p>
+<p>For a missing PLC value, investigate the PLC, network, driver, data service, and client in sequence. For a missing historical record, also inspect the logging path and storage system.</p>
+<p>Changing an HMI object before establishing where the data path failed is often wasted work.</p>
+<h2 id="16-interview-questions-and-answers">16. Interview Questions and Answers</h2>
+<p>Q1. What is SCADA?</p>
+<p>SCADA stands for Supervisory Control and Data Acquisition. It provides supervisory monitoring, data acquisition, alarms, visualization, and configured control functions for industrial processes.</p>
+<p>Q2. What is the difference between a SCADA server and a client?</p>
+<p>A server provides configured application services and data access. A client provides the user interface through which an operator interacts with the system.</p>
+<p>Q3. What is a communication driver?</p>
+<p>A driver implements communication with a supported device or protocol so that an application can exchange process data.</p>
+<p>Q4. What is an OPC server?</p>
+<p>An OPC server provides a standardized data interface to compatible clients and obtains data through its configured device connections or other data sources.</p>
+<p>Q5. What is the difference between a SCADA server and a database?</p>
+<p>A SCADA server provides application and monitoring services. A database stores structured records. A SCADA system may write data to a database without the database itself acting as the SCADA server.</p>
+<p>Q6. Why can a SCADA screen show stale values?</p>
+<p>The application may continue displaying the last acquired value after communication fails unless it detects the failure and handles data quality appropriately.</p>
+<p>Q7. What is the difference between polling and screen refresh?</p>
+<p>Polling requests or acquires data from a source. Screen refresh updates the displayed interface. The display can refresh more frequently than new data arrives.</p>
+<p>Q8. What is the purpose of SCADA redundancy?</p>
+<p>Redundancy reduces the impact of selected component failures by providing alternate services or paths, subject to the design and tested failover behavior.</p>
+<p>Q9. Why separate SCADA clients from servers?</p>
+<p>It allows multiple operator interfaces to use shared services and can simplify application management and expansion.</p>
+<p>Q10. Why is network segmentation important?</p>
+<p>It limits unnecessary connectivity between network zones and helps control access to industrial controllers and supervisory systems.</p>
+<p>Q11. Is SCADA a replacement for PLC control?</p>
+<p>No. The PLC normally executes the machine-control logic. SCADA provides supervisory monitoring and configured commands.</p>
+<p>Q12. What is the difference between a historian and SQL Server?</p>
+<p>A historian is optimized for time-series process data. SQL Server is a relational database platform that can store structured records, including time-stamped process values, depending on the application design.</p>
+<h2 id="17-practical-exercises">17. Practical Exercises</h2>
+<p>Use a development environment or an approved test system.</p>
+<ol>
+<li>Draw the architecture of a standalone SCADA system.</li>
+<li>Draw a client-server SCADA architecture with two clients and one PLC.</li>
+<li>Identify where the communication driver runs in an existing installation.</li>
+<li>Trace one PLC value from the source tag to the operator screen.</li>
+<li>Distinguish the PLC scan time, acquisition interval, screen refresh interval, and logging interval.</li>
+<li>Identify the database or historian used by an existing application.</li>
+<li>Determine what happens when one PLC becomes unavailable.</li>
+<li>Determine what happens when the SCADA server becomes unavailable.</li>
+<li>Check how stale values and communication failures are indicated.</li>
+<li>Identify the shared components that could affect several clients.</li>
+<li>Draw the data path from a PLC through SCADA logging to SQL Server.</li>
+<li>Prepare a troubleshooting checklist for a system where the PLC is operating normally but the SCADA client displays invalid values.</li>
+</ol>
+<h2 id="18-final-mental-model">18. Final Mental Model</h2>
+<pre><code>Physical Process
+      |
+      v
+Sensors and Actuators
+      |
+      v
+PLC / Controller
+      |
+      v
+Communication Driver or Data Interface
+      |
+      v
+SCADA Data / Application Services
+      |
+      +------------------+
+      |                  |
+      v                  v
+ SCADA Clients      Historian / Database
+      |                  |
+      v                  v
+ Operator Screens   Trends / Reports
+ Alarms and Status  Historical Analysis
+</code></pre>
+<p>Remember the role of each component:</p>
+<ul>
+<li>PLC: Controls the machine.</li>
+<li>Driver: Communicates with the controller.</li>
+<li>Server: Provides configured application services.</li>
+<li>Client: Presents the operator interface.</li>
+<li>Database: Stores structured records.</li>
+<li>Historian: Stores and serves historical process data.</li>
+<li>Network: Connects the components and introduces its own failure modes.</li>
+<li>SCADA architecture: Defines how these components communicate, share responsibilities, and recover from faults.</li>
+</ul>
+<p>The most useful SCADA maintenance skill is understanding the complete path from the physical process to the displayed value and, where applicable, from an operator command back to the PLC.</p>
+<p>Topic covered: <code>01_Arch - Architecture: Server, clients, drivers, PLCs</code></p>
+<p>Next topic: <code>02_Tags_Drivers - Tags &amp; drivers: Link tags to PLC data</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

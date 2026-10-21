@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drive Fault: Command Signals, Start/Stop Control</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Drive Fault: Command Signals, Start/Stop Control</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-startstop-command-architecture">2. Start/Stop Command Architecture</a></li>
+<li><a href="#3-common-command-sources">3. Common Command Sources</a><ul>
+<li><a href="#31-hardwired-digital-inputs">3.1 Hardwired digital inputs</a></li>
+<li><a href="#32-fieldbus-commands">3.2 Fieldbus commands</a></li>
+<li><a href="#33-local-keypad-or-hmi-control">3.3 Local keypad or HMI control</a></li>
+<li><a href="#34-internal-drive-logic">3.4 Internal drive logic</a></li>
+</ul>
+</li>
+<li><a href="#4-two-wire-and-three-wire-startstop-control">4. Two-Wire and Three-Wire Start/Stop Control</a><ul>
+<li><a href="#41-two-wire-control">4.1 Two-wire control</a></li>
+<li><a href="#42-three-wire-control">4.2 Three-wire control</a></li>
+<li><a href="#43-comparison">4.3 Comparison</a></li>
+</ul>
+</li>
+<li><a href="#5-stop-commands-and-stop-modes">5. Stop Commands and Stop Modes</a><ul>
+<li><a href="#51-why-a-stop-command-may-appear-ineffective">5.1 Why a stop command may appear ineffective</a></li>
+</ul>
+</li>
+<li><a href="#6-drive-enable-and-run-command-are-different">6. Drive Enable and Run Command Are Different</a><ul>
+<li><a href="#61-common-enabling-conditions">6.1 Common enabling conditions</a></li>
+</ul>
+</li>
+<li><a href="#7-plc-to-drive-command-troubleshooting">7. PLC-to-Drive Command Troubleshooting</a><ul>
+<li><a href="#71-diagnostic-sequence">7.1 Diagnostic sequence</a></li>
+<li><a href="#72-signal-tracing-table">7.2 Signal tracing table</a></li>
+</ul>
+</li>
+<li><a href="#8-digital-input-electrical-checks">8. Digital Input Electrical Checks</a><ul>
+<li><a href="#81-common-issues">8.1 Common issues</a></li>
+<li><a href="#82-safe-measurement-method">8.2 Safe measurement method</a></li>
+</ul>
+</li>
+<li><a href="#9-fieldbus-command-troubleshooting">9. Fieldbus Command Troubleshooting</a><ul>
+<li><a href="#91-common-causes">9.1 Common causes</a></li>
+<li><a href="#92-diagnostic-method">9.2 Diagnostic method</a></li>
+</ul>
+</li>
+<li><a href="#10-localremote-and-handauto-selection">10. Local/Remote and Hand/Auto Selection</a><ul>
+<li><a href="#101-common-failure">10.1 Common failure</a></li>
+<li><a href="#102-checks">10.2 Checks</a></li>
+</ul>
+</li>
+<li><a href="#11-fault-reset-and-start-command-interaction">11. Fault Reset and Start Command Interaction</a><ul>
+<li><a href="#111-typical-sequence">11.1 Typical sequence</a></li>
+<li><a href="#112-common-problems">11.2 Common problems</a></li>
+</ul>
+</li>
+<li><a href="#12-interlocks-and-permissives">12. Interlocks and Permissives</a><ul>
+<li><a href="#121-important-distinction">12.1 Important distinction</a></li>
+</ul>
+</li>
+<li><a href="#13-direction-and-conflicting-commands">13. Direction and Conflicting Commands</a></li>
+<li><a href="#14-common-startstop-fault-scenarios">14. Common Start/Stop Fault Scenarios</a></li>
+<li><a href="#15-practical-breakdown-example-plc-run-command-missing">15. Practical Breakdown Example: PLC Run Command Missing</a></li>
+<li><a href="#16-practical-breakdown-example-drive-runs-from-keypad-only">16. Practical Breakdown Example: Drive Runs from Keypad Only</a></li>
+<li><a href="#17-practical-breakdown-example-motor-does-not-stop-as-expected">17. Practical Breakdown Example: Motor Does Not Stop as Expected</a></li>
+<li><a href="#18-safety-considerations">18. Safety Considerations</a></li>
+<li><a href="#19-maintenance-record-template">19. Maintenance Record Template</a></li>
+<li><a href="#20-interview-questions-and-answers">20. Interview Questions and Answers</a><ul>
+<li><a href="#q1-what-is-the-difference-between-a-start-command-and-a-speed-reference">Q1. What is the difference between a start command and a speed reference?</a></li>
+<li><a href="#q2-why-can-a-drive-be-ready-but-not-run">Q2. Why can a drive be ready but not run?</a></li>
+<li><a href="#q3-what-is-the-difference-between-two-wire-and-three-wire-control">Q3. What is the difference between two-wire and three-wire control?</a></li>
+<li><a href="#q4-why-does-a-drive-run-from-its-keypad-but-not-from-the-plc">Q4. Why does a drive run from its keypad but not from the PLC?</a></li>
+<li><a href="#q5-what-is-a-drive-permissive">Q5. What is a drive permissive?</a></li>
+<li><a href="#q6-why-might-a-reset-command-fail-to-clear-a-fault">Q6. Why might a reset command fail to clear a fault?</a></li>
+<li><a href="#q7-does-a-stop-command-immediately-stop-the-motor">Q7. Does a stop command immediately stop the motor?</a></li>
+<li><a href="#q8-what-should-be-checked-first-when-the-drive-has-no-fault-but-the-motor-does-not-start">Q8. What should be checked first when the drive has no fault but the motor does not start?</a></li>
+<li><a href="#q9-what-is-a-control-word">Q9. What is a control word?</a></li>
+<li><a href="#q10-why-must-restart-behavior-be-checked-after-troubleshooting">Q10. Why must restart behavior be checked after troubleshooting?</a></li>
+</ul>
+</li>
+<li><a href="#21-completion-checklist">21. Completion Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\19_Breakdown\03_Drive_Fault\04_Command</code></p>
+<h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>A drive command signal tells a VFD or servo drive what action to perform, such as starting, stopping, enabling, resetting a fault, or selecting a direction of rotation.</p>
+<p>A drive can have healthy power, a healthy motor, and a valid speed reference but still fail to run because the start command is missing, the enable signal is inactive, a safety interlock is open, or the control source is configured incorrectly.</p>
+<p>The purpose of command-signal troubleshooting is to identify where the intended command is lost, blocked, incorrectly configured, or rejected.</p>
+<p>Common command functions include:</p>
+<ul>
+<li>Start or run command.</li>
+<li>Stop command.</li>
+<li>Forward and reverse commands.</li>
+<li>Drive enable.</li>
+<li>Fault reset.</li>
+<li>Jog command.</li>
+<li>Local/remote selection.</li>
+<li>Automatic/manual selection.</li>
+<li>Safety-related permission signals.</li>
+<li>PLC sequence and interlock conditions.</li>
+</ul>
+<p>Important distinction: A run command requests motion. It does not guarantee that the motor will rotate. The drive must also be ready, enabled, free of active blocking faults, and supplied with a valid reference and operating conditions.</p>
+<h2 id="2-startstop-command-architecture">2. Start/Stop Command Architecture</h2>
+<p>A typical industrial drive control path is:</p>
+<pre><code>Operator Push Button / HMI / Machine Sensor
+                    ↓
+             PLC Input or Logic
+                    ↓
+          PLC Sequence and Interlocks
+                    ↓
+       PLC Output / Fieldbus Command
+                    ↓
+             VFD Control Interface
+                    ↓
+       Drive Enable and Run Conditions
+                    ↓
+             VFD Output to Motor
+                    ↓
+             Motor and Machine
+</code></pre>
+<p>The exact arrangement depends on whether commands are hardwired, transmitted over a fieldbus, generated by the drive's own terminals, or provided by a combination of these methods.</p>
+<p>A missing command must be traced through the actual installed architecture. Replacing the drive before checking the PLC output, control wiring, and command-source settings is an expensive way to discover a loose wire.</p>
+<h2 id="3-common-command-sources">3. Common Command Sources</h2>
+<h3 id="31-hardwired-digital-inputs">3.1 Hardwired digital inputs</h3>
+<p>The PLC or operator circuit sends a discrete ON/OFF signal to the drive's digital input.</p>
+<p>Typical examples:</p>
+<ul>
+<li>DI1: Forward run.</li>
+<li>DI2: Reverse run.</li>
+<li>DI3: Enable.</li>
+<li>DI4: Fault reset.</li>
+</ul>
+<p>These assignments are examples only. Actual terminal assignments must be verified from the drive configuration and electrical drawings.</p>
+<h3 id="32-fieldbus-commands">3.2 Fieldbus commands</h3>
+<p>The PLC communicates with the drive over an industrial network such as PROFINET, EtherNet/IP, PROFIBUS, Modbus, or another supported protocol.</p>
+<p>The command may be contained in a control word or structured output data.</p>
+<p>Typical command information includes:</p>
+<ul>
+<li>Enable operation.</li>
+<li>Start or stop.</li>
+<li>Direction.</li>
+<li>Fault reset.</li>
+<li>Jog.</li>
+<li>Control-word bits.</li>
+</ul>
+<p>If the fieldbus is disconnected, the PLC is not in the correct mode, or the control word is incorrect, the drive may not receive the intended run command.</p>
+<h3 id="33-local-keypad-or-hmi-control">3.3 Local keypad or HMI control</h3>
+<p>Some drives can be operated from their local keypad or a configured HMI interface.</p>
+<p>The drive may be set to local control, remote control, terminal control, or network control. The exact terminology varies by manufacturer.</p>
+<p>If the drive is configured to accept commands from the keypad but the PLC is sending a hardwired run signal, the motor may not start even though the signal is physically present.</p>
+<h3 id="34-internal-drive-logic">3.4 Internal drive logic</h3>
+<p>Some drives support internal timers, programmable logic, application functions, or built-in sequence control.</p>
+<p>In these systems, the final run command may depend on multiple internal conditions rather than a single external input.</p>
+<h2 id="4-two-wire-and-three-wire-startstop-control">4. Two-Wire and Three-Wire Start/Stop Control</h2>
+<p>Two common hardwired control arrangements are two-wire and three-wire control. Their behavior must be understood before troubleshooting a drive that starts unexpectedly or refuses to start.</p>
+<h3 id="41-two-wire-control">4.1 Two-wire control</h3>
+<p>Two-wire control generally uses a maintained contact or maintained logic state to represent the run request.</p>
+<p>For example, a maintained ON signal requests running, and an OFF signal requests stopping.</p>
+<pre><code>Run Switch ON
+     ↓
+Run Command Active
+     ↓
+Drive Permissives Satisfied
+     ↓
+Motor Runs
+
+Run Switch OFF
+     ↓
+Run Command Removed
+     ↓
+Drive Stops According to Stop Mode
+</code></pre>
+<p>Typical applications include PLC outputs and maintained machine-control signals.</p>
+<p>A key risk is that if the run signal remains ON during a power interruption or control restart, the drive may restart when its conditions permit. Restart behavior depends on the drive configuration, control scheme, and applicable safety requirements.</p>
+<h3 id="42-three-wire-control">4.2 Three-wire control</h3>
+<p>Three-wire control commonly uses separate momentary start and stop push buttons, with the control circuit or drive maintaining the run state after the start button is released.</p>
+<p>A typical arrangement includes:</p>
+<ul>
+<li>Normally open START push button.</li>
+<li>Normally closed STOP push button.</li>
+<li>Holding or seal-in logic.</li>
+<li>Appropriate drive run-command configuration.</li>
+</ul>
+<p>Conceptually:</p>
+<pre><code>STOP Circuit Healthy
+        ↓
+START Button Pressed
+        ↓
+Run State Latched
+        ↓
+Motor Runs
+
+STOP Button Pressed
+        ↓
+Run State Cleared
+        ↓
+Motor Stops
+</code></pre>
+<p>The latching behavior may be implemented in PLC logic, relay logic, or the drive's configured control mode.</p>
+<h3 id="43-comparison">4.3 Comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Two-wire control</th>
+<th>Three-wire control</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Typical input behavior</td>
+<td>Maintained run state</td>
+<td>Momentary start and stop actions</td>
+</tr>
+<tr>
+<td>Run-state retention</td>
+<td>Maintained command remains active</td>
+<td>Separate logic retains run state</td>
+</tr>
+<tr>
+<td>Common use</td>
+<td>PLC-controlled run request</td>
+<td>Push-button start/stop stations</td>
+</tr>
+<tr>
+<td>Restart consideration</td>
+<td>Maintained ON command may permit restart</td>
+<td>Start logic often requires a new start action, depending on implementation</td>
+</tr>
+<tr>
+<td>Main diagnostic focus</td>
+<td>Run input state and command source</td>
+<td>Start/stop circuit and latching logic</td>
+</tr>
+</tbody>
+</table>
+<p>Neither arrangement is automatically safer in every application. Restart behavior must be designed and validated for the actual machine risk assessment.</p>
+<h2 id="5-stop-commands-and-stop-modes">5. Stop Commands and Stop Modes</h2>
+<p>A stop command does not always mean the drive immediately removes all motor torque. The response depends on the configured stop mode and any active safety functions.</p>
+<p>Common stop behaviors include:</p>
+<ul>
+<li>Ramp stop: The drive decelerates according to a configured ramp.</li>
+<li>Coast stop: The drive removes its active drive command and the motor slows according to its mechanical characteristics.</li>
+<li>DC injection braking: The drive applies a controlled DC component to create braking torque where supported and configured.</li>
+<li>Dynamic braking: A braking circuit dissipates regenerated energy, commonly through a braking resistor where the drive supports it.</li>
+<li>Safety-related stop functions: Safety functions such as Safe Torque Off (STO) act through a safety-rated system and must be designed and validated according to the applicable safety requirements.</li>
+</ul>
+<p>The terms and exact behavior vary by drive manufacturer and application.</p>
+<h3 id="51-why-a-stop-command-may-appear-ineffective">5.1 Why a stop command may appear ineffective</h3>
+<p>Possible reasons include:</p>
+<ul>
+<li>The PLC continues asserting the run command.</li>
+<li>The wrong command source is selected.</li>
+<li>A fieldbus control word is not updating.</li>
+<li>The stop input is assigned incorrectly.</li>
+<li>The stop mode is configured differently from expectations.</li>
+<li>A different operating mode overrides the intended command.</li>
+<li>The machine is coasting after torque removal.</li>
+<li>A brake or mechanical load affects the stopping behavior.</li>
+</ul>
+<p>If a stop command is not working as expected, verify the command state and configured stop mode. Do not assume that removing the run signal guarantees immediate mechanical stopping.</p>
+<h2 id="6-drive-enable-and-run-command-are-different">6. Drive Enable and Run Command Are Different</h2>
+<p>A drive enable signal generally permits operation, while the run command requests the drive to execute motion.</p>
+<p>The precise distinction depends on the drive's control architecture.</p>
+<p>A simplified condition is:</p>
+<div class="math-display">\[ \text{Run permitted} = \text{Drive ready} \land \text{Enable active} \land \text{Run request active} \land \text{Permissives satisfied} \]</div>
+<p>This is a conceptual relationship, not a universal internal drive equation.</p>
+<p>A drive may therefore show:</p>
+<ul>
+<li>Ready but not running.</li>
+<li>Enabled but not running.</li>
+<li>Run command present but operation inhibited.</li>
+<li>Running status active while the motor is still accelerating.</li>
+<li>Stop command accepted while the motor continues decelerating.</li>
+</ul>
+<h3 id="61-common-enabling-conditions">6.1 Common enabling conditions</h3>
+<ul>
+<li>No active blocking fault.</li>
+<li>Control supply available.</li>
+<li>Drive enable input active.</li>
+<li>Safety system in the required state.</li>
+<li>Correct control mode selected.</li>
+<li>Valid communication, if network control is used.</li>
+<li>Machine sequence permitting operation.</li>
+<li>Correct direction and operating mode selection.</li>
+<li>Valid speed or torque reference where required.</li>
+</ul>
+<p>Some drives use different status words and permissive structures, so verify the exact meaning in the relevant manual.</p>
+<h2 id="7-plc-to-drive-command-troubleshooting">7. PLC-to-Drive Command Troubleshooting</h2>
+<p>When a PLC-controlled motor fails to start, trace the command from the operator request to the drive's accepted command.</p>
+<h3 id="71-diagnostic-sequence">7.1 Diagnostic sequence</h3>
+<ol>
+<li>Confirm the operator request on the HMI or push button.</li>
+<li>Check whether the corresponding PLC input changes state.</li>
+<li>Verify the PLC sequence conditions and interlocks.</li>
+<li>Check whether the PLC logic generates the intended run command.</li>
+<li>Verify the PLC output module or fieldbus output data.</li>
+<li>For hardwired control, measure the control signal using the approved procedure.</li>
+<li>Confirm that the signal reaches the correct drive terminal.</li>
+<li>Check the drive's digital input monitor or control-word monitor.</li>
+<li>Verify the configured command source.</li>
+<li>Check the drive-ready, enable, fault, and inhibit status.</li>
+<li>Confirm that the drive accepts the command.</li>
+<li>Investigate the reference and output conditions if the command is accepted but motion does not occur.</li>
+</ol>
+<p>The purpose is to find the first point where the actual signal differs from the intended state.</p>
+<h3 id="72-signal-tracing-table">7.2 Signal tracing table</h3>
+<table>
+<thead>
+<tr>
+<th>Test point</th>
+<th>Expected condition</th>
+<th>If incorrect, investigate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HMI or push button</td>
+<td>Start request present</td>
+<td>Operator input, HMI logic, button contacts</td>
+</tr>
+<tr>
+<td>PLC input</td>
+<td>Input state changes correctly</td>
+<td>Sensor, field wiring, input module</td>
+</tr>
+<tr>
+<td>PLC sequence</td>
+<td>Start conditions satisfied</td>
+<td>Interlocks, sequence state, permissives</td>
+</tr>
+<tr>
+<td>PLC output or network data</td>
+<td>Run command generated</td>
+<td>PLC logic, output mapping, communication</td>
+</tr>
+<tr>
+<td>Drive input monitor</td>
+<td>Command received</td>
+<td>Wiring, terminal assignment, input configuration</td>
+</tr>
+<tr>
+<td>Drive control source</td>
+<td>Correct source selected</td>
+<td>Local/remote mode, parameter settings</td>
+</tr>
+<tr>
+<td>Drive status</td>
+<td>Ready and permitted</td>
+<td>Active fault, enable, safety status, inhibit</td>
+</tr>
+<tr>
+<td>Drive output</td>
+<td>Output behavior matches command and reference</td>
+<td>Drive diagnostics, configuration, motor circuit</td>
+</tr>
+</tbody>
+</table>
+<h2 id="8-digital-input-electrical-checks">8. Digital Input Electrical Checks</h2>
+<p>Hardwired commands may use 24 V DC digital inputs, but the actual voltage and input circuit must be confirmed from the drive documentation.</p>
+<h3 id="81-common-issues">8.1 Common issues</h3>
+<ul>
+<li>Missing control supply.</li>
+<li>Blown control fuse.</li>
+<li>Loose terminal.</li>
+<li>Broken conductor.</li>
+<li>Incorrect common or reference connection.</li>
+<li>Wrong NPN/PNP or sinking/sourcing arrangement.</li>
+<li>Incorrect input polarity.</li>
+<li>Incorrectly assigned digital input.</li>
+<li>Failed PLC output transistor or relay contact.</li>
+<li>Input configured for an unexpected function.</li>
+</ul>
+<h3 id="82-safe-measurement-method">8.2 Safe measurement method</h3>
+<ul>
+<li>Review the electrical drawing and terminal assignment.</li>
+<li>Confirm the specified control voltage.</li>
+<li>Use a suitable meter and approved test procedure.</li>
+<li>Check the signal at the source and at the drive input.</li>
+<li>Compare the measured electrical state with the drive's input monitor.</li>
+<li>Inspect the common/reference arrangement.</li>
+<li>Restore covers and barriers after testing.</li>
+</ul>
+<p>A voltage reading alone does not always prove that an input circuit is functioning correctly. The drive's diagnostic monitor and the configured input function are also important.</p>
+<p>Never short terminals or apply an external voltage to a drive input unless the circuit and procedure explicitly permit it.</p>
+<h2 id="9-fieldbus-command-troubleshooting">9. Fieldbus Command Troubleshooting</h2>
+<p>When the drive is controlled over a network, the PLC may send a control word and receive a status word.</p>
+<p>The names, bit positions, and meanings depend on the drive's communication profile and configuration.</p>
+<h3 id="91-common-causes">9.1 Common causes</h3>
+<ul>
+<li>Network cable disconnected.</li>
+<li>PLC or drive communication fault.</li>
+<li>Wrong IP address or device name.</li>
+<li>Incorrect fieldbus configuration.</li>
+<li>Drive not configured for network control.</li>
+<li>Wrong control-word mapping.</li>
+<li>PLC output data not updating.</li>
+<li>Drive in local mode.</li>
+<li>Communication watchdog timeout.</li>
+<li>Fault reset or enable bit not handled correctly.</li>
+<li>Incorrect telegram or assembly configuration.</li>
+</ul>
+<h3 id="92-diagnostic-method">9.2 Diagnostic method</h3>
+<ol>
+<li>Check the PLC communication diagnostics.</li>
+<li>Check the drive's network status.</li>
+<li>Verify the configured device and communication profile.</li>
+<li>Confirm that the PLC output data changes as expected.</li>
+<li>Monitor the transmitted control word.</li>
+<li>Read the drive's returned status word.</li>
+<li>Verify the correct command-source configuration.</li>
+<li>Check communication watchdog and timeout behavior.</li>
+<li>Confirm the drive's interpretation of the command.</li>
+</ol>
+<p>A connected network does not prove that the drive is receiving the correct run command. Communication health, data mapping, command-source selection, and permissive logic are separate checks.</p>
+<h2 id="10-localremote-and-handauto-selection">10. Local/Remote and Hand/Auto Selection</h2>
+<p>Many industrial systems support local and remote operation.</p>
+<p>Common modes include:</p>
+<ul>
+<li>Local: Commands come from the drive keypad or another locally configured interface.</li>
+<li>Remote: Commands come from the configured external source, such as PLC terminals or fieldbus.</li>
+<li>Hand: Operator-controlled operation, often through an HMI or local control station.</li>
+<li>Auto: Commands are determined by PLC sequence logic or process control.</li>
+</ul>
+<p>The exact definitions vary by installation.</p>
+<h3 id="101-common-failure">10.1 Common failure</h3>
+<p>The operator presses START on the HMI, but the drive remains stopped because it is in local mode and ignores the remote command.</p>
+<p>Alternatively, the drive may be in remote mode while a technician expects the keypad to control it.</p>
+<h3 id="102-checks">10.2 Checks</h3>
+<ul>
+<li>Verify the selected control mode.</li>
+<li>Confirm the configured command source.</li>
+<li>Check whether the mode is selected by a parameter, digital input, HMI, or fieldbus.</li>
+<li>Confirm that the requested mode transition is permitted.</li>
+<li>Check for a local/remote status indication.</li>
+<li>Follow the plant's authorization procedure before changing modes.</li>
+</ul>
+<p>Mode changes can alter how a machine responds to maintained commands. Verify restart behavior and machine safety before returning to automatic operation.</p>
+<h2 id="11-fault-reset-and-start-command-interaction">11. Fault Reset and Start Command Interaction</h2>
+<p>A fault reset command is not the same as a start command.</p>
+<p>A reset typically acknowledges or clears a resettable fault after the underlying fault condition has been removed. It does not necessarily start the motor.</p>
+<h3 id="111-typical-sequence">11.1 Typical sequence</h3>
+<pre><code>Drive Fault Occurs
+        ↓
+Drive Output Stops or Is Inhibited
+        ↓
+Fault Cause Investigated
+        ↓
+Underlying Fault Corrected
+        ↓
+Reset Command Applied If Permitted
+        ↓
+Drive Returns to Ready State
+        ↓
+Valid Start Command Applied
+        ↓
+Drive Runs If All Conditions Are Satisfied
+</code></pre>
+<h3 id="112-common-problems">11.2 Common problems</h3>
+<ul>
+<li>Reset is issued while the fault remains active.</li>
+<li>Reset input is assigned incorrectly.</li>
+<li>Reset command is held continuously when a pulse is expected.</li>
+<li>PLC reset logic repeats unexpectedly.</li>
+<li>A start command remains active while the fault is reset.</li>
+<li>A fault clears but a separate interlock still blocks operation.</li>
+</ul>
+<p>Do not repeatedly reset a drive without understanding the cause. A reset is an acknowledgement mechanism, not a repair technique.</p>
+<h2 id="12-interlocks-and-permissives">12. Interlocks and Permissives</h2>
+<p>An interlock prevents an operation when a required condition is not satisfied. A permissive is a condition that must be true before an operation is allowed.</p>
+<p>Examples include:</p>
+<ul>
+<li>Guard or access condition satisfied.</li>
+<li>Lubrication pressure available.</li>
+<li>Cooling system healthy.</li>
+<li>Conveyor downstream ready.</li>
+<li>Hydraulic pressure within limits.</li>
+<li>Process equipment in the correct state.</li>
+<li>No conflicting direction command.</li>
+<li>Machine sequence at the correct step.</li>
+<li>Safety system in the required operating state.</li>
+</ul>
+<p>Interlocks may be implemented in PLC logic, hardwired control circuits, the drive, or a safety-rated control system.</p>
+<h3 id="121-important-distinction">12.1 Important distinction</h3>
+<p>A standard PLC interlock is not automatically a safety-rated function. Personnel protection must use the designed and validated safety system, including appropriate safety-rated devices and functions.</p>
+<p>Never bypass an interlock or safety circuit merely to make the motor run. Identify why the condition is false and use the approved troubleshooting method.</p>
+<h2 id="13-direction-and-conflicting-commands">13. Direction and Conflicting Commands</h2>
+<p>Some drives support separate forward and reverse commands. Others use a run command plus a direction bit.</p>
+<p>Possible faults include:</p>
+<ul>
+<li>Forward and reverse commands active simultaneously.</li>
+<li>Incorrect direction mapping.</li>
+<li>Wrong PLC output assignment.</li>
+<li>Inconsistent direction state between PLC and drive.</li>
+<li>Direction reversal attempted outside permitted conditions.</li>
+</ul>
+<p>The drive may reject conflicting commands, prioritize one input, stop, or behave according to its configured logic.</p>
+<p>Verify the manufacturer's truth table and the plant's intended logic rather than assuming a universal response.</p>
+<h2 id="14-common-startstop-fault-scenarios">14. Common Start/Stop Fault Scenarios</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Diagnostic focus</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Drive is ready but motor does not start</td>
+<td>Missing run command or enable</td>
+<td>Drive input monitor, PLC output, command source</td>
+</tr>
+<tr>
+<td>HMI start button works but motor remains stopped</td>
+<td>PLC interlock or sequence condition false</td>
+<td>PLC logic, permissives, HMI command status</td>
+</tr>
+<tr>
+<td>PLC output is ON but drive does not run</td>
+<td>Wrong terminal, input configuration, or control mode</td>
+<td>Wiring diagram, drive input monitor, command source</td>
+</tr>
+<tr>
+<td>Drive starts from keypad but not PLC</td>
+<td>External command path incorrect</td>
+<td>Remote mode, terminal configuration, fieldbus data</td>
+</tr>
+<tr>
+<td>Drive starts unexpectedly after power restoration</td>
+<td>Maintained command and restart configuration</td>
+<td>Two-wire logic, PLC startup behavior, restart parameters</td>
+</tr>
+<tr>
+<td>Stop command is issued but motor keeps rotating</td>
+<td>Coast or ramp stop behavior, incorrect command source</td>
+<td>Stop mode, run signal, mechanical deceleration</td>
+</tr>
+<tr>
+<td>Reset clears the fault but drive does not start</td>
+<td>Start command absent or another inhibit remains</td>
+<td>Ready status, enable, interlocks, run command</td>
+</tr>
+<tr>
+<td>Run command arrives but drive reports inhibited</td>
+<td>Permissive, safety status, or drive condition</td>
+<td>Status word, enable chain, active fault</td>
+</tr>
+<tr>
+<td>Motor runs in the wrong direction</td>
+<td>Direction mapping or motor connection issue</td>
+<td>PLC logic, direction bit, approved motor checks</td>
+</tr>
+<tr>
+<td>Drive trips when network control is selected</td>
+<td>Communication or control-word problem</td>
+<td>Network diagnostics, control word, watchdog</td>
+</tr>
+</tbody>
+</table>
+<h2 id="15-practical-breakdown-example-plc-run-command-missing">15. Practical Breakdown Example: PLC Run Command Missing</h2>
+<p>Machine condition: A motor does not start from the HMI. The VFD has no active fault and displays ready.</p>
+<p>Initial observations:</p>
+<ul>
+<li>HMI START button responds.</li>
+<li>Drive shows ready.</li>
+<li>Motor does not rotate.</li>
+<li>No run command is visible in the drive input monitor.</li>
+</ul>
+<p>Investigation:</p>
+<ol>
+<li>Verify that the HMI request reaches the PLC.</li>
+<li>Check sequence state and permissive conditions.</li>
+<li>Monitor the PLC's internal run-command bit.</li>
+<li>Verify the mapped output or fieldbus command.</li>
+<li>Check the output module and wiring where hardwired control is used.</li>
+<li>Verify the drive's command-source selection.</li>
+<li>Check the drive's input monitor and terminal assignment.</li>
+</ol>
+<p>Possible root cause: A PLC output address was changed during a program modification, but the physical drive command remained wired to the original output.</p>
+<p>Corrective action: Restore the correct mapping under change control and verify the logic and electrical drawing.</p>
+<p>Verification: Confirm the start request travels through the expected path and the motor starts and stops correctly under the approved test conditions.</p>
+<h2 id="16-practical-breakdown-example-drive-runs-from-keypad-only">16. Practical Breakdown Example: Drive Runs from Keypad Only</h2>
+<p>Machine condition: The motor operates from the drive keypad but does not start from the PLC.</p>
+<p>Investigation:</p>
+<ol>
+<li>Record the active control mode.</li>
+<li>Verify whether the drive is configured for local or remote command control.</li>
+<li>Check the configured remote source.</li>
+<li>If hardwired, monitor the digital input and verify the terminal assignment.</li>
+<li>If fieldbus-controlled, inspect communication status, output data, and control-word mapping.</li>
+<li>Check whether enable and permissive conditions are satisfied.</li>
+</ol>
+<p>Possible root cause: The drive is configured for keypad control rather than the intended PLC command source.</p>
+<p>Corrective action: Correct the command-source configuration according to the approved machine settings.</p>
+<p>Verification: Confirm that PLC commands are accepted, local/remote behavior matches the design, and unexpected restart behavior is not introduced.</p>
+<h2 id="17-practical-breakdown-example-motor-does-not-stop-as-expected">17. Practical Breakdown Example: Motor Does Not Stop as Expected</h2>
+<p>Machine condition: An operator issues STOP, but the motor continues rotating for several seconds.</p>
+<p>Investigation:</p>
+<ol>
+<li>Verify that the stop request reaches the PLC or drive.</li>
+<li>Confirm that the run command is removed or the appropriate stop command is transmitted.</li>
+<li>Check the configured stop mode and deceleration ramp.</li>
+<li>Review whether the load has significant inertia.</li>
+<li>Check the mechanical braking arrangement if rapid stopping is required.</li>
+<li>Verify that the machine's required stopping performance is met.</li>
+</ol>
+<p>Possible root cause: The drive is configured for ramp stopping, and the load has sufficient inertia to require several seconds to decelerate.</p>
+<p>Corrective action: Apply the approved stop behavior and braking design for the machine. Do not arbitrarily shorten the ramp or alter braking parameters without checking drive limits, regenerative energy, mechanical constraints, and safety requirements.</p>
+<p>Verification: Measure the stopping time under representative operating conditions and confirm compliance with the machine design.</p>
+<h2 id="18-safety-considerations">18. Safety Considerations</h2>
+<ul>
+<li>Apply the approved isolation and lockout/tagout procedure before electrical work.</li>
+<li>Verify absence of hazardous voltage before touching conductors.</li>
+<li>Observe the manufacturer's DC bus discharge time and verify the required safe condition.</li>
+<li>Never assume a stopped motor is electrically isolated.</li>
+<li>Do not use a standard drive run/stop command as a substitute for an emergency-stop or safety-rated stop function.</li>
+<li>Never bypass safety circuits to force a start command.</li>
+<li>Confirm the machine's restart behavior after power loss, communication loss, fault reset, or mode changes.</li>
+<li>Use approved procedures for live measurements and only where necessary.</li>
+<li>Keep guards and protective barriers in place during normal operation.</li>
+<li>Follow plant authorization and change-control procedures for drive parameters and PLC logic.</li>
+</ul>
+<h2 id="19-maintenance-record-template">19. Maintenance Record Template</h2>
+<pre><code>Machine / Station:
+Motor Asset Number:
+Drive Manufacturer and Model:
+Drive Identification:
+Control Source: Terminal / Fieldbus / Keypad / Other
+Control Mode: Local / Remote / Hand / Auto
+Start Command Source:
+Stop Command Source:
+Drive Enable Source:
+Fault Code and Status:
+HMI Start Request:
+PLC Input State:
+PLC Run Logic State:
+PLC Output / Fieldbus Command:
+Drive Input Monitor:
+Drive Control-Word Status:
+Drive Ready Status:
+Interlock / Permissive Findings:
+Stop Mode:
+Direction Command:
+Verified Root Cause:
+Corrective Action:
+Parameter or Logic Changes:
+Post-Repair Start Test:
+Post-Repair Stop Test:
+Restart Behavior Verified:
+Maintenance Record Reference:
+</code></pre>
+<h2 id="20-interview-questions-and-answers">20. Interview Questions and Answers</h2>
+<h3 id="q1-what-is-the-difference-between-a-start-command-and-a-speed-reference">Q1. What is the difference between a start command and a speed reference?</h3>
+<p>The start command requests operation. The speed reference specifies the desired speed or frequency. A drive may receive a valid speed reference while remaining stopped because the run command or enable is missing.</p>
+<h3 id="q2-why-can-a-drive-be-ready-but-not-run">Q2. Why can a drive be ready but not run?</h3>
+<p>The drive may be ready but not receiving a run command, may be disabled, may be in the wrong control mode, or may be blocked by an interlock or permissive condition.</p>
+<h3 id="q3-what-is-the-difference-between-two-wire-and-three-wire-control">Q3. What is the difference between two-wire and three-wire control?</h3>
+<p>Two-wire control generally uses a maintained run state. Three-wire control commonly uses momentary start and stop actions with a latched run state implemented in logic or by the drive.</p>
+<h3 id="q4-why-does-a-drive-run-from-its-keypad-but-not-from-the-plc">Q4. Why does a drive run from its keypad but not from the PLC?</h3>
+<p>The drive may be configured for local control, the remote command source may be incorrect, or the PLC output, wiring, fieldbus data, or control-word mapping may be faulty.</p>
+<h3 id="q5-what-is-a-drive-permissive">Q5. What is a drive permissive?</h3>
+<p>A permissive is a required condition that must be satisfied before an operation is allowed, such as cooling availability, correct machine sequence, or an acceptable process condition.</p>
+<h3 id="q6-why-might-a-reset-command-fail-to-clear-a-fault">Q6. Why might a reset command fail to clear a fault?</h3>
+<p>The fault condition may still be active, the reset input may be incorrectly configured, the reset signal may not be received, or the fault may require a different approved recovery procedure.</p>
+<h3 id="q7-does-a-stop-command-immediately-stop-the-motor">Q7. Does a stop command immediately stop the motor?</h3>
+<p>Not necessarily. Depending on the stop mode, the drive may ramp down or remove torque and allow the motor to coast. Mechanical stopping time depends on the drive, motor, load, and braking system.</p>
+<h3 id="q8-what-should-be-checked-first-when-the-drive-has-no-fault-but-the-motor-does-not-start">Q8. What should be checked first when the drive has no fault but the motor does not start?</h3>
+<p>Check the actual run-command state, enable status, command source, drive-ready status, and active permissives. Trace the signal from the operator request to the drive rather than immediately replacing hardware.</p>
+<h3 id="q9-what-is-a-control-word">Q9. What is a control word?</h3>
+<p>A control word is a structured set of bits transmitted over a communication interface to command a drive. Its exact bit meanings depend on the communication profile and drive configuration.</p>
+<h3 id="q10-why-must-restart-behavior-be-checked-after-troubleshooting">Q10. Why must restart behavior be checked after troubleshooting?</h3>
+<p>Power restoration, communication recovery, fault reset, or switching control modes can change whether a maintained run request is accepted. Unexpected restart can create serious machine hazards.</p>
+<h2 id="21-completion-checklist">21. Completion Checklist</h2>
+<ul>
+<li>Explain the start/stop command path from operator request to drive.</li>
+<li>Distinguish run command, drive enable, ready status, and speed reference.</li>
+<li>Explain two-wire and three-wire control.</li>
+<li>Identify ramp stop, coast stop, and relevant braking behavior.</li>
+<li>Trace hardwired digital inputs safely.</li>
+<li>Diagnose PLC output and sequence-related command failures.</li>
+<li>Diagnose fieldbus control-word and status-word issues.</li>
+<li>Verify local/remote and hand/auto control modes.</li>
+<li>Understand fault reset and its limitations.</li>
+<li>Check interlocks, permissives, and direction commands.</li>
+<li>Verify restart behavior after power or communication recovery.</li>
+<li>Document the root cause and confirm correct start/stop operation.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\19_Breakdown\03_Drive_Fault\05_Reference - Reference: Speed reference signal</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

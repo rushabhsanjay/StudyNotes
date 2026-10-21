@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drive Component Replacement</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Drive Component Replacement</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and Scope</a></li>
+<li><a href="#2-understanding-the-drive-system">2. Understanding the Drive System</a><ul>
+<li><a href="#21-main-drive-categories">2.1 Main drive categories</a></li>
+</ul>
+</li>
+<li><a href="#3-common-drive-faults-and-their-causes">3. Common Drive Faults and Their Causes</a></li>
+<li><a href="#4-safety-requirements">4. Safety Requirements</a><ul>
+<li><a href="#41-principal-hazards">4.1 Principal hazards</a></li>
+<li><a href="#42-required-precautions">4.2 Required precautions</a></li>
+<li><a href="#43-safety-related-functions">4.3 Safety-related functions</a></li>
+</ul>
+</li>
+<li><a href="#5-pre-replacement-identification-and-compatibility">5. Pre-Replacement Identification and Compatibility</a><ul>
+<li><a href="#51-information-to-record">5.1 Information to record</a></li>
+<li><a href="#52-compatibility-matrix">5.2 Compatibility matrix</a></li>
+<li><a href="#53-power-rating-and-current">5.3 Power rating and current</a></li>
+</ul>
+</li>
+<li><a href="#6-backup-and-parameter-preservation">6. Backup and Parameter Preservation</a><ul>
+<li><a href="#61-what-to-preserve">6.1 What to preserve</a></li>
+<li><a href="#62-parameter-backup-methods">6.2 Parameter backup methods</a></li>
+<li><a href="#63-validate-the-backup">6.3 Validate the backup</a></li>
+</ul>
+</li>
+<li><a href="#7-standard-drive-replacement-procedure">7. Standard Drive Replacement Procedure</a><ul>
+<li><a href="#71-phase-a-diagnose-and-prepare">7.1 Phase A: Diagnose and prepare</a></li>
+<li><a href="#72-phase-b-record-the-installation">7.2 Phase B: Record the installation</a></li>
+<li><a href="#73-phase-c-isolate-and-remove-the-drive">7.3 Phase C: Isolate and remove the drive</a></li>
+<li><a href="#74-phase-d-install-the-replacement">7.4 Phase D: Install the replacement</a></li>
+<li><a href="#75-phase-e-configure-and-restore-parameters">7.5 Phase E: Configure and restore parameters</a></li>
+<li><a href="#76-phase-f-commission-and-release">7.6 Phase F: Commission and release</a></li>
+</ul>
+</li>
+<li><a href="#8-parameter-categories-that-require-special-attention">8. Parameter Categories That Require Special Attention</a><ul>
+<li><a href="#81-motor-nameplate-parameters">8.1 Motor nameplate parameters</a></li>
+<li><a href="#82-command-and-reference-parameters">8.2 Command and reference parameters</a></li>
+<li><a href="#83-limits-and-ramp-settings">8.3 Limits and ramp settings</a></li>
+<li><a href="#84-analog-input-and-output-configuration">8.4 Analog input and output configuration</a></li>
+<li><a href="#85-communication-parameters">8.5 Communication parameters</a></li>
+</ul>
+</li>
+<li><a href="#9-replacing-a-vfd">9. Replacing a VFD</a><ul>
+<li><a href="#91-additional-vfd-checks">9.1 Additional VFD checks</a></li>
+<li><a href="#92-motor-identification-and-autotuning">9.2 Motor identification and autotuning</a></li>
+<li><a href="#93-vfd-replacement-validation">9.3 VFD replacement validation</a></li>
+</ul>
+</li>
+<li><a href="#10-replacing-a-servo-drive">10. Replacing a Servo Drive</a><ul>
+<li><a href="#101-additional-servo-system-information">10.1 Additional servo-system information</a></li>
+<li><a href="#102-servo-tuning">10.2 Servo tuning</a></li>
+<li><a href="#103-encoder-and-motor-feedback-checks">10.3 Encoder and motor feedback checks</a></li>
+</ul>
+</li>
+<li><a href="#11-replacing-a-drive-in-a-plc-controlled-machine">11. Replacing a Drive in a PLC-Controlled Machine</a><ul>
+<li><a href="#111-typical-command-and-status-signals">11.1 Typical command and status signals</a></li>
+<li><a href="#112-plc-and-network-integration">11.2 PLC and network integration</a></li>
+</ul>
+</li>
+<li><a href="#12-braking-regeneration-and-mechanical-loads">12. Braking, Regeneration, and Mechanical Loads</a><ul>
+<li><a href="#121-braking-resistor">12.1 Braking resistor</a></li>
+<li><a href="#122-regenerative-systems">12.2 Regenerative systems</a></li>
+<li><a href="#123-vertical-axes-and-suspended-loads">12.3 Vertical axes and suspended loads</a></li>
+</ul>
+</li>
+<li><a href="#13-manufacturer-specific-considerations">13. Manufacturer-Specific Considerations</a></li>
+<li><a href="#14-troubleshooting-after-replacement">14. Troubleshooting After Replacement</a><ul>
+<li><a href="#troubleshooting-discipline">Troubleshooting discipline</a></li>
+</ul>
+</li>
+<li><a href="#15-functional-validation-and-acceptance">15. Functional Validation and Acceptance</a><ul>
+<li><a href="#151-electrical-and-installation-checks">15.1 Electrical and installation checks</a></li>
+<li><a href="#152-configuration-and-communication-checks">15.2 Configuration and communication checks</a></li>
+<li><a href="#153-functional-checks">15.3 Functional checks</a></li>
+</ul>
+</li>
+<li><a href="#16-documentation-and-change-control">16. Documentation and Change Control</a><ul>
+<li><a href="#161-minimum-replacement-record">16.1 Minimum replacement record</a></li>
+<li><a href="#162-change-control-triggers">16.2 Change-control triggers</a></li>
+</ul>
+</li>
+<li><a href="#17-common-mistakes-to-avoid">17. Common Mistakes to Avoid</a></li>
+<li><a href="#18-practical-example-replacing-a-vfd-on-a-test-bed">18. Practical Example: Replacing a VFD on a Test Bed</a><ul>
+<li><a href="#step-1-diagnose-and-prepare">Step 1: Diagnose and prepare</a></li>
+<li><a href="#step-2-replace-the-drive">Step 2: Replace the drive</a></li>
+<li><a href="#step-3-restore-configuration">Step 3: Restore configuration</a></li>
+<li><a href="#step-4-validate">Step 4: Validate</a></li>
+<li><a href="#step-5-close-the-activity">Step 5: Close the activity</a></li>
+</ul>
+</li>
+<li><a href="#19-key-performance-indicators">19. Key Performance Indicators</a></li>
+<li><a href="#20-interview-questions-and-answers">20. Interview Questions and Answers</a></li>
+<li><a href="#21-final-drive-replacement-checklist">21. Final Drive Replacement Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\33_SOP_WI\05_Component_Replacement\03_Drive - Drive</code></p>
+<h2 id="1-purpose-and-scope">1. Purpose and Scope</h2>
+<p>A drive component replacement is the controlled replacement of a faulty, damaged, obsolete, or incompatible electrical drive component while preserving the approved motor-control behavior, protection settings, process performance, and machine safety.</p>
+<p>In industrial automation, a drive commonly refers to a Variable Frequency Drive (VFD), AC drive, servo drive, or another electronic motor-control device. The exact replacement procedure depends on the drive type, voltage and power rating, motor, feedback system, application, and machine design.</p>
+<p>Drive replacement may involve:</p>
+<ul>
+<li>Replacing a complete VFD or servo drive.</li>
+<li>Replacing a power module, control board, cooling fan, keypad, or other OEM-serviceable part.</li>
+<li>Replacing an encoder interface or communication option.</li>
+<li>Replacing a braking resistor or associated drive component.</li>
+<li>Migrating from an obsolete drive to an approved successor.</li>
+<li>Restoring drive parameters, motor data, communication settings, and application configuration.</li>
+</ul>
+<p>Core principle: A replacement drive must be electrically compatible, correctly configured, properly integrated with the control system, and functionally validated before the machine is returned to service. A drive that powers up without an alarm is not necessarily a correctly commissioned drive.</p>
+<h2 id="2-understanding-the-drive-system">2. Understanding the Drive System</h2>
+<p>A motor-drive system includes more than the drive itself. Failure in the motor, cable, power supply, cooling system, mechanical load, feedback device, or control network can produce symptoms that appear to indicate a faulty drive.</p>
+<pre><code>Electrical supply
+       ↓
+Protection and isolation
+       ↓
+Drive power converter
+       ↓
+Motor cable
+       ↓
+Electric motor
+       ↓
+Mechanical load
+
+PLC / Motion controller
+       ↓
+Control command and communication
+       ↓
+Drive control section
+
+Encoder / feedback device
+       ↓
+Servo drive or supported feedback interface
+</code></pre>
+<p>The diagram is conceptual. Actual systems may use additional contactors, line reactors, braking units, safety devices, feedback interfaces, or shared DC buses.</p>
+<h3 id="21-main-drive-categories">2.1 Main drive categories</h3>
+<table>
+<thead>
+<tr>
+<th>Drive type</th>
+<th>Primary function</th>
+<th>Important replacement considerations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VFD or AC drive</td>
+<td>Controls AC motor speed and often torque</td>
+<td>Motor data, control mode, acceleration, deceleration, limits, protection</td>
+</tr>
+<tr>
+<td>Servo drive</td>
+<td>Controls motor position, speed, and torque using a motion system</td>
+<td>Motor-drive compatibility, feedback, tuning, motion configuration</td>
+</tr>
+<tr>
+<td>DC drive</td>
+<td>Controls a DC motor's speed or torque</td>
+<td>Armature and field ratings, feedback, current limits, control settings</td>
+</tr>
+<tr>
+<td>Regenerative drive</td>
+<td>Returns supported braking energy to the supply</td>
+<td>Regeneration topology, supply compatibility, braking configuration</td>
+</tr>
+<tr>
+<td>Multi-axis drive system</td>
+<td>Controls multiple axes using shared or coordinated hardware</td>
+<td>Axis assignment, shared DC bus, synchronization, configuration</td>
+</tr>
+<tr>
+<td>Integrated motor drive</td>
+<td>Combines motor and drive electronics</td>
+<td>Complete assembly compatibility, cooling, communications, motor data</td>
+</tr>
+</tbody>
+</table>
+<p>Do not treat a VFD and a servo drive as interchangeable simply because both control motor motion. Their feedback requirements, control algorithms, dynamic performance, and commissioning methods may be substantially different.</p>
+<h2 id="3-common-drive-faults-and-their-causes">3. Common Drive Faults and Their Causes</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible causes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Drive does not power up</td>
+<td>Missing supply, blown fuse, isolation issue, internal power-stage fault</td>
+</tr>
+<tr>
+<td>Overcurrent trip</td>
+<td>Motor cable fault, short circuit, excessive load, incorrect acceleration, drive fault</td>
+</tr>
+<tr>
+<td>Overvoltage trip</td>
+<td>Excessive regenerative energy, rapid deceleration, supply disturbance, incorrect braking configuration</td>
+</tr>
+<tr>
+<td>Undervoltage trip</td>
+<td>Supply dip, loose connection, failed supply component, insufficient DC-bus voltage</td>
+</tr>
+<tr>
+<td>Overtemperature trip</td>
+<td>Blocked airflow, failed fan, high ambient temperature, overload, contamination</td>
+</tr>
+<tr>
+<td>Motor does not rotate</td>
+<td>Missing run command, inhibit, interlock, motor wiring issue, configuration mismatch</td>
+</tr>
+<tr>
+<td>Motor runs at the wrong speed</td>
+<td>Incorrect reference scaling, frequency limits, motor data, control configuration</td>
+</tr>
+<tr>
+<td>Servo following error</td>
+<td>Feedback issue, tuning problem, mechanical obstruction, incorrect motion configuration</td>
+</tr>
+<tr>
+<td>Encoder or feedback alarm</td>
+<td>Damaged cable, incorrect feedback type, connector issue, incompatible motor or encoder</td>
+</tr>
+<tr>
+<td>Communication fault</td>
+<td>Network issue, incorrect node identity, protocol mismatch, drive configuration error</td>
+</tr>
+<tr>
+<td>Ground fault</td>
+<td>Cable or motor insulation damage, wiring issue, drive power-stage fault</td>
+</tr>
+<tr>
+<td>Repeated trips after replacement</td>
+<td>Original root cause remains, incorrect settings, incompatible drive, mechanical problem</td>
+</tr>
+</tbody>
+</table>
+<p>A drive trip is evidence of a detected condition, not proof that the drive is defective. Check the fault history and investigate the motor, wiring, load, supply, cooling, and control system before deciding to replace the drive.</p>
+<h2 id="4-safety-requirements">4. Safety Requirements</h2>
+<p>Drive replacement involves hazardous electrical energy, stored DC-bus energy, rotating machinery, and sometimes regenerative energy from the motor or mechanical load.</p>
+<h3 id="41-principal-hazards">4.1 Principal hazards</h3>
+<ul>
+<li>Electric shock from incoming supply terminals.</li>
+<li>Stored energy in capacitors after supply isolation.</li>
+<li>Unexpected motor movement from control commands or external forces.</li>
+<li>Regeneration from a rotating motor or mechanically driven axis.</li>
+<li>Unexpected restart after communication or power restoration.</li>
+<li>Arc-flash and short-circuit hazards, depending on the equipment and installation.</li>
+<li>Hot heat sinks, braking resistors, and other components.</li>
+<li>Mechanical hazards from suspended loads, vertical axes, conveyors, and rotating equipment.</li>
+<li>Electrostatic discharge damage to electronic components.</li>
+</ul>
+<h3 id="42-required-precautions">4.2 Required precautions</h3>
+<ol>
+<li>Obtain authorization and identify the correct machine and drive.</li>
+<li>Review the OEM instructions, electrical drawings, and machine-specific risk controls.</li>
+<li>Place the machine in the approved safe state.</li>
+<li>Isolate all relevant energy sources using the approved lockout/tagout or site isolation procedure.</li>
+<li>Account for auxiliary supplies, external DC buses, regeneration, and other possible energy sources.</li>
+<li>Wait for the manufacturer's specified DC-bus discharge time.</li>
+<li>Verify the required absence of voltage using an approved instrument and method.</li>
+<li>Secure mechanical loads and prevent unexpected movement.</li>
+<li>Use appropriate electrical PPE, ESD precautions, and tools.</li>
+<li>Do not bypass protective devices or safety functions to make testing easier.</li>
+</ol>
+<p>Never assume the DC bus is safe merely because the drive display is dark or the supply has been switched off. Follow the specific equipment instructions and site electrical-safety procedure.</p>
+<h3 id="43-safety-related-functions">4.3 Safety-related functions</h3>
+<p>Some drives support safety functions such as Safe Torque Off (STO), Safe Stop 1 (SS1), or other safety-rated motion functions. Their availability and implementation depend on the exact drive and system architecture.</p>
+<p>Replacing a drive or safety-related option may require documented verification of safety parameters, wiring, configuration, and the associated safety function. A standard run test does not establish that a safety function is valid.</p>
+<p>STO prevents the drive from producing motor torque under its defined conditions. It does not necessarily isolate electrical power or eliminate every mechanical hazard.</p>
+<h2 id="5-pre-replacement-identification-and-compatibility">5. Pre-Replacement Identification and Compatibility</h2>
+<p>Before selecting a replacement, establish the exact drive configuration and the application requirements. Matching only the drive's kW rating is insufficient.</p>
+<h3 id="51-information-to-record">5.1 Information to record</h3>
+<ul>
+<li>Machine and asset identification.</li>
+<li>Drive manufacturer, family, model, catalog number, and revision.</li>
+<li>Rated input voltage, phases, frequency, and current.</li>
+<li>Rated output voltage, current, and power.</li>
+<li>Motor nameplate data.</li>
+<li>Drive duty rating and overload capability.</li>
+<li>Control mode, such as scalar V/f, sensorless vector, closed-loop vector, or servo control.</li>
+<li>Motor feedback type and encoder resolution where applicable.</li>
+<li>Control terminal wiring and external reference signals.</li>
+<li>Communication protocol, network address, and device identity.</li>
+<li>Firmware and engineering software versions.</li>
+<li>Parameter backup and approved configuration revision.</li>
+<li>Braking resistor, reactor, filter, and braking-unit specifications.</li>
+<li>Cooling arrangement and enclosure requirements.</li>
+<li>Safety options and required safety functions.</li>
+<li>PLC or motion-controller interface and relevant interlocks.</li>
+</ul>
+<h3 id="52-compatibility-matrix">5.2 Compatibility matrix</h3>
+<table>
+<thead>
+<tr>
+<th>Factor</th>
+<th>Verification requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Supply voltage</td>
+<td>Replacement supports the actual incoming supply</td>
+</tr>
+<tr>
+<td>Input and output current</td>
+<td>Ratings support the motor and application</td>
+</tr>
+<tr>
+<td>Motor type</td>
+<td>Drive supports the installed induction, synchronous, servo, or other motor type</td>
+</tr>
+<tr>
+<td>Overload duty</td>
+<td>Drive supports the required starting and operating duty</td>
+</tr>
+<tr>
+<td>Control method</td>
+<td>Required scalar, vector, or motion-control mode is available</td>
+</tr>
+<tr>
+<td>Motor feedback</td>
+<td>Encoder or resolver interface is compatible where required</td>
+</tr>
+<tr>
+<td>Braking system</td>
+<td>Regenerative or braking hardware matches the application</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>Required fieldbus, protocol, and PLC integration are supported</td>
+</tr>
+<tr>
+<td>Control I/O</td>
+<td>Required digital and analog interfaces are available</td>
+</tr>
+<tr>
+<td>Firmware</td>
+<td>Project and configuration are supported by the target firmware</td>
+</tr>
+<tr>
+<td>Safety</td>
+<td>Required safety functions and hardware options are supported</td>
+</tr>
+<tr>
+<td>Environment</td>
+<td>Temperature, altitude, contamination, cooling, and enclosure requirements are met</td>
+</tr>
+<tr>
+<td>Mounting</td>
+<td>Dimensions, clearances, ventilation, and cable entry are suitable</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53-power-rating-and-current">5.3 Power rating and current</h3>
+<p>Drive selection must consider motor current and application duty, not only motor power.</p>
+<p>For a three-phase motor, the approximate electrical input power relationship is:</p>
+<div class="math-display">\[ P\_{\text{in}}=\sqrt{3}\\,V_L I_L \cos\phi \]</div>
+<p>Here, <span class="math-inline">\(V_L\)</span> is line voltage, <span class="math-inline">\(I_L\)</span> is line current, and <span class="math-inline">\(\cos\phi\)</span> is the power factor. This relationship describes three-phase electrical input power, not a universal drive-sizing rule. Motor efficiency, drive losses, overload duty, switching characteristics, and application requirements also matter.</p>
+<p>Use the manufacturer's selection guidelines and the motor nameplate. A replacement with a higher nominal kW rating may still be unsuitable if its output-current rating, overload capability, voltage class, or required control functions do not match.</p>
+<h2 id="6-backup-and-parameter-preservation">6. Backup and Parameter Preservation</h2>
+<p>A drive parameter backup is one of the most important parts of a controlled replacement. Incorrect parameters can cause a motor to run at the wrong speed, produce excessive current, respond incorrectly to commands, or behave unpredictably during deceleration.</p>
+<h3 id="61-what-to-preserve">6.1 What to preserve</h3>
+<table>
+<thead>
+<tr>
+<th>Data</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Complete parameter set</td>
+<td>Preserves the approved drive configuration</td>
+</tr>
+<tr>
+<td>Motor nameplate data</td>
+<td>Supports correct motor control and protection</td>
+</tr>
+<tr>
+<td>Control mode</td>
+<td>Defines how the drive controls motor behavior</td>
+</tr>
+<tr>
+<td>Acceleration and deceleration times</td>
+<td>Preserves ramp behavior</td>
+</tr>
+<tr>
+<td>Speed, frequency, torque, and current limits</td>
+<td>Preserves operating boundaries</td>
+</tr>
+<tr>
+<td>Digital and analog I/O mapping</td>
+<td>Preserves external command and feedback relationships</td>
+</tr>
+<tr>
+<td>Reference scaling</td>
+<td>Preserves the relationship between command signals and motor response</td>
+</tr>
+<tr>
+<td>Communication settings</td>
+<td>Preserves PLC or network integration</td>
+</tr>
+<tr>
+<td>Fault history</td>
+<td>Helps identify the original failure and recurring conditions</td>
+</tr>
+<tr>
+<td>Firmware and hardware revision</td>
+<td>Supports compatibility and restoration</td>
+</tr>
+<tr>
+<td>Braking settings</td>
+<td>Preserves the approved braking configuration</td>
+</tr>
+<tr>
+<td>Motor feedback parameters</td>
+<td>Supports encoder or resolver operation</td>
+</tr>
+<tr>
+<td>Tuning and identification data</td>
+<td>Supports required motor or servo performance</td>
+</tr>
+<tr>
+<td>Safety parameters</td>
+<td>Supports controlled restoration and safety validation where applicable</td>
+</tr>
+<tr>
+<td>Drive and motor identification</td>
+<td>Ensures the backup belongs to the correct asset</td>
+</tr>
+</tbody>
+</table>
+<h3 id="62-parameter-backup-methods">6.2 Parameter backup methods</h3>
+<p>Depending on the drive family, backups may be created using:</p>
+<ul>
+<li>The drive keypad or operator panel.</li>
+<li>Manufacturer engineering software.</li>
+<li>A supported memory card or removable storage device.</li>
+<li>A supported controller-based parameter-management method.</li>
+<li>A documented manual parameter record for critical settings.</li>
+</ul>
+<p>Whenever possible, retain the native backup file and a human-readable parameter report. A photograph of the display or a short list of frequently used parameters is not a complete backup.</p>
+<h3 id="63-validate-the-backup">6.3 Validate the backup</h3>
+<p>Before removing the original drive:</p>
+<ol>
+<li>Identify the exact drive and motor.</li>
+<li>Export the approved parameter set using a supported method.</li>
+<li>Record the drive model, firmware, and parameter-file version.</li>
+<li>Confirm that the file can be opened or restored using the appropriate tool.</li>
+<li>Record parameters that require separate preservation.</li>
+<li>Verify whether the file contains the required communication and motor settings.</li>
+<li>Store the backup in the approved engineering repository.</li>
+<li>Protect passwords, credentials, and sensitive configuration information.</li>
+</ol>
+<p>A backup should not automatically be treated as a verified golden configuration. If the existing drive has been operating incorrectly or contains unapproved changes, compare its parameters with the approved baseline before deciding which values should be restored.</p>
+<h2 id="7-standard-drive-replacement-procedure">7. Standard Drive Replacement Procedure</h2>
+<p>The following framework must be adapted to the exact drive model, electrical installation, and machine-specific SOP.</p>
+<h3 id="71-phase-a-diagnose-and-prepare">7.1 Phase A: Diagnose and prepare</h3>
+<ol>
+<li>Record the drive fault code and relevant fault history.</li>
+<li>Check whether the fault originates in the drive, supply, motor, cable, control system, or mechanical load.</li>
+<li>Confirm the replacement is justified.</li>
+<li>Verify the exact replacement model and electrical compatibility.</li>
+<li>Preserve the approved parameter set and relevant diagnostic information.</li>
+<li>Record the motor nameplate data and external wiring.</li>
+<li>Review the electrical drawing and manufacturer's replacement instructions.</li>
+<li>Confirm the required isolation, discharge, and mechanical securing procedures.</li>
+<li>Obtain authorization and prepare the approved replacement and tools.</li>
+</ol>
+<h3 id="72-phase-b-record-the-installation">7.2 Phase B: Record the installation</h3>
+<p>Before disconnecting the drive:</p>
+<ul>
+<li>Photograph the drive label and installation where permitted.</li>
+<li>Record incoming supply and motor output connections.</li>
+<li>Identify control terminals and communication connections.</li>
+<li>Record the drive's network address and device identity.</li>
+<li>Record external reference signals and feedback connections.</li>
+<li>Identify braking resistors, reactors, filters, and external braking units.</li>
+<li>Record relevant parameter values and diagnostics.</li>
+<li>Identify the associated PLC, motor, and machine axis.</li>
+</ul>
+<p>Label conductors and connectors so that the original arrangement can be reconstructed without relying on memory.</p>
+<h3 id="73-phase-c-isolate-and-remove-the-drive">7.3 Phase C: Isolate and remove the drive</h3>
+<ol>
+<li>Place the machine in its approved safe state.</li>
+<li>Apply the required energy-isolation procedure.</li>
+<li>Account for auxiliary supplies, external DC sources, and possible regeneration.</li>
+<li>Wait the specified discharge time.</li>
+<li>Verify the absence of voltage using the approved method.</li>
+<li>Confirm that mechanical loads cannot move unexpectedly.</li>
+<li>Disconnect the incoming supply, motor leads, control wiring, feedback wiring, and communications as applicable.</li>
+<li>Label and secure the disconnected conductors.</li>
+<li>Remove the drive using the OEM procedure.</li>
+<li>Inspect the mounting area, terminals, cables, and nearby equipment for heat damage, contamination, or mechanical problems.</li>
+</ol>
+<p>Do not touch terminals or internal components until the required safe conditions have been verified.</p>
+<h3 id="74-phase-d-install-the-replacement">7.4 Phase D: Install the replacement</h3>
+<ol>
+<li>Confirm the replacement model, current rating, voltage class, and hardware options.</li>
+<li>Inspect the unit for damage.</li>
+<li>Verify mounting, clearances, cooling, and environmental suitability.</li>
+<li>Install the drive according to the manufacturer's instructions.</li>
+<li>Reconnect the incoming supply and motor output according to the approved drawing.</li>
+<li>Restore the control and communication connections.</li>
+<li>Reconnect feedback devices and braking components where applicable.</li>
+<li>Verify conductor identification, terminal tightness, polarity, grounding, and shielding.</li>
+<li>Confirm that required clearances and cooling paths are unobstructed.</li>
+<li>Inspect the installation before restoring power.</li>
+</ol>
+<p>Never infer terminal function from physical position alone. Drive families may use different terminal layouts, and similar-looking terminals can serve different functions.</p>
+<h3 id="75-phase-e-configure-and-restore-parameters">7.5 Phase E: Configure and restore parameters</h3>
+<ol>
+<li>Verify the replacement drive's model and firmware.</li>
+<li>Confirm compatibility with the approved parameter backup.</li>
+<li>Restore the approved parameter set using the supported method.</li>
+<li>Verify motor nameplate data and control mode.</li>
+<li>Check reference sources and speed or torque limits.</li>
+<li>Verify acceleration and deceleration settings.</li>
+<li>Restore communication and I/O configuration.</li>
+<li>Verify feedback, braking, and application-specific settings.</li>
+<li>Confirm required safety configuration through the approved procedure.</li>
+<li>Compare critical parameters with the approved baseline.</li>
+<li>Record any conversion, parameter migration, or firmware changes.</li>
+</ol>
+<p>Do not blindly copy parameters between different drive models. Parameter numbers, meanings, ranges, defaults, and supported functions may differ. Use the manufacturer's migration procedure and verify the resulting values.</p>
+<h3 id="76-phase-f-commission-and-release">7.6 Phase F: Commission and release</h3>
+<ol>
+<li>Complete the required electrical and mechanical inspections.</li>
+<li>Confirm that the drive reports acceptable status.</li>
+<li>Verify communication with the PLC or motion controller.</li>
+<li>Check the command and reference signals.</li>
+<li>Confirm that the drive is not receiving an unintended start command.</li>
+<li>Perform the approved initial test under controlled conditions.</li>
+<li>Verify motor direction and response where applicable.</li>
+<li>Validate acceleration, deceleration, speed limits, and feedback.</li>
+<li>Check the affected machine sequence and interlocks.</li>
+<li>Verify relevant safety functions using the approved validation procedure.</li>
+<li>Confirm process performance and quality requirements.</li>
+<li>Obtain return-to-service authorization.</li>
+<li>Update the maintenance history and configuration backup.</li>
+</ol>
+<h2 id="8-parameter-categories-that-require-special-attention">8. Parameter Categories That Require Special Attention</h2>
+<h3 id="81-motor-nameplate-parameters">8.1 Motor nameplate parameters</h3>
+<p>Depending on the motor and drive, these may include:</p>
+<ul>
+<li>Rated voltage.</li>
+<li>Rated current.</li>
+<li>Rated frequency.</li>
+<li>Rated speed.</li>
+<li>Rated power.</li>
+<li>Power factor or equivalent motor model information.</li>
+<li>Motor type and pole configuration where applicable.</li>
+<li>Encoder or resolver specifications for supported feedback systems.</li>
+</ul>
+<p>Incorrect motor data can degrade torque control, speed estimation, current protection, or motor identification.</p>
+<h3 id="82-command-and-reference-parameters">8.2 Command and reference parameters</h3>
+<p>Confirm the intended source for:</p>
+<ul>
+<li>Start and stop commands.</li>
+<li>Forward and reverse commands where permitted.</li>
+<li>Speed or frequency reference.</li>
+<li>Torque reference for applicable applications.</li>
+<li>Enable and inhibit signals.</li>
+<li>Reset commands.</li>
+<li>Jog or setup commands.</li>
+<li>Local versus remote operation.</li>
+</ul>
+<p>A replacement drive may default to keypad control rather than the original PLC command source. This can create a machine-control mismatch even if the motor and drive hardware are otherwise compatible.</p>
+<h3 id="83-limits-and-ramp-settings">8.3 Limits and ramp settings</h3>
+<p>Verify:</p>
+<ul>
+<li>Minimum and maximum speed or frequency.</li>
+<li>Current and torque limits.</li>
+<li>Acceleration and deceleration times.</li>
+<li>Ramp shape and stop behavior.</li>
+<li>Reverse-operation restrictions.</li>
+<li>Stall prevention or other supported protective functions.</li>
+<li>Braking behavior.</li>
+<li>Application-specific speed restrictions.</li>
+</ul>
+<p>Do not increase limits merely to eliminate a nuisance trip. Determine whether the trip reflects an incorrect setting, mechanical load, supply issue, or genuine equipment problem.</p>
+<h3 id="84-analog-input-and-output-configuration">8.4 Analog input and output configuration</h3>
+<p>For analog interfaces, verify:</p>
+<ul>
+<li>Signal type, such as <code>0–10 V</code> or <code>4–20 mA</code>.</li>
+<li>Signal scaling and engineering units.</li>
+<li>Input and output terminal assignment.</li>
+<li>Signal common and polarity.</li>
+<li>Reference source selection.</li>
+<li>Filtering and update behavior.</li>
+<li>Fault response for signal loss where configured.</li>
+</ul>
+<p>An incorrect reference range can cause the motor to run faster or slower than intended even when the analog signal is electrically valid.</p>
+<h3 id="85-communication-parameters">8.5 Communication parameters</h3>
+<p>Verify the settings required by the selected protocol:</p>
+<ul>
+<li>IP address or network node.</li>
+<li>Device name or station identity.</li>
+<li>Communication protocol and option module.</li>
+<li>PLC connection and I/O mapping.</li>
+<li>Control-word and status-word mapping.</li>
+<li>Reference and feedback data mapping.</li>
+<li>Communication-loss timeout and response.</li>
+<li>Supported network speed and topology settings.</li>
+</ul>
+<p>A network connection alone does not prove that the correct control and reference data are being exchanged.</p>
+<h2 id="9-replacing-a-vfd">9. Replacing a VFD</h2>
+<p>A VFD controls motor speed by adjusting the electrical output supplied to the motor. Replacement must preserve the approved relationship between control commands, motor response, and protection.</p>
+<h3 id="91-additional-vfd-checks">9.1 Additional VFD checks</h3>
+<ul>
+<li>Verify the motor type and rating.</li>
+<li>Confirm whether the application uses V/f, sensorless vector, or closed-loop control.</li>
+<li>Check whether motor identification or tuning is required by the manufacturer.</li>
+<li>Verify minimum and maximum frequency.</li>
+<li>Check the acceleration and deceleration profiles.</li>
+<li>Confirm braking requirements and overvoltage behavior.</li>
+<li>Check the drive's overload duty and current limits.</li>
+<li>Verify analog reference scaling and digital command mapping.</li>
+<li>Confirm any PLC fieldbus control-word configuration.</li>
+<li>Validate the intended motor direction and stop behavior.</li>
+</ul>
+<h3 id="92-motor-identification-and-autotuning">9.2 Motor identification and autotuning</h3>
+<p>Some drives offer motor identification or autotuning procedures. These procedures estimate or identify motor parameters needed for particular control modes.</p>
+<p>The required procedure depends on the drive and motor. Some methods can be performed without rotation; others may cause the motor to rotate or produce torque.</p>
+<p>Before executing motor identification:</p>
+<ol>
+<li>Confirm that the selected method is supported.</li>
+<li>Follow the exact manufacturer's procedure.</li>
+<li>Establish the required safe conditions.</li>
+<li>Secure or disconnect the mechanical load only when the approved method requires and permits it.</li>
+<li>Confirm that the motor and machine can tolerate the procedure.</li>
+<li>Record the results and any parameter changes.</li>
+</ol>
+<p>Do not run an unfamiliar tuning procedure on a connected production mechanism simply because the drive menu offers it.</p>
+<h3 id="93-vfd-replacement-validation">9.3 VFD replacement validation</h3>
+<ul>
+<li>Confirm correct drive status and motor data.</li>
+<li>Verify the PLC start/stop and speed-reference interface.</li>
+<li>Test the approved speed range.</li>
+<li>Check acceleration and deceleration behavior.</li>
+<li>Verify motor direction.</li>
+<li>Observe current, load, and temperature under suitable conditions.</li>
+<li>Check braking and stop behavior.</li>
+<li>Confirm that protective trips and interlocks remain effective.</li>
+<li>Verify process performance before release.</li>
+</ul>
+<h2 id="10-replacing-a-servo-drive">10. Replacing a Servo Drive</h2>
+<p>A servo drive operates within a motion-control system where precise position, speed, or torque response may be essential. Replacement requires more than restoring generic drive parameters.</p>
+<h3 id="101-additional-servo-system-information">10.1 Additional servo-system information</h3>
+<p>Preserve and verify:</p>
+<ul>
+<li>Servo motor model and rated specifications.</li>
+<li>Drive and motor compatibility.</li>
+<li>Encoder or resolver type.</li>
+<li>Feedback resolution and supported interface.</li>
+<li>Motor power and feedback cable arrangement.</li>
+<li>Axis identity and motion-controller mapping.</li>
+<li>Electronic gearing or scaling.</li>
+<li>Position, velocity, and torque limits.</li>
+<li>Acceleration and deceleration limits.</li>
+<li>Servo tuning and compensation settings.</li>
+<li>Homing method and reference configuration.</li>
+<li>Mechanical transmission and gear-ratio settings.</li>
+<li>Brake control for motors fitted with holding brakes.</li>
+<li>Safety configuration and permitted motion limits.</li>
+</ul>
+<h3 id="102-servo-tuning">10.2 Servo tuning</h3>
+<p>Servo tuning affects the relationship between commanded motion and actual motor response. Incorrect tuning may produce oscillation, excessive following error, vibration, poor positioning, or instability.</p>
+<p>After replacement:</p>
+<ol>
+<li>Verify the motor and feedback compatibility.</li>
+<li>Restore the approved axis configuration.</li>
+<li>Confirm scaling and gear-ratio settings.</li>
+<li>Verify the feedback direction and axis coordinate conventions.</li>
+<li>Check the homing or referencing procedure.</li>
+<li>Apply the approved tuning procedure if required.</li>
+<li>Validate motion under controlled conditions.</li>
+<li>Confirm position accuracy, following error, settling behavior, and load response against defined acceptance criteria.</li>
+</ol>
+<p>Do not copy tuning values indiscriminately between axes. Differences in motor, load inertia, mechanical transmission, and drive hardware can make apparently similar settings unsuitable.</p>
+<h3 id="103-encoder-and-motor-feedback-checks">10.3 Encoder and motor feedback checks</h3>
+<p>A feedback-related fault may originate in the encoder, cable, connector, motor, drive interface, or configuration.</p>
+<p>Check:</p>
+<ul>
+<li>Feedback cable continuity and condition.</li>
+<li>Correct connector and pin assignment.</li>
+<li>Encoder supply requirements where applicable.</li>
+<li>Feedback type and compatibility.</li>
+<li>Resolution and direction settings.</li>
+<li>Shielding and grounding according to the OEM design.</li>
+<li>Drive diagnostic information.</li>
+<li>Mechanical coupling and feedback integrity.</li>
+</ul>
+<p>If the motor direction or feedback direction is incorrect, stop the commissioning activity and resolve the configuration issue before allowing normal motion.</p>
+<h2 id="11-replacing-a-drive-in-a-plc-controlled-machine">11. Replacing a Drive in a PLC-Controlled Machine</h2>
+<p>In a typical automated machine, the PLC commands the drive and monitors its status. The interface may use hardwired digital and analog signals or an industrial network.</p>
+<h3 id="111-typical-command-and-status-signals">11.1 Typical command and status signals</h3>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Typical purpose</th>
+<th>Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Enable</td>
+<td>Permits the drive to operate</td>
+<td>Verify intended logic and interlocks</td>
+</tr>
+<tr>
+<td>Start/run</td>
+<td>Requests operation</td>
+<td>Confirm correct command source and behavior</td>
+</tr>
+<tr>
+<td>Speed reference</td>
+<td>Specifies the requested speed</td>
+<td>Verify scaling, units, and limits</td>
+</tr>
+<tr>
+<td>Ready</td>
+<td>Indicates drive readiness</td>
+<td>Confirm the actual status definition</td>
+</tr>
+<tr>
+<td>Running</td>
+<td>Indicates operating state</td>
+<td>Verify status mapping and response</td>
+</tr>
+<tr>
+<td>Fault</td>
+<td>Indicates a detected drive fault</td>
+<td>Confirm indication and alarm handling</td>
+</tr>
+<tr>
+<td>Fault reset</td>
+<td>Requests fault reset where supported</td>
+<td>Verify authorization and reset conditions</td>
+</tr>
+<tr>
+<td>Actual speed</td>
+<td>Reports measured or estimated speed</td>
+<td>Compare with expected behavior</td>
+</tr>
+<tr>
+<td>Actual current or torque</td>
+<td>Reports operating load where available</td>
+<td>Check data mapping and engineering units</td>
+</tr>
+</tbody>
+</table>
+<p>Signal names and meanings vary by drive and PLC program. Verify the actual I/O list, control-word definitions, and approved logic.</p>
+<h3 id="112-plc-and-network-integration">11.2 PLC and network integration</h3>
+<p>After replacement:</p>
+<ul>
+<li>Verify the drive's network identity.</li>
+<li>Confirm the correct PLC connection and device profile.</li>
+<li>Check control-word and status-word mapping.</li>
+<li>Verify speed or torque reference scaling.</li>
+<li>Confirm actual-value feedback.</li>
+<li>Check communication watchdogs and loss-of-communication behavior.</li>
+<li>Validate the drive-ready, running, and fault indications.</li>
+<li>Verify that the PLC handles drive faults as intended.</li>
+<li>Confirm that restart behavior matches the approved design.</li>
+</ul>
+<p>Do not assume that matching the network address is sufficient. A replacement model may use different data structures, control words, or device profiles.</p>
+<h2 id="12-braking-regeneration-and-mechanical-loads">12. Braking, Regeneration, and Mechanical Loads</h2>
+<p>Braking configuration is particularly important in applications involving high inertia, frequent stopping, vertical motion, or externally driven motors.</p>
+<h3 id="121-braking-resistor">12.1 Braking resistor</h3>
+<p>A braking resistor dissipates regenerative energy as heat in supported drive systems. Replacement checks may include:</p>
+<ul>
+<li>Resistance value.</li>
+<li>Continuous and peak power ratings.</li>
+<li>Thermal protection.</li>
+<li>Wiring and connection method.</li>
+<li>Required mounting and ventilation.</li>
+<li>Compatibility with the drive's braking circuit.</li>
+<li>Manufacturer-specified duty and thermal limits.</li>
+</ul>
+<p>An incorrect resistor can damage the braking circuit, overheat, or fail to provide the required braking behavior.</p>
+<h3 id="122-regenerative-systems">12.2 Regenerative systems</h3>
+<p>Some drives return braking energy to the electrical supply or a shared DC bus. Confirm the exact topology and supported replacement components.</p>
+<p>Check the supply interface, regenerative hardware, DC-bus arrangement, control settings, and fault response. Do not substitute a non-regenerative drive into a regenerative application without an approved engineering assessment.</p>
+<h3 id="123-vertical-axes-and-suspended-loads">12.3 Vertical axes and suspended loads</h3>
+<p>Vertical axes may require a mechanical brake or other engineered load-holding method. The drive's electrical behavior alone may not prevent gravity-driven movement.</p>
+<p>Before replacement and commissioning:</p>
+<ul>
+<li>Confirm the mechanical load is safely supported.</li>
+<li>Verify brake wiring and control configuration.</li>
+<li>Confirm the brake's required sequence and feedback where fitted.</li>
+<li>Validate the approved load-holding and release behavior.</li>
+<li>Follow the OEM and site-specific safety procedures.</li>
+</ul>
+<p>Never assume that STO, a drive disable command, or removal of the run command will safely hold a suspended load.</p>
+<h2 id="13-manufacturer-specific-considerations">13. Manufacturer-Specific Considerations</h2>
+<table>
+<thead>
+<tr>
+<th>Drive family</th>
+<th>Common engineering environment</th>
+<th>Important considerations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Siemens SINAMICS</td>
+<td>SINAMICS Startdrive and supported Siemens tools</td>
+<td>Drive family, firmware, motor data, parameter migration, PLC integration</td>
+</tr>
+<tr>
+<td>Rockwell PowerFlex</td>
+<td>Studio 5000 and supported drive tools, depending on model</td>
+<td>Drive revision, adapter configuration, parameter file compatibility, network profile</td>
+</tr>
+<tr>
+<td>Mitsubishi FR series</td>
+<td>Supported Mitsubishi drive tools and configuration methods</td>
+<td>Exact FR model, control terminals, communication options, parameter compatibility</td>
+</tr>
+<tr>
+<td>Schneider Electric Altivar</td>
+<td>Supported Altivar configuration software</td>
+<td>Drive model, application settings, motor data, communication configuration</td>
+</tr>
+<tr>
+<td>Yaskawa drives</td>
+<td>Supported DriveWizard and related tools, depending on family</td>
+<td>Drive series, motor compatibility, tuning, feedback, parameter transfer</td>
+</tr>
+<tr>
+<td>Delta drives</td>
+<td>Supported Delta configuration tools, depending on series</td>
+<td>Model compatibility, parameter set, I/O and communication configuration</td>
+</tr>
+<tr>
+<td>Servo systems</td>
+<td>Manufacturer-specific servo tools</td>
+<td>Motor-drive pairing, feedback, axis configuration, tuning, safety settings</td>
+</tr>
+</tbody>
+</table>
+<p>Tool names and capabilities vary by product generation. Verify the exact model's documentation before performing parameter transfer, firmware updates, or commissioning.</p>
+<h2 id="14-troubleshooting-after-replacement">14. Troubleshooting After Replacement</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Diagnostic approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Drive remains unpowered</td>
+<td>Supply, wiring, protection, or internal fault</td>
+<td>Verify supply and installation using the approved method</td>
+</tr>
+<tr>
+<td>Drive immediately trips</td>
+<td>Incorrect wiring, motor fault, configuration mismatch, or incompatible hardware</td>
+<td>Review fault codes and inspect the complete system</td>
+</tr>
+<tr>
+<td>Motor does not start</td>
+<td>Missing enable, interlock, run command, or incorrect command source</td>
+<td>Check the PLC and drive command path</td>
+</tr>
+<tr>
+<td>Motor rotates in the wrong direction</td>
+<td>Wiring, direction command, or configuration issue</td>
+<td>Stop safely and verify the approved direction configuration</td>
+</tr>
+<tr>
+<td>Motor runs at incorrect speed</td>
+<td>Reference scaling, limits, motor data, or control mode</td>
+<td>Compare actual settings with the approved parameter baseline</td>
+</tr>
+<tr>
+<td>Overcurrent during acceleration</td>
+<td>Excessive load, incorrect ramp, motor or cable issue</td>
+<td>Investigate the load, electrical circuit, and approved ramp settings</td>
+</tr>
+<tr>
+<td>Overvoltage during deceleration</td>
+<td>Regenerative energy, ramp settings, braking configuration, supply issue</td>
+<td>Review the drive diagnostics and braking design</td>
+</tr>
+<tr>
+<td>Motor overheats</td>
+<td>Incorrect motor data, overload, cooling problem, or application mismatch</td>
+<td>Verify load, current, motor cooling, and configuration</td>
+</tr>
+<tr>
+<td>Servo following error</td>
+<td>Feedback, tuning, scaling, or mechanical problem</td>
+<td>Review feedback diagnostics and axis configuration</td>
+</tr>
+<tr>
+<td>PLC reports drive communication fault</td>
+<td>Network or device configuration mismatch</td>
+<td>Check device identity, protocol, data mapping, and network status</td>
+</tr>
+<tr>
+<td>Fault returns after reset</td>
+<td>Underlying cause remains</td>
+<td>Diagnose the initiating condition instead of repeatedly resetting</td>
+</tr>
+<tr>
+<td>Machine stops differently</td>
+<td>Changed ramp, brake, or stop configuration</td>
+<td>Compare approved stop behavior and validate the affected sequence</td>
+</tr>
+</tbody>
+</table>
+<h3 id="troubleshooting-discipline">Troubleshooting discipline</h3>
+<ol>
+<li>Record the fault code and operating conditions.</li>
+<li>Identify whether the issue is electrical, mechanical, configuration-related, or communication-related.</li>
+<li>Compare the replacement's critical parameters with the approved baseline.</li>
+<li>Check the motor, cable, feedback, braking components, and load as applicable.</li>
+<li>Verify PLC commands and drive status feedback.</li>
+<li>Confirm the original root cause has been corrected.</li>
+<li>Retest the affected functions under approved conditions.</li>
+<li>Document the result and unresolved risks.</li>
+</ol>
+<h2 id="15-functional-validation-and-acceptance">15. Functional Validation and Acceptance</h2>
+<p>Validation must be appropriate to the type of drive, the affected machine function, and the consequences of failure.</p>
+<h3 id="151-electrical-and-installation-checks">15.1 Electrical and installation checks</h3>
+<ul>
+<li>Correct drive model, rating, and options verified.</li>
+<li>Wiring checked against approved electrical drawings.</li>
+<li>Grounding, shielding, and connections inspected.</li>
+<li>Motor and feedback cables verified.</li>
+<li>Cooling clearances and ventilation confirmed.</li>
+<li>Braking components checked where applicable.</li>
+<li>Required isolation and installation inspections completed.</li>
+</ul>
+<h3 id="152-configuration-and-communication-checks">15.2 Configuration and communication checks</h3>
+<ul>
+<li>Approved parameter set restored or configured.</li>
+<li>Motor nameplate data verified.</li>
+<li>Control mode and command source verified.</li>
+<li>Speed, torque, and current limits checked.</li>
+<li>Acceleration and deceleration settings checked.</li>
+<li>PLC or motion-controller communication verified.</li>
+<li>Drive-ready, running, fault, and feedback signals validated.</li>
+<li>Required safety configuration validated through the approved process.</li>
+</ul>
+<h3 id="153-functional-checks">15.3 Functional checks</h3>
+<ul>
+<li>No unexpected fault or diagnostic condition remains.</li>
+<li>Start, stop, enable, and inhibit behavior are correct.</li>
+<li>Motor direction is correct.</li>
+<li>Reference scaling and actual-value feedback are correct.</li>
+<li>Speed or position behavior meets acceptance criteria.</li>
+<li>Braking and stopping behavior are validated.</li>
+<li>Mechanical load response is acceptable.</li>
+<li>Required interlocks and fault responses work correctly.</li>
+<li>Safety functions are validated by authorized personnel.</li>
+<li>Process quality and production requirements are met.</li>
+<li>Return-to-service approval is recorded.</li>
+</ul>
+<p>Do not use an uncontrolled production run as the first test of an unfamiliar drive configuration. The initial commissioning conditions must be defined by the applicable machine-specific procedure.</p>
+<h2 id="16-documentation-and-change-control">16. Documentation and Change Control</h2>
+<p>Drive replacement records must identify the installed hardware, parameter configuration, test evidence, and authorization.</p>
+<h3 id="161-minimum-replacement-record">16.1 Minimum replacement record</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Work order</td>
+<td>Maintenance work-order reference</td>
+</tr>
+<tr>
+<td>Asset ID</td>
+<td>Machine, motor, and drive identification</td>
+</tr>
+<tr>
+<td>Fault description</td>
+<td>Symptom, trip code, and operating conditions</td>
+</tr>
+<tr>
+<td>Removed drive</td>
+<td>Manufacturer, model, revision, and serial number where available</td>
+</tr>
+<tr>
+<td>Replacement drive</td>
+<td>Manufacturer, model, revision, and serial number where available</td>
+</tr>
+<tr>
+<td>Motor details</td>
+<td>Motor type and relevant nameplate information</td>
+</tr>
+<tr>
+<td>Parameter backup</td>
+<td>Approved backup filename, revision, or repository reference</td>
+</tr>
+<tr>
+<td>Firmware</td>
+<td>Drive and relevant engineering software versions</td>
+</tr>
+<tr>
+<td>Configuration changes</td>
+<td>Parameter migration, tuning, or hardware changes</td>
+</tr>
+<tr>
+<td>Testing</td>
+<td>Electrical, communication, motion, and safety checks as applicable</td>
+</tr>
+<tr>
+<td>Result</td>
+<td>Pass, fail, or restricted operation</td>
+</tr>
+<tr>
+<td>Approval</td>
+<td>Required maintenance, engineering, production, and safety approval</td>
+</tr>
+<tr>
+<td>Follow-up</td>
+<td>Root-cause actions, spare-stock update, or further investigation</td>
+</tr>
+</tbody>
+</table>
+<h3 id="162-change-control-triggers">16.2 Change-control triggers</h3>
+<p>Formal engineering review may be required when replacement involves:</p>
+<ul>
+<li>A different drive family or rating.</li>
+<li>Changes to motor type or control mode.</li>
+<li>Different braking or regenerative hardware.</li>
+<li>Changed PLC interface or communication protocol.</li>
+<li>Changes to speed, torque, current, or ramp limits.</li>
+<li>Servo tuning or motion-configuration changes.</li>
+<li>Changes to safety-related functions or parameters.</li>
+<li>Firmware upgrades or project conversion.</li>
+<li>Changes affecting process performance or product quality.</li>
+</ul>
+<p>Record the approved configuration before and after the change, the reason for the change, the validation results, and the rollback plan.</p>
+<h2 id="17-common-mistakes-to-avoid">17. Common Mistakes to Avoid</h2>
+<ul>
+<li>Replacing a drive before checking the motor, cable, supply, and mechanical load.</li>
+<li>Selecting a replacement using only the motor's kW rating.</li>
+<li>Ignoring overload duty and output-current requirements.</li>
+<li>Failing to preserve the original parameter set.</li>
+<li>Restoring parameters from the wrong machine or drive.</li>
+<li>Copying parameter numbers across different models without validating their meaning.</li>
+<li>Ignoring firmware and communication compatibility.</li>
+<li>Forgetting encoder, braking, or external feedback connections.</li>
+<li>Changing current or speed limits just to suppress trips.</li>
+<li>Assuming STO isolates the electrical supply or holds a suspended load.</li>
+<li>Running autotuning without checking its mechanical consequences.</li>
+<li>Returning the machine to service without validating stop behavior and interlocks.</li>
+<li>Failing to document the root cause and final configuration.</li>
+</ul>
+<h2 id="18-practical-example-replacing-a-vfd-on-a-test-bed">18. Practical Example: Replacing a VFD on a Test Bed</h2>
+<p>Scenario: A VFD trips on overcurrent during acceleration. After diagnosis, the drive is confirmed faulty and an approved replacement is available.</p>
+<h3 id="step-1-diagnose-and-prepare">Step 1: Diagnose and prepare</h3>
+<ul>
+<li>Record the fault code and relevant operating conditions.</li>
+<li>Check the motor, motor cable, mechanical load, supply, and cooling system.</li>
+<li>Confirm that the drive itself is the root cause.</li>
+<li>Verify replacement voltage, output current, overload rating, and control compatibility.</li>
+<li>Preserve the approved parameter set and motor data.</li>
+<li>Record PLC interface settings and existing ramp configuration.</li>
+</ul>
+<h3 id="step-2-replace-the-drive">Step 2: Replace the drive</h3>
+<ul>
+<li>Apply the approved isolation procedure.</li>
+<li>Allow the required DC-bus discharge time and verify safe conditions.</li>
+<li>Secure the mechanical equipment against unexpected movement.</li>
+<li>Label and disconnect the power, motor, control, and communication wiring.</li>
+<li>Remove the faulty drive according to the OEM instructions.</li>
+<li>Install the compatible replacement and restore the connections.</li>
+<li>Inspect the installation before restoring power.</li>
+</ul>
+<h3 id="step-3-restore-configuration">Step 3: Restore configuration</h3>
+<ul>
+<li>Verify the replacement drive model and firmware.</li>
+<li>Restore the approved parameters using the supported method.</li>
+<li>Check motor data, control mode, current limits, speed reference, and ramps.</li>
+<li>Verify PLC communication and drive status mapping.</li>
+<li>Confirm that the intended command source is selected.</li>
+<li>Record any parameter differences.</li>
+</ul>
+<h3 id="step-4-validate">Step 4: Validate</h3>
+<ul>
+<li>Complete the required electrical and installation checks.</li>
+<li>Verify drive-ready status and communication.</li>
+<li>Confirm the start command and reference values.</li>
+<li>Test motor direction and response under controlled conditions.</li>
+<li>Validate acceleration and deceleration.</li>
+<li>Check motor current and fault behavior under the approved test conditions.</li>
+<li>Verify the affected machine sequence and required interlocks.</li>
+<li>Obtain return-to-service approval.</li>
+</ul>
+<h3 id="step-5-close-the-activity">Step 5: Close the activity</h3>
+<ul>
+<li>Record the removed and installed drive.</li>
+<li>Record the root cause and test results.</li>
+<li>Update the approved parameter backup.</li>
+<li>Update the asset history and spare inventory.</li>
+<li>Document any follow-up action.</li>
+</ul>
+<p>Key lesson: If the original overcurrent trip was caused by a seized bearing or damaged motor cable, replacing the drive would not resolve the underlying fault. Component replacement must follow diagnosis, not substitute for it.</p>
+<h2 id="19-key-performance-indicators">19. Key Performance Indicators</h2>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Drive-related downtime</td>
+<td>Measures production interruption associated with drive failures</td>
+</tr>
+<tr>
+<td>Mean Time to Repair (MTTR)</td>
+<td>Measures repair duration using a consistent site definition</td>
+</tr>
+<tr>
+<td>Repeat drive failure rate</td>
+<td>Identifies recurring hardware, configuration, or application problems</td>
+</tr>
+<tr>
+<td>First-time fix rate</td>
+<td>Measures repairs completed without repeat intervention</td>
+</tr>
+<tr>
+<td>Parameter backup availability</td>
+<td>Measures whether approved configurations are accessible</td>
+</tr>
+<tr>
+<td>Restore-test success rate</td>
+<td>Measures successful restoration against defined acceptance criteria</td>
+</tr>
+<tr>
+<td>Drive fault recurrence</td>
+<td>Tracks repeated fault codes or fault categories</td>
+</tr>
+<tr>
+<td>Documentation compliance</td>
+<td>Measures completeness of replacement and commissioning records</td>
+</tr>
+</tbody>
+</table>
+<p>KPI definitions must remain consistent. For example, MTTR may include diagnosis, waiting for spares, configuration, validation, and production release, or it may measure active repair time only.</p>
+<h2 id="20-interview-questions-and-answers">20. Interview Questions and Answers</h2>
+<p>Q1. What must be checked before replacing a VFD?</p>
+<p>Confirm the root cause, drive ratings, motor compatibility, wiring, parameter backup, control interface, safety requirements, and OEM replacement instructions.</p>
+<p>Q2. Why is matching the kW rating alone insufficient?</p>
+<p>The replacement must also meet the voltage, current, overload duty, motor type, control mode, braking, feedback, and environmental requirements.</p>
+<p>Q3. Why should drive parameters be backed up?</p>
+<p>They preserve motor data, limits, ramps, command sources, communication, braking behavior, and application-specific settings needed for controlled recovery.</p>
+<p>Q4. Can parameters be copied directly between different drive models?</p>
+<p>Not without verifying compatibility and parameter mapping. Parameter meanings, ranges, and supported functions can differ between models.</p>
+<p>Q5. What is the difference between a VFD and a servo drive?</p>
+<p>A VFD commonly controls motor speed and torque for general motor applications. A servo system is designed for more precise position, speed, or torque control and commonly depends on feedback and motion-system configuration.</p>
+<p>Q6. Why might a replacement drive immediately trip?</p>
+<p>Possible causes include incorrect wiring, incompatible hardware, wrong motor data, a motor or cable fault, a mechanical overload, or an unsuitable parameter configuration.</p>
+<p>Q7. What must be checked after replacing a servo drive?</p>
+<p>Verify motor-drive compatibility, feedback, axis scaling, tuning, motion limits, homing, brake behavior, communication, and the applicable safety functions.</p>
+<p>Q8. Does STO make a drive safe to work on electrically?</p>
+<p>No. STO is a safety-related torque-prevention function, not electrical isolation. The required isolation and verification procedures must still be followed.</p>
+<p>Q9. Why should braking behavior be validated after replacement?</p>
+<p>Incorrect braking configuration can cause overvoltage trips, excessive stopping distance, uncontrolled movement, or unsafe behavior in high-inertia and vertical-axis applications.</p>
+<p>Q10. When is drive replacement complete?</p>
+<p>When the approved drive and configuration are installed, electrical and functional checks pass, required safety functions are validated, documentation is complete, and authorized personnel approve return to service.</p>
+<h2 id="21-final-drive-replacement-checklist">21. Final Drive Replacement Checklist</h2>
+<ul>
+<li>Fault diagnosed and root cause investigated.</li>
+<li>Replacement drive selected for the actual application.</li>
+<li>Motor, supply, feedback, and braking compatibility confirmed.</li>
+<li>Approved parameter backup preserved.</li>
+<li>Existing wiring and configuration documented.</li>
+<li>Isolation, DC-bus discharge, and verification completed.</li>
+<li>Mechanical loads secured.</li>
+<li>Replacement installed according to OEM instructions.</li>
+<li>Motor data and control parameters verified.</li>
+<li>PLC or motion-controller interface validated.</li>
+<li>Motor direction, speed, torque, or position behavior checked as applicable.</li>
+<li>Braking, interlocks, and fault responses validated.</li>
+<li>Safety functions verified through the approved process.</li>
+<li>Process and quality acceptance criteria met.</li>
+<li>Return-to-service authorization obtained.</li>
+<li>Parameter backup and maintenance records updated.</li>
+<li>Root cause and follow-up actions documented.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\33_SOP_WI\05_Component_Replacement\04_Robot - Robot</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

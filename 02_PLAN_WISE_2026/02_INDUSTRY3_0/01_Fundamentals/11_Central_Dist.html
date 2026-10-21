@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>11. Centralized and Distributed Control</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">11. Centralized and Distributed Control</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-centralized-control">1. Centralized control</a><ul>
+<li><a href="#11-how-centralized-control-works">1.1 How centralized control works</a></li>
+<li><a href="#12-advantages-of-centralized-control">1.2 Advantages of centralized control</a></li>
+<li><a href="#13-limitations-of-centralized-control">1.3 Limitations of centralized control</a></li>
+</ul>
+</li>
+<li><a href="#2-distributed-control">2. Distributed control</a><ul>
+<li><a href="#21-how-distributed-control-works">2.1 How distributed control works</a></li>
+<li><a href="#22-advantages-of-distributed-control">2.2 Advantages of distributed control</a></li>
+<li><a href="#23-limitations-of-distributed-control">2.3 Limitations of distributed control</a></li>
+</ul>
+</li>
+<li><a href="#3-visual-reference-distributed-control-system-architecture">3. Visual reference: Distributed control system architecture</a></li>
+<li><a href="#4-centralized-versus-distributed-control">4. Centralized versus distributed control</a></li>
+<li><a href="#5-distributed-control-is-not-the-same-as-distributed-io">5. Distributed control is not the same as distributed I/O</a></li>
+<li><a href="#6-the-important-distinction-centralized-supervision-versus-distributed-control">6. The important distinction: centralized supervision versus distributed control</a></li>
+<li><a href="#7-practical-example-automotive-robotic-production-line">7. Practical example: Automotive robotic production line</a><ul>
+<li><a href="#71-centralized-design">7.1 Centralized design</a></li>
+<li><a href="#72-distributed-design">7.2 Distributed design</a></li>
+<li><a href="#73-what-happens-when-one-controller-fails">7.3 What happens when one controller fails?</a></li>
+</ul>
+</li>
+<li><a href="#8-reliability-redundancy-and-failure-domains">8. Reliability, redundancy, and failure domains</a><ul>
+<li><a href="#centralized-control">Centralized control</a></li>
+<li><a href="#distributed-control">Distributed control</a></li>
+</ul>
+</li>
+<li><a href="#9-control-architecture-selection">9. Control architecture selection</a></li>
+<li><a href="#10-maintenance-troubleshooting-for-centralized-and-distributed-systems">10. Maintenance troubleshooting for centralized and distributed systems</a></li>
+<li><a href="#11-interview-questions-and-answers">11. Interview questions and answers</a></li>
+<li><a href="#12-final-mental-model">12. Final mental model</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Centralized and distributed control describe how control functions are organized and where control decisions are executed within an industrial automation system.</p>
+<p>The key difference is where the control logic resides and how responsibilities are divided among controllers.</p>
+<ul>
+<li>Centralized control: Most of the relevant control logic is executed by one central controller or a central control system.</li>
+<li>Distributed control: Control functions are divided among multiple controllers or control units that manage their respective machines, process areas, or functions.</li>
+</ul>
+<p>Neither architecture is automatically better in every situation. The right choice depends on machine complexity, response time, availability requirements, expansion plans, maintenance capability, and cost. Industrial systems, naturally, also enjoy combining both approaches and calling it an architecture.</p>
+<h2 id="1-centralized-control">1. Centralized control</h2>
+<p>In centralized control, one main controller performs most of the control logic for the equipment or process within its scope.</p>
+<p>For example, one PLC may control a conveyor system, multiple pneumatic fixtures, sensors, motors, and several machine stations.</p>
+<pre><code>          Central PLC
+              ↕
+      Central I/O System
+              ↕
+    Sensors and Actuators
+              ↕
+       Multiple Machines
+</code></pre>
+<p>This is a simplified arrangement. A centralized PLC can also communicate with remote I/O modules distributed around the machine, so physical I/O location alone does not determine whether the control architecture is centralized.</p>
+<h3 id="11-how-centralized-control-works">1.1 How centralized control works</h3>
+<ol>
+<li>Field sensors provide signals to the controller through its I/O system.</li>
+<li>The controller evaluates the program and determines the required actions.</li>
+<li>Output commands are sent to the relevant field devices.</li>
+<li>Feedback signals return to the controller.</li>
+<li>The controller coordinates the operation according to its programmed logic.</li>
+</ol>
+<p>The control decisions are concentrated in the main controller, even if the sensors, actuators, and I/O modules are physically spread across a large area.</p>
+<h3 id="12-advantages-of-centralized-control">1.2 Advantages of centralized control</h3>
+<ul>
+<li>Simpler coordination: One controller can manage interactions between several devices and stations.</li>
+<li>Centralized programming: Much of the control logic can be developed and maintained in one project.</li>
+<li>Consistent logic: Shared operating conditions and data can be managed within a common controller program.</li>
+<li>Potentially lower initial complexity: For a small machine, one controller may be simpler and cheaper than several controllers.</li>
+</ul>
+<h3 id="13-limitations-of-centralized-control">1.3 Limitations of centralized control</h3>
+<ul>
+<li>Concentrated failure impact: A failure of the main controller can affect many functions that depend on it.</li>
+<li>Growing program complexity: As the machine expands, the program can become harder to understand, test, and maintain.</li>
+<li>Communication and I/O constraints: Large installations may require more remote I/O, network capacity, and careful timing design.</li>
+<li>Expansion challenges: Adding stations can require extensive modifications to the central program and its interfaces.</li>
+</ul>
+<p>Centralization does not automatically mean poor reliability. Redundant controllers, redundant power supplies, and suitable fault-tolerant designs can reduce the risk of a single failure stopping the system.</p>
+<h2 id="2-distributed-control">2. Distributed control</h2>
+<p>In distributed control, control responsibilities are divided among multiple controllers or autonomous control units.</p>
+<p>Each controller manages an assigned machine, process area, or group of functions. The controllers exchange information when coordination is required.</p>
+<pre><code>             Supervisory System
+               HMI / SCADA
+                    ↕
+          Industrial Network
+          ↙         ↓         ↘
+      PLC A       PLC B       PLC C
+        ↕           ↕           ↕
+    Station A   Station B   Station C
+     Devices     Devices     Devices
+</code></pre>
+<p>For example, a vehicle-body production line might have separate controllers for body positioning, clamping, welding coordination, and conveyor movement. A higher-level system coordinates production across these areas.</p>
+<p>The controllers do not necessarily need a higher-level PLC for every interaction. They may communicate directly with one another or use a supervisory system, depending on the design.</p>
+<h3 id="21-how-distributed-control-works">2.1 How distributed control works</h3>
+<ol>
+<li>Each controller receives signals from its assigned field devices.</li>
+<li>It executes its local control program.</li>
+<li>It controls its assigned equipment.</li>
+<li>It exchanges relevant status and commands with other controllers.</li>
+<li>The supervisory system gathers information from multiple areas for operator monitoring and coordination.</li>
+</ol>
+<p>The main advantage is that control responsibilities are separated into manageable sections. A problem in one area may remain limited to that area, provided the architecture and dependencies allow it.</p>
+<h3 id="22-advantages-of-distributed-control">2.2 Advantages of distributed control</h3>
+<ul>
+<li>Modularity: Each station or process area can have its own controller and defined responsibilities.</li>
+<li>Scalability: Additional areas can often be added without expanding one central program indefinitely.</li>
+<li>Localized troubleshooting: Maintenance personnel can investigate the controller and devices associated with the affected area.</li>
+<li>Reduced field wiring: Local controllers and remote I/O can reduce long cable runs to a central panel.</li>
+<li>Potentially improved availability: A local controller may continue controlling its own equipment if a supervisory connection fails, depending on the design.</li>
+<li>Independent development: Different machine areas can sometimes be developed, tested, and commissioned separately.</li>
+</ul>
+<h3 id="23-limitations-of-distributed-control">2.3 Limitations of distributed control</h3>
+<ul>
+<li>Greater integration effort: Controllers must exchange compatible and correctly interpreted data.</li>
+<li>Network dependencies: Communication failures can disrupt coordination between areas.</li>
+<li>More components to maintain: Multiple controllers introduce additional hardware, firmware, configurations, and diagnostic requirements.</li>
+<li>Troubleshooting across boundaries: A fault may involve one controller, its network, or another controller's logic.</li>
+<li>Configuration consistency: Tag names, data structures, operating modes, and software versions must be managed carefully.</li>
+</ul>
+<p>Distributed control does not eliminate common failure points. Shared networks, power supplies, supervisory servers, or common infrastructure can still affect multiple areas.</p>
+<h2 id="3-visual-reference-distributed-control-system-architecture">3. Visual reference: Distributed control system architecture</h2>
+<p>The following is an openly available architecture diagram published by Yokogawa. It illustrates distributed controllers and equipment with operator monitoring and supervisory functions arranged above them.</p>
+<p><a href="https://web-material3.yokogawa.com/18/79/overview/what%20is%20DCS-e-r4.png">Yokogawa distributed control system architecture showing operator interfaces, distributed controllers, remote I/O and equipment</a></p>
+<p>Source: <a href="https://www.yokogawa.com/nl/solutions/products-and-services/control/control-and-safety-system/distributed-control-systems-dcs/">Yokogawa, Distributed Control Systems</a>.</p>
+<p>Notice the important separation: monitoring can be centralized while control calculations are distributed. The operator may see the entire plant on a common interface even though different controllers execute the actual control functions locally.</p>
+<h2 id="4-centralized-versus-distributed-control">4. Centralized versus distributed control</h2>
+<table>
+<thead>
+<tr>
+<th>Comparison</th>
+<th>Centralized control</th>
+<th>Distributed control</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Control execution</td>
+<td>Concentrated in a central controller or control system</td>
+<td>Divided among multiple controllers or control units</td>
+</tr>
+<tr>
+<td>Program organization</td>
+<td>One main program or coordinated central project</td>
+<td>Multiple local programs or control applications</td>
+</tr>
+<tr>
+<td>Expansion</td>
+<td>May increase central program and hardware demands</td>
+<td>Can support modular expansion by area</td>
+</tr>
+<tr>
+<td>Coordination</td>
+<td>Often straightforward within one controller</td>
+<td>Requires defined interfaces between controllers</td>
+</tr>
+<tr>
+<td>Failure impact</td>
+<td>A central controller failure can affect many dependent functions</td>
+<td>Some failures may remain localized</td>
+</tr>
+<tr>
+<td>Communication dependence</td>
+<td>Depends on the architecture; local control can be less network-dependent</td>
+<td>Often relies more heavily on controller-to-controller communication</td>
+</tr>
+<tr>
+<td>Troubleshooting</td>
+<td>Can be concentrated around the main controller</td>
+<td>Requires checking local controllers and their interfaces</td>
+</tr>
+<tr>
+<td>Hardware and engineering</td>
+<td>May be simpler for small systems</td>
+<td>Can involve more hardware and integration effort</td>
+</tr>
+<tr>
+<td>Typical application</td>
+<td>Small or moderately sized machines</td>
+<td>Large machines, modular lines, and multi-area plants</td>
+</tr>
+</tbody>
+</table>
+<p>The comparison describes typical tendencies, not guaranteed outcomes. A poorly designed distributed system can be less reliable than a well-designed centralized one.</p>
+<h2 id="5-distributed-control-is-not-the-same-as-distributed-io">5. Distributed control is not the same as distributed I/O</h2>
+<p>This distinction is particularly important for PLC maintenance.</p>
+<p>Distributed I/O means that input and output modules are physically located away from the main controller and communicate with it over a network.</p>
+<p>Distributed control means that control execution or decision-making is divided among multiple controllers or autonomous control units.</p>
+<p>These are different architectural decisions.</p>
+<p><img loading="lazy" decoding="async" alt="PLC ELECTRICAL CABINET – TORNUM" src="11_Central_Dist_assets/img_001.jpg" /></p>
+<p>Distributed I/O with centralized control</p>
+<p>One main PLC executes the control program. Remote I/O modules near the equipment collect sensor signals and operate output circuits through the industrial network.</p>
+<p><img loading="lazy" decoding="async" alt="Siemens Simatic Et 200SP system rail 2 000 MM - 6ES71936MR000DA0 kopen? - Elektrobode.nl" src="11_Central_Dist_assets/img_002.jpg" /></p>
+<p>Distributed control</p>
+<p>Multiple controllers execute their own assigned control logic. They can have local I/O and communicate with each other for station or process coordination.</p>
+<p>A system can use both distributed control and distributed I/O. A controller located at each station may operate local I/O while exchanging status with the rest of the production line.</p>
+<p>Siemens documents both centralized and distributed automation architectures, including remote peripheral systems and distributed controllers. <a href="https://www.siemens.com/en-us/products/simatic/">Siemens SIMATIC automation</a> provides manufacturer examples.</p>
+<h2 id="6-the-important-distinction-centralized-supervision-versus-distributed-control">6. The important distinction: centralized supervision versus distributed control</h2>
+<p>A distributed system does not mean that every operator needs a separate HMI or that the plant has no central control room.</p>
+<p>A common arrangement is:</p>
+<ul>
+<li>Local controllers execute control functions.</li>
+<li>A communication network connects the controllers.</li>
+<li>Central HMI or SCADA stations display system-wide information.</li>
+<li>Operators monitor the plant and issue authorized supervisory commands.</li>
+<li>Local controllers continue executing their assigned logic independently where the design permits.</li>
+</ul>
+<p>This is one of the defining ideas behind a distributed control system (DCS).</p>
+<p>For example, a chemical plant may have separate controllers for temperature, pressure, flow, and other process areas. Operators may view all of these from a central control room, but the individual controllers execute their configured control strategies.</p>
+<p>A DCS is therefore not simply a collection of unrelated PLCs. It is an integrated control system with coordinated engineering, communication, operator interfaces, and control functions. Modern PLC-based architectures can also achieve substantial integration, so the distinction is architectural rather than a rigid rule based only on controller brand or count. <a href="https://www.abb.com/gb/en/areas/automation/control-systems">ABB control systems</a>.</p>
+<h2 id="7-practical-example-automotive-robotic-production-line">7. Practical example: Automotive robotic production line</h2>
+<p>Consider three stations:</p>
+<ul>
+<li>Station A positions the vehicle body.</li>
+<li>Station B clamps and welds the body.</li>
+<li>Station C transfers the body to the next operation.</li>
+</ul>
+<h3 id="71-centralized-design">7.1 Centralized design</h3>
+<p>One central PLC controls the sensors, clamps, conveyor commands, and station coordination for all three stations.</p>
+<p>Advantages:</p>
+<ul>
+<li>Shared logic is managed in one main program.</li>
+<li>Coordination within the controller can be straightforward.</li>
+<li>There may be fewer controller projects to manage.</li>
+</ul>
+<p>Challenges:</p>
+<ul>
+<li>The central program can become large and complex.</li>
+<li>A central controller fault can affect all dependent stations.</li>
+<li>Adding new stations may require substantial program and I/O changes.</li>
+</ul>
+<h3 id="72-distributed-design">7.2 Distributed design</h3>
+<p>Each station has its own PLC or local controller.</p>
+<pre><code>PLC A: Body Positioning
+          ↕
+PLC B: Clamping and Welding Coordination
+          ↕
+PLC C: Body Transfer
+          ↕
+Supervisory HMI / SCADA
+</code></pre>
+<p>This is a simplified representation of a possible design. In a real line, all controllers may connect through a common industrial network rather than being connected in a single chain.</p>
+<p>Advantages:</p>
+<ul>
+<li>Each station has a more clearly defined control scope.</li>
+<li>Local programs can be developed and tested independently.</li>
+<li>A station-level fault may have a limited impact if the other stations do not depend on it to continue operating.</li>
+<li>Additional stations may be integrated through defined communication interfaces.</li>
+</ul>
+<p>Challenges:</p>
+<ul>
+<li>The controllers must exchange correct status and command data.</li>
+<li>Network and communication diagnostics become important.</li>
+<li>The engineering team must maintain consistent interfaces and system-wide behaviour.</li>
+</ul>
+<h3 id="73-what-happens-when-one-controller-fails">7.3 What happens when one controller fails?</h3>
+<p>Suppose PLC B stops communicating.</p>
+<p>PLC A may still be able to execute its local program. PLC C may also remain powered and execute its own logic. However, the complete line might stop because the required station-ready or production-coordination information is missing.</p>
+<p>This demonstrates a critical principle:</p>
+<p>Local control can remain operational even when overall production coordination is unavailable.</p>
+<p>Whether the line stops, continues, or enters a controlled state depends on the program, machine dependencies, network architecture, and safety design.</p>
+<h2 id="8-reliability-redundancy-and-failure-domains">8. Reliability, redundancy, and failure domains</h2>
+<p>Centralized versus distributed control is closely related to reliability, but the concepts are not interchangeable.</p>
+<ul>
+<li>Reliability: The ability of equipment or a system to perform its required function under specified conditions.</li>
+<li>Availability: The proportion of time a system is capable of performing its required function.</li>
+<li>Redundancy: Additional components or paths intended to preserve functionality when a component fails.</li>
+<li>Failure domain: The portion of a system that can be affected by a particular failure.</li>
+</ul>
+<h3 id="centralized-control">Centralized control</h3>
+<p>A central controller may be a major failure point because multiple functions depend on it. Redundant CPUs, power supplies, networks, and suitable I/O arrangements can reduce this risk.</p>
+<h3 id="distributed-control">Distributed control</h3>
+<p>A local controller failure may affect only its assigned area, but the fault can still propagate through dependencies. A shared network failure, common power failure, or supervisory-system failure can affect multiple areas.</p>
+<p>A distributed design is not automatically redundant. Four controllers without backups are still four controllers without backups.</p>
+<h2 id="9-control-architecture-selection">9. Control architecture selection</h2>
+<p>The decision should be based on the application rather than the assumption that distributed control is always more advanced.</p>
+<table>
+<thead>
+<tr>
+<th>Design consideration</th>
+<th>Centralized may suit</th>
+<th>Distributed may suit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>System size</td>
+<td>Compact machine with manageable logic</td>
+<td>Large machine or multiple production areas</td>
+</tr>
+<tr>
+<td>Coordination</td>
+<td>Tightly integrated functions within one controller</td>
+<td>Functions that can be separated into defined modules</td>
+</tr>
+<tr>
+<td>Physical layout</td>
+<td>Equipment located near one control panel</td>
+<td>Equipment spread across multiple stations or process areas</td>
+</tr>
+<tr>
+<td>Expansion</td>
+<td>Limited or predictable expansion</td>
+<td>Modular expansion or repeated station designs</td>
+</tr>
+<tr>
+<td>Maintenance</td>
+<td>Team prefers one main controller and program</td>
+<td>Team can maintain multiple controllers and interfaces</td>
+</tr>
+<tr>
+<td>Availability</td>
+<td>Central controller risk is acceptable or mitigated</td>
+<td>Local autonomy and fault containment are important goals</td>
+</tr>
+</tbody>
+</table>
+<p>Other factors include response-time requirements, communication performance, engineering standards, cybersecurity, spare-parts strategy, lifecycle cost, and the skills available to the maintenance team.</p>
+<p>A hybrid architecture is common: centralized line coordination, distributed station controllers, remote I/O, and local drive or robot control.</p>
+<h2 id="10-maintenance-troubleshooting-for-centralized-and-distributed-systems">10. Maintenance troubleshooting for centralized and distributed systems</h2>
+<p>When a machine stops, first identify whether the fault affects one device, one station, multiple stations, or the entire system.</p>
+<table>
+<thead>
+<tr>
+<th>Observed symptom</th>
+<th>Possible area to investigate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>One sensor fails to update</td>
+<td>Sensor, wiring, I/O channel, or tag mapping</td>
+</tr>
+<tr>
+<td>All signals on one remote I/O rack disappear</td>
+<td>Rack power, network connection, adapter, or configuration</td>
+</tr>
+<tr>
+<td>One station stops while others remain operational</td>
+<td>Local controller, station equipment, or local logic</td>
+</tr>
+<tr>
+<td>Multiple stations lose communication simultaneously</td>
+<td>Shared network infrastructure, switch, power, or common communication path</td>
+</tr>
+<tr>
+<td>HMI loses visibility but local machines continue</td>
+<td>Supervisory connection, HMI, server, or data communication</td>
+</tr>
+<tr>
+<td>Multiple controllers stop responding</td>
+<td>Common infrastructure, controller power, network architecture, or another shared dependency</td>
+</tr>
+</tbody>
+</table>
+<p>A useful diagnostic sequence is:</p>
+<ol>
+<li>Determine the scope of the failure.</li>
+<li>Check controller mode, fault status, and diagnostics.</li>
+<li>Check local I/O and remote I/O communication status.</li>
+<li>Verify the relevant controller tags and program conditions.</li>
+<li>Check controller-to-controller communication where applicable.</li>
+<li>Verify physical device conditions and feedback.</li>
+<li>Identify the root cause before resetting or changing logic.</li>
+</ol>
+<p>Do not assume that a common symptom proves a common cause. For example, multiple stations stopping may be the intended response to one missing production-ready signal rather than a failure of several PLCs.</p>
+<h2 id="11-interview-questions-and-answers">11. Interview questions and answers</h2>
+<p>Q1. What is centralized control?</p>
+<p>Centralized control concentrates most control execution within one main controller or central control system.</p>
+<p>Q2. What is distributed control?</p>
+<p>Distributed control divides control functions among multiple controllers or control units, typically assigned to individual machines, stations, or process areas.</p>
+<p>Q3. What is the difference between distributed control and distributed I/O?</p>
+<p>Distributed control divides control execution among multiple controllers. Distributed I/O places input and output modules away from the main controller. A system can use either or both.</p>
+<p>Q4. Is SCADA centralized or distributed?</p>
+<p>SCADA commonly provides centralized monitoring and supervisory interaction across multiple distributed controllers or remote sites. The underlying control functions may be distributed independently of where the SCADA software runs.</p>
+<p>Q5. Does a DCS have centralized control?</p>
+<p>A DCS commonly distributes control execution among local controllers while centralizing operator supervision, engineering functions, and system-wide visibility. Central supervision does not mean all control calculations occur in one processor.</p>
+<p>Q6. What is the main advantage of distributed control?</p>
+<p>It allows control functions to be separated into modular areas, which can improve scalability and fault containment when the system is properly designed.</p>
+<p>Q7. What is the main risk of centralized control?</p>
+<p>A failure of the central controller or its supporting infrastructure may affect many functions that depend on it. Suitable redundancy and design measures can mitigate this risk.</p>
+<p>Q8. Can a distributed system continue operating if the supervisory network fails?</p>
+<p>Possibly. Local controllers may continue executing their assigned control logic, but the outcome depends on which network failed, the communication dependencies, and the system design.</p>
+<p>Q9. What is a hybrid control architecture?</p>
+<p>It combines centralized and distributed elements, such as a central PLC coordinating several local PLCs, remote I/O systems, robot controllers, and drives.</p>
+<p>Q10. How should maintenance distinguish a local failure from a system-wide failure?</p>
+<p>Establish the scope first, then compare local controller diagnostics, I/O status, network health, and inter-controller communication. This helps isolate the fault without unnecessarily disturbing unaffected equipment.</p>
+<h2 id="12-final-mental-model">12. Final mental model</h2>
+<p>Remember these four distinctions:</p>
+<ul>
+<li>Centralized control: Control decisions are concentrated in a central controller or system.</li>
+<li>Distributed control: Control decisions are divided among multiple controllers.</li>
+<li>Distributed I/O: Input and output hardware is located in remote or decentralized locations.</li>
+<li>Centralized supervision: Operators can monitor and supervise many areas from a common interface.</li>
+</ul>
+<p>A production line can have distributed controllers, distributed I/O, and centralized SCADA at the same time.</p>
+<p>For your maintenance work, the most useful question is: Where is the control function executed, which other components depend on it, and how far can its failure affect the system?</p>
+<p>The next topic in your study sequence is 12_Machine_Cycle: Machine Cycle.</p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

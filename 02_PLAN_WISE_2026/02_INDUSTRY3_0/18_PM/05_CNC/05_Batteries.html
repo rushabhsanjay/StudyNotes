@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CNC Batteries and Battery-Backed Data Retention</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">CNC Batteries and Battery-Backed Data Retention</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-main-battery-types-and-applications">2. Main Battery Types and Applications</a></li>
+<li><a href="#3-battery-backup-architecture">3. Battery-Backup Architecture</a></li>
+<li><a href="#4-battery-technologies">4. Battery Technologies</a><ul>
+<li><a href="#41-lithium-primary-batteries">4.1 Lithium Primary Batteries</a></li>
+<li><a href="#42-rechargeable-backup-batteries">4.2 Rechargeable Backup Batteries</a></li>
+<li><a href="#43-battery-packs">4.3 Battery Packs</a></li>
+</ul>
+</li>
+<li><a href="#5-cnc-memory-battery-versus-absolute-encoder-battery">5. CNC Memory Battery Versus Absolute Encoder Battery</a></li>
+<li><a href="#6-battery-failure-symptoms">6. Battery Failure Symptoms</a></li>
+<li><a href="#7-battery-replacement-planning">7. Battery Replacement Planning</a><ul>
+<li><a href="#71-identify-the-correct-battery">7.1 Identify the Correct Battery</a></li>
+<li><a href="#72-review-the-retention-risk">7.2 Review the Retention Risk</a></li>
+</ul>
+</li>
+<li><a href="#8-replacing-a-battery-while-power-is-applied">8. Replacing a Battery While Power Is Applied</a></li>
+<li><a href="#9-absolute-encoder-battery-maintenance">9. Absolute Encoder Battery Maintenance</a><ul>
+<li><a href="#important-concepts">Important concepts</a></li>
+<li><a href="#after-replacement">After replacement</a></li>
+</ul>
+</li>
+<li><a href="#10-consequences-of-cnc-battery-failure">10. Consequences of CNC Battery Failure</a></li>
+<li><a href="#11-cnc-parameter-and-data-backup">11. CNC Parameter and Data Backup</a><ul>
+<li><a href="#backup-practices">Backup practices</a></li>
+</ul>
+</li>
+<li><a href="#12-practical-example-cnc-memory-battery-alarm">12. Practical Example: CNC Memory Battery Alarm</a><ul>
+<li><a href="#situation">Situation</a></li>
+<li><a href="#investigation">Investigation</a></li>
+<li><a href="#possible-causes">Possible causes</a></li>
+<li><a href="#corrective-action">Corrective action</a></li>
+</ul>
+</li>
+<li><a href="#13-practical-example-absolute-encoder-battery-alarm">13. Practical Example: Absolute Encoder Battery Alarm</a><ul>
+<li><a href="#situation_1">Situation</a></li>
+<li><a href="#investigation_1">Investigation</a></li>
+<li><a href="#possible-causes_1">Possible causes</a></li>
+<li><a href="#corrective-action_1">Corrective action</a></li>
+</ul>
+</li>
+<li><a href="#14-practical-example-machine-reference-lost-after-power-restoration">14. Practical Example: Machine Reference Lost After Power Restoration</a><ul>
+<li><a href="#situation_2">Situation</a></li>
+<li><a href="#investigation_2">Investigation</a></li>
+<li><a href="#possible-causes_2">Possible causes</a></li>
+<li><a href="#corrective-action_2">Corrective action</a></li>
+</ul>
+</li>
+<li><a href="#15-battery-storage-and-handling">15. Battery Storage and Handling</a></li>
+<li><a href="#16-preventive-maintenance-checklist">16. Preventive Maintenance Checklist</a><ul>
+<li><a href="#routine-monitoring">Routine monitoring</a></li>
+<li><a href="#planned-maintenance">Planned maintenance</a></li>
+</ul>
+</li>
+<li><a href="#17-battery-management-in-industrial-maintenance">17. Battery Management in Industrial Maintenance</a></li>
+<li><a href="#18-key-engineering-principles">18. Key Engineering Principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>Batteries in CNC machines provide backup power to specific electronic circuits so that selected data or electrical states can be retained when the main supply is switched off or interrupted.</p>
+<p>Depending on the CNC controller, drive, encoder, and machine design, batteries may support:</p>
+<ul>
+<li>Retention of machine parameters and configuration data.</li>
+<li>Retention of absolute encoder position information.</li>
+<li>Preservation of selected memory contents.</li>
+<li>Maintenance of a real-time clock.</li>
+<li>Backup of specific data in battery-backed memory.</li>
+</ul>
+<p>Important: A CNC machine does not necessarily use one battery for all these functions. The controller, absolute encoder, servo system, and other modules may have separate batteries or may use different retention technologies. Some newer systems use nonvolatile memory and do not require a battery for certain functions.</p>
+<p>A battery is not a substitute for a proper backup. If important CNC data exists only in a battery-backed memory area, battery failure or loss of backup power can result in data loss.</p>
+<h2 id="2-main-battery-types-and-applications">2. Main Battery Types and Applications</h2>
+<table>
+<thead>
+<tr>
+<th>Battery application</th>
+<th>Purpose</th>
+<th>Possible consequence of failure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CNC memory backup</td>
+<td>Retains selected controller data in battery-backed memory</td>
+<td>Loss of retained data or configuration</td>
+</tr>
+<tr>
+<td>Absolute encoder battery</td>
+<td>Powers the encoder's backup circuitry or position-retention function</td>
+<td>Position data may become invalid or require reference recovery</td>
+</tr>
+<tr>
+<td>Servo feedback battery</td>
+<td>Supports battery-dependent absolute feedback arrangements</td>
+<td>Axis reference may need restoration</td>
+</tr>
+<tr>
+<td>Real-time clock battery</td>
+<td>Maintains clock and date in supported hardware</td>
+<td>Clock resets or incorrect timestamps</td>
+</tr>
+<tr>
+<td>PLC or SRAM backup</td>
+<td>Retains selected data in supported battery-backed memory</td>
+<td>Retained values or memory contents may be lost</td>
+</tr>
+<tr>
+<td>UPS battery</td>
+<td>Provides temporary power to supported equipment</td>
+<td>Reduced backup runtime or unexpected shutdown</td>
+</tr>
+</tbody>
+</table>
+<p>These functions may be combined in a particular system or supplied by separate batteries. Confirm the actual arrangement from the machine and component documentation.</p>
+<h2 id="3-battery-backup-architecture">3. Battery-Backup Architecture</h2>
+<p>A typical battery-backed memory arrangement works as follows:</p>
+<pre><code>Main Machine Supply Available
+    ↓
+Controller Operates Normally
+    ↓
+Data Stored in Memory
+    ↓
+Main Supply Switched Off
+    ↓
+Battery Supports Selected Backup Circuit
+    ↓
+Retained Data Preserved
+    ↓
+Main Supply Restored
+    ↓
+Controller Recovers Retained Data
+</code></pre>
+<p>The exact sequence depends on the hardware. Some data is retained in nonvolatile memory without a battery, while battery-backed memory requires a valid backup supply.</p>
+<p>An absolute encoder battery may operate independently of the CNC memory battery. Replacing one battery does not necessarily protect the other.</p>
+<h2 id="4-battery-technologies">4. Battery Technologies</h2>
+<h3 id="41-lithium-primary-batteries">4.1 Lithium Primary Batteries</h3>
+<p>Some CNC controllers and absolute encoders use non-rechargeable lithium batteries.</p>
+<p>Characteristics include:</p>
+<ul>
+<li>High energy density.</li>
+<li>Long shelf life relative to many other primary battery types.</li>
+<li>Low self-discharge under suitable storage conditions.</li>
+<li>Availability in manufacturer-specified voltage, capacity, and package formats.</li>
+</ul>
+<p>These batteries must not be recharged unless the specific product is explicitly designed for that purpose. A primary lithium battery installed in a charging circuit intended for a rechargeable battery can create a serious safety hazard.</p>
+<h3 id="42-rechargeable-backup-batteries">4.2 Rechargeable Backup Batteries</h3>
+<p>Some equipment uses rechargeable backup batteries, depending on its design and age.</p>
+<p>Characteristics include:</p>
+<ul>
+<li>Charging behavior defined by the equipment.</li>
+<li>Capacity degradation with age and operating conditions.</li>
+<li>Potential failure from poor charging conditions or extended storage.</li>
+<li>Replacement requirements specific to the battery and controller.</li>
+</ul>
+<p>Do not assume that a battery is rechargeable based only on its appearance or voltage.</p>
+<h3 id="43-battery-packs">4.3 Battery Packs</h3>
+<p>Some CNC systems use assembled battery packs with multiple cells, connectors, wiring, and sometimes monitoring circuitry.</p>
+<p>When replacing a pack, verify:</p>
+<ul>
+<li>Exact part number or approved successor.</li>
+<li>Nominal voltage.</li>
+<li>Chemistry.</li>
+<li>Connector and polarity.</li>
+<li>Capacity and discharge characteristics.</li>
+<li>Whether the pack contains monitoring or identification circuitry.</li>
+<li>Whether replacement must be performed with the equipment powered.</li>
+</ul>
+<p>A pack that fits physically is not necessarily electrically compatible.</p>
+<h2 id="5-cnc-memory-battery-versus-absolute-encoder-battery">5. CNC Memory Battery Versus Absolute Encoder Battery</h2>
+<p>These are two different maintenance functions and must not be confused.</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>CNC memory battery</th>
+<th>Absolute encoder battery</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Primary function</td>
+<td>Retains selected controller data</td>
+<td>Supports absolute position retention in battery-dependent feedback systems</td>
+</tr>
+<tr>
+<td>Typical location</td>
+<td>CNC control unit or memory backup compartment</td>
+<td>Servo motor feedback system, encoder, or specified battery holder</td>
+</tr>
+<tr>
+<td>Potential consequence of failure</td>
+<td>Parameter or retained-memory loss</td>
+<td>Loss of valid absolute-position data</td>
+</tr>
+<tr>
+<td>Recovery after failure</td>
+<td>Restore or reload data as required</td>
+<td>Follow the specified reference recovery or absolute-position procedure</td>
+</tr>
+<tr>
+<td>Replacement priority</td>
+<td>Based on retention risk and manufacturer requirements</td>
+<td>Based on feedback architecture and risk of losing position validity</td>
+</tr>
+<tr>
+<td>Universal behavior</td>
+<td>No, varies by controller</td>
+<td>No, varies by encoder and servo system</td>
+</tr>
+</tbody>
+</table>
+<p>Some CNC architectures retain most configuration data in nonvolatile memory, while others use battery-backed memory for particular functions. Similarly, not all absolute encoders require batteries.</p>
+<p>Never assume that replacing the CNC battery also replaces the absolute encoder battery.</p>
+<h2 id="6-battery-failure-symptoms">6. Battery Failure Symptoms</h2>
+<p>A weak or failed battery may produce symptoms such as:</p>
+<ul>
+<li>Battery-low alarm.</li>
+<li>Battery replacement warning.</li>
+<li>Absolute encoder battery alarm.</li>
+<li>Loss of date or time.</li>
+<li>Memory-retention alarm.</li>
+<li>Absolute-position data invalid.</li>
+<li>Requirement to establish machine reference.</li>
+<li>Retained data missing after power restoration.</li>
+</ul>
+<p>The absence of an alarm does not prove that the battery is healthy. Some systems provide limited warning, and the warning period depends on the equipment design.</p>
+<p>A battery alarm also does not automatically mean that data has already been lost. The controller's exact alarm description and the manufacturer's procedure determine the required action.</p>
+<h2 id="7-battery-replacement-planning">7. Battery Replacement Planning</h2>
+<p>Battery replacement should be based on the equipment manufacturer's specified interval, battery status, service history, and operational risk.</p>
+<h3 id="71-identify-the-correct-battery">7.1 Identify the Correct Battery</h3>
+<p>Record the following before ordering a replacement:</p>
+<ul>
+<li>CNC manufacturer and controller model.</li>
+<li>Machine builder and machine model.</li>
+<li>Relevant module or encoder designation.</li>
+<li>Existing battery part number.</li>
+<li>Nominal voltage and chemistry.</li>
+<li>Connector type and polarity.</li>
+<li>Approved replacement part number.</li>
+<li>Battery installation location.</li>
+<li>Required replacement procedure.</li>
+</ul>
+<p>Do not identify a battery only by voltage. Different chemistries, connectors, capacities, and discharge characteristics may make apparently similar batteries unsuitable.</p>
+<h3 id="72-review-the-retention-risk">7.2 Review the Retention Risk</h3>
+<p>Before replacement, establish:</p>
+<ul>
+<li>Which data the battery supports.</li>
+<li>Whether the relevant data is already stored in nonvolatile memory.</li>
+<li>Whether a current backup exists.</li>
+<li>Whether absolute axis position may be affected.</li>
+<li>Whether the machine requires a special replacement mode.</li>
+<li>Whether replacement requires the controller to remain powered.</li>
+<li>Whether the procedure needs an authorized technician.</li>
+</ul>
+<p>This assessment prevents a routine maintenance task from becoming an unexpected CNC recovery job.</p>
+<h2 id="8-replacing-a-battery-while-power-is-applied">8. Replacing a Battery While Power Is Applied</h2>
+<p>Some CNC manufacturers specify replacement with the control powered so that the backup circuit remains supported by the main supply. Other systems require a different method.</p>
+<p>There is no universal rule that all CNC batteries must be replaced with the machine powered or with the machine switched off.</p>
+<p>Before replacement:</p>
+<ol>
+<li>Identify the exact controller, module, or encoder.</li>
+<li>Obtain the machine-builder or manufacturer-approved procedure.</li>
+<li>Confirm whether the relevant circuit must remain powered.</li>
+<li>Check whether any special operating mode is required.</li>
+<li>Verify the correct battery part number and polarity.</li>
+<li>Prepare the replacement and tools before beginning.</li>
+<li>Follow the specified sequence without improvisation.</li>
+<li>Confirm that the warning clears and the retained data remains valid.</li>
+</ol>
+<p>If the procedure requires powered replacement, qualified personnel must follow the applicable electrical safety requirements and avoid contact with exposed energized circuits. If the procedure requires isolation, follow the isolation instructions and understand the data-retention consequences before disconnecting power.</p>
+<p>Do not remove a battery first and then search for the replacement procedure. That sequence is an excellent way to convert preventive maintenance into data recovery.</p>
+<h2 id="9-absolute-encoder-battery-maintenance">9. Absolute Encoder Battery Maintenance</h2>
+<p>Some absolute encoders maintain position information through a battery-dependent backup arrangement. The details vary significantly by encoder and drive family.</p>
+<h3 id="important-concepts">Important concepts</h3>
+<ul>
+<li>Absolute position: A feedback value that identifies position within the encoder's supported measurement range.</li>
+<li>Incremental position: A position derived from movement relative to a reference or previously established state.</li>
+<li>Reference return or homing: A procedure that establishes the machine's reference position according to the control architecture.</li>
+<li>Absolute-position recovery: A manufacturer-specific procedure used when absolute position information is missing or invalid.</li>
+</ul>
+<p>An absolute encoder battery alarm does not always mean the axis has physically moved or that the encoder itself is defective.</p>
+<h3 id="after-replacement">After replacement</h3>
+<p>Depending on the system, required checks may include:</p>
+<ul>
+<li>Confirming that the encoder battery alarm has cleared.</li>
+<li>Checking whether absolute position remains valid.</li>
+<li>Confirming the controller's reference status.</li>
+<li>Following any required reference recovery procedure.</li>
+<li>Verifying axis movement under approved conditions.</li>
+<li>Confirming that machine coordinates and travel limits remain correct.</li>
+</ul>
+<p>Do not automatically perform reference return or alter absolute-position settings without checking the machine's prescribed procedure. Some systems retain valid position, while others require a controlled recovery.</p>
+<h2 id="10-consequences-of-cnc-battery-failure">10. Consequences of CNC Battery Failure</h2>
+<p>The consequences depend on the battery's function and the hardware architecture.</p>
+<table>
+<thead>
+<tr>
+<th>Retained function</th>
+<th>Possible result of loss</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Battery-backed CNC memory</td>
+<td>Selected parameters or retained data may be lost</td>
+</tr>
+<tr>
+<td>Absolute encoder position retention</td>
+<td>Position validity may be lost</td>
+</tr>
+<tr>
+<td>Real-time clock</td>
+<td>Date and time may reset</td>
+</tr>
+<tr>
+<td>Battery-backed PLC data</td>
+<td>Selected retained values may be lost</td>
+</tr>
+<tr>
+<td>UPS power support</td>
+<td>Shorter runtime or loss of backup capability</td>
+</tr>
+</tbody>
+</table>
+<p>Potential downstream effects include:</p>
+<ul>
+<li>Longer machine recovery time.</li>
+<li>Incorrect configuration if data is restored from an unsuitable backup.</li>
+<li>Need for reference recovery or calibration.</li>
+<li>Production downtime.</li>
+<li>Additional commissioning checks.</li>
+<li>Risk of incorrect machine operation if invalid data is not detected.</li>
+</ul>
+<p>A lost absolute reference is not equivalent to a physically damaged axis. Likewise, a machine that powers up normally may still have lost important retained data.</p>
+<h2 id="11-cnc-parameter-and-data-backup">11. CNC Parameter and Data Backup</h2>
+<p>Battery maintenance must be supported by a reliable backup strategy.</p>
+<p>Important backup categories may include:</p>
+<ul>
+<li>CNC parameters.</li>
+<li>Machine-builder parameters.</li>
+<li>Servo and spindle drive parameters.</li>
+<li>PLC programs and retained data, where supported.</li>
+<li>Tool offsets.</li>
+<li>Work offsets.</li>
+<li>Tool-management data.</li>
+<li>Macro variables.</li>
+<li>Pitch-error or other compensation data.</li>
+<li>Machine configuration files.</li>
+<li>Relevant software and firmware versions.</li>
+</ul>
+<p>Not every item is battery-backed, and not every item is included in a standard CNC backup operation.</p>
+<h3 id="backup-practices">Backup practices</h3>
+<ol>
+<li>Identify which data is critical to machine operation.</li>
+<li>Use the manufacturer-supported backup method.</li>
+<li>Store backups in an approved location.</li>
+<li>Include machine identification, date, and software or parameter revision.</li>
+<li>Protect backups from unauthorized changes.</li>
+<li>Verify that the backup completed successfully.</li>
+<li>Periodically confirm that files are readable and complete.</li>
+<li>Document the recovery procedure and any required licenses or access permissions.</li>
+</ol>
+<p>A backup file existing on a computer does not prove that it can restore the machine. Recovery requirements should be understood before a failure occurs.</p>
+<h2 id="12-practical-example-cnc-memory-battery-alarm">12. Practical Example: CNC Memory Battery Alarm</h2>
+<h3 id="situation">Situation</h3>
+<p>A CNC controller displays a low-battery warning during routine operation.</p>
+<h3 id="investigation">Investigation</h3>
+<ol>
+<li>Record the exact alarm text and code.</li>
+<li>Identify the controller model and the battery it refers to.</li>
+<li>Check the manufacturer's specified replacement procedure.</li>
+<li>Verify that the correct replacement battery is available.</li>
+<li>Confirm the status of the latest CNC and machine configuration backups.</li>
+<li>Determine whether the procedure requires powered replacement or isolation.</li>
+<li>Perform the replacement according to the approved procedure.</li>
+<li>Confirm that the alarm clears and relevant retained data remains available.</li>
+</ol>
+<h3 id="possible-causes">Possible causes</h3>
+<ul>
+<li>Battery reaching its specified service-life limit.</li>
+<li>Elevated temperature or unsuitable storage conditions.</li>
+<li>Incorrect battery type.</li>
+<li>Battery connector or contact problem.</li>
+<li>Fault in the monitoring circuit.</li>
+</ul>
+<h3 id="corrective-action">Corrective action</h3>
+<p>Replace the battery according to the approved procedure and document the replacement date, part number, alarm status, and required verification.</p>
+<p>Do not wait for a low-battery warning to become a memory-loss event before planning the replacement.</p>
+<h2 id="13-practical-example-absolute-encoder-battery-alarm">13. Practical Example: Absolute Encoder Battery Alarm</h2>
+<h3 id="situation_1">Situation</h3>
+<p>A CNC machining centre displays an absolute encoder battery alarm after a period of service.</p>
+<h3 id="investigation_1">Investigation</h3>
+<ul>
+<li>Identify the affected axis and feedback system.</li>
+<li>Confirm whether the battery supports the motor encoder or another absolute-position device.</li>
+<li>Review the drive and CNC alarm details.</li>
+<li>Check the specified replacement procedure.</li>
+<li>Establish whether absolute position remains valid.</li>
+<li>Confirm whether the system requires reference recovery after replacement.</li>
+</ul>
+<h3 id="possible-causes_1">Possible causes</h3>
+<ul>
+<li>Battery capacity has declined.</li>
+<li>Battery connection is poor.</li>
+<li>The wrong battery was installed previously.</li>
+<li>The monitoring circuit or feedback system has a fault.</li>
+</ul>
+<h3 id="corrective-action_1">Corrective action</h3>
+<p>Restore the approved battery arrangement and follow the controller's required position-validity checks. If the absolute position is invalid, complete the prescribed recovery and verification process before normal production.</p>
+<h2 id="14-practical-example-machine-reference-lost-after-power-restoration">14. Practical Example: Machine Reference Lost After Power Restoration</h2>
+<h3 id="situation_2">Situation</h3>
+<p>After a machine shutdown, the CNC indicates that an axis reference or absolute position is invalid.</p>
+<h3 id="investigation_2">Investigation</h3>
+<ol>
+<li>Record the exact CNC and drive alarms.</li>
+<li>Identify the axis feedback architecture.</li>
+<li>Check battery condition and replacement history.</li>
+<li>Determine whether the system relies on battery-backed absolute position.</li>
+<li>Verify the controller's current reference status.</li>
+<li>Review the approved reference-recovery procedure.</li>
+<li>Check whether machine-specific calibration or compensation data is intact.</li>
+</ol>
+<h3 id="possible-causes_2">Possible causes</h3>
+<ul>
+<li>Battery-backed position data was lost.</li>
+<li>The encoder or feedback cable was disconnected.</li>
+<li>An encoder or drive was replaced without the required commissioning.</li>
+<li>The controller lost reference validity for another supported reason.</li>
+<li>Configuration or calibration data is incorrect.</li>
+</ul>
+<h3 id="corrective-action_2">Corrective action</h3>
+<p>Follow the manufacturer's reference-recovery process and verify the machine coordinate system, travel limits, and positioning accuracy before releasing the machine.</p>
+<p>Do not assume that an axis is safe to move to its previous coordinate merely because the displayed coordinate value looks familiar.</p>
+<h2 id="15-battery-storage-and-handling">15. Battery Storage and Handling</h2>
+<p>Battery storage requirements depend on chemistry and manufacturer specifications.</p>
+<p>General precautions include:</p>
+<ul>
+<li>Store batteries within the specified temperature range.</li>
+<li>Protect terminals from short circuits.</li>
+<li>Keep batteries in their original protective packaging where appropriate.</li>
+<li>Prevent mechanical damage, crushing, or puncture.</li>
+<li>Avoid exposure to moisture and unsuitable environments.</li>
+<li>Check shelf life before installation.</li>
+<li>Keep incompatible battery types clearly identified.</li>
+<li>Follow applicable procedures for damaged, leaking, or swollen batteries.</li>
+<li>Dispose of used batteries through the approved collection and recycling process.</li>
+</ul>
+<p>Lithium batteries require particular care because short circuits, physical damage, incorrect charging, or unsuitable handling can create fire and injury risks.</p>
+<p>Do not mix old and new cells in a battery pack unless the manufacturer explicitly permits that arrangement.</p>
+<h2 id="16-preventive-maintenance-checklist">16. Preventive Maintenance Checklist</h2>
+<h3 id="routine-monitoring">Routine monitoring</h3>
+<ul>
+<li>Review CNC and absolute encoder battery alarms.</li>
+<li>Maintain a list of battery locations and supported functions.</li>
+<li>Record battery installation dates and specified replacement intervals.</li>
+<li>Verify that the approved replacement batteries are available.</li>
+<li>Confirm that current CNC and machine configuration backups exist.</li>
+<li>Check for loose connectors or visible damage where inspection is permitted.</li>
+<li>Review unresolved reference or memory-retention alarms.</li>
+</ul>
+<h3 id="planned-maintenance">Planned maintenance</h3>
+<ul>
+<li>Verify the exact controller and encoder battery requirements.</li>
+<li>Replace batteries according to manufacturer instructions.</li>
+<li>Confirm the required powered or isolated replacement condition.</li>
+<li>Verify alarm clearance after replacement.</li>
+<li>Confirm retained data and reference validity where applicable.</li>
+<li>Complete reference recovery if required.</li>
+<li>Record the installed battery part number and date.</li>
+<li>Update maintenance records and the next replacement due date.</li>
+<li>Confirm that relevant backups remain accessible.</li>
+</ul>
+<p>Battery replacement intervals must follow the manufacturer's requirements and account for operating temperature, service conditions, and battery status. A universal replacement interval cannot safely be applied to every CNC controller or encoder.</p>
+<h2 id="17-battery-management-in-industrial-maintenance">17. Battery Management in Industrial Maintenance</h2>
+<p>For a maintenance department, battery control should be treated as a defined preventive-maintenance activity rather than an occasional response to alarms.</p>
+<p>A useful battery register contains:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine ID</td>
+<td>Identifies the machine</td>
+</tr>
+<tr>
+<td>Module or axis</td>
+<td>Identifies the supported device</td>
+</tr>
+<tr>
+<td>Battery function</td>
+<td>Distinguishes memory, encoder, clock, or UPS backup</td>
+</tr>
+<tr>
+<td>Battery part number</td>
+<td>Ensures correct procurement</td>
+</tr>
+<tr>
+<td>Chemistry and voltage</td>
+<td>Supports compatibility verification</td>
+</tr>
+<tr>
+<td>Installation date</td>
+<td>Establishes service history</td>
+</tr>
+<tr>
+<td>Replacement interval</td>
+<td>Supports planned maintenance</td>
+</tr>
+<tr>
+<td>Alarm status</td>
+<td>Records the current condition</td>
+</tr>
+<tr>
+<td>Backup status</td>
+<td>Confirms relevant data protection</td>
+</tr>
+<tr>
+<td>Replacement procedure</td>
+<td>Links to the approved work instruction</td>
+</tr>
+<tr>
+<td>Last verification</td>
+<td>Records post-replacement checks</td>
+</tr>
+</tbody>
+</table>
+<p>For SAP PM or another computerized maintenance system, each battery type can be linked to the equipment or functional location, preventive-maintenance task list, spare-part record, and replacement history.</p>
+<p>This supports planned procurement and reduces the risk of losing machine data due to a neglected battery.</p>
+<h2 id="18-key-engineering-principles">18. Key Engineering Principles</h2>
+<ul>
+<li>CNC batteries support specific retention functions; they do not necessarily back up the entire machine.</li>
+<li>CNC memory batteries and absolute encoder batteries may be separate.</li>
+<li>Some systems use nonvolatile memory and require no battery for particular data.</li>
+<li>Battery chemistry, voltage, connector, and charging behavior must match the equipment requirements.</li>
+<li>Powered replacement and isolated replacement are both possible, depending on the hardware.</li>
+<li>The approved replacement procedure must be identified before removing the battery.</li>
+<li>Absolute-position validity must be checked after relevant battery or feedback work.</li>
+<li>CNC backups are essential even when batteries are healthy.</li>
+<li>Battery failure may cause data loss, reference recovery, or additional commissioning work.</li>
+<li>Alarm clearance alone does not prove that all retained data and references remain valid.</li>
+<li>Traceable battery registers and scheduled maintenance reduce avoidable CNC downtime.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\18_PM\05_CNC\06_Params - Parameters</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

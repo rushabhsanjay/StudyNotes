@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HMI Alarm History</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">HMI Alarm History</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-purpose-of-alarm-history">2. Purpose of alarm history</a></li>
+<li><a href="#3-alarm-event-and-alarm-history">3. Alarm, event, and alarm history</a></li>
+<li><a href="#4-typical-alarm-lifecycle">4. Typical alarm lifecycle</a></li>
+<li><a href="#5-alarm-occurrence-acknowledgment-and-clearance">5. Alarm occurrence, acknowledgment, and clearance</a></li>
+<li><a href="#6-information-stored-in-alarm-history">6. Information stored in alarm history</a></li>
+<li><a href="#7-alarm-timestamp-and-time-synchronization">7. Alarm timestamp and time synchronization</a></li>
+<li><a href="#8-alarm-history-versus-active-alarm-list">8. Alarm history versus active alarm list</a></li>
+<li><a href="#9-alarm-history-versus-event-log">9. Alarm history versus event log</a></li>
+<li><a href="#10-alarm-history-architecture">10. Alarm history architecture</a></li>
+<li><a href="#11-alarm-storage-and-retention">11. Alarm storage and retention</a><ul>
+<li><a href="#storage-considerations">Storage considerations</a></li>
+<li><a href="#estimating-storage-requirements">Estimating storage requirements</a></li>
+</ul>
+</li>
+<li><a href="#12-alarm-history-filters-and-search">12. Alarm history filters and search</a></li>
+<li><a href="#13-alarm-priority-and-severity">13. Alarm priority and severity</a></li>
+<li><a href="#14-first-out-alarms-and-consequential-alarms">14. First-out alarms and consequential alarms</a></li>
+<li><a href="#15-alarm-duration-and-frequency-analysis">15. Alarm duration and frequency analysis</a><ul>
+<li><a href="#alarm-duration">Alarm duration</a></li>
+<li><a href="#alarm-frequency">Alarm frequency</a></li>
+<li><a href="#useful-analysis-measures">Useful analysis measures</a></li>
+</ul>
+</li>
+<li><a href="#16-alarm-floods-and-nuisance-alarms">16. Alarm floods and nuisance alarms</a><ul>
+<li><a href="#alarm-flood">Alarm flood</a></li>
+<li><a href="#nuisance-alarm">Nuisance alarm</a></li>
+</ul>
+</li>
+<li><a href="#17-alarm-deadband-delay-and-latching">17. Alarm deadband, delay, and latching</a><ul>
+<li><a href="#deadband">Deadband</a></li>
+<li><a href="#alarm-delay">Alarm delay</a></li>
+<li><a href="#alarm-latching">Alarm latching</a></li>
+</ul>
+</li>
+<li><a href="#18-alarm-history-troubleshooting-procedure">18. Alarm history troubleshooting procedure</a><ul>
+<li><a href="#step-1-define-the-failure-window">Step 1: Define the failure window</a></li>
+<li><a href="#step-2-filter-alarm-history">Step 2: Filter alarm history</a></li>
+<li><a href="#step-3-identify-the-earliest-relevant-event">Step 3: Identify the earliest relevant event</a></li>
+<li><a href="#step-4-correlate-other-evidence">Step 4: Correlate other evidence</a></li>
+<li><a href="#step-5-verify-the-actual-fault">Step 5: Verify the actual fault</a></li>
+<li><a href="#step-6-correct-the-cause">Step 6: Correct the cause</a></li>
+<li><a href="#step-7-validate-recovery">Step 7: Validate recovery</a></li>
+<li><a href="#step-8-document-the-findings">Step 8: Document the findings</a></li>
+</ul>
+</li>
+<li><a href="#19-practical-industrial-example-intermittent-proximity-sensor">19. Practical industrial example: intermittent proximity sensor</a></li>
+<li><a href="#20-alarm-history-maintenance-checklist">20. Alarm history maintenance checklist</a><ul>
+<li><a href="#routine-checks">Routine checks</a></li>
+<li><a href="#periodic-checks">Periodic checks</a></li>
+<li><a href="#after-hmi-replacement-or-software-changes">After HMI replacement or software changes</a></li>
+</ul>
+</li>
+<li><a href="#21-common-mistakes-to-avoid">21. Common mistakes to avoid</a></li>
+<li><a href="#22-key-principles">22. Key principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>HMI alarm history is the recorded chronological history of alarm events and their associated state changes within an HMI, PLC, SCADA system, or connected alarm-management service.</p>
+<p>It allows maintenance and production personnel to investigate past faults, identify recurring problems, correlate alarms with machine behavior, and determine why production stopped.</p>
+<p>An alarm history may record events such as:</p>
+<ul>
+<li>Motor overload.</li>
+<li>VFD fault.</li>
+<li>PLC communication failure.</li>
+<li>Low pneumatic pressure.</li>
+<li>Safety circuit interruption.</li>
+<li>Sensor signal failure.</li>
+<li>High temperature.</li>
+<li>Machine cycle timeout.</li>
+<li>Emergency-stop activation.</li>
+<li>Operator acknowledgment and alarm return to normal.</li>
+</ul>
+<p>For example, if a conveyor stops unexpectedly, the current HMI screen may show no active fault because the original fault has already cleared. Alarm history can reveal that a drive fault occurred first, followed by a conveyor sequence timeout and then a production-stop alarm.</p>
+<p>Alarm history is evidence for troubleshooting, not automatic proof of root cause. Events must be interpreted in the context of the control sequence, timestamps, machine feedback, and operating conditions.</p>
+<h2 id="2-purpose-of-alarm-history">2. Purpose of alarm history</h2>
+<p>Alarm history supports several maintenance and operational activities.</p>
+<ul>
+<li>Fault investigation: Determine which alarms occurred before, during, and after a breakdown.</li>
+<li>Root-cause analysis: Identify the earliest relevant fault and distinguish primary faults from consequential alarms.</li>
+<li>Recurring-fault analysis: Identify repeated alarms on a specific machine, device, or process.</li>
+<li>Downtime analysis: Establish fault timing and support production-loss investigations.</li>
+<li>Preventive maintenance: Identify developing issues such as repeated overheating, communication loss, or low pressure.</li>
+<li>Process improvement: Find nuisance alarms, poor alarm thresholds, and unnecessary operator interventions.</li>
+<li>Audit and traceability: Preserve records of alarm occurrence and acknowledgment where required.</li>
+<li>Shift handover: Communicate unresolved faults and events that occurred during the previous shift.</li>
+</ul>
+<p>Alarm history is particularly valuable when the original fault disappears after the machine stops, an operator resets the equipment, or the control system automatically clears a condition.</p>
+<h2 id="3-alarm-event-and-alarm-history">3. Alarm, event, and alarm history</h2>
+<p>These terms are related but have different meanings.</p>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Alarm</td>
+<td>An abnormal condition requiring operator awareness or action</td>
+<td>VFD overload</td>
+</tr>
+<tr>
+<td>Event</td>
+<td>A recorded occurrence or state change</td>
+<td>Operator switches machine to manual</td>
+</tr>
+<tr>
+<td>Alarm occurrence</td>
+<td>The point when an alarm condition becomes active</td>
+<td>Motor overload bit changes to active</td>
+</tr>
+<tr>
+<td>Alarm acknowledgment</td>
+<td>An operator or authorized system confirms awareness of an alarm</td>
+<td>Operator acknowledges the overload</td>
+</tr>
+<tr>
+<td>Alarm return to normal</td>
+<td>The triggering condition is no longer active</td>
+<td>Overload signal clears</td>
+</tr>
+<tr>
+<td>Alarm history</td>
+<td>Chronological record of configured alarm-related occurrences and state changes</td>
+<td>Overload, acknowledgment, and return-to-normal records</td>
+</tr>
+</tbody>
+</table>
+<p>An alarm is not necessarily the same as an event. A machine mode change may be recorded as an event without representing an abnormal condition.</p>
+<p>Similarly, an alarm can remain active even after it has been acknowledged. Acknowledgment indicates awareness; it does not necessarily clear the fault.</p>
+<h2 id="4-typical-alarm-lifecycle">4. Typical alarm lifecycle</h2>
+<p>A common alarm lifecycle is:</p>
+<pre><code>Normal condition
+      ↓
+Alarm condition becomes active
+      ↓
+Alarm displayed and recorded
+      ↓
+Operator acknowledgment, if required
+      ↓
+Physical or logical fault condition clears
+      ↓
+Alarm returns to normal
+      ↓
+History retains the configured records
+</code></pre>
+<p>The exact sequence depends on the alarm configuration.</p>
+<p>Some alarms are acknowledged before the condition clears. Others clear automatically when the condition returns to normal. Some systems separately record acknowledgment, return to normal, shelving, suppression, or operator actions.</p>
+<p>A properly configured history should distinguish these states rather than treating them as a single event.</p>
+<h2 id="5-alarm-occurrence-acknowledgment-and-clearance">5. Alarm occurrence, acknowledgment, and clearance</h2>
+<p>Consider a motor overload alarm.</p>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Event</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10:15:12</td>
+<td>Motor overload alarm activates</td>
+<td>The configured overload condition becomes true</td>
+</tr>
+<tr>
+<td>10:15:25</td>
+<td>Operator acknowledges alarm</td>
+<td>The operator confirms awareness</td>
+</tr>
+<tr>
+<td>10:18:40</td>
+<td>Overload condition clears</td>
+<td>The triggering signal returns to its normal state</td>
+</tr>
+<tr>
+<td>10:18:40 or later</td>
+<td>Alarm returns to normal in history</td>
+<td>The system records the configured clearance event</td>
+</tr>
+</tbody>
+</table>
+<p>The example timestamps are illustrative.</p>
+<p>The motor may still require inspection, reset, or a permitted restart sequence even after the overload signal clears. Alarm clearance does not establish that the equipment is safe or ready for operation.</p>
+<h2 id="6-information-stored-in-alarm-history">6. Information stored in alarm history</h2>
+<p>The information available depends on the HMI platform and alarm architecture.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Timestamp</td>
+<td>Records when the event occurred</td>
+</tr>
+<tr>
+<td>Alarm ID</td>
+<td>Provides a stable identifier for the alarm</td>
+</tr>
+<tr>
+<td>Alarm message</td>
+<td>Describes the abnormal condition</td>
+</tr>
+<tr>
+<td>Equipment or tag name</td>
+<td>Identifies the affected device or process</td>
+</tr>
+<tr>
+<td>Alarm class or priority</td>
+<td>Supports categorization and response planning</td>
+</tr>
+<tr>
+<td>Event type</td>
+<td>Identifies activation, acknowledgment, return to normal, or another recorded state</td>
+</tr>
+<tr>
+<td>Current or recorded state</td>
+<td>Describes the alarm state represented by the record</td>
+</tr>
+<tr>
+<td>User identity</td>
+<td>Identifies the acknowledging or acting user when supported</td>
+</tr>
+<tr>
+<td>Value at occurrence</td>
+<td>Records a process value associated with the alarm when configured</td>
+</tr>
+<tr>
+<td>Source</td>
+<td>Identifies the HMI, PLC, server, or alarm subsystem that generated the record</td>
+</tr>
+<tr>
+<td>Additional details</td>
+<td>May include area, location, alarm group, or diagnostic information</td>
+</tr>
+</tbody>
+</table>
+<p>Not every system stores every field. Some information must be configured explicitly, and some depends on whether the source device or server provides it.</p>
+<h2 id="7-alarm-timestamp-and-time-synchronization">7. Alarm timestamp and time synchronization</h2>
+<p>Correct timestamps are essential for reconstructing a breakdown.</p>
+<p>If the HMI clock is several minutes ahead of the PLC clock, an alarm may appear to have occurred before its actual triggering condition. This can lead maintenance teams toward the wrong component.</p>
+<p>Important considerations include:</p>
+<ul>
+<li>HMI and PLC clock configuration.</li>
+<li>SCADA server and historian clock configuration.</li>
+<li>Time zone and daylight-saving settings where applicable.</li>
+<li>Network Time Protocol (NTP) or another approved time-synchronization method.</li>
+<li>Timestamp resolution and precision.</li>
+<li>Whether the recorded timestamp represents source time or receipt time.</li>
+<li>Behavior during communication outages and buffered event uploads.</li>
+</ul>
+<p>For example, a PLC may record a drive fault at 10:15:12 while the HMI receives the event at 10:15:15. Both timestamps may be valid for different stages of the communication process.</p>
+<p>For high-speed or tightly sequenced events, determine which timestamp is being displayed and whether the event source supports sufficiently precise time recording.</p>
+<h2 id="8-alarm-history-versus-active-alarm-list">8. Alarm history versus active alarm list</h2>
+<p>The active alarm list and alarm history serve different purposes.</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Active alarm list</th>
+<th>Alarm history</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Primary purpose</td>
+<td>Shows current alarm conditions</td>
+<td>Shows recorded past alarm events</td>
+</tr>
+<tr>
+<td>Typical contents</td>
+<td>Active and possibly unacknowledged alarms</td>
+<td>Occurrences and configured alarm state changes</td>
+</tr>
+<tr>
+<td>Main use</td>
+<td>Immediate operator response</td>
+<td>Troubleshooting and historical analysis</td>
+</tr>
+<tr>
+<td>Changes over time</td>
+<td>Changes as alarm states change</td>
+<td>Retains records according to storage and retention settings</td>
+</tr>
+<tr>
+<td>Acknowledgment</td>
+<td>Often allows acknowledgment</td>
+<td>Usually records acknowledgment if configured</td>
+</tr>
+<tr>
+<td>Fault investigation</td>
+<td>Useful for current faults</td>
+<td>Essential for reconstructing earlier faults</td>
+</tr>
+</tbody>
+</table>
+<p>A machine may have no active alarms while its history contains several faults from the previous shift.</p>
+<p>Conversely, an alarm can be active now but missing from the expected history because of a logging configuration problem, storage failure, or a source-specific limitation.</p>
+<h2 id="9-alarm-history-versus-event-log">9. Alarm history versus event log</h2>
+<p>An event log may include many kinds of system activity, while alarm history focuses on alarm-related information.</p>
+<table>
+<thead>
+<tr>
+<th>Record type</th>
+<th>Example</th>
+<th>Typical purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Alarm history</td>
+<td>Low air pressure</td>
+<td>Investigate abnormal conditions</td>
+</tr>
+<tr>
+<td>Operator event</td>
+<td>Mode changed from Auto to Manual</td>
+<td>Understand operator actions</td>
+</tr>
+<tr>
+<td>System diagnostic log</td>
+<td>HMI communication driver disconnected</td>
+<td>Diagnose application and communication faults</td>
+</tr>
+<tr>
+<td>Audit trail</td>
+<td>User changed a setpoint</td>
+<td>Trace controlled changes</td>
+</tr>
+<tr>
+<td>Process historian</td>
+<td>Conveyor speed was 1.2 m/s</td>
+<td>Analyze historical process behavior</td>
+</tr>
+</tbody>
+</table>
+<p>These records may be stored in separate systems. A complete root-cause investigation may require all of them.</p>
+<p>For example, an alarm history may show a low-pressure alarm, while a process historian shows pressure gradually declining over several minutes and an audit trail shows that a setpoint was changed earlier.</p>
+<h2 id="10-alarm-history-architecture">10. Alarm history architecture</h2>
+<p>A typical architecture for PLC-based alarm recording is:</p>
+<pre><code>Sensors and Equipment
+        ↓
+PLC Logic and Alarm Conditions
+        ↓
+HMI or SCADA Alarm Subsystem
+        ↓
+Alarm Event Storage
+        ↓
+Historical Alarm Viewer and Reports
+</code></pre>
+<p>The actual architecture can vary.</p>
+<ul>
+<li>The PLC may provide alarm bits or structured alarm information.</li>
+<li>The HMI may generate alarms from PLC tags and store history locally.</li>
+<li>A SCADA server may centralize alarm processing and storage.</li>
+<li>A historian or database may store records for reporting.</li>
+<li>An external reporting system may summarize alarm counts and durations.</li>
+</ul>
+<p>A local HMI history is not automatically a centralized plant-wide alarm database. If the HMI is replaced or its storage fails, locally stored records may be lost unless they are separately exported or replicated.</p>
+<h2 id="11-alarm-storage-and-retention">11. Alarm storage and retention</h2>
+<p>Alarm history can be stored in several ways:</p>
+<ul>
+<li>Local HMI memory.</li>
+<li>Removable storage supported by the device.</li>
+<li>Local files or databases.</li>
+<li>A centralized SCADA alarm server.</li>
+<li>A historian or enterprise database.</li>
+<li>An approved archival system.</li>
+</ul>
+<p>Each method has different capacity, retention, reliability, and recovery characteristics.</p>
+<h3 id="storage-considerations">Storage considerations</h3>
+<ul>
+<li>Maximum history capacity.</li>
+<li>Record size and event frequency.</li>
+<li>Retention period.</li>
+<li>Database or file-system limits.</li>
+<li>Storage wear and device endurance.</li>
+<li>Behavior when storage becomes full.</li>
+<li>Backup and recovery procedures.</li>
+<li>Network disconnection and event buffering.</li>
+<li>Access permissions and data integrity.</li>
+</ul>
+<p>If a system retains a fixed number of records, new records may overwrite old records when capacity is reached. Other systems stop logging, raise a storage alarm, or apply a configured retention policy.</p>
+<p>The actual behavior must be known and tested.</p>
+<h3 id="estimating-storage-requirements">Estimating storage requirements</h3>
+<p>A simplified estimate is:</p>
+<div class="math-display">\[ S = E \times B \times D \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(S\)</span> = approximate storage requirement.</li>
+<li><span class="math-inline">\(E\)</span> = average recorded events per day.</li>
+<li><span class="math-inline">\(B\)</span> = average stored bytes per event.</li>
+<li><span class="math-inline">\(D\)</span> = retention period in days.</li>
+</ul>
+<p>Suppose a system records 12,000 events per day, averaging 500 bytes per stored record, for 90 days:</p>
+<div class="math-display">\[ S = 12{,}000 \times 500 \times 90 \]</div>
+<div class="math-display">\[ S = 540{,}000{,}000\text{ bytes} \]</div>
+<p>This is approximately 540 MB using decimal units, before database indexes, metadata, transaction logs, replication, and other overhead.</p>
+<p>Actual requirements should be measured or calculated from the storage platform's documented behavior.</p>
+<h2 id="12-alarm-history-filters-and-search">12. Alarm history filters and search</h2>
+<p>A useful alarm history interface allows users to narrow records to a relevant period and equipment group.</p>
+<p>Common filters include:</p>
+<ul>
+<li>Start and end date/time.</li>
+<li>Equipment or machine ID.</li>
+<li>Alarm ID or tag name.</li>
+<li>Alarm message.</li>
+<li>Alarm priority.</li>
+<li>Alarm class.</li>
+<li>Alarm state or event type.</li>
+<li>Operator identity, where available.</li>
+<li>Production area or line.</li>
+<li>Acknowledgment status.</li>
+</ul>
+<p>For example, to investigate a station that stopped between 10:00 and 10:30, filter history to that interval and the relevant equipment group. Then identify the earliest meaningful alarm and correlate it with PLC diagnostics, drive fault records, and process trends.</p>
+<p>Do not filter only for high-priority alarms if lower-priority events may explain the initiating failure.</p>
+<h2 id="13-alarm-priority-and-severity">13. Alarm priority and severity</h2>
+<p>Alarm priority indicates the relative importance or urgency of an alarm according to the site's alarm philosophy.</p>
+<p>A common arrangement is:</p>
+<table>
+<thead>
+<tr>
+<th>Priority level</th>
+<th>Illustrative meaning</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Critical</td>
+<td>Immediate action may be required to prevent a major consequence</td>
+<td>Critical process condition requiring immediate response</td>
+</tr>
+<tr>
+<td>High</td>
+<td>Prompt operator intervention required</td>
+<td>Production-critical drive fault</td>
+</tr>
+<tr>
+<td>Medium</td>
+<td>Timely investigation or corrective action required</td>
+<td>Persistent sensor fault affecting sequence readiness</td>
+</tr>
+<tr>
+<td>Low</td>
+<td>Lower urgency condition requiring attention under defined procedures</td>
+<td>Noncritical equipment condition</td>
+</tr>
+</tbody>
+</table>
+<p>These are illustrative labels. Priority names, colors, response times, and escalation rules must follow the site's approved alarm-management standard.</p>
+<p>Priority should be based on consequence and required response, not merely on how often a condition occurs or how dramatic its message sounds.</p>
+<p>An alarm flood containing hundreds of poorly prioritized messages reduces the visibility of genuinely important conditions.</p>
+<h2 id="14-first-out-alarms-and-consequential-alarms">14. First-out alarms and consequential alarms</h2>
+<p>When a machine stops, several alarms may appear in quick succession.</p>
+<p>Consider an automated conveyor:</p>
+<ol>
+<li>A VFD trips due to an internal drive fault.</li>
+<li>The PLC detects loss of motor-running feedback.</li>
+<li>The conveyor sequence times out.</li>
+<li>A downstream station reports that material is unavailable.</li>
+<li>The line controller stops production.</li>
+</ol>
+<p>The VFD fault may be the initiating fault, while the remaining alarms are consequences.</p>
+<p>First-out analysis attempts to identify the earliest relevant fault that initiated the abnormal sequence.</p>
+<p>However, the earliest timestamp is not always the root cause. The first displayed alarm could be caused by a sensor fault, communication delay, or unrelated condition. Timestamp precision and the control sequence must be considered.</p>
+<p>Useful evidence includes:</p>
+<ul>
+<li>PLC event logs.</li>
+<li>VFD fault history.</li>
+<li>HMI alarm timestamps.</li>
+<li>Motor-running feedback.</li>
+<li>Interlock states.</li>
+<li>Process trends.</li>
+<li>Sequence-state transitions.</li>
+</ul>
+<h2 id="15-alarm-duration-and-frequency-analysis">15. Alarm duration and frequency analysis</h2>
+<p>Alarm history can be used to identify persistent or recurring problems.</p>
+<h3 id="alarm-duration">Alarm duration</h3>
+<p>For an alarm with a recorded activation and return-to-normal time:</p>
+<div class="math-display">\[ T\_{\text{duration}} = T\_{\text{return}} - T\_{\text{activation}} \]</div>
+<p>If a low-pressure alarm activates at 10:00:00 and returns to normal at 10:02:30, the recorded duration is 150 seconds.</p>
+<p>This measures the alarm's active duration. It does not necessarily equal production downtime or the total time required to repair the problem.</p>
+<h3 id="alarm-frequency">Alarm frequency</h3>
+<p>Alarm frequency is the number of occurrences within a defined interval.</p>
+<p>For example:</p>
+<ul>
+<li>Sensor fault occurred 18 times in one shift.</li>
+<li>Drive communication fault occurred 42 times in one week.</li>
+<li>Overtemperature alarm occurred 9 times after maintenance.</li>
+</ul>
+<p>Frequency should be analyzed alongside duration, operating conditions, and consequence. A brief recurring alarm may indicate an intermittent connection, while a single long-duration alarm may indicate a persistent failure.</p>
+<h3 id="useful-analysis-measures">Useful analysis measures</h3>
+<table>
+<thead>
+<tr>
+<th>Measure</th>
+<th>What it helps identify</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Alarm count by equipment</td>
+<td>Repeatedly problematic assets</td>
+</tr>
+<tr>
+<td>Alarm count by shift</td>
+<td>Time-dependent or operating-condition-related patterns</td>
+</tr>
+<tr>
+<td>Total active duration</td>
+<td>Persistent abnormal conditions</td>
+</tr>
+<tr>
+<td>Repeated alarm intervals</td>
+<td>Intermittent faults or unstable control behavior</td>
+</tr>
+<tr>
+<td>Alarm count by priority</td>
+<td>Distribution of operational urgency</td>
+</tr>
+<tr>
+<td>Alarm count after maintenance</td>
+<td>Possible installation or configuration issues</td>
+</tr>
+<tr>
+<td>Alarm flood frequency</td>
+<td>Poor alarm design or major process disturbances</td>
+</tr>
+<tr>
+<td>Time from activation to acknowledgment</td>
+<td>Operator response patterns, interpreted in context</td>
+</tr>
+</tbody>
+</table>
+<h2 id="16-alarm-floods-and-nuisance-alarms">16. Alarm floods and nuisance alarms</h2>
+<h3 id="alarm-flood">Alarm flood</h3>
+<p>An alarm flood occurs when a large number of alarms are generated in a short period, potentially overwhelming the operator.</p>
+<p>Common causes include:</p>
+<ul>
+<li>A major process upset.</li>
+<li>PLC communication failure.</li>
+<li>Loss of a common power supply.</li>
+<li>A shared sensor or network fault.</li>
+<li>Poorly designed alarm dependencies.</li>
+<li>Incorrect alarm thresholds.</li>
+</ul>
+<h3 id="nuisance-alarm">Nuisance alarm</h3>
+<p>A nuisance alarm repeatedly activates without providing useful operational information.</p>
+<p>Common causes include:</p>
+<ul>
+<li>Alarm thresholds set too close to normal operating values.</li>
+<li>No appropriate deadband or hysteresis.</li>
+<li>Poor signal quality.</li>
+<li>Incorrect debounce or delay configuration.</li>
+<li>An alarm generated for a condition that is already expected during a sequence.</li>
+<li>Repeated alarms caused by unstable communication.</li>
+</ul>
+<p>Possible improvements include correcting the physical cause, reviewing thresholds, applying approved deadband or delay logic, and designing suitable alarm suppression or shelving behavior.</p>
+<p>Any change must follow the site's alarm-management and change-control procedures. Do not suppress an alarm merely because it is inconvenient.</p>
+<h2 id="17-alarm-deadband-delay-and-latching">17. Alarm deadband, delay, and latching</h2>
+<p>These configuration features influence how alarms behave.</p>
+<h3 id="deadband">Deadband</h3>
+<p>Deadband prevents repeated switching when a measured value fluctuates near an alarm threshold.</p>
+<p>For example, a high-temperature alarm may activate at 80°C and clear only after temperature falls below 77°C. The 3°C difference provides hysteresis.</p>
+<p>The actual thresholds must be engineered for the process. Deadband must not delay detection of a dangerous condition.</p>
+<h3 id="alarm-delay">Alarm delay</h3>
+<p>A delay requires a condition to remain true for a configured period before the alarm activates.</p>
+<p>For example, a low-pressure alarm might require the pressure to remain below a threshold for 2 seconds to reject a brief transient.</p>
+<p>Delays must not compromise required response time or safety-related functions.</p>
+<h3 id="alarm-latching">Alarm latching</h3>
+<p>A latched alarm remains recorded or active according to its logic until a defined reset or acknowledgment condition is met.</p>
+<p>Latching can preserve evidence of intermittent faults, but the HMI display, PLC alarm bit, and underlying physical condition must be understood separately.</p>
+<p>A reset must not bypass required permissives or clear a fault record that the site's procedures require to be retained.</p>
+<h2 id="18-alarm-history-troubleshooting-procedure">18. Alarm history troubleshooting procedure</h2>
+<h3 id="step-1-define-the-failure-window">Step 1: Define the failure window</h3>
+<p>Record the approximate breakdown time, affected equipment, production state, and operator observations.</p>
+<p>Include a reasonable time interval before and after the reported stop.</p>
+<h3 id="step-2-filter-alarm-history">Step 2: Filter alarm history</h3>
+<p>Filter by equipment, time interval, and relevant alarm classes. Preserve the original records when required by the site's investigation procedure.</p>
+<h3 id="step-3-identify-the-earliest-relevant-event">Step 3: Identify the earliest relevant event</h3>
+<p>Separate likely initiating alarms from alarms caused by sequence interruption or downstream effects.</p>
+<h3 id="step-4-correlate-other-evidence">Step 4: Correlate other evidence</h3>
+<p>Compare alarm records against:</p>
+<ul>
+<li>PLC diagnostics.</li>
+<li>VFD fault history.</li>
+<li>CNC or robot diagnostics.</li>
+<li>HMI communication logs.</li>
+<li>Sensor and actuator feedback.</li>
+<li>Process historian trends.</li>
+<li>Operator actions and audit records.</li>
+</ul>
+<h3 id="step-5-verify-the-actual-fault">Step 5: Verify the actual fault</h3>
+<p>Use authorized diagnostic methods to inspect the suspected device and control sequence. An alarm message indicates a configured condition, which may or may not identify the failed physical component directly.</p>
+<h3 id="step-6-correct-the-cause">Step 6: Correct the cause</h3>
+<p>Repair the component, wiring, communication path, configuration, or control logic as appropriate. Follow the approved isolation, safety, and change-control procedures.</p>
+<h3 id="step-7-validate-recovery">Step 7: Validate recovery</h3>
+<p>Confirm that the alarm condition clears correctly, the relevant feedback returns to the expected state, and the equipment operates under the approved test procedure.</p>
+<h3 id="step-8-document-the-findings">Step 8: Document the findings</h3>
+<p>Record the initiating fault, consequential alarms, root cause, corrective action, downtime, and recurrence-prevention measures.</p>
+<h2 id="19-practical-industrial-example-intermittent-proximity-sensor">19. Practical industrial example: intermittent proximity sensor</h2>
+<p>An automotive station intermittently stops because a fixture-position sensor is not detected.</p>
+<p>The alarm history shows:</p>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Recorded event</th>
+<th>Initial interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>14:21:03</td>
+<td>Fixture-position sensor timeout</td>
+<td>Potential initiating fault</td>
+</tr>
+<tr>
+<td>14:21:05</td>
+<td>Sequence step timeout</td>
+<td>Likely consequence</td>
+</tr>
+<tr>
+<td>14:21:06</td>
+<td>Station cycle aborted</td>
+<td>Sequence response</td>
+</tr>
+<tr>
+<td>14:21:10</td>
+<td>Operator acknowledges alarms</td>
+<td>Operator action</td>
+</tr>
+<tr>
+<td>14:22:15</td>
+<td>Station reset event</td>
+<td>Recovery attempt</td>
+</tr>
+</tbody>
+</table>
+<p>The investigation should not immediately conclude that the sensor itself is defective.</p>
+<p>Check:</p>
+<ul>
+<li>Sensor supply voltage.</li>
+<li>Sensor alignment and mounting.</li>
+<li>Target position and mechanical repeatability.</li>
+<li>Connector and cable condition.</li>
+<li>PLC input status.</li>
+<li>Input filtering and sequence timing.</li>
+<li>Whether the sensor changes state at the expected point in the cycle.</li>
+</ul>
+<p>If the PLC input intermittently drops when the fixture vibrates, the root cause could be a loose connector, damaged cable, poor mounting, or inadequate mechanical positioning.</p>
+<p>After repair, verify the sensor state across repeated approved cycles and confirm that the timeout does not recur.</p>
+<h2 id="20-alarm-history-maintenance-checklist">20. Alarm history maintenance checklist</h2>
+<h3 id="routine-checks">Routine checks</h3>
+<ul>
+<li>Confirm that new alarm events are being recorded.</li>
+<li>Check that timestamps are plausible and synchronized.</li>
+<li>Verify that active alarms and historical records behave as expected.</li>
+<li>Review repeated faults on critical equipment.</li>
+<li>Check for storage-capacity or logging errors.</li>
+<li>Verify that alarm history filters return the expected records.</li>
+</ul>
+<h3 id="periodic-checks">Periodic checks</h3>
+<ul>
+<li>Confirm the configured retention period.</li>
+<li>Review alarm storage and database health.</li>
+<li>Check backup and recovery arrangements for alarm records.</li>
+<li>Investigate recurring communication-loss and device-fault alarms.</li>
+<li>Review nuisance alarms and alarm floods.</li>
+<li>Verify priority and message configuration against approved standards.</li>
+<li>Confirm that relevant alarms can be correlated with PLC and drive diagnostics.</li>
+<li>Document corrective actions in SAP PM or the site's maintenance system.</li>
+</ul>
+<h3 id="after-hmi-replacement-or-software-changes">After HMI replacement or software changes</h3>
+<ul>
+<li>Verify that new alarm events are recorded.</li>
+<li>Check occurrence, acknowledgment, and return-to-normal behavior.</li>
+<li>Confirm timestamp correctness.</li>
+<li>Verify alarm messages, priorities, and equipment identifiers.</li>
+<li>Confirm that required historical records remain available or have been archived.</li>
+<li>Test the approved recovery procedure.</li>
+</ul>
+<h2 id="21-common-mistakes-to-avoid">21. Common mistakes to avoid</h2>
+<ul>
+<li>Assuming an acknowledged alarm means the fault has cleared.</li>
+<li>Treating every alarm displayed after a machine stop as an independent root cause.</li>
+<li>Assuming the earliest timestamp automatically proves causation.</li>
+<li>Ignoring clock synchronization and event timestamp sources.</li>
+<li>Treating alarm history and active alarm lists as interchangeable.</li>
+<li>Assuming a local HMI stores the complete plant-wide alarm history.</li>
+<li>Deleting historical records to make the interface easier to use.</li>
+<li>Suppressing recurring alarms without investigating their cause.</li>
+<li>Using alarm duration as an exact measure of production downtime without defining the relationship.</li>
+<li>Restoring an HMI without verifying its alarm configuration and logging behavior.</li>
+</ul>
+<h2 id="22-key-principles">22. Key principles</h2>
+<ul>
+<li>Alarm history provides chronological evidence for troubleshooting and continuous improvement.</li>
+<li>Alarm occurrence, acknowledgment, return to normal, and reset are distinct concepts.</li>
+<li>Timestamp quality is critical when reconstructing event sequences.</li>
+<li>The initiating fault must be distinguished from consequential alarms.</li>
+<li>Alarm storage, retention, backup, and time synchronization require planned maintenance.</li>
+<li>Alarm count alone is not a sufficient measure of operational risk.</li>
+<li>Correct alarm configuration improves operator response and maintenance diagnosis.</li>
+<li>Historical records should be preserved and interpreted alongside PLC, drive, process, and operator-event data.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\18_PM\03_VFD\01_Cooling_Fans_Filters - Cooling/Fans/Filters</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

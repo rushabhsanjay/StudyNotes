@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLC Communication</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">PLC Communication</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-basic-communication-architecture">2. Basic Communication Architecture</a></li>
+<li><a href="#3-why-plc-communication-is-required">3. Why PLC Communication Is Required</a></li>
+<li><a href="#4-physical-interface-versus-protocol">4. Physical Interface Versus Protocol</a></li>
+<li><a href="#5-communication-types">5. Communication Types</a><ul>
+<li><a href="#51-serial-communication">5.1 Serial Communication</a></li>
+<li><a href="#52-industrial-ethernet">5.2 Industrial Ethernet</a></li>
+<li><a href="#53-fieldbus-communication">5.3 Fieldbus Communication</a></li>
+<li><a href="#54-backplane-communication">5.4 Backplane Communication</a></li>
+</ul>
+</li>
+<li><a href="#6-common-industrial-communication-protocols">6. Common Industrial Communication Protocols</a></li>
+<li><a href="#7-plc-communication-parameters">7. PLC Communication Parameters</a><ul>
+<li><a href="#71-device-identity">7.1 Device Identity</a></li>
+<li><a href="#72-network-parameters">7.2 Network Parameters</a></li>
+<li><a href="#73-serial-parameters">7.3 Serial Parameters</a></li>
+<li><a href="#74-protocol-parameters">7.4 Protocol Parameters</a></li>
+</ul>
+</li>
+<li><a href="#8-ip-addressing-in-plc-networks">8. IP Addressing in PLC Networks</a><ul>
+<li><a href="#example">Example</a></li>
+</ul>
+</li>
+<li><a href="#9-communication-models">9. Communication Models</a><ul>
+<li><a href="#91-client-server">9.1 Client-Server</a></li>
+<li><a href="#92-producer-consumer">9.2 Producer-Consumer</a></li>
+<li><a href="#93-master-slave-and-client-server-terminology">9.3 Master-Slave and Client-Server Terminology</a></li>
+<li><a href="#94-cyclic-and-acyclic-data">9.4 Cyclic and Acyclic Data</a></li>
+</ul>
+</li>
+<li><a href="#10-communication-timing-and-performance">10. Communication Timing and Performance</a><ul>
+<li><a href="#101-update-time">10.1 Update Time</a></li>
+<li><a href="#102-latency">10.2 Latency</a></li>
+<li><a href="#103-timeout">10.3 Timeout</a></li>
+<li><a href="#104-jitter">10.4 Jitter</a></li>
+<li><a href="#105-watchdog">10.5 Watchdog</a></li>
+</ul>
+</li>
+<li><a href="#11-plc-communication-with-an-hmi">11. PLC Communication With an HMI</a><ul>
+<li><a href="#diagnostic-approach">Diagnostic approach</a></li>
+</ul>
+</li>
+<li><a href="#12-plc-communication-with-a-vfd">12. PLC Communication With a VFD</a><ul>
+<li><a href="#example-drive-runs-locally-but-not-from-the-plc">Example: Drive Runs Locally but Not From the PLC</a></li>
+</ul>
+</li>
+<li><a href="#13-plc-communication-with-remote-io">13. PLC Communication With Remote I/O</a></li>
+<li><a href="#14-plc-communication-with-cnc-and-robot-controllers">14. PLC Communication With CNC and Robot Controllers</a><ul>
+<li><a href="#141-cnc-integration">14.1 CNC Integration</a></li>
+<li><a href="#142-robot-integration">14.2 Robot Integration</a></li>
+<li><a href="#143-troubleshooting-handshake-problems">14.3 Troubleshooting Handshake Problems</a></li>
+</ul>
+</li>
+<li><a href="#15-modbus-rtu-and-modbus-tcp">15. Modbus RTU and Modbus TCP</a><ul>
+<li><a href="#151-modbus-rtu">15.1 Modbus RTU</a></li>
+<li><a href="#152-modbus-tcp">15.2 Modbus TCP</a></li>
+<li><a href="#153-register-mapping">15.3 Register Mapping</a></li>
+<li><a href="#154-common-modbus-faults">15.4 Common Modbus Faults</a></li>
+</ul>
+</li>
+<li><a href="#16-ethernetip-and-cip">16. EtherNet/IP and CIP</a><ul>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+</ul>
+</li>
+<li><a href="#17-profinet">17. PROFINET</a></li>
+<li><a href="#18-opc-ua-and-industrial-data-integration">18. OPC UA and Industrial Data Integration</a></li>
+<li><a href="#19-communication-fault-diagnosis">19. Communication Fault Diagnosis</a><ul>
+<li><a href="#191-establish-the-scope">19.1 Establish the Scope</a></li>
+<li><a href="#192-check-power-and-physical-link">19.2 Check Power and Physical Link</a></li>
+<li><a href="#193-verify-addressing">19.3 Verify Addressing</a></li>
+<li><a href="#194-verify-protocol-configuration">19.4 Verify Protocol Configuration</a></li>
+<li><a href="#195-review-diagnostics">19.5 Review Diagnostics</a></li>
+<li><a href="#196-check-data-quality">19.6 Check Data Quality</a></li>
+<li><a href="#197-verify-recovery">19.7 Verify Recovery</a></li>
+</ul>
+</li>
+<li><a href="#20-common-communication-faults">20. Common Communication Faults</a></li>
+<li><a href="#21-communication-with-node-red-sql-server-and-grafana">21. Communication With Node-RED, SQL Server, and Grafana</a><ul>
+<li><a href="#plc-to-node-red">PLC-to-Node-RED</a></li>
+<li><a href="#node-red-processing">Node-RED Processing</a></li>
+<li><a href="#node-red-to-sql-server">Node-RED-to-SQL Server</a></li>
+<li><a href="#sql-server-to-grafana">SQL Server-to-Grafana</a></li>
+</ul>
+</li>
+<li><a href="#22-ot-network-reliability-and-security">22. OT Network Reliability and Security</a></li>
+<li><a href="#23-communication-maintenance-and-documentation">23. Communication Maintenance and Documentation</a></li>
+<li><a href="#24-sap-pm-and-communication-fault-records">24. SAP PM and Communication Fault Records</a></li>
+<li><a href="#25-practical-industrial-example">25. Practical Industrial Example</a><ul>
+<li><a href="#scenario-plc-shows-connected-but-robot-values-are-false-or-null">Scenario: PLC Shows Connected, but Robot Values Are False or Null</a></li>
+<li><a href="#possible-causes">Possible causes</a></li>
+<li><a href="#diagnostic-sequence">Diagnostic sequence</a></li>
+</ul>
+</li>
+<li><a href="#26-performance-indicators">26. Performance Indicators</a></li>
+<li><a href="#27-practical-checklist">27. Practical Checklist</a><ul>
+<li><a href="#before-troubleshooting">Before troubleshooting</a></li>
+<li><a href="#during-diagnosis">During diagnosis</a></li>
+<li><a href="#after-repair">After repair</a></li>
+</ul>
+</li>
+<li><a href="#28-key-engineering-principles">28. Key Engineering Principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>PLC communication is the exchange of data between a Programmable Logic Controller (PLC) and other devices, systems, or engineering tools through supported physical interfaces and communication protocols.</p>
+<p>Communication enables a PLC to exchange commands, status information, measurements, alarms, diagnostic data, configuration information, and production data with equipment across an industrial automation system.</p>
+<p>Typical communication partners include:</p>
+<ul>
+<li>Human-Machine Interfaces (HMIs).</li>
+<li>Supervisory Control and Data Acquisition (SCADA) systems.</li>
+<li>Variable Frequency Drives (VFDs).</li>
+<li>CNC controllers.</li>
+<li>Remote I/O stations.</li>
+<li>Robots and robot controllers.</li>
+<li>Other PLCs.</li>
+<li>Industrial Ethernet switches.</li>
+<li>Industrial PCs and data-acquisition systems.</li>
+<li>Manufacturing execution systems and historians.</li>
+<li>Engineering workstations and programming software.</li>
+</ul>
+<p>Communication is essential when a machine must coordinate multiple controllers or when production data must be collected for monitoring, diagnostics, quality, and traceability.</p>
+<h2 id="2-basic-communication-architecture">2. Basic Communication Architecture</h2>
+<p>A typical industrial automation communication architecture may contain several layers.</p>
+<pre><code>Enterprise and Business Systems
+          ↕
+MES / Historian / Reporting / Database
+          ↕
+SCADA / Industrial PC / Data Gateway
+          ↕
+Industrial Ethernet Network
+          ↕
+PLC / CNC / Robot Controller / VFD / Remote I/O
+          ↕
+Physical I/O and Field Devices
+</code></pre>
+<p>This is a conceptual architecture, not a mandatory network topology. Some devices communicate directly with each other, while others exchange data through gateways or supervisory systems.</p>
+<p>For example, an Allen-Bradley ControlLogix PLC may exchange data with remote I/O over EtherNet/IP, provide status information to an HMI, and send selected production data through Node-RED to a SQL database and Grafana dashboard.</p>
+<p>Each connection has its own physical requirements, protocol, configuration, and failure modes.</p>
+<h2 id="3-why-plc-communication-is-required">3. Why PLC Communication Is Required</h2>
+<table>
+<thead>
+<tr>
+<th>Purpose</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Operator control</td>
+<td>HMI sends a permitted start request to a PLC</td>
+</tr>
+<tr>
+<td>Drive control</td>
+<td>PLC sends a speed reference to a VFD</td>
+</tr>
+<tr>
+<td>Status monitoring</td>
+<td>VFD reports ready, running, and fault status</td>
+</tr>
+<tr>
+<td>Remote I/O</td>
+<td>PLC reads sensor states from a remote I/O rack</td>
+</tr>
+<tr>
+<td>Machine coordination</td>
+<td>PLC exchanges handshake signals with a CNC</td>
+</tr>
+<tr>
+<td>Robot integration</td>
+<td>PLC and robot controller exchange cycle and fault states</td>
+</tr>
+<tr>
+<td>Production monitoring</td>
+<td>PLC provides cycle count and machine status to SCADA</td>
+</tr>
+<tr>
+<td>Traceability</td>
+<td>Controller data is recorded with a part or batch identifier</td>
+</tr>
+<tr>
+<td>Diagnostics</td>
+<td>Engineering software reads controller status and fault information</td>
+</tr>
+<tr>
+<td>Data acquisition</td>
+<td>Gateway collects PLC tags and stores them in SQL</td>
+</tr>
+</tbody>
+</table>
+<p>Communication does not replace every hardwired signal. Some signals remain hardwired because of response-time, diagnostic, compatibility, or safety requirements.</p>
+<h2 id="4-physical-interface-versus-protocol">4. Physical Interface Versus Protocol</h2>
+<p>These two concepts must be distinguished.</p>
+<p>A physical interface defines how devices are electrically or physically connected. A communication protocol defines how information is exchanged and interpreted.</p>
+<table>
+<thead>
+<tr>
+<th>Physical interface or medium</th>
+<th>Example protocols or uses</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ethernet copper cable</td>
+<td>EtherNet/IP, PROFINET, Modbus TCP</td>
+</tr>
+<tr>
+<td>Fiber-optic Ethernet</td>
+<td>Industrial Ethernet over optical links</td>
+</tr>
+<tr>
+<td>RS-232 serial interface</td>
+<td>Supported serial protocols and vendor interfaces</td>
+</tr>
+<tr>
+<td>RS-485 serial interface</td>
+<td>Modbus RTU and other supported serial protocols</td>
+</tr>
+<tr>
+<td>USB</td>
+<td>Programming, configuration, or service connection</td>
+</tr>
+<tr>
+<td>Proprietary backplane</td>
+<td>Internal communication between PLC modules</td>
+</tr>
+<tr>
+<td>Dedicated fieldbus cable</td>
+<td>PROFIBUS and other supported fieldbus systems</td>
+</tr>
+</tbody>
+</table>
+<p>Ethernet is not itself the same thing as EtherNet/IP or PROFINET. Ethernet describes the underlying network technology, while those industrial protocols define additional communication behavior.</p>
+<p>Similarly, RS-485 defines electrical signaling characteristics, not a complete application protocol.</p>
+<p>A cable can be physically connected while communication still fails because the protocol, address, baud rate, network configuration, or device settings are incorrect.</p>
+<h2 id="5-communication-types">5. Communication Types</h2>
+<h3 id="51-serial-communication">5.1 Serial Communication</h3>
+<p>Serial communication transfers information sequentially over a serial interface.</p>
+<p>Common industrial interfaces include RS-232 and RS-485.</p>
+<p>Typical applications include:</p>
+<ul>
+<li>Legacy PLC connections.</li>
+<li>Instrument communication.</li>
+<li>Barcode readers.</li>
+<li>Older VFD interfaces.</li>
+<li>Weighing systems.</li>
+<li>Serial gateways.</li>
+</ul>
+<p>RS-232 is commonly used for point-to-point connections over relatively short distances according to the equipment specification.</p>
+<p>RS-485 supports differential signaling and can support multidrop networks when the devices and protocol are designed for that arrangement.</p>
+<p>Important serial parameters include:</p>
+<ul>
+<li>Baud rate.</li>
+<li>Data bits.</li>
+<li>Parity.</li>
+<li>Stop bits.</li>
+<li>Device address.</li>
+<li>Wiring polarity.</li>
+<li>Termination.</li>
+<li>Biasing.</li>
+<li>Protocol-specific timing.</li>
+</ul>
+<p>For example, a Modbus RTU device configured for 9,600 baud, even parity, and one stop bit may fail to communicate with a master configured for a different serial format.</p>
+<p>The exact settings must match the devices and network design.</p>
+<h3 id="52-industrial-ethernet">5.2 Industrial Ethernet</h3>
+<p>Industrial Ethernet uses Ethernet-based networking for industrial control and data exchange.</p>
+<p>Advantages include:</p>
+<ul>
+<li>High data throughput.</li>
+<li>Integration with industrial PCs and supervisory systems.</li>
+<li>Flexible network topology.</li>
+<li>Support for diagnostics and device configuration.</li>
+<li>Integration with modern PLCs, drives, robots, and remote I/O.</li>
+</ul>
+<p>Common industrial Ethernet protocols include:</p>
+<ul>
+<li>EtherNet/IP.</li>
+<li>PROFINET.</li>
+<li>Modbus TCP.</li>
+<li>OPC UA over supported network transports.</li>
+<li>Manufacturer-specific Ethernet protocols.</li>
+</ul>
+<p>The protocol must be supported and correctly configured on both communicating devices or through a compatible gateway.</p>
+<h3 id="53-fieldbus-communication">5.3 Fieldbus Communication</h3>
+<p>Fieldbus systems provide communication between controllers and distributed automation equipment.</p>
+<p>Examples include PROFIBUS and other manufacturer- or industry-specific fieldbus systems.</p>
+<p>Fieldbus systems may use specialized cabling, connectors, addressing, termination, and diagnostic procedures.</p>
+<p>A legacy fieldbus installation may continue to operate reliably for years, but maintenance personnel should understand its configuration and replacement constraints.</p>
+<h3 id="54-backplane-communication">5.4 Backplane Communication</h3>
+<p>In modular PLC systems, the CPU communicates with I/O and specialty modules through the manufacturer's internal backplane or module bus.</p>
+<p>This communication is separate from the external plant network.</p>
+<p>A CPU may communicate normally over Ethernet while a local I/O module has a backplane, configuration, or hardware fault.</p>
+<h2 id="6-common-industrial-communication-protocols">6. Common Industrial Communication Protocols</h2>
+<table>
+<thead>
+<tr>
+<th>Protocol</th>
+<th>Typical application</th>
+<th>Important characteristic</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EtherNet/IP</td>
+<td>Allen-Bradley PLCs, remote I/O, drives, robots</td>
+<td>Uses CIP over Ethernet and IP networking</td>
+</tr>
+<tr>
+<td>PROFINET</td>
+<td>Siemens PLCs, distributed I/O, drives</td>
+<td>Industrial Ethernet protocol with defined real-time communication classes</td>
+</tr>
+<tr>
+<td>Modbus TCP</td>
+<td>PLCs, instruments, gateways, SCADA</td>
+<td>Uses Modbus messaging over TCP/IP</td>
+</tr>
+<tr>
+<td>Modbus RTU</td>
+<td>Serial instruments and legacy equipment</td>
+<td>Serial protocol commonly used over RS-485</td>
+</tr>
+<tr>
+<td>PROFIBUS DP</td>
+<td>Legacy distributed I/O and drives</td>
+<td>Fieldbus requiring appropriate network configuration</td>
+</tr>
+<tr>
+<td>OPC UA</td>
+<td>Data exchange between automation and supervisory or IT systems</td>
+<td>Provides structured information exchange and security mechanisms</td>
+</tr>
+<tr>
+<td>CANopen</td>
+<td>Selected motion and embedded industrial systems</td>
+<td>Uses CAN-based communication and device profiles</td>
+</tr>
+<tr>
+<td>DeviceNet</td>
+<td>Legacy industrial I/O and device networks</td>
+<td>CIP-based network using CAN physical-layer technology</td>
+</tr>
+<tr>
+<td>CC-Link</td>
+<td>Selected Mitsubishi and compatible automation systems</td>
+<td>Industrial field network with family-specific implementations</td>
+</tr>
+<tr>
+<td>Manufacturer-specific protocols</td>
+<td>PLC programming and proprietary integrations</td>
+<td>May require specific software, hardware, or gateway support</td>
+</tr>
+</tbody>
+</table>
+<p>Protocol availability depends on the exact CPU, communication module, firmware, licensing, and configuration. A protocol's presence in a manufacturer's product range does not mean every PLC model supports it.</p>
+<h2 id="7-plc-communication-parameters">7. PLC Communication Parameters</h2>
+<p>Communication parameters vary by protocol, but several categories appear repeatedly.</p>
+<h3 id="71-device-identity">7.1 Device Identity</h3>
+<p>Each device must be identifiable within the communication system.</p>
+<p>Depending on the protocol, this may involve:</p>
+<ul>
+<li>IP address.</li>
+<li>MAC address.</li>
+<li>Device name.</li>
+<li>Node address.</li>
+<li>Station number.</li>
+<li>Unit identifier.</li>
+<li>Serial slave address.</li>
+<li>Controller or device path.</li>
+</ul>
+<p>Incorrect or duplicate addressing can prevent communication or cause data to be exchanged with the wrong device.</p>
+<h3 id="72-network-parameters">7.2 Network Parameters</h3>
+<p>For IP-based networks, check:</p>
+<ul>
+<li>IP address.</li>
+<li>Subnet mask.</li>
+<li>Default gateway, where required.</li>
+<li>VLAN configuration, where used.</li>
+<li>Routing.</li>
+<li>Firewall rules.</li>
+<li>Port availability.</li>
+<li>Duplicate IP addresses.</li>
+<li>Network segmentation.</li>
+</ul>
+<p>A default gateway is not necessarily required for communication between devices on the same subnet. It is needed when communication must cross an IP network boundary and the routing design requires it.</p>
+<h3 id="73-serial-parameters">7.3 Serial Parameters</h3>
+<p>For serial communication, check:</p>
+<ul>
+<li>Baud rate.</li>
+<li>Data bits.</li>
+<li>Parity.</li>
+<li>Stop bits.</li>
+<li>Electrical interface.</li>
+<li>Device address.</li>
+<li>Cable polarity.</li>
+<li>Termination and biasing.</li>
+<li>Master/slave or client/server roles, as applicable.</li>
+</ul>
+<h3 id="74-protocol-parameters">7.4 Protocol Parameters</h3>
+<p>Depending on the protocol, additional settings may include:</p>
+<ul>
+<li>Connection type.</li>
+<li>Requested packet interval.</li>
+<li>Update period.</li>
+<li>Timeout.</li>
+<li>Retry count.</li>
+<li>Watchdog.</li>
+<li>Produced/consumed data configuration.</li>
+<li>Input/output assembly or data mapping.</li>
+<li>Register addresses.</li>
+<li>Data types and byte order.</li>
+<li>Device name and controller configuration.</li>
+<li>Security certificates and authentication.</li>
+</ul>
+<p>Do not change parameters randomly to see what works. Compare the configured values with the actual device settings and approved project documentation.</p>
+<h2 id="8-ip-addressing-in-plc-networks">8. IP Addressing in PLC Networks</h2>
+<p>An IP address identifies a network interface within an IP network.</p>
+<p>For example, a PLC might use <code>192.168.10.10</code>, while an HMI uses <code>192.168.10.20</code>.</p>
+<p>If both use a compatible subnet configuration, they may communicate directly, provided the physical network, protocol, and access configuration are correct.</p>
+<p>A duplicate IP address can cause intermittent or confusing behavior because two devices may respond for the same address.</p>
+<h3 id="example">Example</h3>
+<table>
+<thead>
+<tr>
+<th>Device</th>
+<th>Example IP address</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC</td>
+<td><code>192.168.10.10</code></td>
+<td>Machine control</td>
+</tr>
+<tr>
+<td>HMI</td>
+<td><code>192.168.10.20</code></td>
+<td>Operator interface</td>
+</tr>
+<tr>
+<td>Engineering PC</td>
+<td><code>192.168.10.30</code></td>
+<td>Programming and diagnostics</td>
+</tr>
+<tr>
+<td>Data gateway</td>
+<td><code>192.168.10.40</code></td>
+<td>Data collection</td>
+</tr>
+</tbody>
+</table>
+<p>These are illustrative addresses, not recommended defaults for every plant.</p>
+<p>Before connecting an engineering laptop, verify the machine's approved addressing plan. Connecting a device with a duplicate or conflicting address can disrupt production.</p>
+<h2 id="9-communication-models">9. Communication Models</h2>
+<h3 id="91-client-server">9.1 Client-Server</h3>
+<p>In a client-server model, a client requests data or a service from a server.</p>
+<p>Examples include a supervisory application requesting data from a supported OPC UA server or an application querying a database.</p>
+<p>The server may be hosted by a PLC, gateway, industrial PC, or separate server, depending on the system.</p>
+<h3 id="92-producer-consumer">9.2 Producer-Consumer</h3>
+<p>In a producer-consumer model, one device produces data and one or more configured consumers receive it.</p>
+<p>This model is used in some industrial protocols, including EtherNet/IP.</p>
+<p>The data exchange may be configured for periodic or event-related behavior, depending on the implementation.</p>
+<h3 id="93-master-slave-and-client-server-terminology">9.3 Master-Slave and Client-Server Terminology</h3>
+<p>Legacy protocols commonly use master/slave terminology, while newer systems often use client/server or controller/device terminology.</p>
+<p>The roles determine who initiates requests, who responds, and how data exchange is scheduled.</p>
+<p>Use the terminology and role definitions specified by the actual protocol.</p>
+<h3 id="94-cyclic-and-acyclic-data">9.4 Cyclic and Acyclic Data</h3>
+<p>Cyclic communication transfers data at regular intervals or according to a configured update mechanism.</p>
+<p>Typical examples include:</p>
+<ul>
+<li>Remote I/O states.</li>
+<li>Drive status words.</li>
+<li>Drive command words.</li>
+<li>Periodic control data.</li>
+</ul>
+<p>Acyclic communication transfers data on demand or when required rather than as part of a continuously repeated cyclic data exchange.</p>
+<p>Typical examples include:</p>
+<ul>
+<li>Device parameters.</li>
+<li>Diagnostic records.</li>
+<li>Configuration information.</li>
+<li>Non-periodic identification data.</li>
+</ul>
+<p>A system may use both types of communication simultaneously.</p>
+<h2 id="10-communication-timing-and-performance">10. Communication Timing and Performance</h2>
+<p>Communication performance is important when control logic depends on data received from another device.</p>
+<h3 id="101-update-time">10.1 Update Time</h3>
+<p>Update time is the interval at which data is refreshed or exchanged under a particular communication configuration.</p>
+<p>An update interval that is too slow may cause delayed status updates or control responses.</p>
+<p>An unnecessarily aggressive update interval may increase network load and device processing requirements.</p>
+<h3 id="102-latency">10.2 Latency</h3>
+<p>Latency is the time taken for information to travel through the relevant communication path.</p>
+<p>It may include device processing, network transmission, switching, queuing, and application handling.</p>
+<h3 id="103-timeout">10.3 Timeout</h3>
+<p>A timeout occurs when expected communication or a response is not received within the configured period.</p>
+<p>Possible causes include:</p>
+<ul>
+<li>Network interruption.</li>
+<li>Device overload.</li>
+<li>Incorrect timeout configuration.</li>
+<li>Slow device response.</li>
+<li>Protocol mismatch.</li>
+<li>Excessive traffic.</li>
+<li>Faulty device or gateway.</li>
+</ul>
+<h3 id="104-jitter">10.4 Jitter</h3>
+<p>Jitter is variation in message timing or arrival intervals.</p>
+<p>It matters when a control application expects data at consistent intervals.</p>
+<h3 id="105-watchdog">10.5 Watchdog</h3>
+<p>A watchdog monitors whether expected activity occurs within an allowed interval.</p>
+<p>Depending on the device and configuration, a watchdog may trigger a fault, mark data invalid, or initiate a defined fallback response.</p>
+<p>The application must specify what happens when communication is lost. Continuing to use stale data without detecting its age can create dangerous or incorrect machine behavior.</p>
+<h2 id="11-plc-communication-with-an-hmi">11. PLC Communication With an HMI</h2>
+<p>An HMI exchanges data with the PLC to display machine status and accept operator commands.</p>
+<p>Typical data includes:</p>
+<ul>
+<li>Machine mode.</li>
+<li>Cycle status.</li>
+<li>Alarm and fault information.</li>
+<li>Sensor states.</li>
+<li>Setpoints.</li>
+<li>Production counters.</li>
+<li>Recipe values.</li>
+<li>Operator commands.</li>
+</ul>
+<p>A communication failure may result in frozen values, stale alarms, unavailable commands, or an HMI communication warning.</p>
+<h3 id="diagnostic-approach">Diagnostic approach</h3>
+<ol>
+<li>Check HMI power and communication indicators.</li>
+<li>Verify the physical link and switch port.</li>
+<li>Confirm PLC and HMI addresses.</li>
+<li>Check protocol configuration and controller path.</li>
+<li>Inspect HMI communication diagnostics.</li>
+<li>Confirm that the PLC is executing and the relevant data tags are valid.</li>
+<li>Check whether other devices on the same network are affected.</li>
+</ol>
+<p>An HMI can display stale data even after communication has failed. A displayed value should not be assumed current unless the application indicates communication quality or data freshness.</p>
+<h2 id="12-plc-communication-with-a-vfd">12. PLC Communication With a VFD</h2>
+<p>A PLC may communicate with a VFD over an industrial network or use hardwired signals.</p>
+<p>Network-based control may exchange:</p>
+<ul>
+<li>Run and stop commands.</li>
+<li>Speed references.</li>
+<li>Direction commands.</li>
+<li>Drive status.</li>
+<li>Actual speed or frequency.</li>
+<li>Current and torque data.</li>
+<li>Fault codes.</li>
+<li>Ready and running states.</li>
+</ul>
+<p>The communication data map and drive parameter configuration must match the PLC project.</p>
+<h3 id="example-drive-runs-locally-but-not-from-the-plc">Example: Drive Runs Locally but Not From the PLC</h3>
+<p>Possible causes include:</p>
+<ul>
+<li>The drive is configured for local control.</li>
+<li>The drive command source is set incorrectly.</li>
+<li>The network connection is unavailable.</li>
+<li>The PLC output data is mapped incorrectly.</li>
+<li>The drive has an active fault or missing permissive.</li>
+<li>The communication watchdog has expired.</li>
+<li>The PLC program is not issuing the expected command.</li>
+</ul>
+<p>Check the drive's command source, reference source, status word, and fault diagnostics before assuming the network cable is defective.</p>
+<p>Safety note: Communication commands must not bypass the drive's intended safety functions. Safe Torque Off and other safety functions must be implemented and validated according to the drive and machine safety design.</p>
+<h2 id="13-plc-communication-with-remote-io">13. PLC Communication With Remote I/O</h2>
+<p>Remote I/O allows field signals to be connected at a location away from the main PLC rack.</p>
+<p>A remote I/O station usually requires:</p>
+<ul>
+<li>Suitable power supply.</li>
+<li>Communication interface.</li>
+<li>Correct network connection.</li>
+<li>Device identification and configuration.</li>
+<li>Compatible I/O modules.</li>
+<li>Correct data mapping.</li>
+</ul>
+<p>If a remote I/O station disappears, check the station power, network link, device status, configuration, and controller diagnostics.</p>
+<p>A network fault may affect multiple remote stations, while a local power or module fault may affect only one station.</p>
+<p>Do not assume that all missing I/O points indicate failed sensors. The signals may be unavailable because the remote I/O adapter or network connection has failed.</p>
+<h2 id="14-plc-communication-with-cnc-and-robot-controllers">14. PLC Communication With CNC and Robot Controllers</h2>
+<h3 id="141-cnc-integration">14.1 CNC Integration</h3>
+<p>A PLC and CNC may exchange machine sequencing information through hardwired I/O or a supported network interface.</p>
+<p>Typical information includes:</p>
+<ul>
+<li>Machine-ready state.</li>
+<li>Cycle-start request.</li>
+<li>Cycle-active state.</li>
+<li>Cycle-complete indication.</li>
+<li>Alarm status.</li>
+<li>Door and fixture conditions.</li>
+<li>Tool-change coordination.</li>
+</ul>
+<p>The exact signal behavior is machine-builder-specific.</p>
+<h3 id="142-robot-integration">14.2 Robot Integration</h3>
+<p>A PLC may exchange handshake information with a robot controller.</p>
+<p>Typical signals include:</p>
+<ul>
+<li>Robot ready.</li>
+<li>Program selected.</li>
+<li>Start request.</li>
+<li>Robot busy.</li>
+<li>Cycle complete.</li>
+<li>Robot fault.</li>
+<li>Part-present confirmation.</li>
+</ul>
+<p>Communication failures can interrupt the handshake and stop the machine sequence.</p>
+<h3 id="143-troubleshooting-handshake-problems">14.3 Troubleshooting Handshake Problems</h3>
+<p>When a robot or CNC sequence stops:</p>
+<ol>
+<li>Identify the last expected handshake state.</li>
+<li>Check the PLC's command and status tags.</li>
+<li>Check the corresponding robot or CNC signals.</li>
+<li>Verify network status or hardwired I/O.</li>
+<li>Review alarms on both controllers.</li>
+<li>Confirm that the expected transition conditions are satisfied.</li>
+<li>Check for stale data, timeouts, and incorrect data mapping.</li>
+</ol>
+<p>Do not bypass a missing handshake or interlock simply to force the next sequence step.</p>
+<h2 id="15-modbus-rtu-and-modbus-tcp">15. Modbus RTU and Modbus TCP</h2>
+<p>Modbus is widely used for industrial data exchange.</p>
+<h3 id="151-modbus-rtu">15.1 Modbus RTU</h3>
+<p>Modbus RTU is commonly used over serial interfaces such as RS-485.</p>
+<p>Important configuration items include:</p>
+<ul>
+<li>Slave address.</li>
+<li>Baud rate.</li>
+<li>Parity.</li>
+<li>Stop bits.</li>
+<li>Register mapping.</li>
+<li>Serial wiring polarity.</li>
+<li>Termination and biasing where required.</li>
+</ul>
+<p>The master/client sends a request, and the addressed device responds according to the protocol.</p>
+<h3 id="152-modbus-tcp">15.2 Modbus TCP</h3>
+<p>Modbus TCP uses Modbus messaging over TCP/IP, commonly over Ethernet.</p>
+<p>Important configuration items include:</p>
+<ul>
+<li>IP address.</li>
+<li>TCP connectivity.</li>
+<li>Server availability.</li>
+<li>Unit identifier where relevant to the architecture.</li>
+<li>Register addresses.</li>
+<li>Function codes.</li>
+<li>Data types and word order for multi-register values.</li>
+</ul>
+<h3 id="153-register-mapping">15.3 Register Mapping</h3>
+<p>A Modbus register address must be interpreted according to the device's documentation.</p>
+<p>Documentation may use reference numbers such as <code>40001</code>, while software interfaces may expect a zero-based offset such as <code>0</code>. The correct mapping depends on the device and client implementation.</p>
+<p>A common troubleshooting mistake is using the right register number in the wrong addressing convention.</p>
+<h3 id="154-common-modbus-faults">15.4 Common Modbus Faults</h3>
+<ul>
+<li>Incorrect serial settings.</li>
+<li>Wrong slave address.</li>
+<li>Incorrect register offset.</li>
+<li>Unsupported function code.</li>
+<li>Incorrect data type.</li>
+<li>Incorrect word order.</li>
+<li>Missing server or slave response.</li>
+<li>Wiring polarity or termination issue.</li>
+<li>Incorrect TCP address or port.</li>
+<li>Device register unavailable in the selected operating mode.</li>
+</ul>
+<h2 id="16-ethernetip-and-cip">16. EtherNet/IP and CIP</h2>
+<p>EtherNet/IP is an industrial Ethernet protocol that uses the Common Industrial Protocol (CIP).</p>
+<p>It is widely used in Allen-Bradley automation systems and compatible industrial devices.</p>
+<p>Typical applications include:</p>
+<ul>
+<li>PLC-to-remote-I/O communication.</li>
+<li>PLC-to-VFD communication.</li>
+<li>PLC-to-robot communication.</li>
+<li>Data exchange between controllers.</li>
+<li>Device diagnostics and configuration.</li>
+</ul>
+<p>Important configuration elements may include:</p>
+<ul>
+<li>Device IP address.</li>
+<li>Electronic keying and device compatibility.</li>
+<li>Controller I/O tree configuration.</li>
+<li>Requested Packet Interval (RPI).</li>
+<li>Connection parameters.</li>
+<li>Assembly or data mapping.</li>
+<li>Device firmware compatibility.</li>
+<li>Network load and connection limits.</li>
+</ul>
+<h3 id="troubleshooting">Troubleshooting</h3>
+<ul>
+<li>Verify the device is powered and reachable.</li>
+<li>Check the controller's module or connection status.</li>
+<li>Confirm the configured device type and revision.</li>
+<li>Verify the IP address and network path.</li>
+<li>Check connection parameters and RPI.</li>
+<li>Inspect device and controller diagnostics.</li>
+<li>Confirm that the expected input and output data are mapped correctly.</li>
+</ul>
+<p>An EtherNet/IP device can respond to basic network diagnostics while its configured I/O connection remains unavailable. Network reachability alone does not prove that the cyclic control connection is healthy.</p>
+<h2 id="17-profinet">17. PROFINET</h2>
+<p>PROFINET is an industrial Ethernet communication system widely used with Siemens PLCs and compatible devices.</p>
+<p>Typical applications include:</p>
+<ul>
+<li>Distributed I/O.</li>
+<li>Drives.</li>
+<li>Field devices.</li>
+<li>Industrial controllers.</li>
+<li>Device diagnostics and topology information.</li>
+</ul>
+<p>Important configuration elements may include:</p>
+<ul>
+<li>Device name.</li>
+<li>IP address.</li>
+<li>Hardware configuration.</li>
+<li>Device identity.</li>
+<li>Network topology.</li>
+<li>Controller-device relationship.</li>
+<li>Real-time communication settings.</li>
+<li>Device and module diagnostics.</li>
+</ul>
+<p>For a PROFINET device that is unavailable, check power, cable and port status, device name, configuration, and diagnostic messages.</p>
+<p>A device name mismatch can prevent the expected controller-device relationship even when the physical Ethernet link is working.</p>
+<h2 id="18-opc-ua-and-industrial-data-integration">18. OPC UA and Industrial Data Integration</h2>
+<p>OPC UA is used for structured and secure data exchange between compatible industrial applications and devices.</p>
+<p>Possible applications include:</p>
+<ul>
+<li>PLC data to SCADA.</li>
+<li>PLC data to an industrial gateway.</li>
+<li>Machine data to a historian.</li>
+<li>Data exchange between automation and higher-level applications.</li>
+</ul>
+<p>Depending on the implementation, OPC UA can support structured data, information models, authentication, encryption, and certificates.</p>
+<p>Common configuration issues include:</p>
+<ul>
+<li>Incorrect endpoint URL.</li>
+<li>Incorrect security policy or message-security configuration.</li>
+<li>Authentication failure.</li>
+<li>Certificate trust problems.</li>
+<li>Incorrect namespace or node identifier.</li>
+<li>User permissions.</li>
+<li>Firewall restrictions.</li>
+<li>Server not enabled or not available.</li>
+</ul>
+<p>A successful TCP connection does not necessarily mean that the OPC UA session is established or that the requested node is readable.</p>
+<h2 id="19-communication-fault-diagnosis">19. Communication Fault Diagnosis</h2>
+<h3 id="191-establish-the-scope">19.1 Establish the Scope</h3>
+<p>Determine whether the fault affects:</p>
+<ul>
+<li>One signal.</li>
+<li>One device.</li>
+<li>One remote I/O station.</li>
+<li>Several devices on one switch.</li>
+<li>An entire subnet.</li>
+<li>The PLC and its programming software.</li>
+<li>A supervisory data path only.</li>
+</ul>
+<p>The scope helps narrow the investigation.</p>
+<h3 id="192-check-power-and-physical-link">19.2 Check Power and Physical Link</h3>
+<p>Inspect device power, network port indicators, cables, connectors, and switch status.</p>
+<p>Where permitted, verify the device supply voltage and inspect any fault LEDs.</p>
+<h3 id="193-verify-addressing">19.3 Verify Addressing</h3>
+<p>Check IP addresses, subnet masks, device names, node addresses, and duplicate-address conditions.</p>
+<p>Compare the actual configuration with the approved network plan.</p>
+<h3 id="194-verify-protocol-configuration">19.4 Verify Protocol Configuration</h3>
+<p>Check the communication role, protocol, device configuration, register mapping, I/O mapping, baud rate, timeout, and other protocol-specific parameters.</p>
+<h3 id="195-review-diagnostics">19.5 Review Diagnostics</h3>
+<p>Read the PLC's diagnostic buffer, module status, communication error counters, drive diagnostics, and HMI or gateway logs.</p>
+<p>Record the exact error text and time before resetting or clearing the fault.</p>
+<h3 id="196-check-data-quality">19.6 Check Data Quality</h3>
+<p>A communication connection may be active while the application receives incorrect or stale data.</p>
+<p>Verify:</p>
+<ul>
+<li>Correct tag or register.</li>
+<li>Correct data type.</li>
+<li>Correct scaling.</li>
+<li>Correct byte and word order.</li>
+<li>Validity or quality status.</li>
+<li>Timestamp or data age where available.</li>
+<li>Correct device and source mapping.</li>
+</ul>
+<h3 id="197-verify-recovery">19.7 Verify Recovery</h3>
+<p>After correcting the cause, verify that:</p>
+<ul>
+<li>Communication status is healthy.</li>
+<li>The intended data is changing correctly.</li>
+<li>No unexpected stale values remain.</li>
+<li>Required machine handshakes complete.</li>
+<li>Diagnostics no longer report the original fault.</li>
+<li>The machine or process behaves correctly under the approved test conditions.</li>
+</ul>
+<h2 id="20-common-communication-faults">20. Common Communication Faults</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Recommended checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC cannot be reached</td>
+<td>Power, cable, IP configuration, or network fault</td>
+<td>Check device status, link, addressing, and routing</td>
+</tr>
+<tr>
+<td>PLC is reachable but HMI data is unavailable</td>
+<td>Protocol, controller path, permissions, or tag configuration</td>
+<td>Inspect HMI communication diagnostics and tag configuration</td>
+</tr>
+<tr>
+<td>Remote I/O station is offline</td>
+<td>Power, network, device name, or configuration issue</td>
+<td>Check station status, supply, topology, and controller diagnostics</td>
+</tr>
+<tr>
+<td>VFD communication fault</td>
+<td>Incorrect parameters, lost connection, or expired watchdog</td>
+<td>Check drive command source, network settings, and fault history</td>
+</tr>
+<tr>
+<td>Modbus reads incorrect values</td>
+<td>Wrong register offset, data type, scaling, or word order</td>
+<td>Compare raw data with the device register map</td>
+</tr>
+<tr>
+<td>Communication drops intermittently</td>
+<td>Cable, connector, power, noise, overload, or duplicate addressing</td>
+<td>Review logs and inspect the physical and network layers</td>
+</tr>
+<tr>
+<td>Robot handshake does not complete</td>
+<td>Missing status, incorrect mapping, or sequence condition</td>
+<td>Compare PLC and robot states</td>
+</tr>
+<tr>
+<td>PLC program download fails</td>
+<td>Unsupported connection, access protection, network issue, or incompatible software</td>
+<td>Check CPU state, programming path, access rights, and software compatibility</td>
+</tr>
+<tr>
+<td>Data gateway reads null values</td>
+<td>Wrong tag path, unsupported driver, access issue, or stale connection</td>
+<td>Check driver status, tag configuration, and data quality</td>
+</tr>
+<tr>
+<td>Several devices fail simultaneously</td>
+<td>Common switch, supply, uplink, or network issue</td>
+<td>Inspect shared infrastructure and correlated events</td>
+</tr>
+</tbody>
+</table>
+<h2 id="21-communication-with-node-red-sql-server-and-grafana">21. Communication With Node-RED, SQL Server, and Grafana</h2>
+<p>In an industrial data-acquisition architecture, a PLC may provide data to Node-RED, which then processes selected tags and stores values in SQL Server for reporting or visualization in Grafana.</p>
+<p>A simplified arrangement is:</p>
+<pre><code>PLC
+  ↓
+Industrial Protocol Driver
+  ↓
+Node-RED
+  ↓
+Data Validation and Tag Processing
+  ↓
+SQL Server
+  ↓
+Grafana Dashboard
+</code></pre>
+<p>Each layer introduces its own failure modes.</p>
+<h3 id="plc-to-node-red">PLC-to-Node-RED</h3>
+<p>Check:</p>
+<ul>
+<li>PLC communication status.</li>
+<li>Driver configuration.</li>
+<li>Correct PLC address and route.</li>
+<li>Tag names and data types.</li>
+<li>Controller access settings.</li>
+<li>Connection and read errors.</li>
+<li>Whether the driver supports the controller and protocol.</li>
+</ul>
+<h3 id="node-red-processing">Node-RED Processing</h3>
+<p>Check:</p>
+<ul>
+<li>Whether messages are arriving.</li>
+<li>Whether the expected tag values are present.</li>
+<li>Whether data types are correct.</li>
+<li>Whether values are being converted or rejected.</li>
+<li>Whether error handling or filtering suppresses updates.</li>
+<li>Whether the flow is using the correct configuration.</li>
+</ul>
+<h3 id="node-red-to-sql-server">Node-RED-to-SQL Server</h3>
+<p>Check:</p>
+<ul>
+<li>SQL Server availability.</li>
+<li>Correct server and database selection.</li>
+<li>Authentication and permissions.</li>
+<li>Connection errors.</li>
+<li>Table and column definitions.</li>
+<li>Data type compatibility.</li>
+<li>Insert or update errors.</li>
+<li>Transaction behavior.</li>
+</ul>
+<h3 id="sql-server-to-grafana">SQL Server-to-Grafana</h3>
+<p>Check:</p>
+<ul>
+<li>Data source configuration.</li>
+<li>Database connectivity.</li>
+<li>Query correctness.</li>
+<li>Table and column names.</li>
+<li>Time-column handling.</li>
+<li>Dashboard time range.</li>
+<li>Data freshness.</li>
+</ul>
+<p>A blank Grafana panel does not automatically mean the PLC has stopped communicating. The fault could exist at any layer between the controller and the dashboard.</p>
+<h2 id="22-ot-network-reliability-and-security">22. OT Network Reliability and Security</h2>
+<p>Operational Technology (OT) networks support equipment that directly monitors or controls physical processes.</p>
+<p>Communication engineering must consider both availability and cybersecurity.</p>
+<p>Important practices include:</p>
+<ul>
+<li>Maintain an approved network diagram and IP address plan.</li>
+<li>Use managed switches where the design requires them.</li>
+<li>Segment networks according to operational and security requirements.</li>
+<li>Restrict engineering and supervisory access to authorized users.</li>
+<li>Apply firewall rules appropriate to the required communication flows.</li>
+<li>Avoid connecting unknown devices to production networks.</li>
+<li>Control software and firmware changes.</li>
+<li>Maintain configuration backups.</li>
+<li>Monitor network and device diagnostics.</li>
+<li>Follow approved remote-access procedures.</li>
+<li>Coordinate network changes with production and maintenance.</li>
+<li>Preserve safety-related independence where required by the design.</li>
+</ul>
+<p>Do not perform unapproved port scans, network reconfiguration, or device resets on a live production network. Even a seemingly harmless change can interrupt real-time control or create unexpected device behavior.</p>
+<h2 id="23-communication-maintenance-and-documentation">23. Communication Maintenance and Documentation</h2>
+<p>A reliable maintenance system should document not only the PLC but also its communication dependencies.</p>
+<p>Recommended records include:</p>
+<ul>
+<li>PLC model, CPU, and firmware.</li>
+<li>Communication module and firmware.</li>
+<li>Protocols in use.</li>
+<li>Device names and IP addresses.</li>
+<li>Serial parameters.</li>
+<li>Network topology and switch ports.</li>
+<li>Device configuration files.</li>
+<li>I/O and data mappings.</li>
+<li>HMI, drive, CNC, and robot communication dependencies.</li>
+<li>Gateway and driver settings.</li>
+<li>Known error codes and diagnostic procedures.</li>
+<li>Approved replacement devices.</li>
+<li>Backup location and configuration revision.</li>
+<li>Recent network changes and fault history.</li>
+</ul>
+<p>Sensitive credentials and secrets should not be stored in ordinary maintenance notes. Follow the site's approved credential-management process.</p>
+<h2 id="24-sap-pm-and-communication-fault-records">24. SAP PM and Communication Fault Records</h2>
+<p>For communication-related downtime, record enough detail to separate a network problem from a device, configuration, or application problem.</p>
+<p>Useful information includes:</p>
+<ul>
+<li>Functional location and equipment number.</li>
+<li>Affected PLC, remote I/O, drive, robot, or network switch.</li>
+<li>Fault time and production impact.</li>
+<li>Exact diagnostic message.</li>
+<li>Communication protocol.</li>
+<li>Affected network segment or connection.</li>
+<li>Relevant device addresses and identifiers, where permitted.</li>
+<li>Results of physical and configuration checks.</li>
+<li>Confirmed root cause.</li>
+<li>Corrective action.</li>
+<li>Software or configuration changes.</li>
+<li>Functional verification.</li>
+<li>Repeat-failure status.</li>
+</ul>
+<p>For example:</p>
+<ul>
+<li>Symptom: Remote I/O station became unavailable during automatic production.</li>
+<li>Cause: The station lost its required network connection because of a damaged connector.</li>
+<li>Corrective action: Replaced the connector using the approved connector and termination procedure.</li>
+<li>Verification: Confirmed the station returned to normal status, I/O data updated correctly, and the machine completed the required operating test.</li>
+</ul>
+<p>If the cause is not confirmed, record it as unresolved or suspected rather than documenting a guess as fact.</p>
+<h2 id="25-practical-industrial-example">25. Practical Industrial Example</h2>
+<h3 id="scenario-plc-shows-connected-but-robot-values-are-false-or-null">Scenario: PLC Shows Connected, but Robot Values Are False or Null</h3>
+<p>An Allen-Bradley GuardLogix controller communicates with robot-related equipment. The data-collection application reports that the controller is connected, but the robot tags remain false or null.</p>
+<h3 id="possible-causes">Possible causes</h3>
+<ul>
+<li>The connection is established, but the selected tags are incorrect.</li>
+<li>The configured driver does not support the required tag path or data type.</li>
+<li>The robot data is not exposed through the selected communication interface.</li>
+<li>The controller's tag structure differs from the expected mapping.</li>
+<li>The program is not updating the values.</li>
+<li>The data-collection application is connected to the wrong controller or program.</li>
+<li>The data is invalid, stale, or being converted incorrectly.</li>
+<li>Access permissions or communication configuration restrict the requested data.</li>
+</ul>
+<h3 id="diagnostic-sequence">Diagnostic sequence</h3>
+<ol>
+<li>Confirm which controller and communication endpoint the application is using.</li>
+<li>Verify the controller's communication status and diagnostic messages.</li>
+<li>Inspect the exact tag names, data types, and paths.</li>
+<li>Compare the application values with the values in the controller's engineering software, using approved access.</li>
+<li>Confirm that the relevant program logic updates the tags.</li>
+<li>Check driver support for the controller and tag structure.</li>
+<li>Review the application logs for read errors, unsupported data types, or mapping failures.</li>
+<li>Validate the value through a second approved diagnostic method when available.</li>
+<li>Correct the configuration and verify data freshness.</li>
+</ol>
+<p>The key distinction is that a connected session does not prove that every requested tag is valid or readable. Diagnose the communication session, tag mapping, and application data path separately.</p>
+<h2 id="26-performance-indicators">26. Performance Indicators</h2>
+<table>
+<thead>
+<tr>
+<th>Indicator</th>
+<th>What it measures</th>
+<th>Engineering value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Communication-related downtime</td>
+<td>Production loss associated with communication faults</td>
+<td>Quantifies operational impact</td>
+</tr>
+<tr>
+<td>Communication fault count</td>
+<td>Number of recorded failures</td>
+<td>Identifies recurring devices or networks</td>
+</tr>
+<tr>
+<td>Repeat-fault rate</td>
+<td>Frequency of recurrence</td>
+<td>Measures corrective-action effectiveness</td>
+</tr>
+<tr>
+<td>Recovery time</td>
+<td>Time required to restore communication</td>
+<td>Supports downtime reduction</td>
+</tr>
+<tr>
+<td>Network availability</td>
+<td>Proportion of time the defined network service is available</td>
+<td>Helps assess reliability</td>
+</tr>
+<tr>
+<td>Timeout frequency</td>
+<td>Number of communication timeouts</td>
+<td>Helps identify intermittent problems</td>
+</tr>
+<tr>
+<td>Data freshness</td>
+<td>Age of the latest valid data</td>
+<td>Supports reliable monitoring</td>
+</tr>
+<tr>
+<td>Configuration compliance</td>
+<td>Agreement between actual and approved configuration</td>
+<td>Reduces undocumented changes</td>
+</tr>
+<tr>
+<td>Backup coverage</td>
+<td>Availability of required configuration backups</td>
+<td>Supports recovery after failures</td>
+</tr>
+</tbody>
+</table>
+<p>The measurement method and scope should be defined consistently. A PLC-to-HMI connection, a remote I/O network, and a database reporting path have different availability requirements and should not be combined without a clear measurement definition.</p>
+<h2 id="27-practical-checklist">27. Practical Checklist</h2>
+<h3 id="before-troubleshooting">Before troubleshooting</h3>
+<ul>
+<li>Identify the affected devices and exact symptoms.</li>
+<li>Review the network diagram and electrical drawings.</li>
+<li>Record diagnostic messages and timestamps.</li>
+<li>Check the device power and physical link.</li>
+<li>Identify the protocol and communication path.</li>
+<li>Confirm the approved IP or serial configuration.</li>
+</ul>
+<h3 id="during-diagnosis">During diagnosis</h3>
+<ul>
+<li>Verify device addresses and names.</li>
+<li>Check cable, connector, and switch status.</li>
+<li>Review PLC and device diagnostics.</li>
+<li>Verify protocol configuration and data mapping.</li>
+<li>Check tag names, data types, and register offsets.</li>
+<li>Confirm that the received data is current and valid.</li>
+<li>Separate physical, network, protocol, and application faults.</li>
+<li>Avoid unapproved changes on a live production network.</li>
+</ul>
+<h3 id="after-repair">After repair</h3>
+<ul>
+<li>Confirm normal communication status.</li>
+<li>Verify correct data exchange.</li>
+<li>Check machine handshake and sequence behavior.</li>
+<li>Confirm the original fault is resolved.</li>
+<li>Record root cause and corrective action.</li>
+<li>Update approved network or device documentation.</li>
+<li>Save configuration changes according to site procedures.</li>
+</ul>
+<h2 id="28-key-engineering-principles">28. Key Engineering Principles</h2>
+<ul>
+<li>Physical connectivity, network reachability, protocol communication, and valid application data are separate conditions.</li>
+<li>Diagnose from the physical layer upward.</li>
+<li>Verify the exact protocol and device configuration rather than relying on assumptions based on the manufacturer.</li>
+<li>Correct data mapping and data types are as important as a working network link.</li>
+<li>Monitor communication quality and data freshness, not only connection status.</li>
+<li>Preserve the required machine safety behavior during communication failures.</li>
+<li>Treat OT network changes as controlled engineering changes.</li>
+<li>Record diagnostics, confirmed root causes, and configuration changes.</li>
+<li>Validate the complete data path after repairs.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\18_PM\01_PLC\07_Program_Backup - Program backup</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

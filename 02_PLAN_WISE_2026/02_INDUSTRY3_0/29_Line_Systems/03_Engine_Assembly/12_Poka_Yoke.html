@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Poka-Yoke in Engine Assembly</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Poka-Yoke in Engine Assembly</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-of-poka-yoke">1. Purpose of Poka-Yoke</a></li>
+<li><a href="#2-core-principles">2. Core Principles</a></li>
+<li><a href="#3-types-of-poka-yoke">3. Types of Poka-Yoke</a><ul>
+<li><a href="#31-prevention-based-poka-yoke">3.1 Prevention-based poka-yoke</a></li>
+<li><a href="#32-detection-based-poka-yoke">3.2 Detection-based poka-yoke</a></li>
+<li><a href="#33-control-based-poka-yoke">3.3 Control-based poka-yoke</a></li>
+<li><a href="#34-informational-poka-yoke">3.4 Informational poka-yoke</a></li>
+</ul>
+</li>
+<li><a href="#4-poka-yoke-classification-by-function">4. Poka-Yoke Classification by Function</a></li>
+<li><a href="#5-poka-yoke-architecture-in-an-automated-assembly-line">5. Poka-Yoke Architecture in an Automated Assembly Line</a></li>
+<li><a href="#6-mechanical-poka-yoke-in-engine-assembly">6. Mechanical Poka-Yoke in Engine Assembly</a><ul>
+<li><a href="#61-part-orientation">6.1 Part orientation</a></li>
+<li><a href="#62-component-compatibility">6.2 Component compatibility</a></li>
+<li><a href="#63-fastener-and-tool-selection">6.3 Fastener and tool selection</a></li>
+<li><a href="#64-fixture-seating">6.4 Fixture seating</a></li>
+</ul>
+</li>
+<li><a href="#7-sensor-based-poka-yoke">7. Sensor-Based Poka-Yoke</a><ul>
+<li><a href="#71-example-missing-component-detection">7.1 Example: Missing-component detection</a></li>
+<li><a href="#72-sensor-failure-considerations">7.2 Sensor failure considerations</a></li>
+</ul>
+</li>
+<li><a href="#8-plc-interlocks-and-sequence-verification">8. PLC Interlocks and Sequence Verification</a><ul>
+<li><a href="#81-permissive-logic">8.1 Permissive logic</a></li>
+<li><a href="#82-sequence-verification">8.2 Sequence verification</a></li>
+<li><a href="#83-preventing-stale-result-errors">8.3 Preventing stale-result errors</a></li>
+</ul>
+</li>
+<li><a href="#9-torque-and-angle-poka-yoke">9. Torque and Angle Poka-Yoke</a><ul>
+<li><a href="#91-example-of-tightening-control">9.1 Example of tightening control</a></li>
+</ul>
+</li>
+<li><a href="#10-vision-and-identification-poka-yoke">10. Vision and Identification Poka-Yoke</a><ul>
+<li><a href="#101-identity-versus-presence">10.1 Identity versus presence</a></li>
+<li><a href="#102-code-read-validation">10.2 Code-read validation</a></li>
+</ul>
+</li>
+<li><a href="#11-poka-yoke-for-leak-testing-and-vision-inspection">11. Poka-Yoke for Leak Testing and Vision Inspection</a><ul>
+<li><a href="#111-leak-testing-examples">11.1 Leak-testing examples</a></li>
+<li><a href="#112-vision-inspection-examples">11.2 Vision-inspection examples</a></li>
+<li><a href="#113-important-limitation">11.3 Important limitation</a></li>
+</ul>
+</li>
+<li><a href="#12-failure-modes-and-effects-analysis-fmea">12. Failure Modes and Effects Analysis (FMEA)</a></li>
+<li><a href="#13-common-poka-yoke-failures">13. Common Poka-Yoke Failures</a></li>
+<li><a href="#14-safe-design-and-safety-interlocks">14. Safe Design and Safety Interlocks</a></li>
+<li><a href="#15-poka-yoke-validation-and-challenge-testing">15. Poka-Yoke Validation and Challenge Testing</a><ul>
+<li><a href="#151-validation-approach">15.1 Validation approach</a></li>
+<li><a href="#152-examples-of-challenge-tests">15.2 Examples of challenge tests</a></li>
+</ul>
+</li>
+<li><a href="#16-bypass-management">16. Bypass Management</a></li>
+<li><a href="#17-maintenance-and-preventive-checks">17. Maintenance and Preventive Checks</a><ul>
+<li><a href="#171-routine-checks">17.1 Routine checks</a></li>
+<li><a href="#172-after-maintenance-or-changes">17.2 After maintenance or changes</a></li>
+</ul>
+</li>
+<li><a href="#18-poka-yoke-kpis">18. Poka-Yoke KPIs</a></li>
+<li><a href="#19-rcacapa-example-missing-fastener-escapes-an-assembly-station">19. RCA/CAPA Example: Missing Fastener Escapes an Assembly Station</a><ul>
+<li><a href="#problem">Problem</a></li>
+<li><a href="#potential-causes">Potential causes</a></li>
+<li><a href="#investigation">Investigation</a></li>
+<li><a href="#corrective-and-preventive-actions">Corrective and preventive actions</a></li>
+</ul>
+</li>
+<li><a href="#20-practical-learning-exercises">20. Practical Learning Exercises</a></li>
+<li><a href="#21-competency-checklist">21. Competency Checklist</a></li>
+<li><a href="#22-final-technical-summary">22. Final Technical Summary</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-of-poka-yoke">1. Purpose of Poka-Yoke</h2>
+<p>Poka-yoke is a mistake-proofing approach used to prevent human errors, detect mistakes immediately, or stop an incorrect process from progressing to the next operation.</p>
+<p>In engine assembly, poka-yoke helps ensure that the correct component is installed, the correct tool or recipe is selected, the assembly is performed in the required sequence, and the result meets the defined acceptance criteria.</p>
+<p>The objective is not to expect every operator to remember every detail perfectly. The objective is to design the process so that common mistakes are physically prevented or detected before they create a defect.</p>
+<p>Typical applications include:</p>
+<ul>
+<li>Preventing installation of the wrong component variant.</li>
+<li>Preventing a connector from being assembled in the wrong orientation.</li>
+<li>Ensuring that required fasteners are present.</li>
+<li>Preventing tightening with the wrong tool or program.</li>
+<li>Detecting missing clips, plugs, seals, or retainers.</li>
+<li>Preventing a station from advancing before a critical operation is completed.</li>
+<li>Verifying the correct engine identity and production recipe.</li>
+<li>Preventing assembly when a component is not correctly located.</li>
+<li>Detecting incorrect pressure, force, position, torque, or angle.</li>
+<li>Ensuring that required inspections have passed before release.</li>
+</ul>
+<p>Poka-yoke is particularly important when a small assembly mistake can cause leakage, engine damage, customer complaints, warranty claims, or safety risks.</p>
+<h2 id="2-core-principles">2. Core Principles</h2>
+<p>Poka-yoke can be implemented through physical design, sensors, control logic, software validation, inspection systems, or a combination of these methods.</p>
+<p>The main principles are:</p>
+<ul>
+<li>Prevent the mistake: Design the fixture or component so that an incorrect action is physically impossible or difficult.</li>
+<li>Detect the mistake immediately: Identify the error at the point where it occurs.</li>
+<li>Stop incorrect progression: Prevent the next operation when a required condition is not satisfied.</li>
+<li>Make errors visible: Provide clear indications of the fault and the required recovery action.</li>
+<li>Control the process: Ensure that the correct tool, recipe, sequence, and acceptance criteria are used.</li>
+<li>Verify effectiveness: Test the mistake-proofing function using representative fault conditions.</li>
+</ul>
+<p>A poka-yoke device is not effective merely because it is installed. It must reliably prevent or detect the intended mistake under actual operating conditions.</p>
+<h2 id="3-types-of-poka-yoke">3. Types of Poka-Yoke</h2>
+<h3 id="31-prevention-based-poka-yoke">3.1 Prevention-based poka-yoke</h3>
+<p>Prevention-based designs make the error physically impossible or prevent the incorrect action from being completed.</p>
+<p>Examples:</p>
+<ul>
+<li>Asymmetric locating pins that allow a component to fit in only one orientation.</li>
+<li>Different connector keying for incompatible connections.</li>
+<li>Fixture geometry that accepts only the intended part variant.</li>
+<li>Dedicated sockets or adapters that reduce the chance of selecting an incorrect interface.</li>
+<li>Mechanical guides that prevent a component from being loaded backward.</li>
+</ul>
+<p>This approach is generally preferable when a practical physical design can eliminate the error without introducing new hazards or excessive complexity.</p>
+<h3 id="32-detection-based-poka-yoke">3.2 Detection-based poka-yoke</h3>
+<p>Detection-based systems identify an error and generate a response before the defect progresses.</p>
+<p>Examples:</p>
+<ul>
+<li>A sensor detects a missing component.</li>
+<li>A vision system checks the orientation of an installed part.</li>
+<li>A torque controller detects an out-of-limit tightening result.</li>
+<li>A barcode reader identifies the wrong component variant.</li>
+<li>A leak tester rejects a component whose measured leakage exceeds the approved limit.</li>
+<li>A position sensor confirms that a fixture has reached the required location.</li>
+</ul>
+<p>Detection is only effective when the system responds correctly to the detected condition.</p>
+<h3 id="33-control-based-poka-yoke">3.3 Control-based poka-yoke</h3>
+<p>Control-based systems use PLC logic, machine controllers, or software rules to prevent an invalid operation.</p>
+<p>Examples:</p>
+<ul>
+<li>The PLC prevents cycle start unless the correct component is present.</li>
+<li>The controller blocks a tightening operation when the wrong program is selected.</li>
+<li>The line prevents transfer until the required inspection result is valid.</li>
+<li>The system prevents a duplicate serial number from being accepted.</li>
+<li>A machine requires the correct recipe for the detected product variant.</li>
+</ul>
+<p>The control must distinguish a valid condition from missing, invalid, or stale data.</p>
+<h3 id="34-informational-poka-yoke">3.4 Informational poka-yoke</h3>
+<p>Informational methods help operators recognize the correct action through labels, visual indicators, displays, or clear instructions.</p>
+<p>Examples:</p>
+<ul>
+<li>Color-coded connectors.</li>
+<li>Clearly labeled material bins.</li>
+<li>HMI prompts showing the required component.</li>
+<li>Tool indicators showing the active tightening program.</li>
+<li>Visual confirmation of the next assembly step.</li>
+</ul>
+<p>Informational methods can reduce mistakes, but they are generally weaker than physical prevention or validated automatic detection when used alone for critical operations.</p>
+<h2 id="4-poka-yoke-classification-by-function">4. Poka-Yoke Classification by Function</h2>
+<p>A practical classification separates mistake prevention, mistake detection, and response.</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Main function</th>
+<th>Engine assembly example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Contact method</td>
+<td>Detects a physical feature or condition</td>
+<td>A sensor confirms a locating feature is present</td>
+</tr>
+<tr>
+<td>Fixed-value method</td>
+<td>Checks whether a required number or quantity of actions has occurred</td>
+<td>A counter verifies that all required tightening cycles were completed</td>
+</tr>
+<tr>
+<td>Motion-step method</td>
+<td>Verifies the required sequence of actions</td>
+<td>A controller checks that the defined assembly steps occur in order</td>
+</tr>
+<tr>
+<td>Physical prevention</td>
+<td>Makes the wrong assembly difficult or impossible</td>
+<td>An asymmetric fixture prevents reverse loading</td>
+</tr>
+<tr>
+<td>Automatic detection</td>
+<td>Identifies an incorrect condition</td>
+<td>Vision detects a missing clip</td>
+</tr>
+<tr>
+<td>Interlocked control</td>
+<td>Prevents progression when a required condition is false</td>
+<td>PLC blocks transfer after a failed critical test</td>
+</tr>
+<tr>
+<td>Operator guidance</td>
+<td>Helps the operator perform the correct step</td>
+<td>HMI displays the required part and sequence</td>
+</tr>
+</tbody>
+</table>
+<p>These categories can overlap. For example, a keyed fixture may physically prevent reverse loading while a sensor independently confirms correct seating.</p>
+<h2 id="5-poka-yoke-architecture-in-an-automated-assembly-line">5. Poka-Yoke Architecture in an Automated Assembly Line</h2>
+<pre><code>Correct Part / Correct Process Requirement
+                    ↓
+       Physical or Electronic Verification
+                    ↓
+       Sensor / Reader / Tool / Vision System
+                    ↓
+                PLC Logic
+                    ↓
+     Required Conditions and Interlocks
+                    ↓
+          Operation Permitted?
+             ↙              ↘
+           YES               NO
+            ↓                 ↓
+     Perform Operation   Block / Alarm / Hold
+            ↓                 ↓
+     Verify Result       Correct the Cause
+            ↓
+     Accept or Reject
+            ↓
+     Record Result and Identity
+</code></pre>
+<p>A typical implementation uses several independent layers:</p>
+<ul>
+<li>Mechanical design reduces the possibility of an error.</li>
+<li>Sensors or process equipment detect the actual condition.</li>
+<li>PLC logic evaluates the required conditions.</li>
+<li>HMI diagnostics communicate the fault.</li>
+<li>Traceability records the result and any authorized recovery.</li>
+</ul>
+<p>The exact architecture depends on the station. Not every poka-yoke function requires a PLC, and not every interlock is a safety-rated function.</p>
+<h2 id="6-mechanical-poka-yoke-in-engine-assembly">6. Mechanical Poka-Yoke in Engine Assembly</h2>
+<p>Mechanical poka-yoke is often effective because it prevents an incorrect action without relying on software or operator memory.</p>
+<h3 id="61-part-orientation">6.1 Part orientation</h3>
+<p>An asymmetrical component, locating pin, or fixture feature can ensure that a part is loaded in the correct orientation.</p>
+<p>Examples include selected covers, brackets, connectors, and components with directional features.</p>
+<p>Design considerations:</p>
+<ul>
+<li>The feature must reliably distinguish the correct orientation.</li>
+<li>Normal part tolerances must be accommodated.</li>
+<li>Wear must not gradually permit incorrect loading.</li>
+<li>The fixture must not damage the component during loading.</li>
+<li>Maintenance or replacement must preserve the intended geometry.</li>
+</ul>
+<h3 id="62-component-compatibility">6.2 Component compatibility</h3>
+<p>Different part variants may use different physical locating features, connector keying, or dedicated adapters to prevent mix-ups.</p>
+<p>A mechanical design should be supplemented with identification checks where the component variants cannot be reliably distinguished by shape alone.</p>
+<h3 id="63-fastener-and-tool-selection">6.3 Fastener and tool selection</h3>
+<p>Dedicated tooling can reduce the likelihood of using the wrong socket, adapter, or tool interface. However, mechanical compatibility alone does not guarantee that the correct torque program, fastener, or tightening sequence has been selected.</p>
+<h3 id="64-fixture-seating">6.4 Fixture seating</h3>
+<p>Locating surfaces, stops, clamps, and sensors can help ensure that the component is seated correctly before assembly begins.</p>
+<p>A clamp-closed signal should not automatically be interpreted as proof of correct part seating unless the fixture design and sensing arrangement have been validated for that purpose.</p>
+<h2 id="7-sensor-based-poka-yoke">7. Sensor-Based Poka-Yoke</h2>
+<p>Sensors verify physical or process conditions and provide inputs to the control system.</p>
+<p>Common devices include:</p>
+<ul>
+<li>Inductive proximity sensors.</li>
+<li>Capacitive sensors.</li>
+<li>Photoelectric sensors.</li>
+<li>Magnetic sensors.</li>
+<li>Mechanical limit switches.</li>
+<li>Pressure switches and pressure transducers.</li>
+<li>Position sensors and encoders.</li>
+<li>Force sensors.</li>
+<li>Vision sensors and smart cameras.</li>
+<li>RFID readers and barcode scanners.</li>
+</ul>
+<h3 id="71-example-missing-component-detection">7.1 Example: Missing-component detection</h3>
+<p>A sensor or vision system checks whether a required component is present.</p>
+<p>A suitable control sequence may require:</p>
+<ol>
+<li>Correct product identity.</li>
+<li>Correct component or fixture position.</li>
+<li>Valid sensor state.</li>
+<li>Completion of the required assembly operation.</li>
+<li>Valid result before the station releases the engine.</li>
+</ol>
+<p>A sensor that detects the presence of a component does not necessarily prove that the component is the correct variant, correctly installed, or fully secured.</p>
+<h3 id="72-sensor-failure-considerations">7.2 Sensor failure considerations</h3>
+<p>Poka-yoke logic must account for more than normal sensor switching.</p>
+<p>Potential problems include:</p>
+<ul>
+<li>Sensor stuck ON.</li>
+<li>Sensor stuck OFF.</li>
+<li>Incorrect mounting.</li>
+<li>Contamination or target damage.</li>
+<li>Wiring faults.</li>
+<li>Incorrect input mapping.</li>
+<li>Bypassed sensor.</li>
+<li>Incorrect PLC logic.</li>
+<li>Signal received from a previous cycle.</li>
+</ul>
+<p>A fault-injection or controlled challenge test should be used where appropriate to verify that the function detects the intended failure condition.</p>
+<h2 id="8-plc-interlocks-and-sequence-verification">8. PLC Interlocks and Sequence Verification</h2>
+<p>PLC-based poka-yoke verifies that the conditions required for an operation are satisfied before allowing the machine to proceed.</p>
+<p>Examples include:</p>
+<ul>
+<li>Correct part ID received.</li>
+<li>Correct product variant selected.</li>
+<li>Fixture closed and part located.</li>
+<li>Required component-presence signals valid.</li>
+<li>Correct tool and recipe selected.</li>
+<li>Previous operation completed successfully.</li>
+<li>Current inspection result valid.</li>
+<li>No active fault that prohibits the operation.</li>
+<li>Required traceability transaction completed.</li>
+</ul>
+<h3 id="81-permissive-logic">8.1 Permissive logic</h3>
+<p>A permissive is a condition that must be true before an operation is allowed.</p>
+<p>For example, an assembly operation might require the correct part identity, a valid fixture position, and confirmation that the previous step passed.</p>
+<p>Conceptually:</p>
+<pre><code>Correct Part Identity
+          AND
+Fixture Correctly Positioned
+          AND
+Required Component Present
+          AND
+Previous Operation Passed
+          ↓
+Assembly Operation Permitted
+</code></pre>
+<p>The actual PLC implementation must account for signal validity, timing, faults, and recovery. A simple AND condition is not enough when inputs can be stale, unavailable, or inconsistent.</p>
+<h3 id="82-sequence-verification">8.2 Sequence verification</h3>
+<p>A sequence-based poka-yoke checks that required operations occur in the intended order.</p>
+<p>For example, the PLC may prevent tightening until a component-presence check has passed. It may then require a valid tightening result before allowing the next operation.</p>
+<p>The control logic should define:</p>
+<ul>
+<li>The expected step.</li>
+<li>The condition that completes the step.</li>
+<li>The conditions required to enter the next step.</li>
+<li>The response to timeout or invalid data.</li>
+<li>The reset and recovery procedure.</li>
+<li>The record that proves the operation was completed.</li>
+</ul>
+<h3 id="83-preventing-stale-result-errors">8.3 Preventing stale-result errors</h3>
+<p>Suppose a tightening controller returns <code>PASS</code> for one engine. If the PLC reuses that signal for the next engine without confirming a new cycle, the next engine may be accepted without a valid tightening operation.</p>
+<p>Prevent this by using a defined handshake, cycle association, result acknowledgment, or equivalent validated method. The controller's result must belong to the current operation and current product.</p>
+<h2 id="9-torque-and-angle-poka-yoke">9. Torque and Angle Poka-Yoke</h2>
+<p>Tightening operations are common candidates for poka-yoke because an incorrect joint can cause leakage, loosening, damage, or product failure.</p>
+<p>Typical controls include:</p>
+<ul>
+<li>Correct tool selection.</li>
+<li>Correct tightening program.</li>
+<li>Fastener-presence checks where suitable.</li>
+<li>Tightening-sequence enforcement.</li>
+<li>Torque and angle acceptance limits.</li>
+<li>Cycle-completion verification.</li>
+<li>Detection of cross-threading or abnormal tightening behavior where the tool supports it.</li>
+<li>Traceability of tightening results.</li>
+</ul>
+<h3 id="91-example-of-tightening-control">9.1 Example of tightening control</h3>
+<pre><code>Engine Identity Valid
+          ↓
+Correct Tightening Program Selected
+          ↓
+Required Fastener and Position Confirmed
+          ↓
+Tightening Cycle Executed
+          ↓
+Torque / Angle Result Evaluated
+          ↓
+Valid Result Associated with Engine
+          ↓
+Next Operation Permitted
+</code></pre>
+<p>Torque and angle limits must come from the approved engineering specification. A tightening result inside a configured range is not, by itself, proof that every aspect of the joint is correct.</p>
+<p>For example, a tool may reach its torque target even if a wrong fastener or an unsuitable joint condition is present. The poka-yoke design must address the actual failure modes identified for that joint.</p>
+<h2 id="10-vision-and-identification-poka-yoke">10. Vision and Identification Poka-Yoke</h2>
+<p>Vision systems, barcode readers, and RFID can prevent part mix-ups and detect missing or incorrectly positioned components.</p>
+<p>Applications include:</p>
+<ul>
+<li>Verifying the engine variant.</li>
+<li>Confirming the correct component identity.</li>
+<li>Checking component orientation.</li>
+<li>Detecting missing clips, plugs, or connectors.</li>
+<li>Verifying selected fastener positions.</li>
+<li>Confirming required markings.</li>
+<li>Checking that the correct inspection job is active.</li>
+</ul>
+<h3 id="101-identity-versus-presence">10.1 Identity versus presence</h3>
+<p>These are different checks:</p>
+<ul>
+<li>Presence: Is an object or feature detected?</li>
+<li>Identification: Is the object the intended component?</li>
+<li>Position: Is the component in the required location?</li>
+<li>Installation verification: Is the component installed correctly?</li>
+<li>Process verification: Was the required operation completed correctly?</li>
+</ul>
+<p>A robust station selects the checks required by the risk and product specification. One check should not be assumed to prove all the others.</p>
+<h3 id="102-code-read-validation">10.2 Code-read validation</h3>
+<p>A barcode or Data Matrix reader may decode a perfectly readable but incorrect component ID.</p>
+<p>The system should compare the decoded identity with the expected part, engine variant, production order, or assembly step. It should also handle unreadable, duplicate, invalid, and missing values according to the approved sequence.</p>
+<h2 id="11-poka-yoke-for-leak-testing-and-vision-inspection">11. Poka-Yoke for Leak Testing and Vision Inspection</h2>
+<p>Leak testers and vision systems can themselves provide mistake-proofing functions.</p>
+<h3 id="111-leak-testing-examples">11.1 Leak-testing examples</h3>
+<ul>
+<li>Preventing test start until the correct component is located.</li>
+<li>Checking that the correct test recipe is selected.</li>
+<li>Confirming fixture closure and required interlocks.</li>
+<li>Detecting whether test pressure reached the required condition.</li>
+<li>Distinguishing a valid pass from a failed or incomplete test.</li>
+<li>Preventing release when a critical test result is missing.</li>
+<li>Linking the result to the correct engine identity.</li>
+</ul>
+<h3 id="112-vision-inspection-examples">11.2 Vision-inspection examples</h3>
+<ul>
+<li>Checking that the expected inspection job is active.</li>
+<li>Detecting a missing component.</li>
+<li>Validating product orientation.</li>
+<li>Rejecting unreadable or incorrect identification.</li>
+<li>Confirming that the current image acquisition completed.</li>
+<li>Preventing acceptance when the result is invalid or unavailable.</li>
+<li>Associating the inspection result with the current product cycle.</li>
+</ul>
+<h3 id="113-important-limitation">11.3 Important limitation</h3>
+<p>A failed camera, leaking fixture, or faulty sensor can compromise the mistake-proofing function itself. Therefore, the design should define how equipment faults are detected and what happens when the poka-yoke function cannot be trusted.</p>
+<h2 id="12-failure-modes-and-effects-analysis-fmea">12. Failure Modes and Effects Analysis (FMEA)</h2>
+<p>FMEA is a structured method for identifying potential failures, their effects, causes, and controls. It helps determine where poka-yoke is needed and whether the existing control is adequate.</p>
+<p>A simplified example for an engine assembly station is shown below.</p>
+<table>
+<thead>
+<tr>
+<th>Potential failure</th>
+<th>Possible effect</th>
+<th>Possible poka-yoke</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wrong component installed</td>
+<td>Incorrect assembly or product failure</td>
+<td>Part identification and variant verification</td>
+</tr>
+<tr>
+<td>Component installed backward</td>
+<td>Fitment or functional problem</td>
+<td>Keyed fixture or orientation check</td>
+</tr>
+<tr>
+<td>Fastener omitted</td>
+<td>Joint failure or leakage</td>
+<td>Presence check and tightening-cycle verification</td>
+</tr>
+<tr>
+<td>Wrong tightening program</td>
+<td>Incorrect joint condition</td>
+<td>Program selection validation</td>
+</tr>
+<tr>
+<td>Required test skipped</td>
+<td>Defect progresses downstream</td>
+<td>PLC interlock requiring valid test completion</td>
+</tr>
+<tr>
+<td>Previous result reused</td>
+<td>Incorrect product accepted</td>
+<td>Cycle-specific result association</td>
+</tr>
+<tr>
+<td>Component incorrectly seated</td>
+<td>Assembly damage or poor fit</td>
+<td>Position sensing and fixture design</td>
+</tr>
+<tr>
+<td>Wrong inspection recipe</td>
+<td>Defect may go undetected</td>
+<td>Product-variant-to-recipe validation</td>
+</tr>
+<tr>
+<td>Sensor stuck ON</td>
+<td>False confirmation of component presence</td>
+<td>Diagnostics and controlled fault testing</td>
+</tr>
+<tr>
+<td>Traceability record missing</td>
+<td>Incomplete manufacturing history</td>
+<td>Required-record validation and controlled recovery</td>
+</tr>
+</tbody>
+</table>
+<p>A complete FMEA should consider severity, occurrence, detection capability, existing controls, and the organization's applicable risk-ranking method. Do not assume that every plant uses the same scoring scale or threshold.</p>
+<h2 id="13-common-poka-yoke-failures">13. Common Poka-Yoke Failures</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Potential cause</th>
+<th>Investigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wrong component passes</td>
+<td>Incorrect identity comparison or weak detection</td>
+<td>Verify the expected-part logic and challenge it with an incorrect component</td>
+</tr>
+<tr>
+<td>Correct component is blocked</td>
+<td>Misaligned sensor, incorrect recipe, or overly restrictive criteria</td>
+<td>Check actual part condition, sensor alignment, and approved settings</td>
+</tr>
+<tr>
+<td>Interlock does not activate</td>
+<td>Incorrect PLC mapping or logic</td>
+<td>Verify input states, program sequence, and intended fault response</td>
+</tr>
+<tr>
+<td>Operation proceeds without a result</td>
+<td>Missing result-valid interlock</td>
+<td>Review handshake, timeout, and release conditions</td>
+</tr>
+<tr>
+<td>Previous result is reused</td>
+<td>Stale-data handling failure</td>
+<td>Check cycle reset, acknowledgment, and product association</td>
+</tr>
+<tr>
+<td>Fixture accepts reversed part</td>
+<td>Mechanical design or wear issue</td>
+<td>Inspect geometry, wear, and locating features</td>
+</tr>
+<tr>
+<td>Sensor gives constant ON</td>
+<td>Wiring fault, stuck sensor, or target permanently detected</td>
+<td>Inspect sensor state, mounting, wiring, and diagnostics</td>
+</tr>
+<tr>
+<td>Correct tool is selected but wrong program runs</td>
+<td>Program selection is not validated</td>
+<td>Compare product identity, program ID, and controller response</td>
+</tr>
+<tr>
+<td>Repeated false rejects</td>
+<td>Poor sensing conditions or overly strict logic</td>
+<td>Review evidence and validate the cause before changing settings</td>
+</tr>
+<tr>
+<td>Bypass remains active</td>
+<td>Poor bypass control or incomplete reset</td>
+<td>Review authorization, event logs, and restart conditions</td>
+</tr>
+<tr>
+<td>HMI shows pass but product is rejected downstream</td>
+<td>Incorrect result mapping or different acceptance criteria</td>
+<td>Compare station logic, tester result, and displayed status</td>
+</tr>
+<tr>
+<td>Poka-yoke works intermittently</td>
+<td>Timing, vibration, sensor position, or inconsistent part presentation</td>
+<td>Observe the cycle and verify the conditions under which detection fails</td>
+</tr>
+</tbody>
+</table>
+<h2 id="14-safe-design-and-safety-interlocks">14. Safe Design and Safety Interlocks</h2>
+<p>Poka-yoke and machine safety are related, but they are not interchangeable.</p>
+<p>A quality interlock may prevent the wrong component from being assembled. A safety-related control function protects people from hazards such as unexpected movement or access to dangerous machinery.</p>
+<p>Do not assume that a normal PLC input, vision system, or standard interlock is safety-rated.</p>
+<p>Important principles include:</p>
+<ul>
+<li>Use the approved safety architecture for personnel-protection functions.</li>
+<li>Do not bypass guards, interlocks, or safety devices to force production.</li>
+<li>Assess whether a fixture or mechanical poka-yoke creates a pinch, crush, or trapping hazard.</li>
+<li>Ensure fault recovery does not cause unexpected automatic movement.</li>
+<li>Use approved energy-isolation procedures for maintenance.</li>
+<li>Validate safety functions according to the applicable safety requirements.</li>
+<li>Keep quality acceptance logic distinct from safety-related logic unless the design explicitly supports the required safety function.</li>
+</ul>
+<p>A poka-yoke device must not introduce a new hazard while preventing an assembly error.</p>
+<h2 id="15-poka-yoke-validation-and-challenge-testing">15. Poka-Yoke Validation and Challenge Testing</h2>
+<p>A poka-yoke function must be tested to confirm that it prevents or detects the intended mistake. A normal production cycle only demonstrates that the system works under normal conditions.</p>
+<h3 id="151-validation-approach">15.1 Validation approach</h3>
+<ol>
+<li>Define the specific mistake or failure mode to be controlled.</li>
+<li>Identify the detection or prevention mechanism.</li>
+<li>Define the expected response when the mistake is introduced.</li>
+<li>Prepare approved test cases or representative challenge parts.</li>
+<li>Verify that the mistake is prevented or detected.</li>
+<li>Confirm that the station enters the correct blocked, rejected, or fault state.</li>
+<li>Verify that a valid part can still proceed normally.</li>
+<li>Check recovery and reset behavior.</li>
+<li>Confirm that the event is recorded where required.</li>
+<li>Document the results and obtain the required approval before release.</li>
+</ol>
+<h3 id="152-examples-of-challenge-tests">15.2 Examples of challenge tests</h3>
+<ul>
+<li>Present an incorrect component variant and confirm that the station blocks it.</li>
+<li>Simulate a missing-component signal using the approved test procedure.</li>
+<li>Verify that a tightening operation cannot proceed with an incorrect program.</li>
+<li>Confirm that a failed leak test prevents normal release.</li>
+<li>Verify that a missing inspection result cannot be interpreted as a pass.</li>
+<li>Simulate a reader timeout and check that the previous engine ID is not reused.</li>
+<li>Confirm that a bypass cannot remain active unintentionally after the approved recovery sequence.</li>
+</ul>
+<p>Testing must be controlled and performed without exposing personnel or equipment to hazards. Do not deliberately damage production parts or bypass safety devices to create a challenge condition.</p>
+<h2 id="16-bypass-management">16. Bypass Management</h2>
+<p>A bypass disables or overrides some normal control condition. It may be necessary for approved maintenance, engineering trials, or defined recovery situations, but it creates risk when poorly controlled.</p>
+<p>A bypass should have:</p>
+<ul>
+<li>A documented reason.</li>
+<li>Authorization from the appropriate role.</li>
+<li>A clearly defined scope.</li>
+<li>Time or cycle limits where practical.</li>
+<li>A visible indication while active.</li>
+<li>An audit record.</li>
+<li>A defined compensating control where required.</li>
+<li>A controlled method for restoring normal operation.</li>
+<li>Verification that the normal poka-yoke function works after restoration.</li>
+</ul>
+<p>Where the risk requires it, production should not continue while the function is bypassed unless an approved alternative control and disposition have been authorized.</p>
+<p>A hidden, permanent bypass is not a poka-yoke solution. It is the removal of the protection.</p>
+<h2 id="17-maintenance-and-preventive-checks">17. Maintenance and Preventive Checks</h2>
+<p>Poka-yoke equipment can deteriorate mechanically, electrically, or logically. Maintenance must confirm both hardware condition and the intended control response.</p>
+<h3 id="171-routine-checks">17.1 Routine checks</h3>
+<ul>
+<li>Inspect sensors, brackets, targets, and connectors.</li>
+<li>Check fixture geometry and locating features for wear.</li>
+<li>Verify that component-identification devices read correctly.</li>
+<li>Review alarms and recurring interlock failures.</li>
+<li>Confirm that the correct recipes and programs are available.</li>
+<li>Check for unauthorized bypasses or overrides.</li>
+<li>Verify the correct sequence and result-handling logic.</li>
+<li>Inspect cables, pneumatic devices, and mechanical actuators.</li>
+<li>Confirm that HMI status matches actual controller state.</li>
+<li>Review recent false accepts, false rejects, and unexpected blocks.</li>
+</ul>
+<h3 id="172-after-maintenance-or-changes">17.2 After maintenance or changes</h3>
+<p>Validation may be required after:</p>
+<ul>
+<li>Sensor replacement or relocation.</li>
+<li>Fixture repair or replacement.</li>
+<li>PLC logic modification.</li>
+<li>Vision job or threshold changes.</li>
+<li>Tightening tool or program changes.</li>
+<li>Barcode reader replacement.</li>
+<li>Product-variant changes.</li>
+<li>Network or interface changes.</li>
+<li>Changes to the production sequence.</li>
+</ul>
+<p>The required validation scope should be based on the change, affected failure modes, and applicable quality and safety procedures.</p>
+<h2 id="18-poka-yoke-kpis">18. Poka-Yoke KPIs</h2>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Purpose</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Defects escaping the station</td>
+<td>Measures failures that pass the intended control</td>
+<td>Indicates possible gaps in prevention or detection</td>
+</tr>
+<tr>
+<td>False-reject rate</td>
+<td>Tracks acceptable products incorrectly blocked</td>
+<td>May reveal unstable sensors or excessive thresholds</td>
+</tr>
+<tr>
+<td>Poka-yoke fault rate</td>
+<td>Tracks failures of the mistake-proofing equipment</td>
+<td>Helps prioritize maintenance and reliability improvements</td>
+</tr>
+<tr>
+<td>Bypass frequency</td>
+<td>Measures how often protection is overridden</td>
+<td>High values warrant investigation of the underlying process</td>
+</tr>
+<tr>
+<td>Repeat-failure rate</td>
+<td>Tracks recurrence of the same mistake or control failure</td>
+<td>Helps evaluate corrective-action effectiveness</td>
+</tr>
+<tr>
+<td>Interlock effectiveness</td>
+<td>Measures whether defined challenge conditions produce the intended response</td>
+<td>Requires planned, controlled validation</td>
+</tr>
+<tr>
+<td>Recovery time</td>
+<td>Measures time needed to restore normal operation</td>
+<td>Helps assess diagnostics and recovery procedures</td>
+</tr>
+<tr>
+<td>Defect escape rate</td>
+<td>Measures defective products found downstream</td>
+<td>Must be defined using a clear denominator and detection source</td>
+</tr>
+<tr>
+<td>Repeat repair rate</td>
+<td>Tracks recurring problems after maintenance</td>
+<td>Indicates whether root causes are being eliminated</td>
+</tr>
+</tbody>
+</table>
+<p>A reduction in station rejects does not automatically mean that quality has improved. Rejects may have decreased because the process improved, or because the detection became less effective. KPI review should include independent evidence of control effectiveness.</p>
+<h2 id="19-rcacapa-example-missing-fastener-escapes-an-assembly-station">19. RCA/CAPA Example: Missing Fastener Escapes an Assembly Station</h2>
+<h3 id="problem">Problem</h3>
+<p>A downstream inspection identifies an engine with a missing fastener, although the assembly station reported a completed cycle.</p>
+<h3 id="potential-causes">Potential causes</h3>
+<ul>
+<li>The station checked only that the tool cycle completed.</li>
+<li>The tool result was not associated with the correct fastener position.</li>
+<li>The PLC reused a previous pass signal.</li>
+<li>The fastener was not present before tightening.</li>
+<li>The tool ran on the wrong position or component.</li>
+<li>The station allowed a manual bypass.</li>
+<li>The HMI displayed a generic pass status that did not represent the complete operation.</li>
+</ul>
+<h3 id="investigation">Investigation</h3>
+<ol>
+<li>Confirm the missing-fastener location and identify the affected engine.</li>
+<li>Retrieve the tool record, PLC sequence, and station traceability history.</li>
+<li>Determine whether the recorded tightening cycle belongs to the correct fastener and engine.</li>
+<li>Review the presence-detection arrangement and the intended detection coverage.</li>
+<li>Check program selection, result-valid timing, and bypass records.</li>
+<li>Reproduce the failure using an approved challenge procedure.</li>
+<li>Identify whether the control failed to prevent the mistake or failed to detect it.</li>
+</ol>
+<h3 id="corrective-and-preventive-actions">Corrective and preventive actions</h3>
+<ul>
+<li>Correct the verified logic, sensing, tooling, or mechanical problem.</li>
+<li>Ensure that required tightening results are associated with the correct position and product.</li>
+<li>Add or improve fastener-presence verification if required by the risk assessment.</li>
+<li>Prevent stale results and uncontrolled bypasses.</li>
+<li>Validate both the normal cycle and the defined failure conditions.</li>
+<li>Review potentially affected engines according to the approved containment process.</li>
+<li>Update maintenance, control, and validation documentation.</li>
+<li>Monitor subsequent defects and poka-yoke performance.</li>
+</ul>
+<p>The corrective action must address the mechanism that allowed the fastener to be missing, not merely add an alarm that operators can acknowledge without resolving the problem.</p>
+<h2 id="20-practical-learning-exercises">20. Practical Learning Exercises</h2>
+<ul>
+<li>Identify the mechanical and electronic poka-yoke devices on an engine assembly station.</li>
+<li>Document the specific mistake each device is intended to prevent or detect.</li>
+<li>Trace a component-presence signal from the sensor through the PLC interlock.</li>
+<li>Verify that the correct part variant is linked to the correct recipe.</li>
+<li>Review how tightening results are linked to the engine and fastener position.</li>
+<li>Test the approved response to a missing or invalid vision result.</li>
+<li>Confirm that a failed leak test prevents normal release.</li>
+<li>Review how stale results and duplicate identity reads are handled.</li>
+<li>Inspect the station for active bypasses and verify their authorization.</li>
+<li>Develop an FMEA entry for one potential assembly error.</li>
+<li>Prepare a controlled challenge-test plan for one poka-yoke function.</li>
+<li>Document the results of a post-maintenance validation.</li>
+<li>Create an RCA/CAPA record for a defect that escaped its intended control.</li>
+</ul>
+<h2 id="21-competency-checklist">21. Competency Checklist</h2>
+<ul>
+<li>Explain poka-yoke and distinguish prevention from detection.</li>
+<li>Identify mechanical, sensor-based, control-based, and informational methods.</li>
+<li>Understand how PLC permissives and sequence checks prevent invalid operations.</li>
+<li>Explain how stale results can defeat mistake-proofing.</li>
+<li>Understand the role of torque, vision, barcode, and leak-testing controls.</li>
+<li>Identify possible false accepts and false rejects.</li>
+<li>Use FMEA to identify where mistake-proofing is required.</li>
+<li>Explain controlled challenge testing and validation.</li>
+<li>Distinguish quality interlocks from safety-rated functions.</li>
+<li>Understand bypass authorization, indication, and restoration.</li>
+<li>Perform maintenance checks on sensors, fixtures, and control interfaces.</li>
+<li>Preserve traceability of faults, overrides, and corrective actions.</li>
+<li>Verify the effectiveness of a corrective action after implementation.</li>
+</ul>
+<h2 id="22-final-technical-summary">22. Final Technical Summary</h2>
+<p>Poka-yoke is the engineering practice of preventing mistakes, detecting incorrect conditions, and stopping defective products from progressing through manufacturing.</p>
+<p>In engine assembly, it can involve mechanical fixtures, component keying, sensors, vision systems, barcode readers, tightening controllers, leak testers, PLC interlocks, and traceability software.</p>
+<p>The most important principles are:</p>
+<ul>
+<li>Prevent the mistake physically where practical.</li>
+<li>Detect the actual failure mode rather than relying on an indirect signal.</li>
+<li>Verify the correct component, recipe, sequence, and process result.</li>
+<li>Prevent missing, invalid, or stale data from being interpreted as a pass.</li>
+<li>Validate the function with controlled challenge tests.</li>
+<li>Control bypasses and restore normal protection after maintenance.</li>
+<li>Keep quality controls separate from safety functions unless the design explicitly supports both.</li>
+<li>Record faults, changes, and validation evidence.</li>
+<li>Measure effectiveness using both station performance and downstream quality results.</li>
+</ul>
+<p>A good poka-yoke system makes the correct process easier to perform, makes common mistakes difficult to commit, and prevents undetected errors from becoming the next station's problem.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\29_Line_Systems\03_Engine_Assembly\13_EOL_Testing - EOL testing</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CNC Controller</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">CNC Controller</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-main-functions-of-a-cnc-controller">2. Main Functions of a CNC Controller</a></li>
+<li><a href="#3-cnc-controller-architecture">3. CNC Controller Architecture</a></li>
+<li><a href="#4-main-components-of-a-cnc-control-system">4. Main Components of a CNC Control System</a><ul>
+<li><a href="#41-cnc-processing-unit">4.1 CNC Processing Unit</a></li>
+<li><a href="#42-cnc-memory-and-storage">4.2 CNC Memory and Storage</a></li>
+<li><a href="#43-cnc-display-and-operator-panel">4.3 CNC Display and Operator Panel</a></li>
+<li><a href="#44-machine-plc">4.4 Machine PLC</a></li>
+</ul>
+</li>
+<li><a href="#5-cnc-controller-versus-plc">5. CNC Controller Versus PLC</a></li>
+<li><a href="#6-cnc-axes-and-coordinate-systems">6. CNC Axes and Coordinate Systems</a><ul>
+<li><a href="#important-coordinate-concepts">Important coordinate concepts</a></li>
+</ul>
+</li>
+<li><a href="#7-cnc-interpolation-and-motion-control">7. CNC Interpolation and Motion Control</a><ul>
+<li><a href="#linear-interpolation">Linear interpolation</a></li>
+<li><a href="#circular-interpolation">Circular interpolation</a></li>
+<li><a href="#feed-rate-control">Feed-rate control</a></li>
+</ul>
+</li>
+<li><a href="#8-cnc-program-execution">8. CNC Program Execution</a></li>
+<li><a href="#9-cnc-operating-modes">9. CNC Operating Modes</a></li>
+<li><a href="#10-machine-reference-and-position-recovery">10. Machine Reference and Position Recovery</a></li>
+<li><a href="#11-cnc-controller-communication-interfaces">11. CNC Controller Communication Interfaces</a></li>
+<li><a href="#12-cnc-controller-manufacturers-and-platforms">12. CNC Controller Manufacturers and Platforms</a></li>
+<li><a href="#13-cnc-parameters-and-machine-configuration">13. CNC Parameters and Machine Configuration</a></li>
+<li><a href="#14-cnc-controller-backups-and-recovery">14. CNC Controller Backups and Recovery</a><ul>
+<li><a href="#backup-principles">Backup principles</a></li>
+</ul>
+</li>
+<li><a href="#15-cnc-alarms-and-diagnostics">15. CNC Alarms and Diagnostics</a><ul>
+<li><a href="#structured-troubleshooting">Structured troubleshooting</a></li>
+</ul>
+</li>
+<li><a href="#16-cnc-controller-hardware-faults">16. CNC Controller Hardware Faults</a></li>
+<li><a href="#17-cnc-controller-environmental-requirements">17. CNC Controller Environmental Requirements</a></li>
+<li><a href="#18-cnc-controller-replacement-procedure">18. CNC Controller Replacement Procedure</a><ul>
+<li><a href="#before-replacement">Before replacement</a></li>
+<li><a href="#during-replacement">During replacement</a></li>
+<li><a href="#after-replacement">After replacement</a></li>
+</ul>
+</li>
+<li><a href="#19-practical-example-cnc-controller-starts-but-axis-will-not-move">19. Practical Example: CNC Controller Starts but Axis Will Not Move</a><ul>
+<li><a href="#situation">Situation</a></li>
+<li><a href="#investigation">Investigation</a></li>
+<li><a href="#possible-findings">Possible findings</a></li>
+<li><a href="#corrective-action">Corrective action</a></li>
+</ul>
+</li>
+<li><a href="#20-practical-example-cnc-controller-replacement-after-hardware-failure">20. Practical Example: CNC Controller Replacement After Hardware Failure</a><ul>
+<li><a href="#situation_1">Situation</a></li>
+<li><a href="#investigation-and-recovery">Investigation and recovery</a></li>
+</ul>
+</li>
+<li><a href="#21-preventive-maintenance-checklist">21. Preventive Maintenance Checklist</a><ul>
+<li><a href="#routine-checks">Routine checks</a></li>
+<li><a href="#planned-maintenance-and-shutdown">Planned maintenance and shutdown</a></li>
+</ul>
+</li>
+<li><a href="#22-key-engineering-principles">22. Key Engineering Principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>A CNC (Computer Numerical Control) controller is the central control system that interprets a machining program and coordinates machine movements, spindle operation, auxiliary functions, and machining sequences to produce a component according to specified dimensions and tolerances.</p>
+<p>The CNC controller converts programmed instructions into coordinated commands for the machine's axes and spindle. It also monitors feedback, processes machine signals, manages operating modes, and communicates with the PLC and other machine subsystems.</p>
+<p>In industrial production, the CNC controller is not simply a program reader. It is part of an integrated control architecture involving motion control, machine sequencing, servo drives, feedback devices, operator interfaces, tool management, and machine safety systems.</p>
+<p>Typical applications include:</p>
+<ul>
+<li>CNC turning and milling machines.</li>
+<li>Machining centres.</li>
+<li>Automotive engine and transmission machining lines.</li>
+<li>Grinding and honing machines.</li>
+<li>Drilling, tapping, and boring machines.</li>
+<li>Multi-axis machining systems.</li>
+<li>Automated production cells with robot loading and unloading.</li>
+</ul>
+<h2 id="2-main-functions-of-a-cnc-controller">2. Main Functions of a CNC Controller</h2>
+<p>The CNC controller performs several interconnected functions.</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Purpose</th>
+<th>Industrial example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Program interpretation</td>
+<td>Reads and processes CNC program instructions</td>
+<td>Executes G-code machining commands</td>
+</tr>
+<tr>
+<td>Axis motion control</td>
+<td>Coordinates linear and rotary axes</td>
+<td>Moves X, Y, and Z axes during milling</td>
+</tr>
+<tr>
+<td>Interpolation</td>
+<td>Calculates coordinated movement between programmed points</td>
+<td>Circular interpolation for a bore</td>
+</tr>
+<tr>
+<td>Feed-rate control</td>
+<td>Regulates programmed tool movement</td>
+<td>Maintains cutting feed during machining</td>
+</tr>
+<tr>
+<td>Spindle control</td>
+<td>Coordinates spindle speed, direction, and operating commands</td>
+<td>Controls spindle speed during drilling</td>
+</tr>
+<tr>
+<td>Position feedback processing</td>
+<td>Compares commanded and actual axis positions</td>
+<td>Detects following error</td>
+</tr>
+<tr>
+<td>PLC coordination</td>
+<td>Handles machine sequence and auxiliary functions</td>
+<td>Controls clamping, doors, and coolant</td>
+</tr>
+<tr>
+<td>Tool management</td>
+<td>Coordinates tool selection and related information</td>
+<td>Requests a tool change</td>
+</tr>
+<tr>
+<td>Alarm management</td>
+<td>Reports control, drive, and machine faults</td>
+<td>Displays an axis-reference alarm</td>
+</tr>
+<tr>
+<td>Operator interface</td>
+<td>Provides program, status, and diagnostic displays</td>
+<td>Shows position, alarms, and program execution</td>
+</tr>
+<tr>
+<td>Data communication</td>
+<td>Exchanges information with external systems</td>
+<td>Transfers programs from a DNC server</td>
+</tr>
+<tr>
+<td>Machine protection</td>
+<td>Participates in defined interlocks and safety functions</td>
+<td>Prevents motion under specified unsafe conditions</td>
+</tr>
+</tbody>
+</table>
+<p>The exact functions depend on the CNC platform, machine builder, software options, and machine configuration.</p>
+<h2 id="3-cnc-controller-architecture">3. CNC Controller Architecture</h2>
+<p>A CNC machine normally contains several control layers. The physical arrangement and division of functions vary by manufacturer.</p>
+<pre><code>Operator / Manufacturing Engineer
+              ↓
+CNC HMI and Operator Panel
+              ↓
+CNC Controller
+    ├── Part Program Interpreter
+    ├── Motion Planning and Interpolation
+    ├── Position and Feed Control
+    ├── Tool and Coordinate Management
+    ├── Alarm and Diagnostic Functions
+    └── Communication Interfaces
+              ↓
+    Servo Drives and Spindle Drive
+              ↓
+    Servo Motors and Spindle Motor
+              ↓
+    Mechanical Machine Axes and Spindle
+
+CNC Controller ↔ Machine PLC
+                       ├── Tool Changer
+                       ├── Coolant and Lubrication
+                       ├── Hydraulic and Pneumatic Systems
+                       ├── Clamping and Unclamping
+                       ├── Door and Machine Interlocks
+                       └── Auxiliary Machine Sequences
+
+Position Feedback → CNC / Drive Control
+Safety Devices → Approved Safety Control System
+</code></pre>
+<p>This is a functional architecture, not a wiring diagram. Some platforms integrate CNC, PLC, and motion functions into a common control platform, while others use separate modules.</p>
+<h2 id="4-main-components-of-a-cnc-control-system">4. Main Components of a CNC Control System</h2>
+<h3 id="41-cnc-processing-unit">4.1 CNC Processing Unit</h3>
+<p>The processing unit executes the CNC software and performs calculations required for machining.</p>
+<p>Its responsibilities may include:</p>
+<ul>
+<li>Reading the active program block.</li>
+<li>Interpreting G-codes, M-codes, and related commands.</li>
+<li>Calculating motion trajectories.</li>
+<li>Coordinating axes.</li>
+<li>Processing tool and coordinate data.</li>
+<li>Communicating with the PLC and drives.</li>
+<li>Managing alarms and operating states.</li>
+</ul>
+<p>A controller processing fault can interrupt machining even when the motors, drives, and mechanical systems are healthy.</p>
+<h3 id="42-cnc-memory-and-storage">4.2 CNC Memory and Storage</h3>
+<p>CNC systems require storage for programs, parameters, machine configuration, tool information, offsets, and diagnostic records.</p>
+<p>Depending on the platform, storage may include internal memory, flash storage, removable media, or external network locations.</p>
+<p>Important maintenance considerations include:</p>
+<ul>
+<li>Available storage capacity.</li>
+<li>Program backup integrity.</li>
+<li>Parameter and configuration backup.</li>
+<li>Data retention after power loss.</li>
+<li>Battery condition where the design uses a battery-backed memory or clock.</li>
+<li>Recovery procedures after controller replacement.</li>
+<li>Software and option compatibility.</li>
+</ul>
+<p>A CNC backup must contain the data needed to restore the machine, not merely a copy of the part program.</p>
+<h3 id="43-cnc-display-and-operator-panel">4.3 CNC Display and Operator Panel</h3>
+<p>The operator panel provides the interface for machine operation, programming, monitoring, and troubleshooting.</p>
+<p>Typical functions include:</p>
+<ul>
+<li>Program editing and execution.</li>
+<li>Manual axis movement.</li>
+<li>Position display.</li>
+<li>Tool and work-offset entry.</li>
+<li>Alarm display.</li>
+<li>Diagnostic screens.</li>
+<li>Machine mode selection.</li>
+<li>Feed and spindle overrides.</li>
+<li>Reference-return operations.</li>
+</ul>
+<p>The operator panel may be integrated with the controller or connected as a separate HMI.</p>
+<p>A display fault does not necessarily mean that the CNC processing unit has failed. Check the display, communication interface, power supply, and controller status before replacing the entire unit.</p>
+<h3 id="44-machine-plc">4.4 Machine PLC</h3>
+<p>The machine PLC handles many of the discrete and sequential functions that support machining.</p>
+<p>Examples include:</p>
+<ul>
+<li>Tool-change sequencing.</li>
+<li>Workpiece clamping.</li>
+<li>Coolant control.</li>
+<li>Lubrication monitoring.</li>
+<li>Hydraulic unit control.</li>
+<li>Pneumatic actuators.</li>
+<li>Door interlocks.</li>
+<li>Pallet-changing sequences.</li>
+<li>Machine-ready conditions.</li>
+<li>Auxiliary alarms.</li>
+</ul>
+<p>The CNC and PLC exchange signals or data to coordinate the machining program with the physical machine.</p>
+<p>For example, an M-code may request a tool change. The CNC program requests the operation, while the PLC executes the required sequence and reports when the tool change is complete.</p>
+<p>The exact division of responsibilities is machine-builder-specific.</p>
+<h2 id="5-cnc-controller-versus-plc">5. CNC Controller Versus PLC</h2>
+<p>A CNC controller and a general-purpose PLC can both execute control logic, but they are designed around different primary responsibilities.</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>CNC controller</th>
+<th>General-purpose PLC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Primary purpose</td>
+<td>Precision machining and coordinated motion</td>
+<td>Machine and process logic</td>
+</tr>
+<tr>
+<td>Typical program</td>
+<td>G-code part program plus control configuration</td>
+<td>Ladder logic, function blocks, structured text, or other supported languages</td>
+</tr>
+<tr>
+<td>Motion</td>
+<td>Integrated interpolation and axis control</td>
+<td>Depends on motion hardware and software capabilities</td>
+</tr>
+<tr>
+<td>Tool coordinates</td>
+<td>Typically includes machining coordinate and offset functions</td>
+<td>Usually requires application-specific implementation</td>
+</tr>
+<tr>
+<td>Cutting feed</td>
+<td>Integrated machining feed control</td>
+<td>Requires programmed logic or motion functionality</td>
+</tr>
+<tr>
+<td>Auxiliary sequences</td>
+<td>Coordinates with machine PLC functions</td>
+<td>Commonly executes these sequences</td>
+</tr>
+<tr>
+<td>Diagnostics</td>
+<td>Axis, spindle, program, and CNC-specific alarms</td>
+<td>I/O, logic, communication, and PLC diagnostics</td>
+</tr>
+</tbody>
+</table>
+<p>Some modern platforms combine CNC, PLC, robotics, and motion functions. The distinction is therefore functional rather than necessarily a distinction between separate physical devices.</p>
+<h2 id="6-cnc-axes-and-coordinate-systems">6. CNC Axes and Coordinate Systems</h2>
+<p>The CNC controller commands movements in a machine coordinate system and applies the relevant work and tool coordinate transformations.</p>
+<p>Common linear axes are:</p>
+<ul>
+<li>X-axis.</li>
+<li>Y-axis.</li>
+<li>Z-axis.</li>
+</ul>
+<p>Rotary axes are often identified as A, B, and C, corresponding conventionally to rotation about X, Y, and Z respectively.</p>
+<p>The actual axis configuration depends on machine construction. A turning centre, vertical machining centre, horizontal machining centre, and five-axis machine can have very different kinematic arrangements.</p>
+<h3 id="important-coordinate-concepts">Important coordinate concepts</h3>
+<p>Machine coordinates: Positions defined relative to the machine's established reference system.</p>
+<p>Work coordinates: Coordinates used to locate the workpiece or programmed part relative to the machine.</p>
+<p>Tool offsets: Values used to account for tool geometry and, depending on the control and machining method, tool-related corrections.</p>
+<p>Reference position: A known machine position established through the machine's reference-return procedure or supported absolute-position system.</p>
+<p>Actual position: The position reported by the control system from its feedback and position-processing architecture.</p>
+<p>Commanded position: The position requested by the CNC motion system.</p>
+<p>The displayed position may be expressed in machine coordinates, work coordinates, or another selected coordinate representation. Always identify the active display and coordinate system before diagnosing a position discrepancy.</p>
+<h2 id="7-cnc-interpolation-and-motion-control">7. CNC Interpolation and Motion Control</h2>
+<p>Interpolation is the process of calculating coordinated axis positions along a programmed path.</p>
+<p>For example, a CNC milling program may command a tool to travel along a straight line while multiple axes move simultaneously. The controller calculates coordinated movement commands so the tool follows the intended path.</p>
+<p>Common motion types include:</p>
+<ul>
+<li>Rapid positioning.</li>
+<li>Linear interpolation.</li>
+<li>Circular interpolation.</li>
+<li>Helical interpolation.</li>
+<li>Rotary-axis movement.</li>
+<li>Multi-axis coordinated movement, where supported.</li>
+</ul>
+<h3 id="linear-interpolation">Linear interpolation</h3>
+<p>A programmed straight-line movement may involve more than one axis. The controller coordinates the axis commands so the resulting tool path follows the specified line.</p>
+<h3 id="circular-interpolation">Circular interpolation</h3>
+<p>Circular interpolation commands a circular path using the supported programming format, such as centre offsets or radius specifications.</p>
+<p>Incorrect coordinate values, incompatible interpolation commands, or unsuitable motion parameters can cause program alarms or unexpected path behavior.</p>
+<h3 id="feed-rate-control">Feed-rate control</h3>
+<p>The controller manages programmed feed according to the active machining mode, axis configuration, motion limits, and override settings.</p>
+<p>Actual motion may be limited by:</p>
+<ul>
+<li>Maximum axis velocity.</li>
+<li>Acceleration and deceleration limits.</li>
+<li>Axis travel limits.</li>
+<li>Servo following-error limits.</li>
+<li>Spindle synchronization requirements.</li>
+<li>Machine kinematic constraints.</li>
+</ul>
+<p>A programmed feed value does not guarantee that every axis can achieve the corresponding motion under every operating condition.</p>
+<h2 id="8-cnc-program-execution">8. CNC Program Execution</h2>
+<p>A typical CNC program contains blocks of instructions. The controller interprets the supported commands and coordinates them with the machine's operating state.</p>
+<p>A simplified program may contain:</p>
+<pre><code>%
+O1001
+G21
+G90
+G54
+T01 M06
+S1500 M03
+G00 X0 Y0
+G43 H01 Z50
+M08
+G01 Z-5 F100
+G00 Z50
+M09
+M05
+M30
+%
+</code></pre>
+<p>This is an illustrative example, not a universal program for a real machine. Its validity and behavior depend on the controller, machine configuration, tool-change implementation, and supported code conventions. The tool length and cutting coordinates must also be suitable for the actual setup.</p>
+<p>Some commands shown are common across many CNC systems, but machine-specific differences exist.</p>
+<p>During execution, the CNC controller may manage:</p>
+<ul>
+<li>Program block interpretation.</li>
+<li>Motion preparation and execution.</li>
+<li>Feed and spindle commands.</li>
+<li>Tool-change requests.</li>
+<li>Auxiliary function handshakes.</li>
+<li>Program pauses and stops.</li>
+<li>Alarm handling and recovery.</li>
+</ul>
+<p>The controller may process program blocks ahead of actual motion using look-ahead or preprocessing. Consequently, the currently displayed block may not always be the block that first caused a physical motion interruption.</p>
+<h2 id="9-cnc-operating-modes">9. CNC Operating Modes</h2>
+<p>The available modes and their exact names depend on the controller.</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Typical purpose</th>
+<th>Maintenance relevance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Automatic / AUTO</td>
+<td>Executes the selected CNC program</td>
+<td>Production cycle and program-related troubleshooting</td>
+</tr>
+<tr>
+<td>Manual / JOG</td>
+<td>Moves axes through manual commands</td>
+<td>Checking axis response under approved conditions</td>
+</tr>
+<tr>
+<td>Handle / MPG</td>
+<td>Allows incremental manual movement</td>
+<td>Controlled positioning and setup</td>
+</tr>
+<tr>
+<td>MDI</td>
+<td>Executes manually entered commands</td>
+<td>Testing permitted commands and machine functions</td>
+</tr>
+<tr>
+<td>Reference return</td>
+<td>Establishes or verifies the machine reference</td>
+<td>Resolving reference and position-related issues</td>
+</tr>
+<tr>
+<td>Edit</td>
+<td>Creates or modifies programs</td>
+<td>Program maintenance and revision control</td>
+</tr>
+<tr>
+<td>Setup</td>
+<td>Supports tooling and workpiece preparation</td>
+<td>Offset and setup verification</td>
+</tr>
+<tr>
+<td>Diagnostics</td>
+<td>Displays controller, axis, PLC, or drive information</td>
+<td>Fault investigation</td>
+</tr>
+</tbody>
+</table>
+<p>Mode selection does not automatically make an operation safe. Machine interlocks, protective devices, operating permissions, and approved procedures still apply.</p>
+<h2 id="10-machine-reference-and-position-recovery">10. Machine Reference and Position Recovery</h2>
+<p>A CNC machine needs a reliable relationship between its internal position system and the physical machine.</p>
+<p>The reference-return process depends on the axis feedback arrangement and machine design.</p>
+<p>Possible arrangements include:</p>
+<ul>
+<li>Incremental feedback with a reference switch and encoder index or another reference method.</li>
+<li>Absolute-position feedback with a supported position-recovery procedure.</li>
+<li>Manufacturer-specific referencing and calibration methods.</li>
+</ul>
+<p>After a battery failure, encoder replacement, mechanical intervention, or controller recovery, the machine may require a reference or position-verification procedure.</p>
+<p>Do not assume that an absolute encoder eliminates every need for machine referencing. Machine configuration, stored position validity, safety requirements, and manufacturer-specific recovery procedures still matter.</p>
+<p>Before returning a machine to production, verify that the reference state and machine coordinate relationship are valid.</p>
+<h2 id="11-cnc-controller-communication-interfaces">11. CNC Controller Communication Interfaces</h2>
+<p>CNC controllers may communicate with:</p>
+<ul>
+<li>Servo drives.</li>
+<li>Spindle drives.</li>
+<li>Machine PLCs.</li>
+<li>Remote I/O.</li>
+<li>Operator panels.</li>
+<li>Tool measurement systems.</li>
+<li>Probing systems.</li>
+<li>Industrial robots.</li>
+<li>DNC or program-management systems.</li>
+<li>Plant monitoring systems.</li>
+</ul>
+<p>Communication may use a manufacturer-specific bus, an industrial Ethernet protocol, serial communication, or another supported interface.</p>
+<p>Troubleshooting should identify the actual communication path involved.</p>
+<p>For example, a CNC controller may be operational while one servo drive is unavailable. In that case, investigate the relevant drive connection, communication status, device configuration, and power state rather than immediately replacing the CNC controller.</p>
+<h2 id="12-cnc-controller-manufacturers-and-platforms">12. CNC Controller Manufacturers and Platforms</h2>
+<p>Different manufacturers offer different controller families, diagnostic methods, programming conventions, configuration tools, and hardware architectures.</p>
+<table>
+<thead>
+<tr>
+<th>Manufacturer or platform</th>
+<th>Common industrial context</th>
+<th>Maintenance focus</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FANUC</td>
+<td>CNC machining centres and turning centres</td>
+<td>CNC alarms, servo diagnostics, parameters, backups</td>
+</tr>
+<tr>
+<td>Siemens SINUMERIK</td>
+<td>Turning, milling, and advanced machining systems</td>
+<td>CNC/PLC integration, axis configuration, diagnostics</td>
+</tr>
+<tr>
+<td>Mitsubishi CNC</td>
+<td>Machining centres and industrial machine tools</td>
+<td>Controller alarms, servo integration, configuration</td>
+</tr>
+<tr>
+<td>Haas CNC</td>
+<td>Haas-built machining centres and turning machines</td>
+<td>Control diagnostics, machine-specific parameters, recovery procedures</td>
+</tr>
+<tr>
+<td>Okuma OSP</td>
+<td>Okuma machining and turning systems</td>
+<td>OSP diagnostics, axis and machine-builder integration</td>
+</tr>
+<tr>
+<td>Heidenhain</td>
+<td>Milling and precision machining systems</td>
+<td>Control-specific diagnostics, axis and feedback analysis</td>
+</tr>
+</tbody>
+</table>
+<p>These are examples, not a complete market list. A machine builder may integrate third-party drives, PLCs, probing systems, and peripheral equipment into a single machine.</p>
+<p>Maintenance rule: Identify the exact controller series, software version, and machine-builder configuration before applying a troubleshooting procedure or parameter change.</p>
+<h2 id="13-cnc-parameters-and-machine-configuration">13. CNC Parameters and Machine Configuration</h2>
+<p>CNC parameters define or influence the controller's behavior. Depending on the platform, they may include axis configuration, machine limits, motion characteristics, feedback settings, communication configuration, and machine-specific functions.</p>
+<p>Examples of parameter-related functions include:</p>
+<ul>
+<li>Axis configuration.</li>
+<li>Reference-return behavior.</li>
+<li>Software travel limits.</li>
+<li>Servo-related configuration.</li>
+<li>Spindle-related configuration.</li>
+<li>Machine interface behavior.</li>
+<li>Tool-change functions.</li>
+<li>Communication settings.</li>
+<li>Coordinate and measurement behavior.</li>
+</ul>
+<p>The meaning, numbering, storage method, and access permissions of parameters vary substantially across controller families.</p>
+<p>Incorrect changes can cause inaccurate positioning, unexpected movement, loss of reference, machine alarms, or equipment damage.</p>
+<p>Before changing parameters:</p>
+<ol>
+<li>Identify the exact controller and machine model.</li>
+<li>Obtain the approved parameter documentation.</li>
+<li>Capture a complete baseline backup using the supported method.</li>
+<li>Record the original value and the reason for the proposed change.</li>
+<li>Obtain the required engineering approval.</li>
+<li>Change only the intended parameter.</li>
+<li>Verify the result under the approved commissioning procedure.</li>
+<li>Record the final value, backup revision, and test outcome.</li>
+</ol>
+<p>Do not copy a parameter set from another machine solely because its controller appears similar. Machine geometry, drive sizing, feedback configuration, and builder-specific functions may differ.</p>
+<h2 id="14-cnc-controller-backups-and-recovery">14. CNC Controller Backups and Recovery</h2>
+<p>A controller backup is essential for recovery after hardware failure, data corruption, controller replacement, or configuration changes.</p>
+<p>Depending on the platform, a complete recovery package may require:</p>
+<ul>
+<li>CNC machine parameters.</li>
+<li>PLC program and associated data.</li>
+<li>Part programs.</li>
+<li>Tool data and offsets.</li>
+<li>Work offsets.</li>
+<li>Axis and spindle configuration.</li>
+<li>Compensation data.</li>
+<li>Machine-builder-specific configuration.</li>
+<li>Drive parameters where required.</li>
+<li>Software versions, licenses, and supported option data.</li>
+<li>Network and device configuration.</li>
+<li>Documentation describing the restoration sequence.</li>
+</ul>
+<p>Some information may reside in different devices and require separate backup procedures.</p>
+<h3 id="backup-principles">Backup principles</h3>
+<ul>
+<li>Use the controller manufacturer's supported backup method.</li>
+<li>Store the backup in an approved location.</li>
+<li>Maintain revision and machine identification.</li>
+<li>Protect backups against unauthorized modification.</li>
+<li>Verify that the files are readable and complete.</li>
+<li>Test restoration through an approved recovery process when feasible.</li>
+<li>Preserve the original configuration before software or parameter changes.</li>
+</ul>
+<p>A file that exists on a USB drive is not necessarily a valid recovery backup. It must contain the correct machine data and be compatible with the intended controller and software environment.</p>
+<h2 id="15-cnc-alarms-and-diagnostics">15. CNC Alarms and Diagnostics</h2>
+<p>A CNC alarm may originate from the controller, PLC, servo drive, spindle drive, feedback system, machine interlocks, or an auxiliary subsystem.</p>
+<p>Typical alarm categories include:</p>
+<ul>
+<li>Program syntax or execution errors.</li>
+<li>Axis reference or travel-limit faults.</li>
+<li>Servo and feedback faults.</li>
+<li>Spindle drive faults.</li>
+<li>PLC sequence timeouts.</li>
+<li>Communication failures.</li>
+<li>Tool-change failures.</li>
+<li>Lubrication or hydraulic faults.</li>
+<li>Temperature-related faults.</li>
+<li>Controller memory or hardware faults.</li>
+</ul>
+<h3 id="structured-troubleshooting">Structured troubleshooting</h3>
+<ol>
+<li>Capture the complete alarm code and description.</li>
+<li>Identify the originating device.</li>
+<li>Record the machine mode, program step, and axis state.</li>
+<li>Review the chronological alarm history.</li>
+<li>Check the relevant PLC, drive, and communication diagnostics.</li>
+<li>Compare the fault with known operating conditions.</li>
+<li>Inspect or test the suspected subsystem using the approved procedure.</li>
+<li>Correct the verified cause.</li>
+<li>Validate operation and document the result.</li>
+</ol>
+<p>An alarm message is an important diagnostic clue, but it is not always a complete root-cause statement.</p>
+<h2 id="16-cnc-controller-hardware-faults">16. CNC Controller Hardware Faults</h2>
+<p>Controller hardware faults may involve power supplies, processors, memory, communication modules, display hardware, or internal storage.</p>
+<p>Possible symptoms include:</p>
+<ul>
+<li>Controller fails to start.</li>
+<li>Controller restarts unexpectedly.</li>
+<li>Display remains blank.</li>
+<li>Hardware or system alarms appear.</li>
+<li>Programs or configuration files become unavailable.</li>
+<li>Communication with drives or PLC stops.</li>
+<li>Memory or storage diagnostics report errors.</li>
+</ul>
+<p>Before replacing the controller, verify the available diagnostics and check external power, connectors, environmental conditions, and related equipment according to the manufacturer's procedures.</p>
+<p>A blank screen alone does not establish that the CNC processor has failed. The display or its power and communication path may be responsible.</p>
+<p>For controller replacement, verify hardware compatibility, software versions, licensing, machine configuration, backups, and the required restoration and commissioning procedure.</p>
+<h2 id="17-cnc-controller-environmental-requirements">17. CNC Controller Environmental Requirements</h2>
+<p>CNC controllers and their associated electronics depend on suitable installation conditions.</p>
+<p>Important environmental factors include:</p>
+<ul>
+<li>Cabinet ambient temperature.</li>
+<li>Cooling and ventilation.</li>
+<li>Dust and conductive contamination.</li>
+<li>Oil mist and coolant ingress.</li>
+<li>Humidity and condensation.</li>
+<li>Vibration.</li>
+<li>Electrical supply quality.</li>
+<li>Electromagnetic interference.</li>
+<li>Connector and cabinet sealing.</li>
+<li>Cooling fan and filter condition.</li>
+</ul>
+<p>A controller that fails only after several hours of operation may be affected by temperature or ventilation, although other causes must also be investigated.</p>
+<p>During preventive maintenance, inspect cabinet cooling, fans, filters, air paths, contamination, and visible signs of overheating. Follow the manufacturer's requirements for cleaning and component replacement.</p>
+<h2 id="18-cnc-controller-replacement-procedure">18. CNC Controller Replacement Procedure</h2>
+<p>Replacing a CNC controller is a configuration-sensitive engineering activity. The physical replacement is only one part of the job.</p>
+<h3 id="before-replacement">Before replacement</h3>
+<ul>
+<li>Identify the exact controller model and hardware revision.</li>
+<li>Record software and firmware versions.</li>
+<li>Preserve CNC and PLC backups.</li>
+<li>Capture machine parameters, offsets, compensation data, and required drive settings.</li>
+<li>Record communication and network configuration.</li>
+<li>Identify licenses and optional functions.</li>
+<li>Confirm the replacement part is approved and compatible.</li>
+<li>Review the manufacturer's replacement procedure.</li>
+</ul>
+<h3 id="during-replacement">During replacement</h3>
+<ul>
+<li>Apply the approved shutdown and isolation procedure.</li>
+<li>Verify the absence of hazardous energy as required.</li>
+<li>Protect connectors, modules, and circuit boards against electrostatic discharge.</li>
+<li>Label and verify connections before disassembly.</li>
+<li>Install the approved replacement according to the manufacturer's instructions.</li>
+<li>Restore only the correct machine-specific configuration.</li>
+</ul>
+<h3 id="after-replacement">After replacement</h3>
+<ul>
+<li>Verify controller startup and diagnostics.</li>
+<li>Confirm CNC-to-PLC and CNC-to-drive communication.</li>
+<li>Check axis reference and position validity.</li>
+<li>Verify required safety functions and interlocks.</li>
+<li>Confirm tooling, offsets, and compensation data.</li>
+<li>Perform controlled motion and machine-function checks.</li>
+<li>Validate machining performance using the approved acceptance procedure.</li>
+<li>Update configuration records and maintenance history.</li>
+</ul>
+<p>Production should resume only after the required functional, dimensional, and safety checks have been completed.</p>
+<h2 id="19-practical-example-cnc-controller-starts-but-axis-will-not-move">19. Practical Example: CNC Controller Starts but Axis Will Not Move</h2>
+<h3 id="situation">Situation</h3>
+<p>A CNC machine powers up normally. The HMI is functional, the part program loads, and no obvious controller hardware alarm is present. However, one axis does not move.</p>
+<h3 id="investigation">Investigation</h3>
+<ol>
+<li>Confirm the selected operating mode and the axis-enable state.</li>
+<li>Review CNC alarms and the affected axis diagnostics.</li>
+<li>Check whether the axis is referenced where required.</li>
+<li>Review the relevant machine interlocks and PLC permissives.</li>
+<li>Check servo-drive status and alarm history.</li>
+<li>Verify communication with the affected drive.</li>
+<li>Inspect the feedback and motor-power connection status using approved procedures.</li>
+<li>Investigate mechanical obstruction only after applying the required safety controls.</li>
+</ol>
+<h3 id="possible-findings">Possible findings</h3>
+<ul>
+<li>The axis has not completed its reference-return procedure.</li>
+<li>The PLC is withholding the enable signal because an interlock is not satisfied.</li>
+<li>The servo drive has a feedback alarm.</li>
+<li>The drive is unavailable on the communication network.</li>
+<li>A machine-specific condition prevents movement.</li>
+</ul>
+<h3 id="corrective-action">Corrective action</h3>
+<p>Resolve the confirmed cause and verify axis readiness, reference validity, and controlled motion. Do not assume the CNC controller has failed simply because it cannot move the axis.</p>
+<h2 id="20-practical-example-cnc-controller-replacement-after-hardware-failure">20. Practical Example: CNC Controller Replacement After Hardware Failure</h2>
+<h3 id="situation_1">Situation</h3>
+<p>A CNC controller fails to boot and reports a hardware-related fault. The maintenance team has an approved replacement unit.</p>
+<h3 id="investigation-and-recovery">Investigation and recovery</h3>
+<ol>
+<li>Capture available fault information and confirm the failed subsystem.</li>
+<li>Verify the replacement controller's exact compatibility.</li>
+<li>Locate the latest approved, machine-specific backup.</li>
+<li>Confirm whether CNC, PLC, drive, tool, offset, and compensation data require separate restoration.</li>
+<li>Restore the required configuration using the manufacturer's procedure.</li>
+<li>Verify controller, PLC, drive, and network communication.</li>
+<li>Confirm axis reference and machine coordinate validity.</li>
+<li>Perform the required safety and controlled-motion checks.</li>
+<li>Validate machine functions and machining accuracy before production release.</li>
+<li>Record the replaced hardware, restored backup revision, and acceptance results.</li>
+</ol>
+<p>A controller that boots successfully is not necessarily ready for production. Configuration restoration and machine validation are essential.</p>
+<h2 id="21-preventive-maintenance-checklist">21. Preventive Maintenance Checklist</h2>
+<h3 id="routine-checks">Routine checks</h3>
+<ul>
+<li>Review active CNC alarms and recurring fault history.</li>
+<li>Check controller startup and diagnostic status.</li>
+<li>Inspect cabinet cooling and ventilation.</li>
+<li>Inspect accessible connectors and cables.</li>
+<li>Check available storage and backup status.</li>
+<li>Review unexpected controller restarts.</li>
+<li>Confirm communication with the PLC and servo drives.</li>
+<li>Check for recurring reference, feedback, or axis faults.</li>
+<li>Record significant changes in controller behavior.</li>
+</ul>
+<h3 id="planned-maintenance-and-shutdown">Planned maintenance and shutdown</h3>
+<ul>
+<li>Verify current CNC and PLC backups.</li>
+<li>Confirm that the latest approved machine configuration is documented.</li>
+<li>Inspect cabinet filters, fans, and environmental conditions.</li>
+<li>Check for contamination, overheating, and connector damage.</li>
+<li>Review recurring alarms and related maintenance orders.</li>
+<li>Verify backup integrity using the supported procedure.</li>
+<li>Review obsolete controller hardware and replacement availability.</li>
+<li>Document approved parameter or software changes.</li>
+<li>Complete required functional and safety verification after intervention.</li>
+</ul>
+<p>Maintenance intervals should follow manufacturer recommendations, machine criticality, operating conditions, and the site's maintenance strategy.</p>
+<h2 id="22-key-engineering-principles">22. Key Engineering Principles</h2>
+<ul>
+<li>The CNC controller coordinates program execution, motion, machining functions, and machine-system communication.</li>
+<li>CNC, PLC, servo drive, spindle drive, HMI, and safety systems have related but distinct responsibilities.</li>
+<li>A CNC alarm may originate from a connected subsystem rather than the controller itself.</li>
+<li>Coordinate systems, tool offsets, and reference validity must be understood before diagnosing position errors.</li>
+<li>Machine-specific parameters must never be copied or modified without compatibility checks and approved backups.</li>
+<li>Controller replacement requires configuration restoration and functional validation, not merely hardware installation.</li>
+<li>Environmental conditions and cabinet cooling can significantly affect control-system reliability.</li>
+<li>Error history, diagnostic information, and machine-specific backups are essential maintenance assets.</li>
+<li>Every intervention should preserve traceability through drawings, configuration records, test results, and maintenance history.</li>
+<li>Production release must follow the applicable safety, functional, and machining-acceptance procedures.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\18_PM\05_CNC\02_Servo - Servo</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

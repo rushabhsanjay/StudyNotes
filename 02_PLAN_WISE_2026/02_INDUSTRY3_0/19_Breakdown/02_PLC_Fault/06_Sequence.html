@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLC Fault: Sequence Troubleshooting, Stuck Steps, and Missing Permissives</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">PLC Fault: Sequence Troubleshooting, Stuck Steps, and Missing Permissives</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-understand-sequence-based-machine-control">2. Understand Sequence-Based Machine Control</a><ul>
+<li><a href="#21-important-sequence-terms">2.1 Important sequence terms</a></li>
+</ul>
+</li>
+<li><a href="#3-what-is-a-stuck-step">3. What Is a Stuck Step?</a><ul>
+<li><a href="#31-common-causes">3.1 Common causes</a></li>
+</ul>
+</li>
+<li><a href="#4-understand-permissives-and-interlocks">4. Understand Permissives and Interlocks</a><ul>
+<li><a href="#41-common-permissives">4.1 Common permissives</a></li>
+<li><a href="#42-how-to-identify-the-missing-permissive">4.2 How to identify the missing permissive</a></li>
+</ul>
+</li>
+<li><a href="#5-diagnostic-method-find-the-first-failed-transition">5. Diagnostic Method: Find the First Failed Transition</a><ul>
+<li><a href="#step-1-confirm-the-current-sequence-state">Step 1: Confirm the current sequence state</a></li>
+<li><a href="#step-2-identify-the-expected-next-state">Step 2: Identify the expected next state</a></li>
+<li><a href="#step-3-read-the-transition-conditions">Step 3: Read the transition conditions</a></li>
+<li><a href="#step-4-trace-the-failed-condition-upstream">Step 4: Trace the failed condition upstream</a></li>
+<li><a href="#step-5-correct-the-root-cause">Step 5: Correct the root cause</a></li>
+<li><a href="#step-6-verify-normal-sequence-operation">Step 6: Verify normal sequence operation</a></li>
+</ul>
+</li>
+<li><a href="#6-sensors-and-completion-feedback">6. Sensors and Completion Feedback</a><ul>
+<li><a href="#61-typical-sensor-related-causes">6.1 Typical sensor-related causes</a></li>
+<li><a href="#62-example-clamp-closes-but-sequence-does-not-advance">6.2 Example: Clamp closes but sequence does not advance</a></li>
+<li><a href="#63-practical-signal-verification">6.3 Practical signal verification</a></li>
+</ul>
+</li>
+<li><a href="#7-timers-and-sequence-timeouts">7. Timers and Sequence Timeouts</a><ul>
+<li><a href="#71-typical-timer-related-faults">7.1 Typical timer-related faults</a></li>
+<li><a href="#72-how-to-troubleshoot">7.2 How to troubleshoot</a></li>
+</ul>
+</li>
+<li><a href="#8-actuators-drives-and-robot-completion">8. Actuators, Drives, and Robot Completion</a><ul>
+<li><a href="#diagnostic-method">Diagnostic method</a></li>
+</ul>
+</li>
+<li><a href="#9-robot-and-plc-handshake-faults">9. Robot and PLC Handshake Faults</a><ul>
+<li><a href="#91-example-handshake">9.1 Example handshake</a></li>
+<li><a href="#92-common-handshake-problems">9.2 Common handshake problems</a></li>
+<li><a href="#93-troubleshooting-handshake-faults">9.3 Troubleshooting handshake faults</a></li>
+</ul>
+</li>
+<li><a href="#10-sequence-state-and-reset-problems">10. Sequence State and Reset Problems</a><ul>
+<li><a href="#101-sequence-state-checks">10.1 Sequence-state checks</a></li>
+</ul>
+</li>
+<li><a href="#11-manual-automatic-and-recovery-modes">11. Manual, Automatic, and Recovery Modes</a><ul>
+<li><a href="#manual-mode">Manual mode</a></li>
+<li><a href="#automatic-mode">Automatic mode</a></li>
+<li><a href="#recovery-mode">Recovery mode</a></li>
+<li><a href="#common-mode-related-faults">Common mode-related faults</a></li>
+</ul>
+</li>
+<li><a href="#12-parallel-operations-and-synchronization">12. Parallel Operations and Synchronization</a></li>
+<li><a href="#13-communication-and-data-validity-in-sequences">13. Communication and Data Validity in Sequences</a></li>
+<li><a href="#14-practical-troubleshooting-case-stuck-at-clamp-step">14. Practical Troubleshooting Case: Stuck at Clamp Step</a></li>
+<li><a href="#15-practical-troubleshooting-case-robot-completion-missing">15. Practical Troubleshooting Case: Robot Completion Missing</a></li>
+<li><a href="#16-root-cause-recording-template">16. Root-Cause Recording Template</a></li>
+<li><a href="#17-common-troubleshooting-mistakes">17. Common Troubleshooting Mistakes</a></li>
+<li><a href="#18-interview-questions-and-answers">18. Interview Questions and Answers</a><ul>
+<li><a href="#q1-what-is-a-stuck-step-in-a-plc-sequence">Q1. What is a stuck step in a PLC sequence?</a></li>
+<li><a href="#q2-what-is-a-permissive">Q2. What is a permissive?</a></li>
+<li><a href="#q3-how-do-you-troubleshoot-a-stuck-sequence-step">Q3. How do you troubleshoot a stuck sequence step?</a></li>
+<li><a href="#q4-what-is-the-difference-between-a-permissive-and-an-interlock">Q4. What is the difference between a permissive and an interlock?</a></li>
+<li><a href="#q5-why-might-a-cylinder-extend-but-the-sequence-fail-to-advance">Q5. Why might a cylinder extend but the sequence fail to advance?</a></li>
+<li><a href="#q6-why-should-a-sequence-not-be-reset-blindly">Q6. Why should a sequence not be reset blindly?</a></li>
+<li><a href="#q7-how-do-you-troubleshoot-a-robot-handshake-fault">Q7. How do you troubleshoot a robot handshake fault?</a></li>
+<li><a href="#q8-why-is-a-sequence-timeout-useful">Q8. Why is a sequence timeout useful?</a></li>
+<li><a href="#q9-what-should-you-do-if-a-sequence-advances-only-when-a-completion-bit-is-forced">Q9. What should you do if a sequence advances only when a completion bit is forced?</a></li>
+<li><a href="#q10-when-is-sequence-troubleshooting-complete">Q10. When is sequence troubleshooting complete?</a></li>
+</ul>
+</li>
+<li><a href="#19-completion-checklist">19. Completion Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\19_Breakdown\02_PLC_Fault\06_Sequence</code></p>
+<h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>Sequence troubleshooting is the process of diagnosing why an automated machine fails to advance through its intended operating steps, remains stuck in one state, skips an operation, or stops while waiting for a required condition.</p>
+<p>In an automated production line, the PLC usually coordinates operations in a defined order. A machine may clamp a component, verify its position, start a machining operation, wait for completion, release the component, and transfer it to the next station.</p>
+<p>Each operation depends on specific inputs, outputs, timing conditions, permissives, and completion feedback.</p>
+<p>Common sequence faults include:</p>
+<ul>
+<li>A sequence step remains active indefinitely.</li>
+<li>The next step never becomes active.</li>
+<li>A required permissive is missing.</li>
+<li>A sensor never confirms the expected position.</li>
+<li>A timer expires without the expected transition.</li>
+<li>A completion signal arrives too early or too late.</li>
+<li>A machine remains in an incorrect operating mode.</li>
+<li>A fault or interlock prevents progression.</li>
+<li>A sequence bit is latched or reset incorrectly.</li>
+<li>The PLC advances, but the physical machine does not complete the operation.</li>
+</ul>
+<p>The objective is to identify the exact transition that failed, determine why its conditions are not satisfied, correct the verified root cause, and validate the sequence without bypassing required protections.</p>
+<h2 id="2-understand-sequence-based-machine-control">2. Understand Sequence-Based Machine Control</h2>
+<p>A sequence is a set of defined machine states or steps. Each step represents an operation or stage of the machine cycle.</p>
+<p>A simple machining station might follow this sequence:</p>
+<pre><code>Step 0: Idle
+    ↓ Start request accepted
+Step 10: Check machine ready
+    ↓ All required permissives satisfied
+Step 20: Clamp component
+    ↓ Clamp-closed feedback received
+Step 30: Start machining
+    ↓ Machining completion received
+Step 40: Retract tool
+    ↓ Retracted-position feedback received
+Step 50: Unclamp component
+    ↓ Clamp-open feedback received
+Step 60: Cycle complete
+    ↓ Reset or next-cycle conditions satisfied
+Step 0: Idle
+</code></pre>
+<p>This is an illustrative sequence. Actual machine logic may use state machines, step numbers, multiple parallel operations, subroutines, or vendor-specific sequence instructions.</p>
+<h3 id="21-important-sequence-terms">2.1 Important sequence terms</h3>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Step or state</td>
+<td>The current stage of the machine cycle</td>
+</tr>
+<tr>
+<td>Transition</td>
+<td>The condition or event that allows movement to another step</td>
+</tr>
+<tr>
+<td>Permissive</td>
+<td>A condition that must be satisfied before an operation is allowed</td>
+</tr>
+<tr>
+<td>Interlock</td>
+<td>A condition that inhibits an operation to prevent an unacceptable machine state</td>
+</tr>
+<tr>
+<td>Completion feedback</td>
+<td>A signal confirming that an operation has reached its intended result</td>
+</tr>
+<tr>
+<td>Timeout</td>
+<td>A defined time limit for an expected operation or response</td>
+</tr>
+<tr>
+<td>Recovery step</td>
+<td>A defined state or procedure used to restore operation after an interruption</td>
+</tr>
+<tr>
+<td>Initialization</td>
+<td>Establishing the required starting state before normal operation</td>
+</tr>
+<tr>
+<td>Sequence reset</td>
+<td>Returning sequence state to a defined condition according to the control design</td>
+</tr>
+</tbody>
+</table>
+<p>A permissive and an interlock are related but not identical in every control design. A permissive generally allows an action when satisfied; an interlock prevents or inhibits an action when a prohibited condition exists.</p>
+<h2 id="3-what-is-a-stuck-step">3. What Is a Stuck Step?</h2>
+<p>A stuck step occurs when the sequence remains in its current state because the required transition condition is not becoming true, or because the program does not execute the expected transition.</p>
+<p>For example, the machine remains at <code>Step 20: Clamp component</code>.</p>
+<p>The expected transition may require:</p>
+<ul>
+<li>Clamp command active.</li>
+<li>Clamp-closed sensor ON.</li>
+<li>Pressure or force condition satisfied.</li>
+<li>No active fault.</li>
+<li>Correct operating mode.</li>
+</ul>
+<p>If any required condition remains false, the sequence may correctly refuse to advance.</p>
+<p>The key diagnostic question is not simply, "Why is the machine stuck?" It is:</p>
+<p>Which exact condition is preventing the current step from transitioning, and why is that condition not satisfied?</p>
+<h3 id="31-common-causes">3.1 Common causes</h3>
+<ul>
+<li>Sensor does not detect the expected position.</li>
+<li>Actuator fails to move.</li>
+<li>Solenoid valve is not energized.</li>
+<li>Pneumatic or hydraulic pressure is insufficient.</li>
+<li>Drive is not ready.</li>
+<li>Robot has not completed its operation.</li>
+<li>Communication data is stale or unavailable.</li>
+<li>Safety-related or process interlock is active.</li>
+<li>Automatic mode is not selected.</li>
+<li>Timer or counter condition is incorrect.</li>
+<li>Transition logic references the wrong variable.</li>
+<li>A sequence reset or initialization condition is incorrect.</li>
+<li>Program changes altered the intended sequence behavior.</li>
+</ul>
+<h2 id="4-understand-permissives-and-interlocks">4. Understand Permissives and Interlocks</h2>
+<p>A machine may require several conditions to be satisfied before an operation begins.</p>
+<p>For example, a conveyor start permissive might be represented conceptually as:</p>
+<pre><code>Conveyor_Start_Permissive =
+    Auto_Mode
+    AND Drive_Ready
+    AND No_Active_Fault
+    AND Upstream_Transfer_Allowed
+    AND Downstream_Station_Ready
+</code></pre>
+<p>This example represents ordinary control logic only. Safety functions must be implemented and validated through the appropriate safety-related system.</p>
+<p>If <code>Conveyor_Start_Permissive</code> is false, the next task is to identify which individual condition is false.</p>
+<h3 id="41-common-permissives">4.1 Common permissives</h3>
+<ul>
+<li>Correct operating mode selected.</li>
+<li>Previous step completed.</li>
+<li>Required sensor confirmed.</li>
+<li>Drive ready and available.</li>
+<li>Robot in the required state.</li>
+<li>Workpiece detected.</li>
+<li>Fixture or clamp in the required position.</li>
+<li>Required pressure, vacuum, or process condition available.</li>
+<li>Downstream station ready.</li>
+<li>No active machine fault.</li>
+<li>Required communication data valid.</li>
+<li>Required process parameters within limits.</li>
+</ul>
+<h3 id="42-how-to-identify-the-missing-permissive">4.2 How to identify the missing permissive</h3>
+<ol>
+<li>Find the sequence step that is currently active.</li>
+<li>Identify the logic that controls its transition.</li>
+<li>List every condition in the transition expression.</li>
+<li>Monitor the live value of each condition.</li>
+<li>Identify which condition does not match the expected state.</li>
+<li>Trace that condition to its source.</li>
+<li>Determine whether the cause is a physical device, configuration, communication issue, or program logic.</li>
+<li>Correct the actual cause and verify the transition.</li>
+</ol>
+<p>Do not remove a permissive merely because it is the condition preventing the machine from running. It may exist to prevent collisions, protect tooling, maintain product quality, or enforce process order.</p>
+<h2 id="5-diagnostic-method-find-the-first-failed-transition">5. Diagnostic Method: Find the First Failed Transition</h2>
+<p>The most effective sequence diagnostic method is to work from the active state toward the next expected state.</p>
+<h3 id="step-1-confirm-the-current-sequence-state">Step 1: Confirm the current sequence state</h3>
+<p>Check the active step number, state variable, active sequence bit, or relevant function-block status.</p>
+<p>Do not rely only on the HMI's displayed step. Verify the underlying PLC value because the display may be stale, mapped incorrectly, or showing a different sequence instance.</p>
+<h3 id="step-2-identify-the-expected-next-state">Step 2: Identify the expected next state</h3>
+<p>Read the sequence logic and determine which state should follow the current one.</p>
+<p>For example:</p>
+<pre><code>Current_Step = 20
+Expected_Next_Step = 30
+</code></pre>
+<p>These numbers are illustrative.</p>
+<h3 id="step-3-read-the-transition-conditions">Step 3: Read the transition conditions</h3>
+<p>Suppose the transition from step 20 to step 30 requires:</p>
+<pre><code>Step_20_Complete =
+    Clamp_Closed
+    AND Pressure_OK
+    AND Drive_Ready
+    AND NOT Fault_Active
+</code></pre>
+<p>Monitor all four conditions. The first condition that is unexpectedly false becomes the starting point for deeper investigation.</p>
+<h3 id="step-4-trace-the-failed-condition-upstream">Step 4: Trace the failed condition upstream</h3>
+<p>For example:</p>
+<pre><code>Clamp_Closed = FALSE
+</code></pre>
+<p>Investigate:</p>
+<ul>
+<li>Is the clamp physically closed?</li>
+<li>Is the sensor aligned?</li>
+<li>Does the sensor indicator change?</li>
+<li>Does the PLC input status change?</li>
+<li>Is the input assigned to the correct tag?</li>
+<li>Is the sensor signal affected by a force or override?</li>
+<li>Is the clamp actuator receiving the required command?</li>
+<li>Is pressure sufficient to complete the movement?</li>
+</ul>
+<h3 id="step-5-correct-the-root-cause">Step 5: Correct the root cause</h3>
+<p>Repair or configure the component that caused the missing condition. Do not modify sequence logic until evidence establishes that the logic itself is wrong.</p>
+<h3 id="step-6-verify-normal-sequence-operation">Step 6: Verify normal sequence operation</h3>
+<p>Confirm that the transition occurs under the intended conditions, the next step performs correctly, and the machine handles the relevant fault and recovery conditions as designed.</p>
+<h2 id="6-sensors-and-completion-feedback">6. Sensors and Completion Feedback</h2>
+<p>Many sequence faults originate from a mismatch between the physical machine and the feedback available to the PLC.</p>
+<h3 id="61-typical-sensor-related-causes">6.1 Typical sensor-related causes</h3>
+<ul>
+<li>Sensor damaged or misaligned.</li>
+<li>Target not reaching the detection point.</li>
+<li>Loose connector.</li>
+<li>Broken cable.</li>
+<li>Incorrect PNP/NPN interface.</li>
+<li>Input channel fault.</li>
+<li>Incorrect PLC tag mapping.</li>
+<li>Sensor signal remains active due to a short circuit.</li>
+<li>Sensor detects the wrong target.</li>
+<li>Mechanical position does not match the expected position.</li>
+<li>Feedback is delayed or intermittent.</li>
+</ul>
+<h3 id="62-example-clamp-closes-but-sequence-does-not-advance">6.2 Example: Clamp closes but sequence does not advance</h3>
+<p>The clamp appears physically closed, but the PLC remains in the clamping step.</p>
+<p>Investigate the signal path in order:</p>
+<pre><code>Clamp Physical Position
+          ↓
+Clamp-Closed Sensor
+          ↓
+Field Wiring
+          ↓
+PLC Input Channel
+          ↓
+PLC Input Tag
+          ↓
+Sequence Transition Condition
+          ↓
+Next Sequence Step
+</code></pre>
+<p>The physical position alone does not prove that the PLC received the required feedback. Likewise, a sensor LED does not prove that the correct PLC input tag is changing.</p>
+<h3 id="63-practical-signal-verification">6.3 Practical signal verification</h3>
+<table>
+<thead>
+<tr>
+<th>Observation</th>
+<th>Likely investigation area</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Clamp is not physically closed</td>
+<td>Actuator, valve, pressure, obstruction, or mechanical issue</td>
+</tr>
+<tr>
+<td>Clamp is closed but sensor indicator is OFF</td>
+<td>Sensor alignment, target, sensor supply, or sensor fault</td>
+</tr>
+<tr>
+<td>Sensor indicator is ON but PLC input is OFF</td>
+<td>Wiring, input supply, channel, or electrical interface</td>
+</tr>
+<tr>
+<td>PLC input is ON but logic tag is OFF</td>
+<td>Tag mapping, inversion, alias, or program logic</td>
+</tr>
+<tr>
+<td>Logic tag is ON but transition remains false</td>
+<td>Another permissive, incorrect transition expression, or sequence execution issue</td>
+</tr>
+<tr>
+<td>Transition condition is true but step does not change</td>
+<td>State-update logic, competing assignments, execution order, or sequence implementation</td>
+</tr>
+</tbody>
+</table>
+<p>Use the electrical drawing and actual I/O configuration to verify the signal path.</p>
+<h2 id="7-timers-and-sequence-timeouts">7. Timers and Sequence Timeouts</h2>
+<p>Timers are commonly used to detect operations that take too long or to introduce deliberate delays.</p>
+<p>Examples include:</p>
+<ul>
+<li>Waiting for a cylinder to extend.</li>
+<li>Waiting for a robot operation to complete.</li>
+<li>Allowing a process delay before transfer.</li>
+<li>Detecting a missing sensor response.</li>
+<li>Monitoring a drive's readiness.</li>
+</ul>
+<h3 id="71-typical-timer-related-faults">7.1 Typical timer-related faults</h3>
+<ul>
+<li>Timer enable never becomes true.</li>
+<li>Timer resets every scan.</li>
+<li>Preset is incorrect.</li>
+<li>Timer is using the wrong time unit.</li>
+<li>Done bit is referenced incorrectly.</li>
+<li>Completion feedback arrives after the timeout.</li>
+<li>Timer instance is reused by multiple operations.</li>
+<li>The timeout alarm is latched and not cleared by the intended reset conditions.</li>
+</ul>
+<h3 id="72-how-to-troubleshoot">7.2 How to troubleshoot</h3>
+<ol>
+<li>Identify the timer associated with the active sequence step.</li>
+<li>Check the timer's enable condition.</li>
+<li>Monitor elapsed time and preset.</li>
+<li>Confirm whether the timer accumulates, resets, or completes as expected.</li>
+<li>Check whether a timer-done signal is part of the transition.</li>
+<li>Verify the physical operation time against the machine design.</li>
+<li>Correct the actual cause of the timeout.</li>
+<li>Validate the operation and fault response.</li>
+</ol>
+<p>Do not increase a timer preset simply to make a timeout disappear. The original timeout may be detecting a failing actuator, delayed feedback, or a process condition that requires intervention.</p>
+<h2 id="8-actuators-drives-and-robot-completion">8. Actuators, Drives, and Robot Completion</h2>
+<p>A sequence may wait for a physical operation to finish even though the PLC command has already been issued.</p>
+<p>Common examples:</p>
+<ul>
+<li>Cylinder does not extend.</li>
+<li>Clamp does not reach its closed position.</li>
+<li>VFD does not achieve the expected running state.</li>
+<li>Servo axis does not reach its target position.</li>
+<li>Robot program does not reach the completion handshake.</li>
+<li>CNC cycle-complete signal is missing.</li>
+<li>Pneumatic pressure does not reach the required threshold.</li>
+</ul>
+<h3 id="diagnostic-method">Diagnostic method</h3>
+<ul>
+<li>Verify the command generated by the PLC.</li>
+<li>Verify the command reaches the relevant output or communication interface.</li>
+<li>Check the actuator's local state and diagnostics.</li>
+<li>Verify energy supply, such as electrical power, pneumatic pressure, or hydraulic pressure.</li>
+<li>Confirm that the mechanical operation is not obstructed.</li>
+<li>Verify completion feedback.</li>
+<li>Check whether the sequence is waiting for the correct feedback variable.</li>
+<li>Confirm that the operation's timeout and fault handling are functioning as intended.</li>
+</ul>
+<p>A PLC command being ON does not prove that the actuator has moved. The command path and the physical result must be investigated separately.</p>
+<h2 id="9-robot-and-plc-handshake-faults">9. Robot and PLC Handshake Faults</h2>
+<p>Automated production lines commonly use handshake signals between a PLC and a robot controller.</p>
+<p>Typical signals may include:</p>
+<ul>
+<li>Robot ready.</li>
+<li>Robot program selected.</li>
+<li>Start request.</li>
+<li>Busy.</li>
+<li>Program running.</li>
+<li>Cycle complete.</li>
+<li>Robot fault.</li>
+<li>Part-present confirmation.</li>
+<li>Request to enter or leave a station.</li>
+</ul>
+<p>Actual signal names and sequencing differ by integrator and robot manufacturer.</p>
+<h3 id="91-example-handshake">9.1 Example handshake</h3>
+<pre><code>PLC verifies robot-ready conditions
+              ↓
+PLC issues start request
+              ↓
+Robot accepts the request
+              ↓
+Robot performs the programmed operation
+              ↓
+Robot asserts completion
+              ↓
+PLC verifies completion conditions
+              ↓
+PLC advances the machine sequence
+</code></pre>
+<h3 id="92-common-handshake-problems">9.2 Common handshake problems</h3>
+<ul>
+<li>Start request never reaches the robot.</li>
+<li>Robot is not in the expected mode.</li>
+<li>Wrong robot program is selected.</li>
+<li>Robot reports busy or faulted.</li>
+<li>PLC waits for the wrong completion bit.</li>
+<li>Completion bit is reset before the PLC reads it.</li>
+<li>PLC and robot disagree about signal timing.</li>
+<li>Communication is unavailable or stale.</li>
+<li>A handshake signal is retained from a previous cycle.</li>
+<li>The required reset or acknowledgement sequence is incomplete.</li>
+</ul>
+<h3 id="93-troubleshooting-handshake-faults">9.3 Troubleshooting handshake faults</h3>
+<ol>
+<li>Monitor the PLC's request signals.</li>
+<li>Check the robot's corresponding input signals.</li>
+<li>Confirm that the robot accepts the request.</li>
+<li>Monitor the robot's status and output signals.</li>
+<li>Verify that the PLC receives the expected completion feedback.</li>
+<li>Check the timing and reset behavior of each handshake signal.</li>
+<li>Confirm the expected program and operating mode.</li>
+<li>Correct the verified issue and test the full handshake cycle.</li>
+</ol>
+<p>Do not force a robot-complete signal to advance the PLC sequence. That can make the PLC proceed while the robot is still moving or has not completed the operation.</p>
+<h2 id="10-sequence-state-and-reset-problems">10. Sequence State and Reset Problems</h2>
+<p>Some sequence faults arise because the controller's internal state does not match the machine's physical state.</p>
+<p>Examples include:</p>
+<ul>
+<li>PLC restarts while the machine is halfway through a cycle.</li>
+<li>Retentive sequence state remains active after power loss.</li>
+<li>Initialization does not execute as intended.</li>
+<li>Multiple step bits remain active.</li>
+<li>No step bit is active.</li>
+<li>A reset clears the sequence but not the associated actuator state.</li>
+<li>Recovery logic assumes the machine is in a position it has not reached.</li>
+<li>A step is re-entered repeatedly.</li>
+<li>Two routines write to the same state variable.</li>
+</ul>
+<h3 id="101-sequence-state-checks">10.1 Sequence-state checks</h3>
+<ul>
+<li>Confirm the active step and expected next step.</li>
+<li>Determine whether the design allows one or multiple active steps.</li>
+<li>Check how the sequence initializes after startup.</li>
+<li>Verify the reset conditions.</li>
+<li>Compare the PLC state with the actual physical machine state.</li>
+<li>Inspect retained variables and initialization logic.</li>
+<li>Check for competing assignments to state variables.</li>
+<li>Confirm that recovery procedures handle interrupted cycles.</li>
+</ul>
+<p>Never reset a sequence solely to clear an HMI message. A sequence reset may cause outputs to change or leave the machine in a state that requires controlled recovery.</p>
+<h2 id="11-manual-automatic-and-recovery-modes">11. Manual, Automatic, and Recovery Modes</h2>
+<p>The same actuator may behave differently depending on the selected mode.</p>
+<h3 id="manual-mode">Manual mode</h3>
+<p>The operator or technician may control individual functions under defined permissives. Manual mode should not be assumed to bypass interlocks or safety functions.</p>
+<h3 id="automatic-mode">Automatic mode</h3>
+<p>The PLC executes the intended sequence and requires the configured transition conditions.</p>
+<h3 id="recovery-mode">Recovery mode</h3>
+<p>Recovery logic may allow a controlled return to a known state after a fault or interrupted cycle. Its exact behavior is machine-specific.</p>
+<h3 id="common-mode-related-faults">Common mode-related faults</h3>
+<ul>
+<li>Automatic mode is not selected.</li>
+<li>A mode-transition condition is missing.</li>
+<li>A manual command is still active.</li>
+<li>The machine is waiting for an initialization or homing operation.</li>
+<li>Recovery mode requires an acknowledgement.</li>
+<li>The selected mode does not support the expected sequence transition.</li>
+<li>A retained fault prevents automatic restart.</li>
+</ul>
+<p>Check the intended mode and its conditions before changing sequence logic.</p>
+<h2 id="12-parallel-operations-and-synchronization">12. Parallel Operations and Synchronization</h2>
+<p>Some machine sequences allow multiple operations to occur simultaneously. The next state may require all parallel operations to finish.</p>
+<p>Example:</p>
+<pre><code>Step 100: Start parallel operations
+              ↓
+       ┌──────┴──────┐
+       ↓             ↓
+   Clamp part     Move axis
+       ↓             ↓
+   Clamp ready    Axis in position
+       └──────┬──────┘
+              ↓
+     Both completion signals true
+              ↓
+       Step 110: Continue
+</code></pre>
+<p>If one operation finishes while the other remains incomplete, the sequence may wait indefinitely.</p>
+<p>Check:</p>
+<ul>
+<li>Which parallel branches are active.</li>
+<li>Whether each branch has a valid completion condition.</li>
+<li>Whether a completion signal is reset too early.</li>
+<li>Whether the transition uses AND or OR logic as intended.</li>
+<li>Whether the two operations depend on each other's state.</li>
+<li>Whether an operation failed without setting an alarm.</li>
+<li>Whether shared resources prevent one branch from progressing.</li>
+</ul>
+<p>A missing completion signal from one branch can block the entire cycle even when all other branches appear healthy.</p>
+<h2 id="13-communication-and-data-validity-in-sequences">13. Communication and Data Validity in Sequences</h2>
+<p>Sequence logic may depend on values received from a robot, VFD, CNC, remote I/O station, vision system, or another PLC.</p>
+<p>A missing transition can therefore be a communication or data-validity problem rather than a sequence-program defect.</p>
+<p>Check:</p>
+<ul>
+<li>Device communication status.</li>
+<li>Data freshness.</li>
+<li>Device-ready and completion bits.</li>
+<li>Correct mapping of incoming data.</li>
+<li>Correct reset and handshake timing.</li>
+<li>Device mode and fault status.</li>
+<li>Whether a disconnected device leaves the last value displayed.</li>
+<li>Whether the sequence validates data quality before using it.</li>
+</ul>
+<p>For example, a robot-complete bit may appear ON in an HMI but represent an old value from before the current cycle. Verify that the handshake is valid for the current operation.</p>
+<h2 id="14-practical-troubleshooting-case-stuck-at-clamp-step">14. Practical Troubleshooting Case: Stuck at Clamp Step</h2>
+<p>Machine condition: A station stops after the PLC commands a fixture clamp.</p>
+<p>Observed behavior:</p>
+<ul>
+<li>PLC remains in RUN.</li>
+<li>Clamp output command is ON.</li>
+<li>Fixture does not receive a valid clamp-complete confirmation.</li>
+<li>The sequence remains at the clamping step.</li>
+</ul>
+<p>Investigation:</p>
+<ol>
+<li>Confirm the active step and expected transition.</li>
+<li>Verify the clamp output command.</li>
+<li>Check the solenoid or actuator command path.</li>
+<li>Verify pneumatic or hydraulic supply, where applicable.</li>
+<li>Check the clamp's physical position.</li>
+<li>Inspect the closed-position sensor and wiring.</li>
+<li>Monitor the corresponding PLC input and logic tag.</li>
+<li>Check for forces, incorrect mapping, or an active interlock.</li>
+<li>Correct the verified cause.</li>
+<li>Test the clamp and confirm that the sequence advances normally.</li>
+</ol>
+<p>Possible root cause: The clamp reaches its mechanical end position, but a misaligned sensor fails to detect it.</p>
+<p>Corrective action: Correct the sensor alignment according to the machine specification and verify reliable detection. Do not force the clamp-complete signal to bypass the missing feedback.</p>
+<p>Verification: The PLC receives the correct sensor status, the sequence advances only when the required conditions are met, and the station completes the intended cycle.</p>
+<h2 id="15-practical-troubleshooting-case-robot-completion-missing">15. Practical Troubleshooting Case: Robot Completion Missing</h2>
+<p>Machine condition: The PLC issues a robot start request, but the machine never advances to the transfer step.</p>
+<p>Observed behavior:</p>
+<ul>
+<li>Robot controller is powered.</li>
+<li>PLC start request is active.</li>
+<li>Robot may be running or waiting.</li>
+<li>PLC's robot-complete condition remains false.</li>
+</ul>
+<p>Investigation:</p>
+<ol>
+<li>Verify that the robot receives the start request.</li>
+<li>Check robot mode, selected program, and controller diagnostics.</li>
+<li>Confirm whether the robot accepted the request.</li>
+<li>Monitor the robot's busy, fault, and completion signals.</li>
+<li>Verify the completion-signal mapping at the PLC.</li>
+<li>Check whether the robot is waiting for another PLC handshake.</li>
+<li>Check whether a signal is being cleared prematurely.</li>
+<li>Correct the actual handshake or device fault.</li>
+<li>Run the approved recovery and functional test.</li>
+</ol>
+<p>Possible root cause: The PLC and robot use mismatched handshake logic after a program revision, so the PLC waits for a completion signal that is not generated under the new sequence.</p>
+<p>Verification: The request, acceptance, busy, completion, and reset signals follow the intended order, and the full machine sequence completes without forced signals.</p>
+<h2 id="16-root-cause-recording-template">16. Root-Cause Recording Template</h2>
+<pre><code>Machine / Station:
+PLC / Controller:
+Sequence Name:
+Active Step:
+Expected Next Step:
+Date and Time:
+
+Machine Symptom:
+Operating Mode:
+Relevant Permissives:
+Missing Transition Condition:
+Physical Device Involved:
+Input / Output Tags:
+Timer / Counter / State Variables:
+Communication Status:
+Active Faults:
+Recent Program Changes:
+
+Physical Condition Verified:
+PLC Input Verified:
+Logic Condition Verified:
+Output Command Verified:
+Device Feedback Verified:
+
+Verified Root Cause:
+Corrective Action:
+Program / Hardware Changes:
+Force / Override Status:
+
+Functional Test:
+Sequence Completion Test:
+Fault Recovery Test:
+Interlock Verification:
+Adjacent Station Verification:
+Production Verification:
+
+Downtime:
+Maintenance Record Reference:
+</code></pre>
+<h2 id="17-common-troubleshooting-mistakes">17. Common Troubleshooting Mistakes</h2>
+<ul>
+<li>Resetting the sequence without confirming the physical machine state.</li>
+<li>Assuming the HMI's displayed step is the actual PLC state.</li>
+<li>Changing transition logic before checking the physical feedback.</li>
+<li>Removing a permissive without understanding its purpose.</li>
+<li>Increasing timeout values to hide slow or failed equipment.</li>
+<li>Forcing completion signals to advance a sequence.</li>
+<li>Ignoring stale robot or remote-device handshake signals.</li>
+<li>Assuming that an output command proves an actuator moved.</li>
+<li>Failing to check parallel operations.</li>
+<li>Overlooking initialization and retained-state behavior.</li>
+<li>Testing only the immediate operation instead of the complete cycle.</li>
+<li>Ignoring recovery behavior after an interrupted cycle.</li>
+<li>Making undocumented online edits during a breakdown.</li>
+<li>Failing to verify safety-related functions after changes.</li>
+</ul>
+<h2 id="18-interview-questions-and-answers">18. Interview Questions and Answers</h2>
+<h3 id="q1-what-is-a-stuck-step-in-a-plc-sequence">Q1. What is a stuck step in a PLC sequence?</h3>
+<p>A stuck step occurs when the sequence remains in its current state because the required transition condition is not satisfied or the state-transition logic is not executing as intended.</p>
+<h3 id="q2-what-is-a-permissive">Q2. What is a permissive?</h3>
+<p>A permissive is a condition that must be satisfied before a specified operation is allowed. Examples include drive-ready status, correct operating mode, required position feedback, or downstream station readiness.</p>
+<h3 id="q3-how-do-you-troubleshoot-a-stuck-sequence-step">Q3. How do you troubleshoot a stuck sequence step?</h3>
+<p>Identify the active state, determine the expected next state, monitor the transition conditions, locate the first unexpected condition, trace it to its source, correct the verified cause, and validate the complete operation.</p>
+<h3 id="q4-what-is-the-difference-between-a-permissive-and-an-interlock">Q4. What is the difference between a permissive and an interlock?</h3>
+<p>A permissive generally establishes that the conditions for an operation are satisfied. An interlock inhibits an operation when a prohibited condition exists. Exact terminology and implementation vary by machine and control design.</p>
+<h3 id="q5-why-might-a-cylinder-extend-but-the-sequence-fail-to-advance">Q5. Why might a cylinder extend but the sequence fail to advance?</h3>
+<p>The completion sensor may not detect the cylinder position, the PLC may not receive the input, the tag may be incorrectly mapped, or another transition condition may remain false.</p>
+<h3 id="q6-why-should-a-sequence-not-be-reset-blindly">Q6. Why should a sequence not be reset blindly?</h3>
+<p>The PLC's internal state may no longer match the machine's physical state. Resetting can change outputs, interrupt recovery logic, or cause an unexpected movement.</p>
+<h3 id="q7-how-do-you-troubleshoot-a-robot-handshake-fault">Q7. How do you troubleshoot a robot handshake fault?</h3>
+<p>Check the PLC's request signals, the robot's received inputs, its mode and program, its status and completion outputs, the PLC's feedback mapping, and the timing and reset behavior of the handshake.</p>
+<h3 id="q8-why-is-a-sequence-timeout-useful">Q8. Why is a sequence timeout useful?</h3>
+<p>It detects an operation that has not completed within the defined period. It helps identify failed actuators, missing feedback, communication problems, and other conditions that prevent progression.</p>
+<h3 id="q9-what-should-you-do-if-a-sequence-advances-only-when-a-completion-bit-is-forced">Q9. What should you do if a sequence advances only when a completion bit is forced?</h3>
+<p>Investigate why the real completion condition is missing. Check the physical operation, feedback sensor, mapping, communication, and program logic. Remove the force according to procedure and correct the actual cause.</p>
+<h3 id="q10-when-is-sequence-troubleshooting-complete">Q10. When is sequence troubleshooting complete?</h3>
+<p>When the root cause has been corrected, the expected transitions occur under the intended conditions, the complete sequence and recovery behavior are verified, and the machine operates within its approved safety and process requirements.</p>
+<h2 id="19-completion-checklist">19. Completion Checklist</h2>
+<ul>
+<li>Explain sequence states, transitions, permissives, and interlocks.</li>
+<li>Identify the active step and expected next step.</li>
+<li>Trace the first failed transition condition.</li>
+<li>Verify sensors and field feedback against PLC input status.</li>
+<li>Diagnose actuator, drive, robot, and completion-feedback faults.</li>
+<li>Investigate timer and timeout behavior.</li>
+<li>Verify initialization, reset, and retained-state logic.</li>
+<li>Diagnose manual, automatic, and recovery-mode issues.</li>
+<li>Investigate parallel operations and synchronization.</li>
+<li>Verify communication and handshake data freshness.</li>
+<li>Correct the root cause without bypassing required protections.</li>
+<li>Test the complete sequence and relevant recovery conditions.</li>
+<li>Document the fault, corrective action, and verification evidence.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\19_Breakdown\03_Drive_Fault\01_Power - Power: Supply and DC bus</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

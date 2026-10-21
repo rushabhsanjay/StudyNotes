@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HMI Storage</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">HMI Storage</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-purpose-of-hmi-storage">2. Purpose of HMI storage</a></li>
+<li><a href="#3-main-types-of-storage">3. Main types of storage</a><ul>
+<li><a href="#31-internal-flash-storage">3.1 Internal flash storage</a></li>
+<li><a href="#32-ram">3.2 RAM</a></li>
+<li><a href="#33-removable-storage">3.3 Removable storage</a></li>
+</ul>
+</li>
+<li><a href="#4-what-hmi-data-may-be-stored">4. What HMI data may be stored?</a></li>
+<li><a href="#5-storage-architecture-in-an-industrial-hmi-system">5. Storage architecture in an industrial HMI system</a></li>
+<li><a href="#6-storage-capacity-and-sizing">6. Storage capacity and sizing</a><ul>
+<li><a href="#example">Example</a></li>
+</ul>
+</li>
+<li><a href="#7-data-logging-and-storage-growth">7. Data logging and storage growth</a><ul>
+<li><a href="#storage-growth-controls">Storage growth controls</a></li>
+</ul>
+</li>
+<li><a href="#8-storage-performance-and-reliability">8. Storage performance and reliability</a></li>
+<li><a href="#9-common-hmi-storage-faults">9. Common HMI storage faults</a></li>
+<li><a href="#10-hmi-storage-troubleshooting-procedure">10. HMI storage troubleshooting procedure</a></li>
+<li><a href="#11-backup-and-restoration">11. Backup and restoration</a><ul>
+<li><a href="#before-restoring">Before restoring</a></li>
+<li><a href="#after-restoring">After restoring</a></li>
+</ul>
+</li>
+<li><a href="#12-security-and-data-integrity">12. Security and data integrity</a></li>
+<li><a href="#13-preventive-maintenance-checklist">13. Preventive maintenance checklist</a><ul>
+<li><a href="#routine-checks">Routine checks</a></li>
+<li><a href="#periodic-checks">Periodic checks</a></li>
+</ul>
+</li>
+<li><a href="#14-practical-industrial-example">14. Practical industrial example</a></li>
+<li><a href="#15-key-principles">15. Key principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>HMI storage refers to the memory and storage resources used by a Human-Machine Interface (HMI) to store its application, configuration, runtime files, historical data, recipes, alarm records, logs, and other information required for operation and recovery.</p>
+<p>In industrial automation, storage is important because an HMI may continue to operate only if its application and required data remain accessible. Storage failure, corruption, insufficient capacity, or incorrect configuration can cause application startup failures, loss of historical records, or inability to restore the panel after replacement.</p>
+<p>HMI storage may be built into the panel or provided by removable memory cards, USB devices, industrial PCs, network storage, or connected servers.</p>
+<p>Important distinction: HMI application storage, operating-system storage, runtime memory, and historical-data storage are different resources. A panel can have sufficient free storage but still fail because it has insufficient RAM or a corrupted runtime application.</p>
+<h2 id="2-purpose-of-hmi-storage">2. Purpose of HMI storage</h2>
+<p>HMI storage supports several functions:</p>
+<ul>
+<li>Application execution: Provides access to the HMI project and runtime files.</li>
+<li>Configuration retention: Preserves communication settings, display configuration, and other supported parameters.</li>
+<li>Recipe management: Stores product recipes and process settings where the application uses local storage.</li>
+<li>Alarm history: Retains alarm events and acknowledgement information according to the application design.</li>
+<li>Data logging: Stores trends, production values, and diagnostic records.</li>
+<li>Backup and restoration: Provides a location for project archives or recovery packages.</li>
+<li>User management: Stores supported user configuration and related application data.</li>
+<li>Diagnostics: Retains logs that help identify application faults and storage problems.</li>
+<li>Data exchange: Allows approved import and export of recipes, reports, and configuration files.</li>
+</ul>
+<p>Not every HMI stores all these items locally. Some applications store historical records on a server, while the panel stores only the runtime application and a limited amount of configuration data.</p>
+<h2 id="3-main-types-of-storage">3. Main types of storage</h2>
+<table>
+<thead>
+<tr>
+<th>Storage type</th>
+<th>Description</th>
+<th>Typical use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Internal flash</td>
+<td>Non-volatile memory integrated into the panel</td>
+<td>Runtime, operating-system files, and configuration</td>
+</tr>
+<tr>
+<td>SSD or industrial storage drive</td>
+<td>Persistent storage used in industrial PCs or advanced HMI systems</td>
+<td>Applications, logs, archives, and larger datasets</td>
+</tr>
+<tr>
+<td>RAM</td>
+<td>Volatile working memory</td>
+<td>Running applications, temporary data, and runtime operations</td>
+</tr>
+<tr>
+<td>Removable memory card</td>
+<td>Manufacturer-supported removable storage</td>
+<td>Project transfer, application recovery, or data storage where supported</td>
+</tr>
+<tr>
+<td>USB storage</td>
+<td>Removable external storage</td>
+<td>Approved project transfer, exports, and backups</td>
+</tr>
+<tr>
+<td>Network storage</td>
+<td>Storage accessed through an approved network connection</td>
+<td>Centralized backups, files, or shared data</td>
+</tr>
+<tr>
+<td>Database server</td>
+<td>A database service storing structured records</td>
+<td>Production history, alarms, trends, and reports</td>
+</tr>
+<tr>
+<td>Cloud storage</td>
+<td>Remote storage accessed through an authorized service</td>
+<td>Selected enterprise data and offsite retention where permitted</td>
+</tr>
+</tbody>
+</table>
+<h3 id="31-internal-flash-storage">3.1 Internal flash storage</h3>
+<p>Internal flash is commonly used for persistent application and configuration files in panel HMIs.</p>
+<p>Its advantages include compact size, no moving parts, and persistence across normal power cycles. However, flash storage has finite write endurance, and its failure can affect the availability of the application or stored data.</p>
+<p>Frequent unnecessary writes, power interruption during critical operations, filesystem corruption, and aging hardware can contribute to storage-related faults.</p>
+<h3 id="32-ram">3.2 RAM</h3>
+<p>RAM is used while the HMI application and operating system are running.</p>
+<p>RAM typically holds:</p>
+<ul>
+<li>Active application data.</li>
+<li>Display and screen objects.</li>
+<li>Communication buffers.</li>
+<li>Runtime variables and temporary calculations.</li>
+<li>Cached values and other working data.</li>
+</ul>
+<p>RAM is generally volatile, meaning its contents are lost when power is removed unless the platform provides a separate persistence mechanism.</p>
+<p>Insufficient RAM may cause slow screen changes, application instability, or runtime failure even when substantial flash storage remains available.</p>
+<h3 id="33-removable-storage">3.3 Removable storage</h3>
+<p>Some HMIs support SD cards, USB devices, or proprietary memory cards for specific tasks.</p>
+<p>Possible uses include:</p>
+<ul>
+<li>Loading or transferring an approved HMI project.</li>
+<li>Storing exported recipes and reports.</li>
+<li>Supporting manufacturer-defined restoration procedures.</li>
+<li>Collecting diagnostic information.</li>
+</ul>
+<p>Support varies by panel model and firmware. A removable card should not be assumed to contain a complete restorable image merely because it can store project files.</p>
+<h2 id="4-what-hmi-data-may-be-stored">4. What HMI data may be stored?</h2>
+<table>
+<thead>
+<tr>
+<th>Data category</th>
+<th>Examples</th>
+<th>Recovery consideration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HMI project</td>
+<td>Screens, navigation, graphics, scripts, and objects</td>
+<td>Preserve the native project and its dependencies</td>
+</tr>
+<tr>
+<td>Runtime files</td>
+<td>Compiled application and runtime resources</td>
+<td>Confirm compatibility with the target panel</td>
+</tr>
+<tr>
+<td>System configuration</td>
+<td>Network settings, regional settings, and device configuration</td>
+<td>May require separate export or reconfiguration</td>
+</tr>
+<tr>
+<td>PLC communication settings</td>
+<td>Controller addresses, tag mappings, and communication parameters</td>
+<td>Validate against the actual machine configuration</td>
+</tr>
+<tr>
+<td>Recipes</td>
+<td>Product-specific process parameters</td>
+<td>Verify which values are approved for restoration</td>
+</tr>
+<tr>
+<td>Alarm history</td>
+<td>Alarm occurrences, timestamps, and acknowledgements</td>
+<td>Historical data may be stored separately from the project</td>
+</tr>
+<tr>
+<td>Trends and logs</td>
+<td>Process values, diagnostic information, and event records</td>
+<td>Confirm retention period and storage destination</td>
+</tr>
+<tr>
+<td>User configuration</td>
+<td>Roles, permissions, and user accounts</td>
+<td>Follow the platform's approved backup and security procedures</td>
+</tr>
+<tr>
+<td>License information</td>
+<td>Runtime or feature licensing data</td>
+<td>Confirm transfer and recovery requirements</td>
+</tr>
+<tr>
+<td>Diagnostic logs</td>
+<td>Runtime errors, communication failures, and system events</td>
+<td>Useful for troubleshooting intermittent faults</td>
+</tr>
+</tbody>
+</table>
+<p>A normal project backup may not include all runtime history, current recipe values, user data, or licensing information. Define the required recovery scope before creating the backup.</p>
+<h2 id="5-storage-architecture-in-an-industrial-hmi-system">5. Storage architecture in an industrial HMI system</h2>
+<p>A typical architecture separates the local HMI application from centrally stored operational data.</p>
+<pre><code>Operator
+   ↓
+HMI Display and Runtime
+   ↓
+Local Storage
+   ├── HMI project and runtime files
+   ├── Configuration
+   ├── Local recipes and logs
+   └── Temporary files
+   ↓
+Industrial Network
+   ├── PLC and machine devices
+   ├── SCADA or historian
+   └── Database or approved file server
+</code></pre>
+<p>The actual architecture depends on the system. An advanced HMI may run on an industrial PC and use network databases, whereas a compact panel may store its project and selected records entirely on internal flash.</p>
+<p>Centralized storage can simplify retention and reporting, but it introduces network, server, access-control, and backup dependencies. Local storage can improve independence from the network, but it may offer limited capacity and can be lost when the panel fails.</p>
+<h2 id="6-storage-capacity-and-sizing">6. Storage capacity and sizing</h2>
+<p>Storage capacity must be sufficient for the runtime application, configuration, logs, recipes, temporary files, and the expected growth of stored data.</p>
+<p>A useful planning relationship is:</p>
+<div class="math-display">\[ S\_{\text{required}} = S\_{\text{application}} + S\_{\text{configuration}} + S\_{\text{logs}} + S\_{\text{recipes}} + S\_{\text{temporary}} + S\_{\text{reserve}} \]</div>
+<p>Where each term represents the expected storage allocation for that category.</p>
+<p>The reserve provides capacity for future changes, temporary operations, and unexpected data growth. The required reserve depends on the platform and application.</p>
+<h3 id="example">Example</h3>
+<p>Assume a panel has the following estimated storage requirements:</p>
+<table>
+<thead>
+<tr>
+<th>Data category</th>
+<th>Estimated size</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HMI application</td>
+<td>250 MB</td>
+</tr>
+<tr>
+<td>Configuration and dependencies</td>
+<td>100 MB</td>
+</tr>
+<tr>
+<td>Local logs and history</td>
+<td>500 MB</td>
+</tr>
+<tr>
+<td>Recipes and exports</td>
+<td>150 MB</td>
+</tr>
+<tr>
+<td>Temporary working space</td>
+<td>100 MB</td>
+</tr>
+<tr>
+<td>Reserved free capacity</td>
+<td>400 MB</td>
+</tr>
+<tr>
+<td>Total required capacity</td>
+<td>1,500 MB</td>
+</tr>
+</tbody>
+</table>
+<p>The panel would require at least 1,500 MB of usable storage for this estimate. The selected storage device must also account for the operating system, manufacturer-reserved partitions, filesystem overhead, and other files not included in the example.</p>
+<p>A device advertised as having a particular capacity may expose less usable space. Always assess the actual free capacity reported by the system.</p>
+<h2 id="7-data-logging-and-storage-growth">7. Data logging and storage growth</h2>
+<p>HMI applications may log alarms, process values, operator actions, and production information. Logging can gradually consume available storage if retention and cleanup are not configured correctly.</p>
+<p>For fixed-size records, approximate storage growth can be estimated as:</p>
+<div class="math-display">\[ S = R \times T \times N \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(S\)</span> is the estimated storage consumed.</li>
+<li><span class="math-inline">\(R\)</span> is the average storage used per record.</li>
+<li><span class="math-inline">\(T\)</span> is the number of records generated per unit of time.</li>
+<li><span class="math-inline">\(N\)</span> is the total time period expressed in matching units.</li>
+</ul>
+<p>For example, if an application stores 1,000 records per day at an average of 2 KB per record, the approximate raw record storage is:</p>
+<div class="math-display">\[ 1{,}000 \times 2\text{ KB} = 2\text{ MB/day} \]</div>
+<p>Over 90 days, this is approximately 180 MB before indexing, filesystem overhead, metadata, and other storage costs.</p>
+<p>Actual database and log sizes may be higher. Some logging systems also use compression, circular buffers, or fixed retention limits.</p>
+<h3 id="storage-growth-controls">Storage growth controls</h3>
+<ul>
+<li>Set appropriate retention periods.</li>
+<li>Configure circular logging where supported and suitable.</li>
+<li>Archive records to an approved server when required.</li>
+<li>Avoid excessive sampling frequencies without a clear operational need.</li>
+<li>Monitor available space and growth trends.</li>
+<li>Confirm that log rotation and deletion policies work as intended.</li>
+<li>Preserve required records before clearing storage.</li>
+</ul>
+<p>Deleting logs can remove evidence needed for fault investigation, quality analysis, or audit purposes. Follow retention requirements before performing cleanup.</p>
+<h2 id="8-storage-performance-and-reliability">8. Storage performance and reliability</h2>
+<p>Capacity alone does not determine storage suitability. Read/write performance, reliability, temperature, power quality, and compatibility also matter.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Meaning</th>
+<th>Possible impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Read speed</td>
+<td>Rate at which stored data can be retrieved</td>
+<td>Application loading and report access</td>
+</tr>
+<tr>
+<td>Write speed</td>
+<td>Rate at which data can be saved</td>
+<td>Logging delays and file operations</td>
+</tr>
+<tr>
+<td>Write endurance</td>
+<td>Expected ability to withstand repeated writes</td>
+<td>Long-term reliability of flash storage</td>
+</tr>
+<tr>
+<td>Available capacity</td>
+<td>Remaining usable storage</td>
+<td>Risk of write failures and application problems</td>
+</tr>
+<tr>
+<td>Filesystem integrity</td>
+<td>Consistency of the storage structure</td>
+<td>File access, boot, or runtime failures</td>
+</tr>
+<tr>
+<td>Power-loss behavior</td>
+<td>How storage handles unexpected power interruption</td>
+<td>Risk of incomplete writes or corruption</td>
+</tr>
+<tr>
+<td>Environmental rating</td>
+<td>Suitability for temperature, vibration, and other conditions</td>
+<td>Reliability in the installed location</td>
+</tr>
+</tbody>
+</table>
+<p>Use storage devices approved for the target HMI. Consumer memory cards or USB drives may not be suitable for continuous industrial operation.</p>
+<h2 id="9-common-hmi-storage-faults">9. Common HMI storage faults</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible causes</th>
+<th>Checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HMI application will not start</td>
+<td>Corrupted project, missing runtime files, full storage, or system fault</td>
+<td>Check startup messages, available space, and application integrity</td>
+</tr>
+<tr>
+<td>Storage-full alarm</td>
+<td>Excessive logging, large exports, temporary files, or insufficient capacity</td>
+<td>Inspect usage by category and verify retention settings</td>
+</tr>
+<tr>
+<td>Recipes cannot be saved</td>
+<td>Full storage, write permissions, damaged filesystem, or application error</td>
+<td>Check free space, permissions, and recipe-storage configuration</td>
+</tr>
+<tr>
+<td>Historical data is missing</td>
+<td>Retention cleanup, incorrect storage destination, logging failure, or database issue</td>
+<td>Check log configuration, server availability, and retention policy</td>
+</tr>
+<tr>
+<td>Application loads slowly</td>
+<td>Slow storage, excessive file access, low RAM, or heavy runtime workload</td>
+<td>Separate storage performance from processor and memory limitations</td>
+</tr>
+<tr>
+<td>Project transfer fails</td>
+<td>Unsupported media, insufficient space, incompatible files, or access restrictions</td>
+<td>Verify supported transfer method and target compatibility</td>
+</tr>
+<tr>
+<td>Files become corrupted</td>
+<td>Power interruption, storage degradation, or filesystem problems</td>
+<td>Check system diagnostics and use approved recovery procedures</td>
+</tr>
+<tr>
+<td>HMI repeatedly restarts</td>
+<td>System fault, application crash, power instability, or storage issue</td>
+<td>Examine startup logs and power diagnostics before concluding storage is responsible</td>
+</tr>
+<tr>
+<td>USB or memory card is not detected</td>
+<td>Unsupported format, faulty media, connector damage, or configuration issue</td>
+<td>Verify approved media requirements and hardware status</td>
+</tr>
+</tbody>
+</table>
+<p>Do not immediately format a storage device when a fault appears. Formatting may permanently destroy the application, configuration, logs, and recovery data needed to restore the panel.</p>
+<h2 id="10-hmi-storage-troubleshooting-procedure">10. HMI storage troubleshooting procedure</h2>
+<ol>
+<li>Confirm the symptom. Determine whether the problem concerns application startup, file saving, historical data, slow performance, or media detection.</li>
+<li>Check system diagnostics. Review storage warnings, runtime logs, operating-system messages, and available capacity.</li>
+<li>Inspect storage usage. Identify large logs, exports, temporary files, and other unexpected growth.</li>
+<li>Check application configuration. Verify storage destinations, write permissions, retention policies, and logging rates.</li>
+<li>Check the hardware. Inspect removable media, connectors, and power conditions according to the manufacturer's procedure.</li>
+<li>Protect existing data. Back up the application and preserve required logs before making destructive changes.</li>
+<li>Correct the cause. Adjust retention, repair configuration, replace failed media, or restore approved files as appropriate.</li>
+<li>Verify operation. Confirm application startup, recipe saving, logging, alarm handling, and communication with the PLC.</li>
+<li>Document the result. Record the fault, corrective action, affected files, and any replaced components.</li>
+</ol>
+<p>If storage errors continue after cleanup, investigate hardware degradation, filesystem integrity, power quality, and runtime faults rather than repeatedly deleting files.</p>
+<h2 id="11-backup-and-restoration">11. Backup and restoration</h2>
+<p>HMI storage management must include a defined backup and restoration method.</p>
+<p>A recovery package may include:</p>
+<ul>
+<li>Native HMI engineering project.</li>
+<li>Required libraries and project dependencies.</li>
+<li>Runtime files where supported.</li>
+<li>Panel model and firmware information.</li>
+<li>HMI runtime and engineering software versions.</li>
+<li>Communication settings and tag configuration.</li>
+<li>Recipe data and required historical records.</li>
+<li>User configuration and licensing requirements handled securely.</li>
+<li>Instructions for restoring and validating the application.</li>
+</ul>
+<h3 id="before-restoring">Before restoring</h3>
+<ul>
+<li>Verify the replacement panel model and supported runtime.</li>
+<li>Confirm project compatibility.</li>
+<li>Identify which data is included in the backup and which data requires separate recovery.</li>
+<li>Preserve the existing panel data where possible and authorized.</li>
+<li>Confirm the approved restoration method.</li>
+</ul>
+<h3 id="after-restoring">After restoring</h3>
+<ul>
+<li>Confirm the HMI starts correctly.</li>
+<li>Verify screen navigation and touch operation.</li>
+<li>Check PLC communication and tag updates.</li>
+<li>Validate recipes, alarms, trends, and required historical records.</li>
+<li>Confirm user permissions and other required settings.</li>
+<li>Test the relevant machine functions under the approved commissioning procedure.</li>
+</ul>
+<p>A successful project transfer does not prove that the complete HMI configuration has been restored.</p>
+<h2 id="12-security-and-data-integrity">12. Security and data integrity</h2>
+<p>HMI storage may contain sensitive machine information, production records, user data, and network configuration.</p>
+<p>Recommended controls include:</p>
+<ul>
+<li>Restrict access to authorized users.</li>
+<li>Store backups in approved repositories.</li>
+<li>Protect credentials and security-sensitive configuration.</li>
+<li>Verify files before restoring them to production equipment.</li>
+<li>Use approved removable media and transfer procedures.</li>
+<li>Protect central storage with suitable access control and backup policies.</li>
+<li>Maintain traceability for project and configuration changes.</li>
+<li>Follow the site's retention and deletion requirements.</li>
+<li>Avoid connecting unknown USB devices to industrial HMIs.</li>
+</ul>
+<p>Removable media can introduce malware as well as transfer files. Use the organization's OT cybersecurity process for all file transfers.</p>
+<h2 id="13-preventive-maintenance-checklist">13. Preventive maintenance checklist</h2>
+<h3 id="routine-checks">Routine checks</h3>
+<ul>
+<li>Check available storage capacity.</li>
+<li>Review storage-full warnings and system diagnostics.</li>
+<li>Confirm that logging and retention settings are appropriate.</li>
+<li>Verify that recipes and required records can be saved.</li>
+<li>Inspect removable media and connectors where applicable.</li>
+<li>Check for repeated runtime or filesystem errors.</li>
+<li>Verify the availability of the approved HMI project backup.</li>
+</ul>
+<h3 id="periodic-checks">Periodic checks</h3>
+<ul>
+<li>Review storage growth trends.</li>
+<li>Verify that required historical records are retained.</li>
+<li>Confirm that backups can be opened and restored using the supported procedure.</li>
+<li>Review storage-device lifecycle and replacement availability.</li>
+<li>Check that HMI firmware and runtime records are current.</li>
+<li>Record findings in the approved maintenance system.</li>
+</ul>
+<h2 id="14-practical-industrial-example">14. Practical industrial example</h2>
+<p>Consider an HMI that displays a storage-full alarm. Operators can still navigate the screens, but new recipes cannot be saved and historical trends stop updating.</p>
+<p>A structured investigation finds that the local alarm and trend logs have grown continuously because retention limits were not configured correctly.</p>
+<p>The appropriate response is to:</p>
+<ol>
+<li>Confirm the current storage usage and identify the files consuming space.</li>
+<li>Check the plant's retention requirements for alarms and production records.</li>
+<li>Preserve required records in an approved destination.</li>
+<li>Configure suitable retention or archival behavior.</li>
+<li>Remove only data approved for deletion.</li>
+<li>Verify that free space has increased.</li>
+<li>Test recipe saving and historical logging.</li>
+<li>Record the root cause and corrective action.</li>
+</ol>
+<p>The long-term correction is to manage storage growth, not merely clear the alarm every few weeks. Otherwise, the same failure will return on schedule, as if the machine were following a maintenance plan nobody actually wrote.</p>
+<h2 id="15-key-principles">15. Key principles</h2>
+<ul>
+<li>HMI storage includes application files, configuration, recipes, logs, and other persistent data.</li>
+<li>RAM, internal flash, removable media, and server storage perform different roles.</li>
+<li>Available capacity, storage performance, write endurance, and data integrity all affect reliability.</li>
+<li>Logging and retention policies must be designed to prevent uncontrolled storage growth.</li>
+<li>Backups must cover the actual recovery requirements, not just the main project file.</li>
+<li>Destructive actions such as formatting or deleting historical data require appropriate authorization and data protection.</li>
+<li>Storage faults must be diagnosed separately from application, processor, power, and PLC communication faults.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\18_PM\02_HMI\04_App_Health - Application health</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

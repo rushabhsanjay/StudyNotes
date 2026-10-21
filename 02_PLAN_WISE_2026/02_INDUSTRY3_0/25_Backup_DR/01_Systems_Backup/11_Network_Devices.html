@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Network Devices Backup and Disaster Recovery</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Network Devices Backup and Disaster Recovery</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and Scope</a></li>
+<li><a href="#2-industrial-network-architecture">2. Industrial Network Architecture</a></li>
+<li><a href="#3-network-device-terminology">3. Network Device Terminology</a></li>
+<li><a href="#4-what-must-be-backed-up">4. What Must Be Backed Up?</a><ul>
+<li><a href="#41-device-identification">4.1 Device Identification</a></li>
+<li><a href="#42-configuration-files">4.2 Configuration Files</a></li>
+<li><a href="#43-network-topology-and-port-mapping">4.3 Network Topology and Port Mapping</a></li>
+<li><a href="#44-security-configuration">4.4 Security Configuration</a></li>
+<li><a href="#45-firmware-and-software-information">4.5 Firmware and Software Information</a></li>
+</ul>
+</li>
+<li><a href="#5-types-of-network-device-backup">5. Types of Network Device Backup</a></li>
+<li><a href="#6-running-configuration-vs-startup-configuration">6. Running Configuration vs. Startup Configuration</a></li>
+<li><a href="#7-backup-methods-and-transfer-protocols">7. Backup Methods and Transfer Protocols</a><ul>
+<li><a href="#71-local-export">7.1 Local Export</a></li>
+<li><a href="#72-centralized-network-management">7.2 Centralized Network Management</a></li>
+<li><a href="#73-file-transfer">7.3 File Transfer</a></li>
+</ul>
+</li>
+<li><a href="#8-network-device-backup-strategy">8. Network Device Backup Strategy</a><ul>
+<li><a href="#81-backup-design">8.1 Backup Design</a></li>
+<li><a href="#82-the-3-2-1-principle">8.2 The 3-2-1 Principle</a></li>
+<li><a href="#83-protect-the-repository">8.3 Protect the Repository</a></li>
+</ul>
+</li>
+<li><a href="#9-backup-scheduling-and-change-management">9. Backup Scheduling and Change Management</a></li>
+<li><a href="#10-network-device-disaster-recovery-procedure">10. Network Device Disaster Recovery Procedure</a><ul>
+<li><a href="#step-1-assess-the-impact">Step 1: Assess the Impact</a></li>
+<li><a href="#step-2-protect-production">Step 2: Protect Production</a></li>
+<li><a href="#step-3-identify-the-failed-device">Step 3: Identify the Failed Device</a></li>
+<li><a href="#step-4-select-the-recovery-method">Step 4: Select the Recovery Method</a></li>
+<li><a href="#step-5-validate-the-replacement">Step 5: Validate the Replacement</a></li>
+<li><a href="#step-6-restore-the-configuration">Step 6: Restore the Configuration</a></li>
+<li><a href="#step-7-reconnect-and-test">Step 7: Reconnect and Test</a></li>
+<li><a href="#step-8-confirm-production-function">Step 8: Confirm Production Function</a></li>
+<li><a href="#step-9-close-the-incident">Step 9: Close the Incident</a></li>
+</ul>
+</li>
+<li><a href="#11-common-network-recovery-scenarios">11. Common Network Recovery Scenarios</a></li>
+<li><a href="#12-configuration-comparison-and-change-control">12. Configuration Comparison and Change Control</a></li>
+<li><a href="#13-backup-folder-structure">13. Backup Folder Structure</a></li>
+<li><a href="#14-network-device-asset-register">14. Network Device Asset Register</a></li>
+<li><a href="#15-recovery-objectives-and-criticality">15. Recovery Objectives and Criticality</a></li>
+<li><a href="#16-restore-testing-and-audit">16. Restore Testing and Audit</a><ul>
+<li><a href="#161-restore-test-checklist">16.1 Restore-Test Checklist</a></li>
+<li><a href="#162-useful-kpis">16.2 Useful KPIs</a></li>
+</ul>
+</li>
+<li><a href="#17-ot-cybersecurity-precautions">17. OT Cybersecurity Precautions</a></li>
+<li><a href="#18-common-mistakes">18. Common Mistakes</a></li>
+<li><a href="#19-practical-industrial-example">19. Practical Industrial Example</a></li>
+<li><a href="#20-interview-questions-and-answers">20. Interview Questions and Answers</a></li>
+<li><a href="#21-final-principles">21. Final Principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-and-scope">1. Purpose and Scope</h2>
+<p>Industrial network devices connect PLCs, HMIs, SCADA servers, CNC machines, robots, vision systems, industrial PCs, drives, remote I/O, and enterprise systems. Their configuration determines how devices communicate, how traffic moves, which systems can access each other, and how the network recovers from faults.</p>
+<p>Network device backup and disaster recovery is the process of preserving configuration, firmware information, network topology, security settings, and required recovery files so that a failed, reset, damaged, or obsolete device can be restored to an approved operational state.</p>
+<p>Typical devices include:</p>
+<ul>
+<li>Managed and unmanaged industrial Ethernet switches.</li>
+<li>Industrial routers and Layer 3 switches.</li>
+<li>Firewalls and industrial security gateways.</li>
+<li>Wireless access points and wireless bridges.</li>
+<li>VPN gateways and remote-access devices.</li>
+<li>Media converters and fiber-optic network devices.</li>
+<li>Serial-to-Ethernet gateways.</li>
+<li>Protocol gateways, such as Modbus TCP-to-serial gateways.</li>
+<li>Network management appliances and controllers.</li>
+<li>Time-synchronization devices, where network configuration is critical.</li>
+</ul>
+<p>Examples of industrial network equipment include Siemens SCALANCE, Rockwell Stratix, Cisco industrial networking equipment, Moxa switches and gateways, Hirschmann industrial switches, and Phoenix Contact networking products.</p>
+<p>The exact backup procedure depends on the manufacturer's platform, firmware version, management method, and device capabilities.</p>
+<h2 id="2-industrial-network-architecture">2. Industrial Network Architecture</h2>
+<pre><code>Enterprise / IT Network
+        ↓
+Industrial DMZ / Approved Security Boundary
+        ↓
+Industrial Firewall / Router
+        ↓
+Plant Backbone / Core Switch
+        ↓
+Industrial Cell or Line Switches
+        ↓
+PLC / HMI / IPC / SCADA / CNC / Robot / Vision
+        ↓
+Remote I/O / Drives / Sensors / Other End Devices
+</code></pre>
+<p>This is a simplified architecture. Actual plants may use ring topologies, redundant links, separate safety networks, multiple VLANs, routed cells, wireless segments, or vendor-specific real-time Ethernet networks.</p>
+<p>Network devices may store configuration for:</p>
+<ul>
+<li>IP addresses and subnet masks.</li>
+<li>VLANs and trunk ports.</li>
+<li>Routing and gateway settings.</li>
+<li>Managed switch port assignments.</li>
+<li>Link aggregation and redundancy.</li>
+<li>Spanning Tree Protocol settings.</li>
+<li>Industrial ring protocols.</li>
+<li>Quality of Service (QoS).</li>
+<li>Multicast filtering and IGMP snooping.</li>
+<li>Firewall rules and access-control lists.</li>
+<li>DHCP, DNS, and time-synchronization services.</li>
+<li>SNMP monitoring.</li>
+<li>User accounts and authentication.</li>
+<li>Certificates, VPNs, and security policies.</li>
+<li>Industrial protocol gateways.</li>
+</ul>
+<p>A backup must preserve the settings needed to reconstruct the intended network behavior, not simply the device's IP address.</p>
+<h2 id="3-network-device-terminology">3. Network Device Terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+<th>Industrial application</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Switch</td>
+<td>Connects devices within an Ethernet network</td>
+<td>Connects PLCs, HMIs, robots, and IPCs</td>
+</tr>
+<tr>
+<td>Managed switch</td>
+<td>Switch with configurable and monitorable features</td>
+<td>VLANs, port security, diagnostics, redundancy</td>
+</tr>
+<tr>
+<td>Unmanaged switch</td>
+<td>Switch with limited or no user configuration</td>
+<td>Simple local connectivity</td>
+</tr>
+<tr>
+<td>Router</td>
+<td>Forwards traffic between IP networks</td>
+<td>Connects routed plant network segments</td>
+</tr>
+<tr>
+<td>Layer 3 switch</td>
+<td>Switch capable of routing IP traffic</td>
+<td>Routing between VLANs or industrial cells</td>
+</tr>
+<tr>
+<td>Firewall</td>
+<td>Enforces traffic security policies</td>
+<td>Restricts communication between zones</td>
+</tr>
+<tr>
+<td>VLAN</td>
+<td>Logical separation of Ethernet traffic</td>
+<td>Separates machine cells or traffic classes</td>
+</tr>
+<tr>
+<td>Trunk port</td>
+<td>Carries multiple VLANs over a link</td>
+<td>Connects switches while preserving VLAN tagging</td>
+</tr>
+<tr>
+<td>Access port</td>
+<td>Usually connects an endpoint to a designated VLAN</td>
+<td>Connects a PLC or IPC to its assigned network</td>
+</tr>
+<tr>
+<td>ACL</td>
+<td>Access Control List</td>
+<td>Permits or denies specified network traffic</td>
+</tr>
+<tr>
+<td>QoS</td>
+<td>Quality of Service</td>
+<td>Prioritizes selected traffic</td>
+</tr>
+<tr>
+<td>STP/RSTP</td>
+<td>Spanning Tree Protocol variants</td>
+<td>Helps prevent Ethernet switching loops</td>
+</tr>
+<tr>
+<td>Ring redundancy</td>
+<td>Mechanism for recovering connectivity after a ring-link failure</td>
+<td>Supports network availability</td>
+</tr>
+<tr>
+<td>IGMP snooping</td>
+<td>Controls multicast forwarding based on group membership</td>
+<td>Helps manage multicast traffic</td>
+</tr>
+<tr>
+<td>SNMP</td>
+<td>Simple Network Management Protocol</td>
+<td>Network monitoring and device status</td>
+</tr>
+<tr>
+<td>Syslog</td>
+<td>Standard method for sending system logs</td>
+<td>Central collection of network device events</td>
+</tr>
+<tr>
+<td>Configuration backup</td>
+<td>Saved device settings</td>
+<td>Supports recovery after reset or failure</td>
+</tr>
+<tr>
+<td>Firmware</td>
+<td>Software embedded in a device</td>
+<td>Controls hardware and networking behavior</td>
+</tr>
+<tr>
+<td>Startup configuration</td>
+<td>Configuration loaded during device startup</td>
+<td>Determines the intended persistent state</td>
+</tr>
+<tr>
+<td>Running configuration</td>
+<td>Configuration currently active in memory</td>
+<td>May contain changes not yet saved persistently</td>
+</tr>
+<tr>
+<td>NVRAM</td>
+<td>Nonvolatile memory used by some platforms</td>
+<td>May store startup configuration</td>
+</tr>
+<tr>
+<td>TFTP/SFTP/SCP</td>
+<td>File-transfer protocols with different security properties</td>
+<td>Transfers configuration or firmware where supported</td>
+</tr>
+<tr>
+<td>AAA</td>
+<td>Authentication, Authorization, and Accounting</td>
+<td>Controls administrator access and records actions</td>
+</tr>
+<tr>
+<td>RTO</td>
+<td>Recovery Time Objective</td>
+<td>Target time to restore network service</td>
+</tr>
+<tr>
+<td>RPO</td>
+<td>Recovery Point Objective</td>
+<td>Maximum acceptable loss of configuration changes measured in time</td>
+</tr>
+<tr>
+<td>Golden configuration</td>
+<td>Approved reference configuration</td>
+<td>Used to compare and restore device settings</td>
+</tr>
+<tr>
+<td>Configuration drift</td>
+<td>Difference between actual and approved configuration</td>
+<td>Identifies unauthorized or undocumented changes</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-what-must-be-backed-up">4. What Must Be Backed Up?</h2>
+<h3 id="41-device-identification">4.1 Device Identification</h3>
+<p>Record the information needed to identify and replace the device.</p>
+<ul>
+<li>Asset ID and plant location.</li>
+<li>Manufacturer and exact model.</li>
+<li>Serial number and hardware revision.</li>
+<li>Firmware version.</li>
+<li>Bootloader version, if applicable.</li>
+<li>License and feature entitlement details.</li>
+<li>Power supply and accessory requirements.</li>
+<li>Available ports, port types, and module configuration.</li>
+<li>Warranty and vendor support details.</li>
+<li>Device role in the network.</li>
+</ul>
+<p>A model name alone may be insufficient. Different hardware revisions can have different firmware compatibility, interfaces, or supported features.</p>
+<h3 id="42-configuration-files">4.2 Configuration Files</h3>
+<p>Preserve the complete configuration supported by the device.</p>
+<p>Typical items include:</p>
+<ul>
+<li>Device hostname.</li>
+<li>Management IP address and subnet.</li>
+<li>Default gateway and routing configuration.</li>
+<li>VLAN IDs and VLAN membership.</li>
+<li>Access and trunk port settings.</li>
+<li>Port speed, duplex, and negotiation settings where configured.</li>
+<li>Link aggregation groups.</li>
+<li>STP/RSTP configuration.</li>
+<li>Ring-redundancy configuration.</li>
+<li>QoS policies.</li>
+<li>IGMP snooping and multicast settings.</li>
+<li>Static routes.</li>
+<li>DHCP relay or server configuration, where applicable.</li>
+<li>DNS and NTP settings.</li>
+<li>Port mirroring or diagnostic settings.</li>
+<li>SNMP and syslog configuration.</li>
+<li>Firewall rules and ACLs.</li>
+<li>NAT configuration, if used.</li>
+<li>VPN settings and supported certificate dependencies.</li>
+<li>User roles and authentication configuration.</li>
+<li>Industrial protocol gateway mappings.</li>
+</ul>
+<p>Not every device supports all these features. Record only the relevant settings for the specific platform.</p>
+<h3 id="43-network-topology-and-port-mapping">4.3 Network Topology and Port Mapping</h3>
+<p>A configuration file may not explain the physical purpose of every port. Maintain a separate port map.</p>
+<table>
+<thead>
+<tr>
+<th>Device port</th>
+<th>Connected equipment</th>
+<th>Purpose</th>
+<th>Important configuration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Port 1</td>
+<td>PLC</td>
+<td>Machine control network</td>
+<td>Assigned industrial VLAN</td>
+</tr>
+<tr>
+<td>Port 2</td>
+<td>HMI</td>
+<td>Operator interface</td>
+<td>Approved cell VLAN</td>
+</tr>
+<tr>
+<td>Port 3</td>
+<td>Robot controller</td>
+<td>Robot communication</td>
+<td>Approved IP and port policy</td>
+</tr>
+<tr>
+<td>Port 4</td>
+<td>Vision IPC</td>
+<td>Inspection and results</td>
+<td>Required application traffic</td>
+</tr>
+<tr>
+<td>Port 5</td>
+<td>Upstream switch</td>
+<td>Backbone uplink</td>
+<td>Trunk and redundancy settings</td>
+</tr>
+<tr>
+<td>Port 6</td>
+<td>Spare port</td>
+<td>Reserved maintenance use</td>
+<td>Disabled or restricted according to policy</td>
+</tr>
+</tbody>
+</table>
+<p>These are illustrative entries. Use the actual plant wiring and approved network configuration.</p>
+<p>Maintain:</p>
+<ul>
+<li>Physical port labels.</li>
+<li>Cable and patch-panel identifiers.</li>
+<li>Fiber type and connector details.</li>
+<li>SFP or transceiver models.</li>
+<li>Redundant-link connections.</li>
+<li>Ring direction or ring-port assignments.</li>
+<li>Network cabinet and switch location.</li>
+<li>Connected-device IP addresses and names.</li>
+</ul>
+<p>A correct configuration loaded onto the wrong physical connections can still leave a machine network nonfunctional.</p>
+<h3 id="44-security-configuration">4.4 Security Configuration</h3>
+<p>Preserve security configuration using approved and secure methods.</p>
+<ul>
+<li>Administrator and operator roles.</li>
+<li>Authentication and authorization settings.</li>
+<li>RADIUS, TACACS+, LDAP, or other supported authentication dependencies.</li>
+<li>ACLs and firewall rules.</li>
+<li>Port-security settings.</li>
+<li>Management access restrictions.</li>
+<li>SNMP version and access controls.</li>
+<li>SSH and HTTPS configuration.</li>
+<li>Certificates and required private keys.</li>
+<li>VPN configuration and cryptographic dependencies.</li>
+<li>Approved firmware and security baseline.</li>
+<li>Audit logs where required.</li>
+<li>Configuration of secure management protocols.</li>
+</ul>
+<p>Do not store plaintext passwords, private keys, or shared secrets in ordinary backup folders. Some device exports deliberately omit secrets or store them in encrypted form. Record the recovery process and ensure the required credentials can be retrieved through the approved secret-management system.</p>
+<h3 id="45-firmware-and-software-information">4.5 Firmware and Software Information</h3>
+<p>Maintain:</p>
+<ul>
+<li>Current firmware version.</li>
+<li>Approved firmware version.</li>
+<li>Firmware image and cryptographic verification information, where available.</li>
+<li>Bootloader version if relevant.</li>
+<li>Firmware release notes.</li>
+<li>Hardware compatibility requirements.</li>
+<li>License or feature activation requirements.</li>
+<li>Upgrade and downgrade restrictions.</li>
+<li>Required intermediate firmware versions.</li>
+<li>Known issues affecting industrial protocols or redundancy.</li>
+</ul>
+<p>Do not automatically install the newest firmware during recovery. New firmware may alter supported features, protocol behavior, security settings, or compatibility with the existing industrial network.</p>
+<p>Use the version approved for the plant's hardware and application.</p>
+<h2 id="5-types-of-network-device-backup">5. Types of Network Device Backup</h2>
+<table>
+<thead>
+<tr>
+<th>Backup type</th>
+<th>What it preserves</th>
+<th>Main limitation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Native configuration export</td>
+<td>Device settings in the manufacturer's supported format</td>
+<td>May omit secrets, firmware, or hardware-specific state</td>
+</tr>
+<tr>
+<td>Plain-text configuration</td>
+<td>Readable settings on supported platforms</td>
+<td>May expose sensitive information</td>
+</tr>
+<tr>
+<td>Binary configuration backup</td>
+<td>Vendor-specific configuration representation</td>
+<td>May require matching software or hardware</td>
+</tr>
+<tr>
+<td>Controller-managed backup</td>
+<td>Configuration stored by a network management platform</td>
+<td>Depends on the controller and its repository</td>
+</tr>
+<tr>
+<td>Firmware backup</td>
+<td>Firmware image, when export or retrieval is supported</td>
+<td>Not every device permits firmware extraction</td>
+</tr>
+<tr>
+<td>Configuration screenshot or report</td>
+<td>Human-readable record of selected settings</td>
+<td>Cannot usually restore the device automatically</td>
+</tr>
+<tr>
+<td>Network topology documentation</td>
+<td>Physical and logical relationships</td>
+<td>Does not contain the full configuration</td>
+</tr>
+<tr>
+<td>Full device replacement kit</td>
+<td>Replacement hardware plus approved configuration and recovery files</td>
+<td>Requires compatibility validation and periodic maintenance</td>
+</tr>
+</tbody>
+</table>
+<p>A readable configuration report and a native device backup serve different purposes. The native file may support restoration, while the report helps engineers understand and validate what is being restored.</p>
+<h2 id="6-running-configuration-vs-startup-configuration">6. Running Configuration vs. Startup Configuration</h2>
+<p>Some network platforms distinguish between active settings and settings saved for the next restart.</p>
+<ul>
+<li>Running configuration: Settings currently active in the device's operational memory.</li>
+<li>Startup configuration: Persistent settings loaded during startup.</li>
+<li>Candidate configuration: Proposed changes that have not yet been committed, on platforms that support candidate-based configuration.</li>
+</ul>
+<p>The exact terminology depends on the vendor.</p>
+<p>A common failure is to change a port's VLAN or redundancy settings, observe that communication works, and forget to save the configuration. After a power interruption, the device may return to the previous settings.</p>
+<p>Recommended practice:</p>
+<ol>
+<li>Capture the approved baseline before changes.</li>
+<li>Make the authorized change.</li>
+<li>Validate connectivity and required behavior.</li>
+<li>Save or commit the configuration using the platform's supported method.</li>
+<li>Export a new backup.</li>
+<li>Record the change, reason, approval, and timestamp.</li>
+<li>Verify that the saved configuration matches the intended active configuration.</li>
+</ol>
+<p>Do not assume that every device saves configuration changes automatically.</p>
+<h2 id="7-backup-methods-and-transfer-protocols">7. Backup Methods and Transfer Protocols</h2>
+<p>The available method depends on the manufacturer, firmware, management system, and plant security requirements.</p>
+<h3 id="71-local-export">7.1 Local Export</h3>
+<p>A technician connects through an approved console, web interface, or management tool and exports the configuration to controlled storage.</p>
+<p>Advantages:</p>
+<ul>
+<li>Straightforward for isolated devices.</li>
+<li>Useful during commissioning or maintenance.</li>
+<li>Can support a controlled pre-change backup.</li>
+</ul>
+<p>Limitations:</p>
+<ul>
+<li>Manual steps can be missed.</li>
+<li>File naming and version control may be inconsistent.</li>
+<li>It may be difficult to maintain frequent backups across many devices.</li>
+</ul>
+<h3 id="72-centralized-network-management">7.2 Centralized Network Management</h3>
+<p>A supported management platform may collect configurations from many devices, maintain revisions, compare changes, and support restoration.</p>
+<p>Advantages:</p>
+<ul>
+<li>Centralized backup visibility.</li>
+<li>Change tracking.</li>
+<li>Standardized naming and retention.</li>
+<li>Reduced manual effort.</li>
+<li>Easier identification of configuration drift.</li>
+</ul>
+<p>Limitations:</p>
+<ul>
+<li>The management system becomes another critical dependency.</li>
+<li>Device support and licensing vary.</li>
+<li>Credentials and access to the management platform require strong protection.</li>
+<li>Centralized collection must not violate OT network segmentation.</li>
+</ul>
+<h3 id="73-file-transfer">7.3 File Transfer</h3>
+<p>Depending on the device, supported protocols may include:</p>
+<ul>
+<li>SFTP or SCP for encrypted file transfer.</li>
+<li>HTTPS-based export or management APIs.</li>
+<li>TFTP on legacy or restricted devices.</li>
+<li>Vendor-specific transfer mechanisms.</li>
+<li>Removable storage for devices that support local backup media.</li>
+</ul>
+<p>Prefer authenticated and encrypted transfer methods where supported.</p>
+<p>TFTP does not provide the same authentication and encryption protections as secure transfer protocols. If it is required by a legacy device, restrict it to an approved isolated management segment and use the plant's compensating controls.</p>
+<p>Never assume that a device supports a protocol simply because another model from the same manufacturer does.</p>
+<h2 id="8-network-device-backup-strategy">8. Network Device Backup Strategy</h2>
+<h3 id="81-backup-design">8.1 Backup Design</h3>
+<pre><code>Industrial Network Device
+        ↓
+Native Configuration Export
+        ↓
+Validation and Version Identification
+        ↓
+Controlled Backup Repository
+        ↓
+Independent Protected Copy
+        ↓
+Integrity Verification
+        ↓
+Periodic Restore Test
+        ↓
+Approved Recovery Procedure
+</code></pre>
+<p>The process should produce a usable, identifiable backup rather than a folder of files with names such as <code>backup_new_final2</code>.</p>
+<h3 id="82-the-3-2-1-principle">8.2 The 3-2-1 Principle</h3>
+<p>Maintain:</p>
+<ul>
+<li>Three copies of important configuration data, including the operational copy.</li>
+<li>Two different storage systems or media where practical.</li>
+<li>One independent off-site or isolated copy.</li>
+</ul>
+<p>For OT systems, the independent copy may be an offline backup or an immutable repository approved by plant cybersecurity.</p>
+<p>Network configuration files are small, so storage capacity is rarely the main problem. Version control, secure access, correct device identification, and tested restoration matter much more.</p>
+<h3 id="83-protect-the-repository">8.3 Protect the Repository</h3>
+<ul>
+<li>Restrict write and delete access.</li>
+<li>Separate backup-administration permissions from ordinary network-management permissions where practical.</li>
+<li>Keep a protected copy that a compromised network device cannot modify.</li>
+<li>Encrypt sensitive backups in storage and transit.</li>
+<li>Verify file integrity.</li>
+<li>Retain approved historical versions.</li>
+<li>Log backup and restore activities.</li>
+<li>Test recovery using a suitable spare or isolated test environment.</li>
+<li>Avoid using shared administrator credentials across all devices.</li>
+</ul>
+<h2 id="9-backup-scheduling-and-change-management">9. Backup Scheduling and Change Management</h2>
+<p>Backup frequency depends on device criticality and how often its configuration changes.</p>
+<table>
+<thead>
+<tr>
+<th>Event or condition</th>
+<th>Recommended action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>New device commissioning</td>
+<td>Capture a complete approved baseline</td>
+</tr>
+<tr>
+<td>Network configuration change</td>
+<td>Export a new backup after validation</td>
+</tr>
+<tr>
+<td>Firmware upgrade</td>
+<td>Back up first and capture the resulting approved configuration</td>
+</tr>
+<tr>
+<td>VLAN or routing change</td>
+<td>Back up and update network documentation</td>
+</tr>
+<tr>
+<td>Security policy change</td>
+<td>Back up affected settings and record approval</td>
+</tr>
+<tr>
+<td>Switch replacement</td>
+<td>Preserve the failed device's configuration if possible and validate compatibility</td>
+</tr>
+<tr>
+<td>Network redesign</td>
+<td>Capture affected configurations and updated topology</td>
+</tr>
+<tr>
+<td>Routine schedule</td>
+<td>Run periodic backups according to criticality and policy</td>
+</tr>
+<tr>
+<td>Suspected unauthorized change</td>
+<td>Preserve current state and logs before corrective action where feasible</td>
+</tr>
+<tr>
+<td>Disaster recovery test</td>
+<td>Record the tested version and the restoration result</td>
+</tr>
+</tbody>
+</table>
+<p>For highly critical devices, event-triggered backups may be more important than a calendar-only schedule.</p>
+<p>A backup captured before a firmware update is useful, but the post-update configuration must also be saved if the upgrade changes or migrates configuration data.</p>
+<h2 id="10-network-device-disaster-recovery-procedure">10. Network Device Disaster Recovery Procedure</h2>
+<h3 id="step-1-assess-the-impact">Step 1: Assess the Impact</h3>
+<p>Determine which systems have lost communication.</p>
+<p>Check:</p>
+<ul>
+<li>PLC-to-HMI communication.</li>
+<li>Robot and CNC communication.</li>
+<li>Vision and traceability data paths.</li>
+<li>SCADA and historian connectivity.</li>
+<li>Upstream network connections.</li>
+<li>Redundant links or ring status.</li>
+<li>Power and link indicators.</li>
+<li>Whether the failure affects a single device or an entire network segment.</li>
+</ul>
+<p>Use approved machine and network safety procedures. Do not make uncontrolled changes to a live network simply to see what happens.</p>
+<h3 id="step-2-protect-production">Step 2: Protect Production</h3>
+<ul>
+<li>Inform the relevant production and maintenance teams.</li>
+<li>Determine the effect on machine operation and quality.</li>
+<li>Apply the approved safe-state or contingency procedure.</li>
+<li>Isolate suspected compromised devices where required.</li>
+<li>Preserve diagnostic information before resetting or replacing hardware.</li>
+<li>Avoid interrupting healthy redundant paths without authorization.</li>
+</ul>
+<p>A network switch may carry control traffic for multiple machines. Replacing or restarting it without understanding its role can expand a local fault into a line-wide outage.</p>
+<h3 id="step-3-identify-the-failed-device">Step 3: Identify the Failed Device</h3>
+<p>Record:</p>
+<ul>
+<li>Asset ID and model.</li>
+<li>Serial number and hardware revision.</li>
+<li>Firmware version if accessible.</li>
+<li>Power and status indicators.</li>
+<li>Connected ports and observed link states.</li>
+<li>Error logs and recent configuration changes.</li>
+<li>Network topology and redundancy role.</li>
+<li>Last known-good configuration backup.</li>
+</ul>
+<p>Determine whether the problem is caused by the device itself, its power supply, fiber or copper link, connected equipment, configuration, firmware, or upstream infrastructure.</p>
+<h3 id="step-4-select-the-recovery-method">Step 4: Select the Recovery Method</h3>
+<ul>
+<li>Configuration corruption: Restore a verified configuration using the supported method.</li>
+<li>Device hardware failure: Replace with a compatible unit and restore the approved configuration.</li>
+<li>Firmware problem: Use the approved recovery or downgrade procedure.</li>
+<li>Network loop: Contain the loop using the approved troubleshooting procedure and verify redundancy behavior.</li>
+<li>Firewall or routing error: Restore or correct the relevant approved policies and routes.</li>
+<li>Cybersecurity incident: Isolate the affected area and follow incident-response procedures before restoring configurations.</li>
+</ul>
+<p>A configuration restore is not a substitute for diagnosing a faulty power supply, damaged fiber, or failed switch hardware.</p>
+<h3 id="step-5-validate-the-replacement">Step 5: Validate the Replacement</h3>
+<p>Check:</p>
+<ul>
+<li>Exact model and hardware compatibility.</li>
+<li>Supported firmware version.</li>
+<li>License or feature entitlement.</li>
+<li>Port count and port type.</li>
+<li>SFP or transceiver compatibility.</li>
+<li>Power requirements.</li>
+<li>Redundancy protocol support.</li>
+<li>VLAN and routing feature support.</li>
+<li>Security configuration requirements.</li>
+</ul>
+<p>A physically similar switch may not support the same ring protocol, VLAN features, management options, or configuration syntax.</p>
+<h3 id="step-6-restore-the-configuration">Step 6: Restore the Configuration</h3>
+<ol>
+<li>Verify the identity and timestamp of the backup.</li>
+<li>Confirm that it belongs to the correct device or approved equivalent.</li>
+<li>Check firmware and hardware compatibility.</li>
+<li>Restore using the manufacturer's supported method.</li>
+<li>Apply the approved device identity and management settings.</li>
+<li>Verify persistent configuration storage.</li>
+<li>Review security settings and credentials.</li>
+<li>Compare the resulting configuration against the approved baseline.</li>
+<li>Document any required deviations.</li>
+</ol>
+<p>Some platforms require configuration conversion when moving between firmware versions or hardware families. Use the vendor-supported conversion procedure instead of assuming that the file can be loaded directly.</p>
+<h3 id="step-7-reconnect-and-test">Step 7: Reconnect and Test</h3>
+<ul>
+<li>Connect management access first where practical.</li>
+<li>Verify management reachability.</li>
+<li>Confirm VLAN membership and trunk settings.</li>
+<li>Check routing and firewall policies.</li>
+<li>Validate link aggregation and redundancy.</li>
+<li>Check spanning-tree or ring-recovery status.</li>
+<li>Test required communication paths.</li>
+<li>Confirm that only intended ports are active.</li>
+<li>Verify logging and monitoring.</li>
+<li>Check that no unauthorized or duplicate device identity exists.</li>
+</ul>
+<p>Reconnect the production network according to the approved change and commissioning procedure.</p>
+<h3 id="step-8-confirm-production-function">Step 8: Confirm Production Function</h3>
+<p>Verify the actual process:</p>
+<ul>
+<li>PLC communication and remote I/O status.</li>
+<li>HMI and SCADA visibility.</li>
+<li>Robot and CNC network connectivity.</li>
+<li>Vision, barcode, and traceability communications.</li>
+<li>Alarm and event reporting.</li>
+<li>Redundancy operation where required.</li>
+<li>Production data flow and timestamps.</li>
+</ul>
+<p>Do not declare the network recovered merely because every switch responds to a ping.</p>
+<h3 id="step-9-close-the-incident">Step 9: Close the Incident</h3>
+<ul>
+<li>Capture the restored configuration.</li>
+<li>Update the approved backup baseline.</li>
+<li>Record hardware and firmware changes.</li>
+<li>Document the root cause and corrective actions.</li>
+<li>Review whether backup frequency or monitoring should change.</li>
+<li>Confirm that the recovery procedure remains accurate.</li>
+</ul>
+<h2 id="11-common-network-recovery-scenarios">11. Common Network Recovery Scenarios</h2>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Recovery approach</th>
+<th>Key verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Managed switch failure</td>
+<td>Replace with a compatible device and restore configuration</td>
+<td>VLANs, trunks, ports, redundancy</td>
+</tr>
+<tr>
+<td>Factory-reset switch</td>
+<td>Restore approved configuration</td>
+<td>Management access and all required features</td>
+</tr>
+<tr>
+<td>Router configuration loss</td>
+<td>Restore routes and interface settings</td>
+<td>Routing tables and permitted traffic paths</td>
+</tr>
+<tr>
+<td>Firewall failure</td>
+<td>Replace or restore using the approved security configuration</td>
+<td>Rules, NAT, VPN, logging, access restrictions</td>
+</tr>
+<tr>
+<td>Fiber link failure</td>
+<td>Inspect fiber, connectors, transceivers, and link budget</td>
+<td>Link state, errors, redundancy path</td>
+</tr>
+<tr>
+<td>Network loop</td>
+<td>Identify the loop and restore approved topology</td>
+<td>STP or ring status, broadcast behavior</td>
+</tr>
+<tr>
+<td>Firmware upgrade failure</td>
+<td>Follow vendor recovery procedure</td>
+<td>Firmware compatibility and configuration integrity</td>
+</tr>
+<tr>
+<td>Lost VLAN configuration</td>
+<td>Restore approved VLAN and port assignments</td>
+<td>Endpoint connectivity and isolation</td>
+</tr>
+<tr>
+<td>Unauthorized configuration change</td>
+<td>Preserve evidence and compare against baseline</td>
+<td>Access logs and configuration differences</td>
+</tr>
+<tr>
+<td>Obsolete switch</td>
+<td>Migrate configuration to a supported replacement</td>
+<td>Feature equivalence and protocol compatibility</td>
+</tr>
+<tr>
+<td>Remote gateway failure</td>
+<td>Restore gateway configuration and mappings</td>
+<td>Serial settings, protocol mappings, device polling</td>
+</tr>
+<tr>
+<td>Time-sync device failure</td>
+<td>Restore supported settings or replace device</td>
+<td>Time source, offset, dependent systems</td>
+</tr>
+</tbody>
+</table>
+<h2 id="12-configuration-comparison-and-change-control">12. Configuration Comparison and Change Control</h2>
+<p>A configuration backup becomes more valuable when it can be compared against the current device state.</p>
+<p>Useful comparisons include:</p>
+<ul>
+<li>Current configuration versus last approved backup.</li>
+<li>Configuration before and after a firmware upgrade.</li>
+<li>Configuration before and after a switch replacement.</li>
+<li>Port assignments versus the approved port map.</li>
+<li>VLAN membership versus the network design.</li>
+<li>Firewall rules versus the approved security baseline.</li>
+<li>Firmware version versus the plant-approved version.</li>
+</ul>
+<p>Configuration differences should be reviewed in context. Some values, such as counters, timestamps, or dynamic neighbor information, may change during normal operation and do not necessarily indicate unauthorized changes.</p>
+<p>Use a controlled change record containing:</p>
+<ul>
+<li>Change request or work-order number.</li>
+<li>Device asset ID.</li>
+<li>Reason for change.</li>
+<li>Previous and new configuration versions.</li>
+<li>Person performing the change.</li>
+<li>Required approvals.</li>
+<li>Functional test results.</li>
+<li>Rollback procedure.</li>
+<li>Final backup location.</li>
+</ul>
+<h2 id="13-backup-folder-structure">13. Backup Folder Structure</h2>
+<p>Use an organized structure with a clear relationship between device identity, configuration revision, and recovery instructions.</p>
+<pre><code>NETWORK_DEVICE_BACKUP/
+    DEVICE_ASSET_ID/
+        01_Inventory/
+            Model_Serial_Hardware_Revision
+            Firmware_And_License
+        02_Approved_Configuration/
+            Baseline
+            Current_Approved
+            Previous_Known_Good
+        03_Firmware/
+            Approved_Version_Records
+            Firmware_Compatibility
+        04_Network_Documentation/
+            Topology
+            Port_Mapping
+            VLAN_IP_Routing
+            Fiber_And_Transceiver_Details
+        05_Security/
+            Access_Policy_Records
+            Certificate_Recovery_References
+            Secret_Repository_References
+        06_Recovery/
+            Recovery_SOP
+            Replacement_Compatibility
+            Validation_Checklist
+        07_Change_Records/
+            Configuration_Diffs
+            Work_Orders
+            Approval_Records
+        08_Backup_Logs/
+            Backup_Timestamps
+            Integrity_Checks
+            Restore_Test_Reports
+</code></pre>
+<p>Sensitive configuration exports should be encrypted or stored in an access-controlled repository. The folder structure is a documentation model, not a reason to distribute secrets to everyone who can access maintenance files.</p>
+<h2 id="14-network-device-asset-register">14. Network Device Asset Register</h2>
+<p>Maintain a central inventory of critical network equipment.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Asset ID</td>
+<td>Unique identification</td>
+</tr>
+<tr>
+<td>Location</td>
+<td>Plant, line, cabinet, or network zone</td>
+</tr>
+<tr>
+<td>Manufacturer and model</td>
+<td>Replacement identification</td>
+</tr>
+<tr>
+<td>Serial number</td>
+<td>Hardware traceability</td>
+</tr>
+<tr>
+<td>Hardware revision</td>
+<td>Compatibility validation</td>
+</tr>
+<tr>
+<td>Firmware version</td>
+<td>Recovery and security compatibility</td>
+</tr>
+<tr>
+<td>Management IP</td>
+<td>Authorized management access</td>
+</tr>
+<tr>
+<td>Device role</td>
+<td>Switch, router, firewall, gateway, or other role</td>
+</tr>
+<tr>
+<td>Network connections</td>
+<td>Upstream and downstream relationships</td>
+</tr>
+<tr>
+<td>VLAN and port-map reference</td>
+<td>Supports configuration validation</td>
+</tr>
+<tr>
+<td>Redundancy role</td>
+<td>Identifies ring, standby, or redundant-link dependencies</td>
+</tr>
+<tr>
+<td>Approved backup revision</td>
+<td>Identifies the intended recovery configuration</td>
+</tr>
+<tr>
+<td>Latest backup time</td>
+<td>Measures configuration freshness</td>
+</tr>
+<tr>
+<td>Backup verification</td>
+<td>Confirms integrity checking</td>
+</tr>
+<tr>
+<td>Last restore test</td>
+<td>Demonstrates recovery readiness</td>
+</tr>
+<tr>
+<td>RTO and RPO</td>
+<td>Defines recovery targets</td>
+</tr>
+<tr>
+<td>Recovery owner</td>
+<td>Establishes responsibility</td>
+</tr>
+<tr>
+<td>Replacement model</td>
+<td>Identifies a validated spare or successor</td>
+</tr>
+</tbody>
+</table>
+<p>Do not include plaintext administrative passwords in the asset register.</p>
+<h2 id="15-recovery-objectives-and-criticality">15. Recovery Objectives and Criticality</h2>
+<p>RTO and RPO should be assigned based on production impact, available redundancy, and the difficulty of restoring the network.</p>
+<ul>
+<li>RTO: Target time within which network service must be restored.</li>
+<li>RPO: Maximum acceptable loss of configuration changes measured as time.</li>
+</ul>
+<p>For network configurations, the RPO may effectively be tied to the last approved configuration change rather than the last scheduled backup. If an important VLAN change occurred after the previous backup, restoring that older file may reproduce the wrong network design.</p>
+<table>
+<thead>
+<tr>
+<th>Device category</th>
+<th>Potential impact</th>
+<th>Recovery planning focus</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Noncritical access switch</td>
+<td>Limited equipment may lose connectivity</td>
+<td>Maintain a verified configuration and compatible spare</td>
+</tr>
+<tr>
+<td>Line-level managed switch</td>
+<td>Multiple machine devices may lose communication</td>
+<td>Prioritize recovery and validate VLANs and redundancy</td>
+</tr>
+<tr>
+<td>Core or distribution switch</td>
+<td>Multiple production areas may be affected</td>
+<td>Maintain high-quality backups and tested replacement procedures</td>
+</tr>
+<tr>
+<td>Industrial firewall</td>
+<td>Required traffic may be blocked or exposed</td>
+<td>Preserve approved rules and validate security before release</td>
+</tr>
+<tr>
+<td>Protocol gateway</td>
+<td>Communication between different interfaces may stop</td>
+<td>Preserve protocol mappings and serial/network parameters</td>
+</tr>
+<tr>
+<td>Redundancy manager or ring device</td>
+<td>Network resilience may be reduced</td>
+<td>Restore redundancy behavior and confirm stable operation</td>
+</tr>
+</tbody>
+</table>
+<p>Redundancy can keep a network operating during a hardware failure, but it does not replace backups. An incorrect configuration can propagate across redundant devices and affect the entire network.</p>
+<h2 id="16-restore-testing-and-audit">16. Restore Testing and Audit</h2>
+<h3 id="161-restore-test-checklist">16.1 Restore-Test Checklist</h3>
+<ul>
+<li>Device inventory and model are documented.</li>
+<li>Backup belongs to the correct device or validated equivalent.</li>
+<li>Firmware compatibility is confirmed.</li>
+<li>Configuration export is readable or accepted by the recovery tool.</li>
+<li>Integrity checks pass where supported.</li>
+<li>Credentials and required security dependencies are available securely.</li>
+<li>Recovery procedure is current.</li>
+<li>A spare or suitable test environment is available where required.</li>
+<li>Configuration restore completes successfully.</li>
+<li>VLANs, trunks, routing, and port settings are validated.</li>
+<li>Redundancy behavior is tested where applicable.</li>
+<li>Required PLC, HMI, SCADA, and IPC communications are verified.</li>
+<li>Firewall and security rules are checked.</li>
+<li>Monitoring and event logging operate correctly.</li>
+<li>Actual recovery duration is recorded.</li>
+<li>Final configuration and test results are saved.</li>
+</ul>
+<h3 id="162-useful-kpis">16.2 Useful KPIs</h3>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backup coverage</td>
+<td>Percentage of critical devices with required backups</td>
+</tr>
+<tr>
+<td>Backup success rate</td>
+<td>Percentage of scheduled backups completed successfully</td>
+</tr>
+<tr>
+<td>Configuration freshness</td>
+<td>Time since the last approved configuration backup</td>
+</tr>
+<tr>
+<td>Restore-test success rate</td>
+<td>Percentage of tests that successfully restore configuration</td>
+</tr>
+<tr>
+<td>Configuration drift</td>
+<td>Number or severity of differences from the approved baseline</td>
+</tr>
+<tr>
+<td>Recovery duration</td>
+<td>Actual time required to restore the network device</td>
+</tr>
+<tr>
+<td>Inventory completeness</td>
+<td>Percentage of devices with required asset information</td>
+</tr>
+<tr>
+<td>Unapproved change count</td>
+<td>Number of detected changes lacking required authorization</td>
+</tr>
+</tbody>
+</table>
+<h2 id="17-ot-cybersecurity-precautions">17. OT Cybersecurity Precautions</h2>
+<p>Industrial network equipment is a security boundary as well as a connectivity component.</p>
+<ul>
+<li>Restrict management access to approved network segments.</li>
+<li>Use unique, authorized administrator credentials.</li>
+<li>Prefer secure management protocols supported by the device.</li>
+<li>Disable unused ports and services according to the approved baseline.</li>
+<li>Protect configuration backups from unauthorized access.</li>
+<li>Treat configuration files as potentially sensitive.</li>
+<li>Validate firmware integrity and compatibility before installation.</li>
+<li>Preserve logs during suspected cyber incidents.</li>
+<li>Do not restore a known-compromised configuration without reviewing it.</li>
+<li>Avoid uncontrolled remote access to industrial devices.</li>
+<li>Verify firewall and ACL behavior after restoration.</li>
+<li>Follow change-control procedures for production network modifications.</li>
+<li>Keep an independent, protected copy of recovery data.</li>
+</ul>
+<p>Configuration files can reveal network topology, device addresses, security policies, and sometimes credential-related information. They should be handled as controlled operational assets.</p>
+<h2 id="18-common-mistakes">18. Common Mistakes</h2>
+<ol>
+<li>Backing up only the switch's IP address instead of the full supported configuration.</li>
+<li>Forgetting to save running changes to persistent storage.</li>
+<li>Restoring a configuration to an incompatible model or firmware version.</li>
+<li>Ignoring VLANs, trunk ports, routing, and redundancy settings.</li>
+<li>Treating screenshots as a replacement for a native configuration backup.</li>
+<li>Keeping backups only on the network device or a connected management PC.</li>
+<li>Assuming a redundant switch automatically contains a valid independent recovery configuration.</li>
+<li>Ignoring physical port mapping and cable topology.</li>
+<li>Using insecure transfer methods without appropriate isolation and compensating controls.</li>
+<li>Reconnecting a restored device before validating its security and identity.</li>
+<li>Replacing a firewall without testing the approved traffic policy.</li>
+<li>Declaring success after a ping test without verifying industrial application communication.</li>
+</ol>
+<h2 id="19-practical-industrial-example">19. Practical Industrial Example</h2>
+<p>A managed industrial Ethernet switch connects a PLC, HMI, robot controller, vision IPC, and an upstream plant switch. Its configuration includes VLAN membership, a trunk uplink, QoS, and ring-redundancy settings.</p>
+<p>The switch fails after a power event.</p>
+<p>A replacement switch is installed, but the PLC and HMI cannot communicate. The replacement's default configuration places all ports in a default VLAN and does not contain the original redundancy settings.</p>
+<p>A correct recovery procedure is:</p>
+<ol>
+<li>Confirm the production impact and apply the approved machine contingency.</li>
+<li>Identify the failed switch and its approved replacement.</li>
+<li>Retrieve the latest verified configuration and network port map.</li>
+<li>Confirm model, firmware, port, and redundancy compatibility.</li>
+<li>Restore the configuration using the supported method.</li>
+<li>Verify VLAN membership, trunk settings, and ring configuration.</li>
+<li>Confirm management access and security policies.</li>
+<li>Reconnect the required network links according to the approved topology.</li>
+<li>Verify PLC, HMI, robot, vision, and upstream communications.</li>
+<li>Check redundancy and network stability.</li>
+<li>Save the restored configuration and document the incident.</li>
+</ol>
+<p>The lesson is simple: a network device is restored only when its approved configuration and required communication paths work correctly, not merely when its status LEDs turn green.</p>
+<h2 id="20-interview-questions-and-answers">20. Interview Questions and Answers</h2>
+<p>Q1. Why should industrial network devices be backed up?</p>
+<p>To restore approved configuration after hardware failure, accidental reset, configuration corruption, unauthorized changes, or replacement.</p>
+<p>Q2. What is the difference between running and startup configuration?</p>
+<p>Running configuration represents the currently active settings on platforms that distinguish it from persistent configuration. Startup configuration is loaded during startup. Unsaved changes may be lost after a restart.</p>
+<p>Q3. What should be included in a managed switch backup?</p>
+<p>The supported configuration, firmware and hardware information, VLANs, port assignments, trunks, redundancy, management settings, security configuration, and recovery documentation.</p>
+<p>Q4. Is an unmanaged switch configuration normally backed up?</p>
+<p>Many unmanaged switches have little or no configurable state. Inventory, port mapping, hardware details, and replacement compatibility are still important.</p>
+<p>Q5. Why is firmware compatibility important during recovery?</p>
+<p>Different firmware versions or hardware models may support different features or configuration formats. Incompatible combinations can prevent restoration or change network behavior.</p>
+<p>Q6. What is configuration drift?</p>
+<p>Configuration drift is the difference between the actual device configuration and its approved baseline.</p>
+<p>Q7. Why is a port map necessary if a configuration file exists?</p>
+<p>The configuration may describe logical ports without identifying their physical cable destinations or machine connections.</p>
+<p>Q8. Why is TFTP a concern?</p>
+<p>TFTP does not provide the same authentication and encryption protections as secure transfer protocols. Where legacy requirements make it necessary, its use should be restricted and controlled.</p>
+<p>Q9. Does network redundancy eliminate the need for backups?</p>
+<p>No. Redundancy can maintain service after selected failures, but it cannot guarantee recovery from configuration corruption, unauthorized changes, or loss of all relevant devices.</p>
+<p>Q10. What should be tested after replacing a managed switch?</p>
+<p>Management access, VLANs, trunks, routing if applicable, security policies, redundancy, monitoring, and required communication between industrial systems.</p>
+<p>Q11. Why should a firewall backup receive special protection?</p>
+<p>It can contain sensitive network architecture and security policy information, and unauthorized changes can either interrupt production or expose industrial systems.</p>
+<p>Q12. What is the most important test of a network backup?</p>
+<p>A controlled restore followed by verification that the required network paths, security policies, and industrial communications operate correctly.</p>
+<h2 id="21-final-principles">21. Final Principles</h2>
+<ul>
+<li>Maintain a verified configuration backup for every critical managed network device.</li>
+<li>Record firmware, hardware revision, network topology, port mapping, and security dependencies.</li>
+<li>Save configuration changes after approval and functional validation.</li>
+<li>Keep protected copies outside the device and its immediate management environment.</li>
+<li>Validate model and firmware compatibility before restoration.</li>
+<li>Test the restored configuration against actual industrial communication requirements.</li>
+<li>Update documentation and backup baselines after successful changes.</li>
+<li>Treat network recovery as a controlled production restoration activity, not a file-copying exercise.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\25_Backup_DR\02_Backup_Structure\01_Master_Working_Backup - Master vs Working backup</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

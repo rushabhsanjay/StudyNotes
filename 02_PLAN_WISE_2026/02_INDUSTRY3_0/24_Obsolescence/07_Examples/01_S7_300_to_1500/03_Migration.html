@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S7-300 to S7-1500 Migration: Convert, Test, and Cut Over</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">S7-300 to S7-1500 Migration: Convert, Test, and Cut Over</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and Scope</a></li>
+<li><a href="#2-migration-strategy">2. Migration Strategy</a><ul>
+<li><a href="#21-full-replacement-versus-staged-migration">2.1 Full replacement versus staged migration</a></li>
+<li><a href="#22-define-the-acceptance-criteria-first">2.2 Define the acceptance criteria first</a></li>
+</ul>
+</li>
+<li><a href="#3-phase-1-pre-migration-assessment">3. Phase 1: Pre-Migration Assessment</a><ul>
+<li><a href="#31-build-the-installed-base-inventory">3.1 Build the installed-base inventory</a></li>
+<li><a href="#32-capture-the-original-behavior">3.2 Capture the original behavior</a></li>
+<li><a href="#33-identify-high-risk-dependencies">3.3 Identify high-risk dependencies</a></li>
+</ul>
+</li>
+<li><a href="#4-phase-2-conversion-and-engineering-preparation">4. Phase 2: Conversion and Engineering Preparation</a><ul>
+<li><a href="#41-preserve-the-original-project">4.1 Preserve the original project</a></li>
+<li><a href="#42-convert-and-resolve-incompatibilities">4.2 Convert and resolve incompatibilities</a></li>
+<li><a href="#43-compile-and-inspect">4.3 Compile and inspect</a></li>
+</ul>
+</li>
+<li><a href="#5-phase-3-test-planning">5. Phase 3: Test Planning</a><ul>
+<li><a href="#51-test-levels">5.1 Test levels</a></li>
+<li><a href="#52-test-traceability">5.2 Test traceability</a></li>
+</ul>
+</li>
+<li><a href="#6-phase-4-hardware-installation-and-verification">6. Phase 4: Hardware Installation and Verification</a><ul>
+<li><a href="#61-physical-inspection">6.1 Physical inspection</a></li>
+<li><a href="#62-power-on-checks">6.2 Power-on checks</a></li>
+</ul>
+</li>
+<li><a href="#7-phase-5-io-and-communication-testing">7. Phase 5: I/O and Communication Testing</a><ul>
+<li><a href="#71-input-testing">7.1 Input testing</a></li>
+<li><a href="#72-output-testing">7.2 Output testing</a></li>
+<li><a href="#73-analog-testing">7.3 Analog testing</a></li>
+<li><a href="#74-communication-testing">7.4 Communication testing</a></li>
+</ul>
+</li>
+<li><a href="#8-phase-6-functional-and-regression-testing">8. Phase 6: Functional and Regression Testing</a><ul>
+<li><a href="#81-functional-sequence-testing">8.1 Functional sequence testing</a></li>
+<li><a href="#82-boundary-and-abnormal-condition-testing">8.2 Boundary and abnormal-condition testing</a></li>
+<li><a href="#83-timing-verification">8.3 Timing verification</a></li>
+<li><a href="#84-regression-test-evidence">8.4 Regression test evidence</a></li>
+</ul>
+</li>
+<li><a href="#9-phase-7-safety-validation">9. Phase 7: Safety Validation</a></li>
+<li><a href="#10-cutover-planning">10. Cutover Planning</a><ul>
+<li><a href="#101-pre-cutover-checklist">10.1 Pre-cutover checklist</a></li>
+<li><a href="#102-cutover-sequence">10.2 Cutover sequence</a></li>
+<li><a href="#103-manage-the-cutover-window">10.3 Manage the cutover window</a></li>
+</ul>
+</li>
+<li><a href="#11-rollback-strategy">11. Rollback Strategy</a><ul>
+<li><a href="#111-rollback-preparation">11.1 Rollback preparation</a></li>
+<li><a href="#112-define-rollback-triggers">11.2 Define rollback triggers</a></li>
+<li><a href="#113-rollback-is-not-always-a-simple-swap">11.3 Rollback is not always a simple swap</a></li>
+</ul>
+</li>
+<li><a href="#12-production-acceptance-and-handover">12. Production Acceptance and Handover</a><ul>
+<li><a href="#121-handover-package">12.1 Handover package</a></li>
+<li><a href="#122-initial-monitoring-period">12.2 Initial monitoring period</a></li>
+</ul>
+</li>
+<li><a href="#13-migration-performance-metrics">13. Migration Performance Metrics</a></li>
+<li><a href="#14-common-migration-failures-and-corrective-actions">14. Common Migration Failures and Corrective Actions</a></li>
+<li><a href="#15-practical-example-migrating-a-test-bench">15. Practical Example: Migrating a Test Bench</a></li>
+<li><a href="#16-final-migration-checklist">16. Final Migration Checklist</a><ul>
+<li><a href="#engineering">Engineering</a></li>
+<li><a href="#testing">Testing</a></li>
+<li><a href="#cutover-and-release">Cutover and release</a></li>
+</ul>
+</li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\24_Obsolescence\07_Examples\01_S7_300_to_1500\03_Migration</code></p>
+<h2 id="1-purpose-and-scope">1. Purpose and Scope</h2>
+<p>A PLC migration is complete only when the replacement system has been engineered, tested, commissioned, documented, and released for production. Converting the program and downloading it to the new CPU are intermediate activities, not proof of a successful migration.</p>
+<p>For an S7-300 to S7-1500 migration, the project must address three major stages:</p>
+<ul>
+<li>Convert: Prepare the target hardware configuration, migrate the engineering project, resolve incompatibilities, and compile the application.</li>
+<li>Test: Verify hardware, I/O, program behavior, communications, timing, fault handling, and safety functions.</li>
+<li>Cut over: Transfer production control to the new system under an approved plan, verify operation, and retain a practical rollback path.</li>
+</ul>
+<p>The objective is to minimize production downtime while protecting personnel, equipment, product quality, and process data.</p>
+<h2 id="2-migration-strategy">2. Migration Strategy</h2>
+<h3 id="21-full-replacement-versus-staged-migration">2.1 Full replacement versus staged migration</h3>
+<p>Two common approaches are a full-system replacement and a staged migration.</p>
+<table>
+<thead>
+<tr>
+<th>Factor</th>
+<th>Full replacement</th>
+<th>Staged migration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Scope</td>
+<td>Replaces the controller system during one planned outage</td>
+<td>Replaces subsystems in planned stages</td>
+</tr>
+<tr>
+<td>Downtime</td>
+<td>Can require a longer single outage</td>
+<td>May distribute downtime across multiple outages</td>
+</tr>
+<tr>
+<td>Engineering</td>
+<td>Entire target system is prepared before cutover</td>
+<td>Requires interface planning between old and new subsystems</td>
+</tr>
+<tr>
+<td>Temporary arrangements</td>
+<td>Usually limited to the outage and recovery plan</td>
+<td>May require temporary gateways or retained legacy equipment</td>
+</tr>
+<tr>
+<td>Testing</td>
+<td>Broad integrated testing before and during commissioning</td>
+<td>Testing occurs at subsystem and integration levels</td>
+</tr>
+<tr>
+<td>Risk</td>
+<td>Concentrated around the main cutover</td>
+<td>Distributed across multiple changes, with added interface complexity</td>
+</tr>
+<tr>
+<td>Best fit</td>
+<td>Well-defined systems with a controlled shutdown window</td>
+<td>Large systems where phased replacement is practical</td>
+</tr>
+</tbody>
+</table>
+<p>A staged migration is not automatically safer. Temporary interfaces, mixed hardware generations, and partial cutovers can create their own failure modes. The choice must be based on the plant's process, available downtime, technical constraints, and risk assessment.</p>
+<h3 id="22-define-the-acceptance-criteria-first">2.2 Define the acceptance criteria first</h3>
+<p>Before converting the project, define what a successful migration means.</p>
+<p>Typical acceptance criteria include:</p>
+<ul>
+<li>Every required field signal is correctly mapped.</li>
+<li>All intended machine sequences execute correctly.</li>
+<li>Required cycle time and response time are achieved.</li>
+<li>HMI, drives, remote I/O, and external systems communicate correctly.</li>
+<li>Alarms and fault recovery operate as intended.</li>
+<li>Retentive values and required recipes are preserved.</li>
+<li>Safety functions are validated under the approved procedure.</li>
+<li>The final project, drawings, and maintenance records are complete.</li>
+<li>Production and engineering representatives approve the release.</li>
+</ul>
+<p>Without acceptance criteria, commissioning tends to become an endless sequence of “it seems to work” demonstrations, which is not a particularly rigorous engineering method.</p>
+<h2 id="3-phase-1-pre-migration-assessment">3. Phase 1: Pre-Migration Assessment</h2>
+<h3 id="31-build-the-installed-base-inventory">3.1 Build the installed-base inventory</h3>
+<p>Create a complete inventory of the original PLC system before changing anything.</p>
+<table>
+<thead>
+<tr>
+<th>Inventory item</th>
+<th>Required information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CPU</td>
+<td>Order number, firmware, memory, communication interfaces</td>
+</tr>
+<tr>
+<td>Central I/O</td>
+<td>Module order numbers, channel counts, addresses</td>
+</tr>
+<tr>
+<td>Distributed I/O</td>
+<td>Station names, interface modules, module types</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>Protocols, device identities, network settings</td>
+</tr>
+<tr>
+<td>HMI and SCADA</td>
+<td>Models, software versions, tags, alarms, external interfaces</td>
+</tr>
+<tr>
+<td>Drives and motion</td>
+<td>Models, communication methods, control and feedback data</td>
+</tr>
+<tr>
+<td>Special modules</td>
+<td>Counting, measurement, serial communication, technology functions</td>
+</tr>
+<tr>
+<td>Safety equipment</td>
+<td>Safety CPU, safety I/O, safety relays, approved safety configuration</td>
+</tr>
+<tr>
+<td>Engineering software</td>
+<td>STEP 7 version, libraries, licences, source files</td>
+</tr>
+<tr>
+<td>Panel infrastructure</td>
+<td>Power supplies, mounting, wiring, network switches, earthing</td>
+</tr>
+</tbody>
+</table>
+<p>Record exact order numbers rather than relying on descriptions such as “old Siemens CPU” or “16-channel input card.” Exact identification prevents incorrect successor selection.</p>
+<h3 id="32-capture-the-original-behavior">3.2 Capture the original behavior</h3>
+<p>Record how the machine operates before the migration.</p>
+<p>Capture:</p>
+<ul>
+<li>Normal startup and shutdown sequences.</li>
+<li>Automatic and manual modes.</li>
+<li>Input/output assignments.</li>
+<li>Timer presets and sequence timeouts.</li>
+<li>Analog ranges, scaling, limits, and calibration constants.</li>
+<li>Communication update requirements.</li>
+<li>Alarm messages and fault-reset conditions.</li>
+<li>Retentive data and power-recovery behavior.</li>
+<li>Cycle time and critical response times.</li>
+<li>Known intermittent faults and existing limitations.</li>
+</ul>
+<p>This baseline distinguishes migration-induced problems from pre-existing issues.</p>
+<h3 id="33-identify-high-risk-dependencies">3.3 Identify high-risk dependencies</h3>
+<p>Pay particular attention to:</p>
+<ul>
+<li>Absolute DB offsets accessed by an HMI or PC.</li>
+<li>Legacy communication processors.</li>
+<li>Protected or unavailable program blocks.</li>
+<li>Unsupported instructions.</li>
+<li>Special-purpose modules.</li>
+<li>Safety-related functions.</li>
+<li>Third-party libraries.</li>
+<li>Remote I/O with uncertain target compatibility.</li>
+<li>External production databases and custom software.</li>
+</ul>
+<p>These dependencies should be resolved during engineering, not discovered for the first time during the production outage.</p>
+<h2 id="4-phase-2-conversion-and-engineering-preparation">4. Phase 2: Conversion and Engineering Preparation</h2>
+<h3 id="41-preserve-the-original-project">4.1 Preserve the original project</h3>
+<p>Maintain separate copies for the original source, the conversion work, and the approved final project.</p>
+<p>Recommended structure:</p>
+<pre><code>PLC_Migration/
+    01_Original_Backup/
+    02_Working_Conversion/
+    03_Compiled_Project/
+    04_Test_Evidence/
+    05_Approved_Release/
+    06_Rollback_Package/
+</code></pre>
+<p>The directory names are examples. The important principle is to keep the original, working, tested, and released versions distinguishable.</p>
+<h3 id="42-convert-and-resolve-incompatibilities">4.2 Convert and resolve incompatibilities</h3>
+<p>Use the supported Siemens migration route for the actual STEP 7 and TIA Portal versions.</p>
+<p>Review and resolve:</p>
+<ul>
+<li>Unsupported hardware references.</li>
+<li>CPU and firmware compatibility.</li>
+<li>Program instructions and block types.</li>
+<li>Data-block layout and addressing.</li>
+<li>Retentivity and initialisation.</li>
+<li>Communication blocks and connections.</li>
+<li>Library dependencies.</li>
+<li>HMI and external application references.</li>
+<li>Technology and safety-related configurations.</li>
+</ul>
+<p>Record each significant correction with the reason for the change and the verification performed.</p>
+<h3 id="43-compile-and-inspect">4.3 Compile and inspect</h3>
+<p>Perform the appropriate hardware and software compilation checks. Review errors and warnings rather than suppressing them without analysis.</p>
+<p>For each issue, document:</p>
+<ul>
+<li>The affected device or program block.</li>
+<li>The original behavior or purpose.</li>
+<li>The corrective action.</li>
+<li>The test used to verify the correction.</li>
+<li>Any remaining limitation or risk.</li>
+</ul>
+<p>A clean compilation is a necessary engineering milestone, but it does not establish correct field wiring, machine timing, or functional behavior.</p>
+<h2 id="5-phase-3-test-planning">5. Phase 3: Test Planning</h2>
+<p>Testing should be planned before the new system is installed. Define the test cases, expected results, acceptance limits, responsible personnel, and required safety precautions.</p>
+<h3 id="51-test-levels">5.1 Test levels</h3>
+<table>
+<thead>
+<tr>
+<th>Test level</th>
+<th>Main purpose</th>
+<th>Typical example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Engineering review</td>
+<td>Check design and project consistency</td>
+<td>Hardware configuration and block review</td>
+</tr>
+<tr>
+<td>Offline verification</td>
+<td>Detect engineering errors without running the machine</td>
+<td>Compile, cross-reference, and logic inspection</td>
+</tr>
+<tr>
+<td>Hardware inspection</td>
+<td>Verify the physical installation</td>
+<td>Rail, terminals, supply, grounding, and wiring</td>
+</tr>
+<tr>
+<td>I/O test</td>
+<td>Confirm field signal mapping</td>
+<td>Operate a sensor and verify the correct PLC tag</td>
+</tr>
+<tr>
+<td>Subsystem test</td>
+<td>Verify individual functions</td>
+<td>Clamp control or drive interface</td>
+</tr>
+<tr>
+<td>Integration test</td>
+<td>Verify interactions between subsystems</td>
+<td>PLC, HMI, drive, robot, and SCADA exchange</td>
+</tr>
+<tr>
+<td>Functional test</td>
+<td>Verify complete machine behavior</td>
+<td>Full automatic production cycle</td>
+</tr>
+<tr>
+<td>Fault test</td>
+<td>Verify abnormal-condition handling</td>
+<td>Sensor timeout or communication interruption</td>
+</tr>
+<tr>
+<td>Safety validation</td>
+<td>Demonstrate required safety performance</td>
+<td>Approved emergency-stop and guard-function tests</td>
+</tr>
+<tr>
+<td>Production acceptance</td>
+<td>Confirm readiness for controlled release</td>
+<td>Production trial against agreed criteria</td>
+</tr>
+</tbody>
+</table>
+<h3 id="52-test-traceability">5.2 Test traceability</h3>
+<p>Every critical requirement should map to one or more test cases.</p>
+<p>Example:</p>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Test case</th>
+<th>Expected result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Clamp must be confirmed before measurement</td>
+<td>Apply clamp command and verify feedback</td>
+<td>Measurement sequence starts only after valid confirmation</td>
+</tr>
+<tr>
+<td>Pressure must be within limits</td>
+<td>Test below, within, and above limits</td>
+<td>Correct acceptance or rejection result</td>
+</tr>
+<tr>
+<td>Communication loss must be detected</td>
+<td>Interrupt the applicable connection under controlled conditions</td>
+<td>Fault is detected and the defined safe response occurs</td>
+</tr>
+<tr>
+<td>Cycle timeout must be detected</td>
+<td>Prevent the expected sensor transition</td>
+<td>Timeout alarm appears and the sequence responds correctly</td>
+</tr>
+<tr>
+<td>Required values must survive a power interruption</td>
+<td>Perform the approved power-cycle test</td>
+<td>Specified retained values are restored correctly</td>
+</tr>
+</tbody>
+</table>
+<p>The test procedure must not introduce uncontrolled hazards. Tests involving motion, safety functions, or energized equipment require the applicable risk controls and authorized personnel.</p>
+<h2 id="6-phase-4-hardware-installation-and-verification">6. Phase 4: Hardware Installation and Verification</h2>
+<p>Before downloading the migrated program, inspect the new hardware installation.</p>
+<h3 id="61-physical-inspection">6.1 Physical inspection</h3>
+<ul>
+<li>Confirm CPU and module order numbers against the approved design.</li>
+<li>Verify mounting, clearances, ventilation, and cable routing.</li>
+<li>Check 24 VDC supplies and the required power distribution.</li>
+<li>Verify protective earth and shield connections.</li>
+<li>Check terminal assignments against the updated drawings.</li>
+<li>Verify network cables, connectors, switch ports, and device names.</li>
+<li>Confirm that disconnected or unused wires are safely terminated.</li>
+<li>Confirm that safety-related wiring matches the approved design.</li>
+</ul>
+<h3 id="62-power-on-checks">6.2 Power-on checks</h3>
+<p>Energize the system according to the approved commissioning procedure.</p>
+<p>Check:</p>
+<ul>
+<li>CPU startup and operating status.</li>
+<li>Module status indicators.</li>
+<li>Hardware diagnostic messages.</li>
+<li>Network connection status.</li>
+<li>Unexpected output behavior.</li>
+<li>Supply voltage and relevant power diagnostics.</li>
+<li>Correct startup and initialisation behavior.</li>
+</ul>
+<p>Outputs must remain in a controlled state until the machine is ready for functional testing. Never assume that a newly downloaded program will keep every output inactive during startup or fault recovery.</p>
+<h2 id="7-phase-5-io-and-communication-testing">7. Phase 5: I/O and Communication Testing</h2>
+<h3 id="71-input-testing">7.1 Input testing</h3>
+<p>For each input:</p>
+<ol>
+<li>Identify the field device and signal tag.</li>
+<li>Confirm the terminal and channel against the wiring drawing.</li>
+<li>Operate the device under controlled conditions.</li>
+<li>Verify that the correct PLC input changes state.</li>
+<li>Confirm the corresponding program logic responds correctly.</li>
+<li>Record the result and any corrective action.</li>
+</ol>
+<p>Test sensors in their real operating conditions where practical. A forced software bit can help isolate logic, but it does not verify the sensor, wiring, input module, or electrical interface.</p>
+<h3 id="72-output-testing">7.2 Output testing</h3>
+<p>For each output:</p>
+<ol>
+<li>Confirm the output address and physical terminal.</li>
+<li>Verify the connected load and its supply.</li>
+<li>Test the output using the approved procedure.</li>
+<li>Confirm that the intended actuator responds.</li>
+<li>Verify feedback and interlocks.</li>
+<li>Confirm that output shutdown and fault behavior are correct.</li>
+</ol>
+<p>Do not force outputs casually. A forced output can move a cylinder, energize a motor, release a clamp, or create unexpected motion. Use approved isolation, access controls, and test conditions.</p>
+<h3 id="73-analog-testing">7.3 Analog testing</h3>
+<p>For each analog channel, verify:</p>
+<ul>
+<li>Signal type and range.</li>
+<li>Correct polarity and wiring.</li>
+<li>Engineering-unit scaling.</li>
+<li>Zero and span behavior.</li>
+<li>Measurement accuracy within the acceptance limits.</li>
+<li>Wire-break and out-of-range diagnostics where supported.</li>
+<li>Correct behavior of limits and alarms.</li>
+</ul>
+<p>For a linear 4–20 mA signal representing 0–100 units:</p>
+<div class="math-display">\[ X = \frac{I-4}{20-4}\times100 \]</div>
+<p>At 12 mA, the expected value is 50 units. Confirm the actual transmitter range and module configuration before applying this calculation.</p>
+<h3 id="74-communication-testing">7.4 Communication testing</h3>
+<p>Test each communication relationship individually before testing the complete production sequence.</p>
+<p>Verify:</p>
+<ul>
+<li>Device identity and addressing.</li>
+<li>Connection establishment.</li>
+<li>Data types and data values.</li>
+<li>Read/write direction.</li>
+<li>Update rate and timeout behavior.</li>
+<li>Alarm and diagnostic response.</li>
+<li>Recovery after communication loss.</li>
+<li>Handling of stale or invalid data.</li>
+</ul>
+<p>Include all relevant devices, such as HMI panels, remote I/O, drives, robots, CNC controllers, measurement instruments, SCADA systems, and PC applications.</p>
+<h2 id="8-phase-6-functional-and-regression-testing">8. Phase 6: Functional and Regression Testing</h2>
+<h3 id="81-functional-sequence-testing">8.1 Functional sequence testing</h3>
+<p>Test every operating mode and critical sequence against the approved requirements.</p>
+<p>For a production test bench, this may include:</p>
+<ol>
+<li>Power-up and machine initialisation.</li>
+<li>Manual control and maintenance mode.</li>
+<li>Part-presence and fixture checks.</li>
+<li>Clamping and confirmation.</li>
+<li>Measurement or test execution.</li>
+<li>Result evaluation and pass/fail handling.</li>
+<li>Part release and cycle completion.</li>
+<li>Fault detection, reset, and recovery.</li>
+<li>Shutdown and restart.</li>
+</ol>
+<p>The exact sequence depends on the machine. The test must cover actual process behavior rather than only whether the PLC program appears to execute.</p>
+<h3 id="82-boundary-and-abnormal-condition-testing">8.2 Boundary and abnormal-condition testing</h3>
+<p>Normal operation is only one part of the test plan. Check how the system behaves when expected conditions do not occur.</p>
+<p>Examples:</p>
+<ul>
+<li>Sensor does not switch.</li>
+<li>Two interlocks disagree.</li>
+<li>Analog value is below or above its allowed range.</li>
+<li>Drive reports a fault.</li>
+<li>Remote I/O communication is lost.</li>
+<li>HMI or external PC communication is interrupted.</li>
+<li>CPU restarts during an approved test condition.</li>
+<li>A timeout expires.</li>
+<li>A required value is missing or invalid.</li>
+</ul>
+<p>For each condition, verify the expected alarm, sequence response, output state, operator message, and recovery procedure.</p>
+<h3 id="83-timing-verification">8.3 Timing verification</h3>
+<p>Record timing-critical behavior before and after migration.</p>
+<table>
+<thead>
+<tr>
+<th>Measurement</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC scan time</td>
+<td>Evaluate program execution load</td>
+</tr>
+<tr>
+<td>Input-to-output response</td>
+<td>Confirm control response</td>
+</tr>
+<tr>
+<td>Sequence duration</td>
+<td>Confirm production cycle requirements</td>
+</tr>
+<tr>
+<td>Communication update time</td>
+<td>Verify data freshness and coordination</td>
+</tr>
+<tr>
+<td>Timeout behavior</td>
+<td>Confirm fault detection occurs within the required interval</td>
+</tr>
+<tr>
+<td>Measurement trigger timing</td>
+<td>Confirm acquisition occurs at the intended point in the process</td>
+</tr>
+</tbody>
+</table>
+<p>A faster CPU does not guarantee identical timing. Differences in execution, I/O updates, communication scheduling, and program structure can affect the process.</p>
+<h3 id="84-regression-test-evidence">8.4 Regression test evidence</h3>
+<p>Record the expected result, actual result, pass/fail status, date, responsible person, and any corrective action for each test.</p>
+<p>A failed test must be resolved and repeated. If the correction affects another subsystem, repeat the relevant integration or regression tests as well.</p>
+<h2 id="9-phase-7-safety-validation">9. Phase 7: Safety Validation</h2>
+<p>Safety-related migration must be treated separately from ordinary PLC functional testing.</p>
+<p>The replacement system must preserve the required safety functions, not merely reproduce the original sequence.</p>
+<p>Check:</p>
+<ul>
+<li>Emergency-stop functions.</li>
+<li>Guard-door interlocks.</li>
+<li>Enabling devices and operating modes.</li>
+<li>Safe motion or drive-related safety functions, where applicable.</li>
+<li>Fail-safe CPU and I/O configuration.</li>
+<li>Safety communication.</li>
+<li>Fault detection and safe-state behavior.</li>
+<li>Reset and restart conditions.</li>
+<li>Required documentation and validation evidence.</li>
+</ul>
+<p>Do not bypass safety devices or rely on standard PLC logic as a substitute for an approved safety function. Any changes to safety hardware, software, or architecture require the applicable risk assessment, validation process, and authorized approval.</p>
+<h2 id="10-cutover-planning">10. Cutover Planning</h2>
+<p>Cutover is the controlled transfer from the old PLC system to the new system. It should be treated as a planned production event with defined responsibilities and decision points.</p>
+<h3 id="101-pre-cutover-checklist">10.1 Pre-cutover checklist</h3>
+<ul>
+<li>Target hardware and software are approved.</li>
+<li>Required test cases have passed.</li>
+<li>The final project is compiled and backed up.</li>
+<li>The original project and rollback package are available.</li>
+<li>Updated drawings and I/O lists are available.</li>
+<li>Required replacement parts and tools are available.</li>
+<li>Operators and maintenance personnel are informed.</li>
+<li>Production, quality, engineering, and safety responsibilities are assigned.</li>
+<li>The shutdown window and expected duration are agreed.</li>
+<li>Acceptance criteria and abort conditions are defined.</li>
+<li>Safety precautions and isolation requirements are approved.</li>
+</ul>
+<h3 id="102-cutover-sequence">10.2 Cutover sequence</h3>
+<pre><code>Approve migration and shutdown window
+    ↓
+Stop production using the approved procedure
+    ↓
+Isolate equipment and establish safe working conditions
+    ↓
+Record final machine state and required process data
+    ↓
+Replace hardware and verify wiring
+    ↓
+Load the approved target project
+    ↓
+Check CPU, module and network diagnostics
+    ↓
+Verify I/O and critical communications
+    ↓
+Perform approved functional and safety checks
+    ↓
+Run controlled production trials
+    ↓
+Accept the system or initiate the rollback plan
+</code></pre>
+<p>The sequence must be adapted to the machine's actual design and site procedures.</p>
+<h3 id="103-manage-the-cutover-window">10.3 Manage the cutover window</h3>
+<p>Prepare a time plan for each major task, including:</p>
+<ul>
+<li>Shutdown and isolation.</li>
+<li>Hardware removal and installation.</li>
+<li>Wiring and inspection.</li>
+<li>Project download and startup.</li>
+<li>I/O and communication checks.</li>
+<li>Critical functional tests.</li>
+<li>Production trial.</li>
+<li>Acceptance decision.</li>
+</ul>
+<p>Assign one person to coordinate the overall cutover and ensure that task completion and unresolved issues are recorded. If a critical acceptance criterion fails, follow the predefined decision process rather than extending the outage indefinitely without control.</p>
+<h2 id="11-rollback-strategy">11. Rollback Strategy</h2>
+<p>A rollback plan defines how the plant can return to the previous operating arrangement if the new system cannot be accepted.</p>
+<h3 id="111-rollback-preparation">11.1 Rollback preparation</h3>
+<p>Preserve:</p>
+<ul>
+<li>Original PLC hardware and its identification.</li>
+<li>Verified original project and required software.</li>
+<li>Original network configuration.</li>
+<li>Existing wiring records and terminal labels.</li>
+<li>Required machine parameters and retained data.</li>
+<li>Original HMI and external-system configurations.</li>
+<li>Tools, spare parts, and personnel required for restoration.</li>
+</ul>
+<p>The old hardware should be retained and protected until the new system has completed the required acceptance period, subject to site policy and equipment condition.</p>
+<h3 id="112-define-rollback-triggers">11.2 Define rollback triggers</h3>
+<p>Possible triggers include:</p>
+<ul>
+<li>Critical functional tests fail.</li>
+<li>Required safety validation cannot be completed.</li>
+<li>Unresolved communication problems prevent correct operation.</li>
+<li>The machine cannot meet essential timing or quality requirements.</li>
+<li>A serious hardware fault occurs.</li>
+<li>The cutover exceeds the approved recovery limit.</li>
+</ul>
+<h3 id="113-rollback-is-not-always-a-simple-swap">11.3 Rollback is not always a simple swap</h3>
+<p>The new system may require different wiring, terminals, network settings, or external-device configurations. Reverting to the old CPU may therefore require restoring the original physical arrangement and configuration.</p>
+<p>Do not assume that the original PLC can be reconnected immediately after the new hardware has been installed. The rollback method must be engineered and, where practical, rehearsed before cutover.</p>
+<h2 id="12-production-acceptance-and-handover">12. Production Acceptance and Handover</h2>
+<p>After the machine passes the agreed tests, the migration must be formally handed over to operations and maintenance.</p>
+<h3 id="121-handover-package">12.1 Handover package</h3>
+<ul>
+<li>Final PLC project and version information.</li>
+<li>Final hardware configuration and module list.</li>
+<li>Updated electrical drawings and I/O mapping.</li>
+<li>Network configuration and device inventory.</li>
+<li>Test results and outstanding-issue register.</li>
+<li>Safety validation records where applicable.</li>
+<li>CPU and module firmware information.</li>
+<li>HMI, drive, and external application project versions.</li>
+<li>Recovery and backup procedures.</li>
+<li>Updated troubleshooting and fault-diagnosis instructions.</li>
+<li>Spare-parts and successor-component records.</li>
+<li>Operator and maintenance training records.</li>
+</ul>
+<h3 id="122-initial-monitoring-period">12.2 Initial monitoring period</h3>
+<p>During the initial production period, monitor:</p>
+<ul>
+<li>Unexpected CPU or module diagnostics.</li>
+<li>Communication interruptions.</li>
+<li>Repeat alarms.</li>
+<li>Cycle time and machine availability.</li>
+<li>Product quality and test-result consistency.</li>
+<li>Operator-reported behavior.</li>
+<li>Data collection and traceability.</li>
+<li>Any change in startup or recovery behavior.</li>
+</ul>
+<p>Investigate deviations against the original baseline and approved acceptance criteria. Do not dismiss a recurring issue simply because production continues.</p>
+<h2 id="13-migration-performance-metrics">13. Migration Performance Metrics</h2>
+<p>Use measurable indicators to evaluate the migration.</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Calculation or evaluation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cutover duration</td>
+<td>Actual time from approved shutdown start to accepted production release</td>
+</tr>
+<tr>
+<td>Test pass rate</td>
+<td>Passed tests divided by total executed tests, multiplied by 100</td>
+</tr>
+<tr>
+<td>Critical defect count</td>
+<td>Number of unresolved defects classified as critical</td>
+</tr>
+<tr>
+<td>Repeat-failure rate</td>
+<td>Frequency of repeated migration-related faults over a defined period</td>
+</tr>
+<tr>
+<td>Availability</td>
+<td>Available operating time divided by scheduled operating time, multiplied by 100</td>
+</tr>
+<tr>
+<td>Cycle-time deviation</td>
+<td>Difference between migrated and baseline cycle time</td>
+</tr>
+<tr>
+<td>Data integrity</td>
+<td>Percentage of required data points verified correctly</td>
+</tr>
+<tr>
+<td>Documentation completion</td>
+<td>Percentage of required handover documents approved</td>
+</tr>
+</tbody>
+</table>
+<p>For example, if 96 of 100 executed tests pass:</p>
+<div class="math-display">\[ \text{Test pass rate} = \frac{96}{100}\times100 = 96\\% \]</div>
+<p>A high pass rate does not justify release if one of the failed tests concerns a critical safety function or essential production requirement. Critical acceptance criteria take precedence over aggregate percentages.</p>
+<h2 id="14-common-migration-failures-and-corrective-actions">14. Common Migration Failures and Corrective Actions</h2>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Likely cause</th>
+<th>Corrective action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CPU will not start correctly</td>
+<td>Unsupported configuration, firmware mismatch, or hardware issue</td>
+<td>Check diagnostics, order numbers, firmware, and configuration</td>
+</tr>
+<tr>
+<td>Input signal appears at the wrong tag</td>
+<td>Incorrect address mapping or wiring</td>
+<td>Compare the approved I/O list, channel assignment, and terminal wiring</td>
+</tr>
+<tr>
+<td>Analog value is incorrect</td>
+<td>Range, scaling, polarity, or module configuration mismatch</td>
+<td>Verify transmitter specifications and scaling</td>
+</tr>
+<tr>
+<td>HMI displays incorrect values</td>
+<td>Changed DB layout, tag references, or communication configuration</td>
+<td>Audit HMI tags and external data dependencies</td>
+</tr>
+<tr>
+<td>Drive fails to communicate</td>
+<td>Interface or telegram configuration changed</td>
+<td>Verify hardware support, network setup, and data mapping</td>
+</tr>
+<tr>
+<td>Sequence times out</td>
+<td>Changed timing behavior or missing feedback</td>
+<td>Inspect sequence logic, field signals, and measured timing</td>
+</tr>
+<tr>
+<td>Data is lost after restart</td>
+<td>Retentivity or initialisation changed</td>
+<td>Verify required retained values and startup behavior</td>
+</tr>
+<tr>
+<td>Intermittent network fault occurs</td>
+<td>Address conflict, wiring issue, device configuration, or network load</td>
+<td>Check physical network and diagnostic evidence</td>
+</tr>
+<tr>
+<td>Production cycle time increases</td>
+<td>Execution or communication timing changed</td>
+<td>Measure the cycle and investigate critical paths</td>
+</tr>
+<tr>
+<td>Rollback takes too long</td>
+<td>Original configuration or restoration steps were not prepared</td>
+<td>Improve and rehearse the recovery plan</td>
+</tr>
+</tbody>
+</table>
+<h2 id="15-practical-example-migrating-a-test-bench">15. Practical Example: Migrating a Test Bench</h2>
+<p>Consider a test bench that uses an S7-300 to control a fixture, monitor pressure, execute a test cycle, evaluate the result, and send production data to an external application.</p>
+<p>A disciplined migration would follow these stages:</p>
+<ol>
+<li>Record the original CPU, I/O, network, program, data, and timing configuration.</li>
+<li>Define the target S7-1500 hardware and TIA Portal project.</li>
+<li>Identify any unsupported instructions, modules, or external data dependencies.</li>
+<li>Convert the project and resolve hardware and software incompatibilities.</li>
+<li>Compile the target project and inspect all relevant diagnostics.</li>
+<li>Test digital inputs, digital outputs, analog scaling, and communications.</li>
+<li>Execute the complete test sequence under controlled conditions.</li>
+<li>Verify pass/fail logic, timeout behavior, data recording, and fault recovery.</li>
+<li>Validate the applicable safety functions.</li>
+<li>Execute the approved cutover and production trial.</li>
+<li>Accept the system or follow the rollback plan.</li>
+<li>Save the final project and update the maintenance documentation.</li>
+</ol>
+<p>The migration is complete only when the system meets its defined acceptance criteria and the required evidence is recorded.</p>
+<h2 id="16-final-migration-checklist">16. Final Migration Checklist</h2>
+<h3 id="engineering">Engineering</h3>
+<ul>
+<li>Original project and hardware configuration preserved.</li>
+<li>Target CPU and modules verified.</li>
+<li>Program conversion completed and reviewed.</li>
+<li>Hardware and software compile checks completed.</li>
+<li>External data and communication dependencies verified.</li>
+<li>Timing and functional requirements documented.</li>
+</ul>
+<h3 id="testing">Testing</h3>
+<ul>
+<li>Hardware and wiring inspected.</li>
+<li>Digital and analog I/O tested.</li>
+<li>Communication links verified.</li>
+<li>Normal sequences tested.</li>
+<li>Fault and recovery scenarios tested.</li>
+<li>Timing and data integrity verified.</li>
+<li>Required safety validation completed.</li>
+</ul>
+<h3 id="cutover-and-release">Cutover and release</h3>
+<ul>
+<li>Shutdown and cutover plan approved.</li>
+<li>Rollback triggers and restoration steps defined.</li>
+<li>Production trial completed.</li>
+<li>Acceptance criteria met.</li>
+<li>Final project and recovery backup saved.</li>
+<li>Drawings, spare lists, and maintenance records updated.</li>
+<li>Operations and maintenance handover completed.</li>
+</ul>
+<p>Core principle: Convert the project, test the actual behavior, cut over under controlled conditions, and retain a verified recovery path. A migration is an engineering change to the whole automation system, not just a programming exercise.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\24_Obsolescence\07_Examples\02_MicroLogix_to_Compact\01_Hardware - Hardware: Controller and I/O differences</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLC-CNC Communication Commissioning</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">PLC-CNC Communication Commissioning</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-scope-and-objectives">2. Scope and Objectives</a></li>
+<li><a href="#3-plc-and-cnc-responsibilities">3. PLC and CNC Responsibilities</a></li>
+<li><a href="#4-typical-plc-cnc-architecture">4. Typical PLC-CNC Architecture</a><ul>
+<li><a href="#41-common-interface-methods">4.1 Common interface methods</a></li>
+</ul>
+</li>
+<li><a href="#5-identify-the-actual-machine-interface">5. Identify the Actual Machine Interface</a></li>
+<li><a href="#6-communication-commissioning-physical-layer">6. Communication Commissioning: Physical Layer</a><ul>
+<li><a href="#61-hardwired-interfaces">6.1 Hardwired interfaces</a></li>
+<li><a href="#62-ethernet-and-fieldbus-interfaces">6.2 Ethernet and fieldbus interfaces</a></li>
+</ul>
+</li>
+<li><a href="#7-signal-mapping-and-data-validation">7. Signal Mapping and Data Validation</a><ul>
+<li><a href="#71-verify-every-mapped-signal">7.1 Verify every mapped signal</a></li>
+<li><a href="#72-data-types-and-byte-mapping">7.2 Data types and byte mapping</a></li>
+</ul>
+</li>
+<li><a href="#8-cnc-state-and-handshake-design">8. CNC State and Handshake Design</a><ul>
+<li><a href="#81-typical-operating-states">8.1 Typical operating states</a></li>
+<li><a href="#82-example-cycle-start-handshake">8.2 Example cycle-start handshake</a></li>
+<li><a href="#83-handshake-rules">8.3 Handshake rules</a></li>
+<li><a href="#84-timeout-handling">8.4 Timeout handling</a></li>
+</ul>
+</li>
+<li><a href="#9-operating-modes-and-program-selection">9. Operating Modes and Program Selection</a></li>
+<li><a href="#10-cnc-functions-and-m-codes">10. CNC Functions and M-Codes</a><ul>
+<li><a href="#101-m-code-commissioning-checks">10.1 M-code commissioning checks</a></li>
+</ul>
+</li>
+<li><a href="#11-coordination-with-machine-auxiliaries">11. Coordination With Machine Auxiliaries</a></li>
+<li><a href="#12-safety-and-interlock-boundaries">12. Safety and Interlock Boundaries</a><ul>
+<li><a href="#121-feed-hold-stop-reset-and-emergency-stop">12.1 Feed hold, stop, reset, and emergency stop</a></li>
+</ul>
+</li>
+<li><a href="#13-alarm-handling-and-diagnostics">13. Alarm Handling and Diagnostics</a><ul>
+<li><a href="#131-diagnostic-design">13.1 Diagnostic design</a></li>
+</ul>
+</li>
+<li><a href="#14-communication-loss-detection-and-recovery">14. Communication-Loss Detection and Recovery</a><ul>
+<li><a href="#141-required-behavior">14.1 Required behavior</a></li>
+<li><a href="#142-recovery-sequence">14.2 Recovery sequence</a></li>
+</ul>
+</li>
+<li><a href="#15-commissioning-procedure">15. Commissioning Procedure</a><ul>
+<li><a href="#phase-1-documentation-and-preparation">Phase 1: Documentation and preparation</a></li>
+<li><a href="#phase-2-physical-and-network-verification">Phase 2: Physical and network verification</a></li>
+<li><a href="#phase-3-signal-by-signal-verification">Phase 3: Signal-by-signal verification</a></li>
+<li><a href="#phase-4-sequence-and-interlock-verification">Phase 4: Sequence and interlock verification</a></li>
+<li><a href="#phase-5-fault-and-recovery-verification">Phase 5: Fault and recovery verification</a></li>
+<li><a href="#phase-6-production-validation">Phase 6: Production validation</a></li>
+</ul>
+</li>
+<li><a href="#16-troubleshooting-guide">16. Troubleshooting Guide</a></li>
+<li><a href="#17-timing-and-performance-validation">17. Timing and Performance Validation</a></li>
+<li><a href="#18-fat-and-sat-for-plc-cnc-communication">18. FAT and SAT for PLC-CNC Communication</a></li>
+<li><a href="#19-acceptance-criteria">19. Acceptance Criteria</a></li>
+<li><a href="#20-practical-example-plc-controlled-cnc-loading">20. Practical Example: PLC-Controlled CNC Loading</a><ul>
+<li><a href="#example-fault-cnc-does-not-start">Example fault: CNC does not start</a></li>
+</ul>
+</li>
+<li><a href="#21-common-commissioning-mistakes">21. Common Commissioning Mistakes</a></li>
+<li><a href="#22-documentation-and-handover">22. Documentation and Handover</a></li>
+<li><a href="#23-interview-questions-and-answers">23. Interview Questions and Answers</a></li>
+<li><a href="#24-final-commissioning-checklist">24. Final Commissioning Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>PLC-CNC communication commissioning is the process of verifying, configuring, testing, and validating the exchange of signals and data between a Programmable Logic Controller (PLC) and a Computer Numerical Control (CNC) system so that the machine operates in the correct sequence, under valid interlocks, and with predictable fault handling.</p>
+<p>The PLC and CNC have different responsibilities. The CNC primarily executes machining programs and controls axes and spindle motion, while the PLC manages machine sequencing, auxiliary equipment, and interlocks. The exact division depends on the machine builder, CNC platform, and machine software architecture.</p>
+<p>The objective is not merely to establish communication. It is to prove that both controllers interpret commands and status information correctly, including during faults, interruptions, resets, and recovery.</p>
+<h2 id="2-scope-and-objectives">2. Scope and Objectives</h2>
+<p>PLC-CNC commissioning typically covers:</p>
+<ul>
+<li>Physical interface wiring and communication-network configuration.</li>
+<li>Signal and data mapping between PLC and CNC.</li>
+<li>CNC ready, alarm, cycle start, cycle active, cycle complete, and reset signals.</li>
+<li>Operating-mode, program-selection, and machining-permission interlocks.</li>
+<li>Coordination of doors, chucks, fixtures, tool changers, coolant, lubrication, and chip conveyors.</li>
+<li>Alarm exchange, diagnostics, communication-loss detection, and recovery.</li>
+<li>Functional testing, cycle-time verification, and FAT/SAT acceptance.</li>
+</ul>
+<p>The commissioning scope must identify whether the interface uses hardwired I/O, fieldbus communication, a CNC-specific data interface, or a combination of these methods.</p>
+<h2 id="3-plc-and-cnc-responsibilities">3. PLC and CNC Responsibilities</h2>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>PLC responsibility</th>
+<th>CNC responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine sequence</td>
+<td>Coordinates machine-level sequence</td>
+<td>Executes the machining sequence assigned to the CNC</td>
+</tr>
+<tr>
+<td>Axis motion</td>
+<td>Requests or permits motion through the defined interface</td>
+<td>Controls CNC axes and interpolated motion</td>
+</tr>
+<tr>
+<td>Spindle</td>
+<td>Coordinates machine-level spindle permissives and auxiliary functions</td>
+<td>Executes spindle commands and relevant CNC functions</td>
+</tr>
+<tr>
+<td>Cycle start</td>
+<td>Issues a valid start request after checking interlocks</td>
+<td>Accepts the request when its internal conditions permit</td>
+</tr>
+<tr>
+<td>Cycle status</td>
+<td>Monitors and coordinates machine state</td>
+<td>Reports program execution and CNC state</td>
+</tr>
+<tr>
+<td>Tool change</td>
+<td>Coordinates the machine-side tool-change mechanism</td>
+<td>Coordinates tool-change requests and tool data according to the configuration</td>
+</tr>
+<tr>
+<td>Door and chuck</td>
+<td>Controls or monitors machine-side devices</td>
+<td>May require valid door, clamping, or fixture status before machining</td>
+</tr>
+<tr>
+<td>Alarms</td>
+<td>Handles machine-level faults and displays or forwards relevant information</td>
+<td>Reports CNC alarms and motion or program faults</td>
+</tr>
+<tr>
+<td>Emergency stop</td>
+<td>Participates in the machine safety architecture where assigned</td>
+<td>Responds through its defined safety interface and configuration</td>
+</tr>
+<tr>
+<td>Recovery</td>
+<td>Coordinates safe machine-level recovery</td>
+<td>Restores CNC operation according to CNC state and recovery rules</td>
+</tr>
+</tbody>
+</table>
+<p>A machine builder may implement some of these functions inside the CNC's integrated PLC rather than an external PLC. Always establish which controller owns each function before changing logic.</p>
+<h2 id="4-typical-plc-cnc-architecture">4. Typical PLC-CNC Architecture</h2>
+<p>A common machine architecture is:</p>
+<pre><code>Operator Panel / HMI
+         ↓
+External Machine PLC
+         ↓
+Machine Interface
+         ↓
+CNC Controller
+         ↓
+Axis Drives and Spindle Drive
+         ↓
+Motors and Machine Motion
+
+External Machine PLC
+         ↓
+Sensors, Valves, Contactors, Pumps, Fixtures,
+Doors, Tool Changer and Other Auxiliary Devices
+</code></pre>
+<p>The machine interface may consist of discrete I/O, a fieldbus, a manufacturer-specific communication interface, or multiple interfaces working together.</p>
+<p>For example, the PLC might send a cycle-start request through discrete I/O while obtaining detailed CNC status and alarm information through an Ethernet-based interface.</p>
+<h3 id="41-common-interface-methods">4.1 Common interface methods</h3>
+<table>
+<thead>
+<tr>
+<th>Interface method</th>
+<th>Typical application</th>
+<th>Commissioning concern</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hardwired digital I/O</td>
+<td>Ready, start request, cycle active, alarm, reset</td>
+<td>Wiring, polarity, voltage, common reference, and signal timing</td>
+</tr>
+<tr>
+<td>PROFINET</td>
+<td>Cyclic exchange between compatible controllers and devices</td>
+<td>Device name, IP configuration, device identity, I/O mapping, and network diagnostics</td>
+</tr>
+<tr>
+<td>EtherNet/IP</td>
+<td>Cyclic I/O exchange between compatible industrial devices</td>
+<td>Device configuration, connection parameters, assembly mapping, and connection status</td>
+</tr>
+<tr>
+<td>PROFIBUS DP</td>
+<td>Cyclic fieldbus I/O on supported equipment</td>
+<td>Node address, baud rate, bus termination, and diagnostics</td>
+</tr>
+<tr>
+<td>CC-Link</td>
+<td>Cyclic communication on supported platforms</td>
+<td>Network parameters, station configuration, and data mapping</td>
+</tr>
+<tr>
+<td>Manufacturer-specific CNC interface</td>
+<td>CNC status, commands, program data, and diagnostics</td>
+<td>Supported API, options, access permissions, data definitions, and controller compatibility</td>
+</tr>
+</tbody>
+</table>
+<p>Not every CNC supports every protocol natively. A communication module, gateway, licensed option, or machine-builder-specific interface may be required.</p>
+<h2 id="5-identify-the-actual-machine-interface">5. Identify the Actual Machine Interface</h2>
+<p>Before commissioning, collect the following information:</p>
+<ul>
+<li>CNC manufacturer, model, software version, and installed options.</li>
+<li>External PLC manufacturer, CPU model, firmware, and project version.</li>
+<li>Machine-builder electrical drawings and I/O lists.</li>
+<li>CNC interface documentation and signal definitions.</li>
+<li>Network topology, IP addresses, device names, and protocol configuration.</li>
+<li>CNC parameter backup and PLC program backup.</li>
+<li>Machine operating sequence and interface timing requirements.</li>
+<li>Safety architecture and the approved risk assessment.</li>
+<li>Existing fault history and machine recovery procedure.</li>
+</ul>
+<p>Common CNC platforms include Siemens SINUMERIK, FANUC CNC, Mitsubishi CNC, and other manufacturer-specific systems. Their interface signals, PLC integration methods, diagnostic screens, and configuration procedures differ.</p>
+<p>Important: Do not assume that a signal named <code>CNC_READY</code>, <code>CYCLE_START</code>, or <code>MACHINE_ALARM</code> has identical meaning across machine builders. Confirm the exact meaning, active state, reset conditions, and timing from the approved interface documentation.</p>
+<h2 id="6-communication-commissioning-physical-layer">6. Communication Commissioning: Physical Layer</h2>
+<h3 id="61-hardwired-interfaces">6.1 Hardwired interfaces</h3>
+<p>For a discrete interface, verify:</p>
+<ol>
+<li>The CNC output is wired to the intended PLC input.</li>
+<li>The PLC output is wired to the intended CNC input.</li>
+<li>The signal voltage and electrical characteristics are compatible.</li>
+<li>The common reference, polarity, and isolation arrangement are correct.</li>
+<li>The input and output addresses match the electrical drawings and PLC configuration.</li>
+<li>The input filter and signal-processing delay are appropriate.</li>
+<li>No unintended cross-connection, short circuit, or forced signal exists.</li>
+</ol>
+<p>For a typical 24 V DC digital interface, check the actual voltage at the receiving terminal rather than relying solely on an indicator LED.</p>
+<p>A PLC input showing <code>TRUE</code> proves that the input channel is active. It does not prove that the receiving CNC interprets that signal as the intended command.</p>
+<h3 id="62-ethernet-and-fieldbus-interfaces">6.2 Ethernet and fieldbus interfaces</h3>
+<p>For a network interface, verify:</p>
+<ul>
+<li>Correct physical ports, cables, switches, and link status.</li>
+<li>Unique and correct IP addresses where applicable.</li>
+<li>Correct subnet configuration.</li>
+<li>Correct device name and device identity where the protocol requires them.</li>
+<li>Matching PLC hardware configuration and actual device configuration.</li>
+<li>Correct cyclic input/output data lengths and mapping.</li>
+<li>No duplicate IP addresses or unexpected network routes.</li>
+<li>Healthy communication diagnostics and acceptable update performance.</li>
+<li>Correct device startup behavior after a power cycle.</li>
+</ul>
+<p>Basic checks may include:</p>
+<pre><code>1. Verify physical link.
+2. Verify device identity and network parameters.
+3. Verify communication connection status.
+4. Monitor raw input and output data.
+5. Confirm each mapped bit and data field.
+6. Test valid command and status transitions.
+7. Test communication interruption under an approved test procedure.
+</code></pre>
+<p>A successful ping does not prove that the industrial communication connection is healthy. ICMP reachability and cyclic control-data exchange are different things, because networking apparently needed another opportunity to be misunderstood.</p>
+<h2 id="7-signal-mapping-and-data-validation">7. Signal Mapping and Data Validation</h2>
+<p>Signal mapping connects a documented machine-interface function to its actual electrical address, PLC variable, CNC variable, or communication-data location.</p>
+<p>A signal map should include the signal name, source, destination, data type, active state, purpose, operating conditions, reset behavior, and verification method.</p>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Typical direction</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CNC ready</td>
+<td>CNC to PLC</td>
+<td>CNC reports readiness according to the interface definition</td>
+</tr>
+<tr>
+<td>CNC alarm active</td>
+<td>CNC to PLC</td>
+<td>One or more CNC alarm conditions are present</td>
+</tr>
+<tr>
+<td>Cycle start request</td>
+<td>PLC to CNC</td>
+<td>PLC requests program execution</td>
+</tr>
+<tr>
+<td>Cycle active</td>
+<td>CNC to PLC</td>
+<td>CNC reports that the machining cycle is active</td>
+</tr>
+<tr>
+<td>Cycle complete</td>
+<td>CNC to PLC</td>
+<td>CNC reports the defined completion condition</td>
+</tr>
+<tr>
+<td>CNC reset request</td>
+<td>PLC to CNC</td>
+<td>Requests reset through the approved interface</td>
+</tr>
+<tr>
+<td>Feed hold request</td>
+<td>PLC to CNC</td>
+<td>Requests a controlled feed hold, if supported</td>
+</tr>
+<tr>
+<td>Program number or selection data</td>
+<td>PLC to CNC</td>
+<td>Identifies a program or selection value when supported</td>
+</tr>
+<tr>
+<td>Door closed</td>
+<td>Machine sensor or safety system to PLC/CNC</td>
+<td>Reports a door state; its use depends on the safety architecture</td>
+</tr>
+<tr>
+<td>Chuck clamped</td>
+<td>Machine sensor to PLC/CNC</td>
+<td>Reports the defined clamping state</td>
+</tr>
+<tr>
+<td>CNC fault code</td>
+<td>CNC to PLC or diagnostic system</td>
+<td>Provides diagnostic information when supported</td>
+</tr>
+</tbody>
+</table>
+<p>The direction shown is typical, not universal. The actual interface specification takes precedence.</p>
+<h3 id="71-verify-every-mapped-signal">7.1 Verify every mapped signal</h3>
+<p>For each signal:</p>
+<ol>
+<li>Record its expected normal state.</li>
+<li>Observe the raw electrical or communication value.</li>
+<li>Observe the PLC variable.</li>
+<li>Observe the corresponding CNC indication or diagnostic value.</li>
+<li>Change the source condition using an approved test.</li>
+<li>Verify that the intended destination changes.</li>
+<li>Confirm that unrelated signals remain unaffected.</li>
+<li>Restore the original condition and verify normal operation.</li>
+</ol>
+<p>This checks the entire path instead of trusting one screen and hoping the rest of the system shares its interpretation.</p>
+<h3 id="72-data-types-and-byte-mapping">7.2 Data types and byte mapping</h3>
+<p>For cyclic communication, check:</p>
+<ul>
+<li>Boolean bit positions.</li>
+<li>Byte offsets and word offsets.</li>
+<li>Signed versus unsigned integer interpretation.</li>
+<li>Integer scaling and engineering units.</li>
+<li>Floating-point representation.</li>
+<li>Byte ordering where relevant.</li>
+<li>String length and character encoding if strings are exchanged.</li>
+<li>Valid ranges, reserved values, and timeout behavior.</li>
+</ul>
+<p>A value displayed as <code>256</code> by one controller and <code>1</code> by another may indicate incorrect byte or word mapping. A value that changes correctly but has the wrong meaning can be more dangerous than a complete communication failure because it may look valid during a quick inspection.</p>
+<h2 id="8-cnc-state-and-handshake-design">8. CNC State and Handshake Design</h2>
+<p>A handshake is a defined exchange of requests, acknowledgements, and status signals between the PLC and CNC. Its purpose is to prevent commands from being missed, repeated unexpectedly, or executed in the wrong sequence.</p>
+<h3 id="81-typical-operating-states">8.1 Typical operating states</h3>
+<p>A machine interface may distinguish the following states:</p>
+<ul>
+<li>Not ready: CNC startup, an active fault, an unavailable mode, or another readiness condition prevents operation.</li>
+<li>Ready: CNC reports readiness under the agreed interface definition.</li>
+<li>Cycle requested: PLC has issued a start request.</li>
+<li>Cycle active: CNC confirms program execution.</li>
+<li>Cycle complete: CNC reports completion according to the interface contract.</li>
+<li>Faulted: A CNC or machine condition requires fault handling.</li>
+<li>Recovery: The system is restoring an approved state after an interruption.</li>
+</ul>
+<p>These states are not interchangeable. In particular, <code>READY</code> does not necessarily mean that every machine-level permissive is satisfied, and <code>CYCLE COMPLETE</code> does not necessarily mean that unloading can safely begin.</p>
+<h3 id="82-example-cycle-start-handshake">8.2 Example cycle-start handshake</h3>
+<p>The following is a generic conceptual sequence. Actual edge-triggering, acknowledgement, and reset rules must follow the CNC and machine-builder interface specification.</p>
+<pre><code>PLC confirms machine permissives
+         ↓
+PLC verifies CNC ready and correct operating mode
+         ↓
+PLC issues cycle-start request
+         ↓
+CNC accepts the request
+         ↓
+CNC reports cycle active
+         ↓
+PLC monitors cycle and machine conditions
+         ↓
+CNC reports cycle complete
+         ↓
+PLC verifies completion and required safe conditions
+         ↓
+PLC starts the next machine sequence
+</code></pre>
+<h3 id="83-handshake-rules">8.3 Handshake rules</h3>
+<p>A reliable handshake should define:</p>
+<ul>
+<li>Which controller owns each request.</li>
+<li>Whether the request is a pulse, a maintained level, or a rising-edge command.</li>
+<li>The required acknowledgement.</li>
+<li>The timeout for receiving that acknowledgement.</li>
+<li>How long a request remains active.</li>
+<li>When the request must be removed.</li>
+<li>What happens if the acknowledgement never arrives.</li>
+<li>What happens if a signal is already active when the sequence begins.</li>
+<li>How a restart is prevented after a power interruption.</li>
+<li>How an interrupted cycle is recovered without duplicating an operation.</li>
+</ul>
+<p>Do not use an arbitrary pulse width. Determine the required duration from the controller interface specification, scan behavior, communication update interval, and any input filtering.</p>
+<h3 id="84-timeout-handling">8.4 Timeout handling</h3>
+<p>A PLC should supervise expected state transitions.</p>
+<p>For example:</p>
+<pre><code>IF Start_Request = TRUE
+AND CNC_Cycle_Active does not arrive before the configured timeout
+THEN
+    Cancel or inhibit the start request according to the interface design
+    Set a diagnostic fault
+    Prevent automatic repeated starts
+    Require the defined recovery procedure
+END_IF
+</code></pre>
+<p>This is illustrative logic, not a complete PLC program. The timeout must be justified by the machine's documented sequence and normal operating time. An arbitrary timeout can create nuisance trips or conceal a genuine fault.</p>
+<h2 id="9-operating-modes-and-program-selection">9. Operating Modes and Program Selection</h2>
+<p>A CNC may support automatic, manual, jog, reference-return, setup, and other operating modes. Availability and naming depend on the controller.</p>
+<p>The PLC must distinguish a valid automatic production condition from a setup or maintenance condition where automatic cycle initiation is not permitted.</p>
+<p>Typical checks include:</p>
+<ul>
+<li>Correct CNC operating mode.</li>
+<li>Correct program selected and loaded.</li>
+<li>Program selection acknowledged, where supported.</li>
+<li>No active alarm preventing execution.</li>
+<li>CNC and required axes in the appropriate state.</li>
+<li>Required reference-return or homing conditions satisfied.</li>
+<li>Door, fixture, chuck, and other required machine conditions satisfied.</li>
+<li>No conflicting manual command or active sequence.</li>
+<li>No safety-system condition prohibiting the requested operation.</li>
+</ul>
+<p>Program-selection interfaces vary considerably. A CNC may use a program number, a dedicated data interface, an external request, or a machine-builder-defined sequence. Verify whether program selection means requested, loaded, selected, or currently executing. Those are different states.</p>
+<p>Do not assume that a cycle-start signal automatically selects the correct program.</p>
+<h2 id="10-cnc-functions-and-m-codes">10. CNC Functions and M-Codes</h2>
+<p>G-codes generally define machining or motion commands, while M-codes generally invoke auxiliary or machine-specific functions. The exact implementation depends on the CNC configuration and machine builder.</p>
+<p>Examples of auxiliary functions include:</p>
+<ul>
+<li>Spindle start and stop.</li>
+<li>Coolant control.</li>
+<li>Tool-change requests.</li>
+<li>Chuck or fixture operations.</li>
+<li>Door or pallet functions.</li>
+<li>Chip conveyor control.</li>
+</ul>
+<p>The PLC may execute some M-code-related machine functions, while the CNC controls the machining program and its execution sequence. Some functions use an acknowledgement or completion signal before the CNC continues.</p>
+<h3 id="101-m-code-commissioning-checks">10.1 M-code commissioning checks</h3>
+<ol>
+<li>Identify the M-code and its documented machine-builder function.</li>
+<li>Verify which controller processes the request.</li>
+<li>Confirm the mapped request and acknowledgement signals.</li>
+<li>Verify the physical output and feedback sensor, if applicable.</li>
+<li>Confirm that the CNC waits for the required completion condition.</li>
+<li>Test timeout and fault behavior.</li>
+<li>Verify that reset or recovery does not cause an unintended repeated action.</li>
+</ol>
+<p>Never infer an M-code's meaning from its number alone. The same M-code can have different machine-specific behavior across CNC platforms and machine builders.</p>
+<h2 id="11-coordination-with-machine-auxiliaries">11. Coordination With Machine Auxiliaries</h2>
+<p>PLC-CNC communication is only one part of the machine sequence. The PLC must coordinate CNC requests with the actual state of machine auxiliaries.</p>
+<table>
+<thead>
+<tr>
+<th>Equipment</th>
+<th>Typical permissive or feedback</th>
+<th>Commissioning concern</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine door</td>
+<td>Closed and locked state, where applicable</td>
+<td>Confirm the required interlock and safety function</td>
+</tr>
+<tr>
+<td>Chuck</td>
+<td>Clamped/unclamped feedback</td>
+<td>Verify sensor state, command sequence, and workpiece retention requirements</td>
+</tr>
+<tr>
+<td>Fixture</td>
+<td>Located, clamped, or pressure-valid feedback</td>
+<td>Prevent machining without the required workholding state</td>
+</tr>
+<tr>
+<td>Tool changer</td>
+<td>Ready, tool-change complete, or fault state</td>
+<td>Verify position feedback and correct completion acknowledgement</td>
+</tr>
+<tr>
+<td>Coolant</td>
+<td>Pump status or flow/pressure feedback, if required</td>
+<td>Prevent continuation where process requirements demand coolant</td>
+</tr>
+<tr>
+<td>Lubrication</td>
+<td>Pressure or system-ready feedback, if required</td>
+<td>Protect equipment and enforce manufacturer requirements</td>
+</tr>
+<tr>
+<td>Chip conveyor</td>
+<td>Running or fault feedback</td>
+<td>Verify sequencing and overload response</td>
+</tr>
+<tr>
+<td>Robot interface</td>
+<td>Part present, load complete, door status, or transfer-ready signals</td>
+<td>Prevent conflicting commands and unsafe simultaneous actions</td>
+</tr>
+</tbody>
+</table>
+<p>A command being issued does not prove that the physical action completed. For example, <code>CHUCK_CLAMP_CMD</code> is not equivalent to <code>CHUCK_CLAMPED_FB</code>.</p>
+<p>Use the feedback needed to prove the intended machine state.</p>
+<h2 id="12-safety-and-interlock-boundaries">12. Safety and Interlock Boundaries</h2>
+<p>Safety functions must be designed and validated according to the machine risk assessment and applicable safety standards. Ordinary PLC-CNC communication should not be treated as a substitute for a validated safety function.</p>
+<p>Important distinctions:</p>
+<ul>
+<li>A standard PLC interlock can prevent a cycle from starting, but may not provide the required safety integrity.</li>
+<li>A normal CNC alarm is not equivalent to a safety-rated stop.</li>
+<li>Feed hold is not equivalent to emergency stop.</li>
+<li>A door-closed status bit does not by itself prove that the door safety function is correctly implemented.</li>
+<li>A communication timeout is not automatically a safe stopping function.</li>
+<li>Restoring communication must not automatically restart motion unless the approved design explicitly permits the behavior and all restart conditions are satisfied.</li>
+</ul>
+<h3 id="121-feed-hold-stop-reset-and-emergency-stop">12.1 Feed hold, stop, reset, and emergency stop</h3>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Purpose</th>
+<th>Key limitation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Feed hold</td>
+<td>Requests a controlled pause in feed motion</td>
+<td>Does not necessarily stop every machine function or remove hazardous energy</td>
+</tr>
+<tr>
+<td>Program stop</td>
+<td>Stops program progression according to CNC behavior</td>
+<td>Does not necessarily make the machine safe for intervention</td>
+</tr>
+<tr>
+<td>CNC reset</td>
+<td>Clears or resets specified CNC states</td>
+<td>May cancel program execution and change machine state</td>
+</tr>
+<tr>
+<td>Emergency stop</td>
+<td>Initiates the designed emergency-stop response</td>
+<td>Must use the validated safety architecture, not an ordinary communications bit alone</td>
+</tr>
+<tr>
+<td>Safe torque off (STO)</td>
+<td>Prevents drive torque production when correctly implemented</td>
+<td>Does not necessarily stop motion immediately or isolate electrical energy</td>
+</tr>
+</tbody>
+</table>
+<p>Commissioning must validate each function separately against the machine design.</p>
+<h2 id="13-alarm-handling-and-diagnostics">13. Alarm Handling and Diagnostics</h2>
+<p>A useful PLC-CNC interface should make faults distinguishable rather than reducing every problem to “CNC not ready.”</p>
+<p>Typical diagnostic categories include:</p>
+<ul>
+<li>CNC not ready.</li>
+<li>CNC alarm active.</li>
+<li>Start request not acknowledged.</li>
+<li>Cycle-active feedback timeout.</li>
+<li>Cycle-complete feedback missing.</li>
+<li>Invalid or unavailable program selection.</li>
+<li>Required machine permissive missing.</li>
+<li>Fieldbus or network connection lost.</li>
+<li>Invalid or stale process data.</li>
+<li>Auxiliary equipment failed to reach its commanded state.</li>
+<li>Unexpected state transition.</li>
+<li>Fault reset attempted while the original fault remains active.</li>
+</ul>
+<h3 id="131-diagnostic-design">13.1 Diagnostic design</h3>
+<p>For each fault, document:</p>
+<ul>
+<li>Fault identifier and description.</li>
+<li>Detection condition.</li>
+<li>Relevant PLC and CNC signals.</li>
+<li>Whether the fault is latched.</li>
+<li>Reset requirements.</li>
+<li>Safe machine response.</li>
+<li>Operator instructions.</li>
+<li>Required maintenance investigation.</li>
+<li>Whether automatic recovery is permitted.</li>
+</ul>
+<p>When available, record a timestamp, CNC alarm number, PLC sequence state, relevant signal snapshot, and last accepted command. This information can turn a recurring intermittent failure into a diagnosable event.</p>
+<h2 id="14-communication-loss-detection-and-recovery">14. Communication-Loss Detection and Recovery</h2>
+<p>Communication loss may occur because of a cable or switch fault, device restart, network configuration error, fieldbus failure, controller fault, or software issue.</p>
+<p>The correct response depends on the process and machine safety design.</p>
+<h3 id="141-required-behavior">14.1 Required behavior</h3>
+<ul>
+<li>Detect communication loss using the protocol's connection status, watchdog, data-validity indicator, or approved diagnostic method.</li>
+<li>Inhibit new commands that depend on valid CNC data.</li>
+<li>Apply the machine's approved response to the current operating state.</li>
+<li>Prevent stale input values from being treated as valid current status.</li>
+<li>Avoid automatic repeated cycle-start commands.</li>
+<li>Record the fault and relevant operating state.</li>
+<li>Require appropriate validation before resuming the sequence.</li>
+</ul>
+<p>Do not blindly force every communication-related output to <code>FALSE</code>. Some signals may need a specific fail-safe state, while others require a coordinated controlled stop. The required response must be derived from the machine risk assessment and interface design.</p>
+<h3 id="142-recovery-sequence">14.2 Recovery sequence</h3>
+<pre><code>Communication fault detected
+         ↓
+Apply the defined fault response
+         ↓
+Prevent unintended new cycle commands
+         ↓
+Identify and correct the network or controller fault
+         ↓
+Confirm communication and valid current data
+         ↓
+Verify CNC state and machine permissives
+         ↓
+Perform the approved reset or recovery sequence
+         ↓
+Resume operation only when restart conditions are satisfied
+</code></pre>
+<p>The recovery logic must account for an interruption that occurs mid-cycle. Restoring communication does not prove that the CNC program, part position, tool state, or machine sequence is ready to resume automatically.</p>
+<h2 id="15-commissioning-procedure">15. Commissioning Procedure</h2>
+<h3 id="phase-1-documentation-and-preparation">Phase 1: Documentation and preparation</h3>
+<ul>
+<li>Obtain current PLC and CNC backups.</li>
+<li>Verify electrical drawings, I/O lists, interface specification, and network topology.</li>
+<li>Confirm firmware, software versions, and required communication options.</li>
+<li>Identify command ownership and acknowledgement behavior.</li>
+<li>Identify safety functions and approved test methods.</li>
+<li>Review machine-builder commissioning and recovery procedures.</li>
+</ul>
+<h3 id="phase-2-physical-and-network-verification">Phase 2: Physical and network verification</h3>
+<ul>
+<li>Verify wiring, terminal references, polarity, and voltage.</li>
+<li>Verify communication cabling, port selection, and link status.</li>
+<li>Confirm IP addresses, device names, and protocol configuration.</li>
+<li>Confirm device identity and cyclic I/O mapping.</li>
+<li>Check for duplicate addresses, bus errors, and connection faults.</li>
+<li>Verify communication diagnostics before enabling automatic operation.</li>
+</ul>
+<h3 id="phase-3-signal-by-signal-verification">Phase 3: Signal-by-signal verification</h3>
+<ul>
+<li>Test each PLC-to-CNC command.</li>
+<li>Test each CNC-to-PLC status signal.</li>
+<li>Verify bit positions, data types, and scaling.</li>
+<li>Verify active-high or active-low behavior.</li>
+<li>Confirm feedback corresponds to the actual machine condition.</li>
+<li>Verify each signal's reset and recovery behavior.</li>
+<li>Record expected and actual results.</li>
+</ul>
+<h3 id="phase-4-sequence-and-interlock-verification">Phase 4: Sequence and interlock verification</h3>
+<ul>
+<li>Verify CNC-ready handling.</li>
+<li>Verify program selection and acknowledgement.</li>
+<li>Verify operating-mode restrictions.</li>
+<li>Verify cycle-start request and acknowledgement.</li>
+<li>Verify cycle-active and cycle-complete transitions.</li>
+<li>Verify door, chuck, fixture, tool changer, and auxiliary interlocks.</li>
+<li>Verify alarms and invalid command handling.</li>
+<li>Verify timeouts and prevention of repeated starts.</li>
+</ul>
+<h3 id="phase-5-fault-and-recovery-verification">Phase 5: Fault and recovery verification</h3>
+<ul>
+<li>Test a missing acknowledgement using an approved method.</li>
+<li>Test an unavailable permissive.</li>
+<li>Test CNC alarm handling.</li>
+<li>Test communication loss and restoration using an approved method.</li>
+<li>Verify no unintended automatic restart occurs.</li>
+<li>Verify the defined mid-cycle recovery procedure.</li>
+<li>Confirm that safety functions are tested separately under the approved safety-validation procedure.</li>
+</ul>
+<h3 id="phase-6-production-validation">Phase 6: Production validation</h3>
+<ul>
+<li>Execute an approved dry run or simulation.</li>
+<li>Verify the complete machine sequence.</li>
+<li>Run a controlled production trial.</li>
+<li>Check cycle time and sequence stability.</li>
+<li>Verify part and tool handling, where applicable.</li>
+<li>Record unresolved defects and obtain the required sign-off.</li>
+</ul>
+<h2 id="16-troubleshooting-guide">16. Troubleshooting Guide</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CNC never reports ready</td>
+<td>CNC alarm, incorrect mode, startup incomplete, or missing permissive</td>
+<td>Inspect CNC diagnostics and the documented readiness conditions</td>
+</tr>
+<tr>
+<td>PLC sends start but CNC does not start</td>
+<td>Incorrect signal mapping, invalid mode, wrong program, or missing interlock</td>
+<td>Trace the request from PLC logic to the CNC input and check CNC status</td>
+</tr>
+<tr>
+<td>Start works intermittently</td>
+<td>Pulse too short, incorrect edge logic, or timing mismatch</td>
+<td>Review the interface specification, scan timing, filtering, and acknowledgement sequence</td>
+</tr>
+<tr>
+<td>CNC starts but PLC does not detect cycle active</td>
+<td>Wrong mapping, polarity, data offset, or transition timing</td>
+<td>Monitor raw interface data and the mapped PLC tag</td>
+</tr>
+<tr>
+<td>Cycle completes but next sequence does not start</td>
+<td>Completion signal not cleared, missing auxiliary feedback, or sequence condition false</td>
+<td>Inspect the PLC sequence state and all next-step permissives</td>
+</tr>
+<tr>
+<td>PLC and CNC display different values</td>
+<td>Data type, scaling, bit offset, or byte-order mismatch</td>
+<td>Compare raw transmitted data with the decoded values</td>
+</tr>
+<tr>
+<td>Network appears connected but data is stale</td>
+<td>Cyclic exchange failure, invalid data status, or application-level problem</td>
+<td>Check connection state, update diagnostics, and data-validity indicators</td>
+</tr>
+<tr>
+<td>CNC alarm does not clear</td>
+<td>Fault cause persists or reset conditions are not met</td>
+<td>Identify the original alarm and use the approved reset sequence</td>
+</tr>
+<tr>
+<td>Machine restarts unexpectedly after reconnection</td>
+<td>Inadequate restart inhibition or retained command state</td>
+<td>Inspect command latching, startup initialization, and recovery logic</td>
+</tr>
+<tr>
+<td>Chuck or door condition blocks cycle</td>
+<td>Missing or inconsistent feedback, incorrect sensor adjustment, or interlock mismatch</td>
+<td>Verify physical condition, feedback signal, and documented permissive</td>
+</tr>
+<tr>
+<td>M-code sequence hangs</td>
+<td>Missing PLC acknowledgement or auxiliary completion feedback</td>
+<td>Trace the M-code request, PLC sequence, device action, and completion signal</td>
+</tr>
+<tr>
+<td>Cycle time is inconsistent</td>
+<td>Excessive handshake delays, repeated polling, network load, or sequence logic</td>
+<td>Timestamp state transitions and identify the actual source of delay</td>
+</tr>
+</tbody>
+</table>
+<p>Troubleshoot from the physical condition toward the application state: device → sensor or output → wiring/network → raw I/O → mapped variable → sequence logic → CNC response. This narrows the search instead of encouraging random edits to working equipment.</p>
+<h2 id="17-timing-and-performance-validation">17. Timing and Performance Validation</h2>
+<p>Communication and handshake timing can affect machine cycle time. Record actual transition timestamps instead of assuming that a delay is caused by the network.</p>
+<p>Useful measurements include:</p>
+<ul>
+<li>Time from start request to acknowledgement.</li>
+<li>Time from start request to cycle-active feedback.</li>
+<li>Time from the end of the CNC program to cycle-complete feedback.</li>
+<li>Time spent waiting for doors, chucks, fixtures, or other equipment.</li>
+<li>Time between a command and the corresponding physical feedback.</li>
+<li>Communication update time and observed data freshness.</li>
+<li>Frequency of timeouts and unexpected state transitions.</li>
+</ul>
+<p>A simple cycle-time model is:</p>
+<div class="math-display">\[ T\_{\text{cycle}} = T\_{\text{machining}} + T\_{\text{handling}} + T\_{\text{interlocks}} + T\_{\text{communication waits}} \]</div>
+<p>This is a simplified accounting model. Some operations overlap, so the terms cannot always be added directly without considering the actual sequence.</p>
+<p>Do not shorten delays merely to improve cycle time. First determine whether each delay is required for signal stability, device movement, process completion, or safety. Optimize only after the underlying timing requirements are understood and validated.</p>
+<h2 id="18-fat-and-sat-for-plc-cnc-communication">18. FAT and SAT for PLC-CNC Communication</h2>
+<p>FAT (Factory Acceptance Test) verifies the system under factory test conditions. SAT (Site Acceptance Test) verifies it after installation and integration at the destination site.</p>
+<table>
+<thead>
+<tr>
+<th>Test item</th>
+<th>FAT emphasis</th>
+<th>SAT emphasis</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Signal mapping</td>
+<td>Verify configured data and simulated or available I/O</td>
+<td>Verify actual field wiring and installed device behavior</td>
+</tr>
+<tr>
+<td>Network</td>
+<td>Verify device configuration and communication</td>
+<td>Verify installed network, topology, and site-specific configuration</td>
+</tr>
+<tr>
+<td>Handshake</td>
+<td>Verify requests, acknowledgements, and state transitions</td>
+<td>Verify complete operation with the real machine</td>
+</tr>
+<tr>
+<td>Interlocks</td>
+<td>Verify documented sequence behavior</td>
+<td>Verify actual sensors, actuators, fixtures, and installed safety arrangements</td>
+</tr>
+<tr>
+<td>Alarms</td>
+<td>Verify detection, display, and reset behavior</td>
+<td>Verify real fault diagnostics and maintenance access</td>
+</tr>
+<tr>
+<td>Recovery</td>
+<td>Verify designed fault and restart logic</td>
+<td>Verify recovery from representative site faults</td>
+</tr>
+<tr>
+<td>Cycle performance</td>
+<td>Verify sequence timing under test conditions</td>
+<td>Verify production cycle time and repeatability</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Review interface documents and test records</td>
+<td>Confirm final as-built records, backups, and handover</td>
+</tr>
+</tbody>
+</table>
+<p>FAT does not replace SAT. A correct factory configuration can still fail at site because of incorrect field wiring, device differences, network configuration, or machine integration.</p>
+<h2 id="19-acceptance-criteria">19. Acceptance Criteria</h2>
+<p>Acceptance criteria should be agreed before testing and should be measurable.</p>
+<p>Typical criteria include:</p>
+<ul>
+<li>All required interface signals are mapped correctly and verified.</li>
+<li>All required commands and acknowledgements follow the approved sequence.</li>
+<li>CNC readiness, alarm, active-cycle, and completion states are correctly interpreted.</li>
+<li>Program selection and operating-mode restrictions behave as specified.</li>
+<li>Required machine permissives prevent invalid cycle initiation.</li>
+<li>Communication faults are detected within the defined limits.</li>
+<li>Fault recovery does not cause unintended movement or repeated cycle initiation.</li>
+<li>Safety functions pass their separate validation requirements.</li>
+<li>Cycle performance meets the agreed machine requirements.</li>
+<li>No unresolved critical defects remain.</li>
+<li>Test records, final backups, interface documents, and recovery instructions are handed over.</li>
+</ul>
+<p>The acceptable response time, timeout values, cycle time, and fault-recovery limits must come from the approved machine requirements. They should not be invented during commissioning to make a failed test appear successful.</p>
+<h2 id="20-practical-example-plc-controlled-cnc-loading">20. Practical Example: PLC-Controlled CNC Loading</h2>
+<p>Consider an automated CNC machine that receives a component from a robot. An external PLC coordinates the robot, machine door, chuck, and CNC cycle.</p>
+<p>A simplified sequence is:</p>
+<pre><code>PLC verifies CNC ready and robot transfer permission
+         ↓
+PLC requests door opening under the approved machine sequence
+         ↓
+Door-open confirmation received
+         ↓
+Robot loads the component
+         ↓
+Robot confirms loading complete and clears the loading zone
+         ↓
+PLC commands chuck clamping
+         ↓
+Chuck-clamped feedback confirmed
+         ↓
+PLC verifies required door and machine conditions
+         ↓
+Door closes and the required closed/locked conditions are confirmed
+         ↓
+PLC issues CNC cycle-start request
+         ↓
+CNC acknowledges and reports cycle active
+         ↓
+CNC completes machining and reports completion
+         ↓
+PLC verifies the required completion and machine states
+         ↓
+PLC requests the next approved unloading sequence
+</code></pre>
+<p>The exact sequence varies by machine design. Door, chuck, and robot operations must follow the validated safety architecture, and CNC program completion must not be treated as proof that every unloading condition is satisfied.</p>
+<h3 id="example-fault-cnc-does-not-start">Example fault: CNC does not start</h3>
+<p>Suppose the PLC issues <code>CNC_START_REQ</code>, but <code>CNC_CYCLE_ACTIVE</code> remains false.</p>
+<p>A disciplined investigation checks:</p>
+<ol>
+<li>Does the PLC sequence actually issue the request?</li>
+<li>Is the request present at the physical interface or in the correct communication output data?</li>
+<li>Does the CNC receive the request in its mapped interface variable?</li>
+<li>Is the request edge or pulse behavior correct?</li>
+<li>Is the CNC in the correct operating mode?</li>
+<li>Is the intended program selected and ready to run?</li>
+<li>Is an alarm or machine permissive preventing acceptance?</li>
+<li>Does the CNC interface require an additional enable or acknowledgement?</li>
+<li>Does the PLC detect a timeout and inhibit unintended retries?</li>
+<li>After the cause is corrected, does the approved recovery procedure restore normal operation?</li>
+</ol>
+<p>This approach identifies whether the fault is in the command source, communication path, CNC acceptance conditions, or machine sequence.</p>
+<h2 id="21-common-commissioning-mistakes">21. Common Commissioning Mistakes</h2>
+<ul>
+<li>Assuming all CNC brands use the same signal definitions.</li>
+<li>Treating network link status as proof of healthy cyclic communication.</li>
+<li>Using the wrong I/O offset or data type.</li>
+<li>Ignoring active-low signals or inverted logic.</li>
+<li>Confusing a start request with cycle-start acceptance.</li>
+<li>Treating CNC ready as proof that all machine permissives are satisfied.</li>
+<li>Assuming a cycle-complete bit guarantees safe unloading.</li>
+<li>Using arbitrary pulse widths or timeout values.</li>
+<li>Clearing alarms without identifying the original cause.</li>
+<li>Allowing stale status data to remain valid after communication loss.</li>
+<li>Automatically restarting after communication recovery.</li>
+<li>Using standard PLC bits as substitutes for required safety functions.</li>
+<li>Changing CNC parameters or machine-builder interface logic without a backup and approved change process.</li>
+<li>Failing to document the final configuration and signal mapping.</li>
+</ul>
+<h2 id="22-documentation-and-handover">22. Documentation and Handover</h2>
+<p>The commissioning package should include:</p>
+<ul>
+<li>Final PLC and CNC backups, with version identification.</li>
+<li>Electrical drawings and the verified I/O list.</li>
+<li>Network topology and device configuration.</li>
+<li>PLC-CNC signal and data mapping.</li>
+<li>Handshake sequence and timing requirements.</li>
+<li>Alarm and timeout definitions.</li>
+<li>Fault-recovery and restart procedures.</li>
+<li>FAT/SAT records and outstanding-defect status.</li>
+<li>Safety-validation records where applicable.</li>
+<li>As-built changes and approvals.</li>
+<li>Maintenance troubleshooting instructions.</li>
+</ul>
+<p>For production maintenance, a concise signal map and a documented state-transition sequence are particularly valuable. They let another engineer determine whether the fault is caused by the CNC, PLC logic, communication path, or machine hardware without reconstructing the entire interface from scratch.</p>
+<h2 id="23-interview-questions-and-answers">23. Interview Questions and Answers</h2>
+<p>1. What is PLC-CNC communication commissioning?</p>
+<p>It is the verification and validation of commands, status signals, data exchange, handshakes, interlocks, diagnostics, and recovery between the PLC and CNC.</p>
+<p>2. What is the difference between CNC ready and CNC cycle active?</p>
+<p>CNC ready indicates readiness under the interface definition. CNC cycle active indicates that program execution has entered the defined active state. Readiness does not prove that a cycle has started.</p>
+<p>3. Why is a handshake necessary?</p>
+<p>It coordinates command acceptance and status confirmation, preventing missed commands, incorrect sequencing, and unintended repeated operations.</p>
+<p>4. Why can a start request be present while the CNC does not start?</p>
+<p>The CNC may be in the wrong mode, have an active alarm, lack a required permissive, have an invalid program selection, or receive an incorrectly mapped or timed command.</p>
+<p>5. What is the difference between a command and feedback?</p>
+<p>A command requests an action. Feedback confirms the reported state or completion condition. A physical action should not be assumed complete solely because its command was issued.</p>
+<p>6. Why can Ethernet connectivity exist while PLC-CNC data exchange fails?</p>
+<p>Physical link or ping success does not guarantee correct protocol configuration, valid cyclic connections, correct data mapping, or application-level operation.</p>
+<p>7. How should communication loss be handled?</p>
+<p>Detect the fault, apply the defined machine response, inhibit unsafe or invalid new commands, diagnose and restore communication, validate current machine state, and follow the approved recovery procedure.</p>
+<p>8. Is feed hold equivalent to emergency stop?</p>
+<p>No. Feed hold requests a controlled pause in feed motion. Emergency stop is a safety function with a defined response implemented and validated through the machine's safety architecture.</p>
+<p>9. Why are M-code functions important in commissioning?</p>
+<p>They often coordinate auxiliary machine functions. The request, PLC action, completion acknowledgement, and fault behavior must be verified according to the machine-specific definition.</p>
+<p>10. How would you diagnose a CNC cycle that hangs during an M-code?</p>
+<p>Trace the M-code request, identify the controller responsible for the action, inspect the PLC sequence, verify the physical action and feedback, and check the required acknowledgement and timeout.</p>
+<p>11. What is the difference between FAT and SAT?</p>
+<p>FAT verifies the system under factory test conditions. SAT verifies the installed system, including real field wiring, equipment, site network, and integrated machine behavior.</p>
+<p>12. What evidence demonstrates successful commissioning?</p>
+<p>Verified signal mappings, successful sequence tests, validated interlocks and fault handling, measured performance, completed acceptance records, and an approved final configuration.</p>
+<h2 id="24-final-commissioning-checklist">24. Final Commissioning Checklist</h2>
+<ul>
+<li>CNC and PLC models, software versions, and interface options confirmed.</li>
+<li>Correct interface method and architecture documented.</li>
+<li>Electrical wiring or network configuration verified.</li>
+<li>Every required signal and data field mapped and tested.</li>
+<li>Data types, offsets, polarity, and scaling verified.</li>
+<li>CNC-ready and cycle-start handshakes validated.</li>
+<li>Program selection and operating-mode conditions verified.</li>
+<li>Auxiliary equipment and required feedback validated.</li>
+<li>Alarm handling, timeouts, and reset behavior verified.</li>
+<li>Communication-loss behavior and recovery tested.</li>
+<li>No unintended restart occurs after fault recovery.</li>
+<li>Safety functions validated separately under the approved procedure.</li>
+<li>Production sequence and cycle performance verified.</li>
+<li>FAT/SAT records, backups, and as-built documentation completed.</li>
+<li>Acceptance criteria satisfied and handover approved.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\13_Commissioning\04_Stage4_Communication\05_PLC_Scanner - PLC-Scanner</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

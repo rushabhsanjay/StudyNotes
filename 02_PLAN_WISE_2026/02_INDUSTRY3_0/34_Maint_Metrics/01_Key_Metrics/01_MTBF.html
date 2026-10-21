@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MTBF: Mean Time Between Failures</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">MTBF: Mean Time Between Failures</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-mtbf-formula">2. MTBF Formula</a><ul>
+<li><a href="#example">Example</a></li>
+</ul>
+</li>
+<li><a href="#3-understanding-the-calculation">3. Understanding the Calculation</a><ul>
+<li><a href="#31-what-counts-as-operating-time">3.1 What counts as operating time?</a></li>
+<li><a href="#32-what-counts-as-a-failure">3.2 What counts as a failure?</a></li>
+</ul>
+</li>
+<li><a href="#4-mtbf-versus-related-maintenance-metrics">4. MTBF Versus Related Maintenance Metrics</a></li>
+<li><a href="#5-mtbf-and-failure-rate">5. MTBF and Failure Rate</a><ul>
+<li><a href="#important-limitation">Important limitation</a></li>
+</ul>
+</li>
+<li><a href="#6-mtbf-calculation-examples">6. MTBF Calculation Examples</a><ul>
+<li><a href="#example-1-plc-system">Example 1: PLC system</a></li>
+<li><a href="#example-2-vfd-population">Example 2: VFD population</a></li>
+<li><a href="#example-3-before-and-after-comparison">Example 3: Before-and-after comparison</a></li>
+</ul>
+</li>
+<li><a href="#7-zero-failures-and-small-data-samples">7. Zero Failures and Small Data Samples</a></li>
+<li><a href="#8-mtbf-in-industrial-maintenance">8. MTBF in Industrial Maintenance</a><ul>
+<li><a href="#81-equipment-reliability">8.1 Equipment reliability</a></li>
+<li><a href="#82-maintenance-strategy-evaluation">8.2 Maintenance strategy evaluation</a></li>
+<li><a href="#83-troubleshooting-prioritization">8.3 Troubleshooting prioritization</a></li>
+</ul>
+</li>
+<li><a href="#9-mtbf-data-collection">9. MTBF Data Collection</a><ul>
+<li><a href="#91-minimum-data-fields">9.1 Minimum data fields</a></li>
+<li><a href="#92-data-sources">9.2 Data sources</a></li>
+</ul>
+</li>
+<li><a href="#10-common-mtbf-calculation-errors">10. Common MTBF Calculation Errors</a></li>
+<li><a href="#11-mtbf-and-availability">11. MTBF and Availability</a><ul>
+<li><a href="#example_1">Example</a></li>
+</ul>
+</li>
+<li><a href="#12-mtbf-improvement-methods">12. MTBF Improvement Methods</a><ul>
+<li><a href="#121-engineering-improvements">12.1 Engineering improvements</a></li>
+<li><a href="#122-maintenance-improvements">12.2 Maintenance improvements</a></li>
+</ul>
+</li>
+<li><a href="#13-mtbf-analysis-by-failure-mode">13. MTBF Analysis by Failure Mode</a></li>
+<li><a href="#14-mtbf-reporting-in-excel-and-power-bi">14. MTBF Reporting in Excel and Power BI</a><ul>
+<li><a href="#recommended-dashboard-measures">Recommended dashboard measures</a></li>
+<li><a href="#example-dataset">Example dataset</a></li>
+<li><a href="#basic-excel-calculation">Basic Excel calculation</a></li>
+</ul>
+</li>
+<li><a href="#15-reliability-statistics-and-interpretation">15. Reliability Statistics and Interpretation</a></li>
+<li><a href="#16-mtbf-in-rca-capa-and-continuous-improvement">16. MTBF in RCA, CAPA, and Continuous Improvement</a></li>
+<li><a href="#17-practical-industrial-example">17. Practical Industrial Example</a><ul>
+<li><a href="#initial-observation">Initial observation</a></li>
+<li><a href="#investigation">Investigation</a></li>
+<li><a href="#corrective-action">Corrective action</a></li>
+<li><a href="#follow-up">Follow-up</a></li>
+</ul>
+</li>
+<li><a href="#18-interview-questions-and-answers">18. Interview Questions and Answers</a></li>
+<li><a href="#19-final-mtbf-checklist">19. Final MTBF Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\34_Maint_Metrics\01_Key_Metrics\01_MTBF - MTBF</code></p>
+<h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>MTBF (Mean Time Between Failures) is a reliability metric that measures the average operating time between consecutive failures of a repairable asset.</p>
+<p>It helps maintenance and engineering teams understand how frequently equipment fails, identify unreliable machines, assess the effectiveness of preventive maintenance, and prioritize reliability improvement projects.</p>
+<p>In industrial automation, MTBF can be applied to:</p>
+<ul>
+<li>PLCs, remote I/O modules, and industrial controllers.</li>
+<li>CNC machines, robots, servo systems, and VFDs.</li>
+<li>Motors, pumps, conveyors, and machine tools.</li>
+<li>Industrial Ethernet switches and communication networks.</li>
+<li>Sensors, actuators, and instrumentation.</li>
+<li>Test benches, end-of-line testing equipment, and production stations.</li>
+<li>Complete production lines, provided the reliability definition and operating boundaries are clearly specified.</li>
+</ul>
+<p>A higher MTBF generally indicates that failures occur less frequently during the defined operating period. However, MTBF alone does not prove that equipment is safe, maintainable, or free from defects.</p>
+<h2 id="2-mtbf-formula">2. MTBF Formula</h2>
+<p>The standard operating-time calculation is:</p>
+<div class="math-display">\[ \text{MTBF}=\frac{\text{Total Operating Time}}{\text{Number of Failures}} \]</div>
+<p>Where:</p>
+<ul>
+<li>Total Operating Time: Accumulated time the asset actually operates under the chosen definition.</li>
+<li>Number of Failures: Number of qualifying failures observed during that operating time.</li>
+<li>MTBF: Average operating time between failures, usually expressed in hours.</li>
+</ul>
+<p>For multiple repairable assets of the same defined population, operating hours can be aggregated when the data and failure definitions are comparable.</p>
+<h3 id="example">Example</h3>
+<p>A machine operates for 720 hours during a reporting period and experiences 6 qualifying failures.</p>
+<div class="math-display">\[ \text{MTBF}=\frac{720}{6}=120\text{ hours} \]</div>
+<p>The machine's observed MTBF is 120 operating hours per failure.</p>
+<p>This does not mean the machine will fail exactly every 120 hours. It is an average calculated from the observed data.</p>
+<h2 id="3-understanding-the-calculation">3. Understanding the Calculation</h2>
+<p>MTBF depends on three things:</p>
+<ol>
+<li>The asset or population being measured.</li>
+<li>The definition of operating time.</li>
+<li>The definition and count of qualifying failures.</li>
+</ol>
+<p>Changing any of these can change the result without any real change in reliability.</p>
+<p>For example, one department may count only hardware breakdowns, while another includes software faults and communication interruptions. Their MTBF figures are not directly comparable unless the difference is understood and accounted for.</p>
+<h3 id="31-what-counts-as-operating-time">3.1 What counts as operating time?</h3>
+<p>Depending on the metric definition, operating time may include:</p>
+<ul>
+<li>Actual machine-running time.</li>
+<li>Powered and available time.</li>
+<li>Time under load.</li>
+<li>Time in a defined operational state.</li>
+</ul>
+<p>The selected definition must be consistent with the reliability question being answered.</p>
+<p>For a CNC spindle, actual spindle-running hours may be appropriate. For a production station whose reliability is evaluated over scheduled operating shifts, a different defined exposure measure may be more useful.</p>
+<h3 id="32-what-counts-as-a-failure">3.2 What counts as a failure?</h3>
+<p>A qualifying failure is an event in which the asset loses its required ability to perform a specified function.</p>
+<p>Examples include:</p>
+<ul>
+<li>A PLC hardware failure that stops the machine.</li>
+<li>A VFD trip caused by a confirmed drive defect.</li>
+<li>A robot servo failure requiring corrective repair.</li>
+<li>A failed sensor that prevents the production sequence.</li>
+<li>A CNC spindle fault that makes machining unavailable.</li>
+</ul>
+<p>Whether a nuisance alarm, operator-induced stoppage, planned intervention, or upstream utility failure counts depends on the metric's scope and the site's approved rules.</p>
+<p>Important: Do not count every alarm as a failure. Multiple alarms from one underlying incident may represent a single failure event rather than several independent failures.</p>
+<h2 id="4-mtbf-versus-related-maintenance-metrics">4. MTBF Versus Related Maintenance Metrics</h2>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Meaning</th>
+<th>Main use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MTBF</td>
+<td>Average operating time between failures of a repairable asset</td>
+<td>Reliability</td>
+</tr>
+<tr>
+<td>MTTR</td>
+<td>Mean time to repair or restore, according to the defined convention</td>
+<td>Maintainability and recovery</td>
+</tr>
+<tr>
+<td>MTTF</td>
+<td>Mean time to failure, commonly used for non-repairable items</td>
+<td>Life-to-failure analysis</td>
+</tr>
+<tr>
+<td>Availability</td>
+<td>Proportion of the defined time that an asset is available for use</td>
+<td>Operational readiness</td>
+</tr>
+<tr>
+<td>Failure rate</td>
+<td>Failures per unit of exposure, such as operating hours</td>
+<td>Reliability analysis</td>
+</tr>
+<tr>
+<td>OEE</td>
+<td>Overall equipment effectiveness based on availability, performance, and quality</td>
+<td>Production effectiveness</td>
+</tr>
+</tbody>
+</table>
+<p>MTBF and MTTR are related but measure different problems. MTBF concerns how frequently failures occur; MTTR concerns how long restoration takes.</p>
+<h2 id="5-mtbf-and-failure-rate">5. MTBF and Failure Rate</h2>
+<p>Under a simplified constant-failure-rate model, MTBF and failure rate are reciprocals.</p>
+<div class="math-display">\[ \lambda=\frac{1}{\text{MTBF}} \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(\lambda\)</span> is the failure rate per unit of operating time.</li>
+<li>MTBF is expressed in the corresponding time unit.</li>
+</ul>
+<p>If MTBF is 120 operating hours:</p>
+<div class="math-display">\[ \lambda=\frac{1}{120}=0.00833 \]</div>
+<p>The estimated failure rate is approximately 0.00833 failures per operating hour, under the stated model and assumptions.</p>
+<p>This is a statistical rate, not a prediction that a failure must occur after a fixed interval.</p>
+<h3 id="important-limitation">Important limitation</h3>
+<p>Real industrial equipment does not always have a constant failure rate. Failures may be influenced by:</p>
+<ul>
+<li>Infant mortality after installation or repair.</li>
+<li>Wear-out and component ageing.</li>
+<li>Temperature, vibration, dust, and moisture.</li>
+<li>Load variation and operating cycles.</li>
+<li>Maintenance quality.</li>
+<li>Software changes and configuration errors.</li>
+<li>Common-cause failures and external utilities.</li>
+</ul>
+<p>When failure rates change over time, a single MTBF value may hide important reliability patterns.</p>
+<h2 id="6-mtbf-calculation-examples">6. MTBF Calculation Examples</h2>
+<h3 id="example-1-plc-system">Example 1: PLC system</h3>
+<p>A PLC-controlled station accumulates 1,800 operating hours and has 3 qualifying PLC-related failures.</p>
+<div class="math-display">\[ \text{MTBF}=\frac{1800}{3}=600\text{ hours} \]</div>
+<p>The observed MTBF is 600 operating hours per qualifying failure.</p>
+<h3 id="example-2-vfd-population">Example 2: VFD population</h3>
+<p>Five comparable drives accumulate a combined 4,000 operating hours. Across that exposure, the group experiences 8 qualifying drive failures.</p>
+<div class="math-display">\[ \text{MTBF}=\frac{4000}{8}=500\text{ hours} \]</div>
+<p>The pooled MTBF is 500 drive-operating hours per failure, provided the drives and failure definitions are comparable.</p>
+<p>This does not mean each individual drive has an MTBF of exactly 500 hours.</p>
+<h3 id="example-3-before-and-after-comparison">Example 3: Before-and-after comparison</h3>
+<p>A machine's baseline MTBF is 100 hours. Following a verified reliability improvement, the measured MTBF becomes 160 hours.</p>
+<p>The percentage improvement is:</p>
+<div class="math-display">\[ \text{Improvement}= \frac{160-100}{100}\times100 =60\\% \]</div>
+<p>The observed MTBF increased by 60%. Before attributing the improvement to the intervention, compare operating exposure, production load, failure definitions, and reporting periods.</p>
+<h2 id="7-zero-failures-and-small-data-samples">7. Zero Failures and Small Data Samples</h2>
+<p>A common mistake is to divide operating time by zero failures.</p>
+<p>If an asset operates for 500 hours and no qualifying failures are observed, the calculation <span class="math-inline">\(500/0\)</span> is undefined. MTBF cannot be calculated using the ordinary observed-failures formula.</p>
+<p>The correct report is:</p>
+<ul>
+<li>Operating exposure: 500 hours.</li>
+<li>Observed qualifying failures: 0.</li>
+<li>Observed MTBF: Not calculable from this sample.</li>
+<li>Interpretation: No qualifying failures were observed during the recorded exposure.</li>
+</ul>
+<p>Under a constant-rate Poisson model, zero failures do not prove that the true failure rate is zero. With only 500 failure-free hours, the evidence remains limited.</p>
+<p>Small samples can also make MTBF unstable. A single additional failure may significantly change the result, particularly for equipment with low failure counts.</p>
+<h2 id="8-mtbf-in-industrial-maintenance">8. MTBF in Industrial Maintenance</h2>
+<h3 id="81-equipment-reliability">8.1 Equipment reliability</h3>
+<p>MTBF can help identify assets that repeatedly interrupt production.</p>
+<p>Examples:</p>
+<ul>
+<li>A conveyor motor with frequent bearing-related failures.</li>
+<li>A robot axis with recurring servo faults.</li>
+<li>A CNC spindle with repeated overheating incidents.</li>
+<li>An industrial network switch with repeated communication failures.</li>
+<li>A test bench with recurring sensor or measurement-system failures.</li>
+</ul>
+<p>Compare assets within meaningful categories. A heavily loaded machining center and a lightly used auxiliary fan should not be ranked solely by their raw MTBF values without considering exposure and duty.</p>
+<h3 id="82-maintenance-strategy-evaluation">8.2 Maintenance strategy evaluation</h3>
+<p>MTBF trends can support decisions about:</p>
+<ul>
+<li>Preventive maintenance intervals.</li>
+<li>Condition-monitoring requirements.</li>
+<li>Critical spare-parts stocking.</li>
+<li>Component redesign or replacement.</li>
+<li>Cable routing and environmental protection.</li>
+<li>Cooling and contamination control.</li>
+<li>Firmware and configuration management.</li>
+<li>Vendor quality and equipment obsolescence.</li>
+</ul>
+<p>An increase in MTBF after a maintenance change can indicate improvement, but the underlying failure mechanisms and data quality still need to be checked.</p>
+<h3 id="83-troubleshooting-prioritization">8.3 Troubleshooting prioritization</h3>
+<p>Repeated failures can be grouped by component, fault code, machine station, shift, operating condition, and root cause.</p>
+<p>For example, repeated PLC communication failures might be associated with a network connector, power supply, electromagnetic interference, or configuration change. MTBF identifies the frequency pattern; fault analysis identifies the cause.</p>
+<h2 id="9-mtbf-data-collection">9. MTBF Data Collection</h2>
+<p>Reliable calculations require reliable source data.</p>
+<h3 id="91-minimum-data-fields">9.1 Minimum data fields</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Asset ID</td>
+<td>Identifies the equipment</td>
+</tr>
+<tr>
+<td>Machine or station</td>
+<td>Establishes operational context</td>
+</tr>
+<tr>
+<td>Component or subsystem</td>
+<td>Identifies the measured reliability boundary</td>
+</tr>
+<tr>
+<td>Failure timestamp</td>
+<td>Establishes the failure event</td>
+</tr>
+<tr>
+<td>Return-to-service timestamp</td>
+<td>Supports downtime and repair analysis</td>
+</tr>
+<tr>
+<td>Operating hours</td>
+<td>Establishes exposure</td>
+</tr>
+<tr>
+<td>Failure category</td>
+<td>Defines the event type</td>
+</tr>
+<tr>
+<td>Failure mode</td>
+<td>Records what failed</td>
+</tr>
+<tr>
+<td>Root cause</td>
+<td>Records the confirmed or provisional cause</td>
+</tr>
+<tr>
+<td>Corrective action</td>
+<td>Documents the response</td>
+</tr>
+<tr>
+<td>Production impact</td>
+<td>Captures operational consequences</td>
+</tr>
+<tr>
+<td>Work order ID</td>
+<td>Links the event to maintenance records</td>
+</tr>
+</tbody>
+</table>
+<p>For MTBF, the essential inputs are operating exposure and qualifying failure count. Additional fields are needed to understand the result and drive improvement.</p>
+<h3 id="92-data-sources">9.2 Data sources</h3>
+<p>Potential sources include:</p>
+<ul>
+<li>SAP PM notifications and maintenance orders.</li>
+<li>PLC and drive diagnostic histories.</li>
+<li>CNC and robot alarm histories.</li>
+<li>SCADA event logs.</li>
+<li>Production downtime records.</li>
+<li>Condition-monitoring systems.</li>
+<li>Machine operating-hour counters.</li>
+<li>Maintenance shift reports.</li>
+<li>OEM diagnostic tools.</li>
+</ul>
+<p>Avoid combining event records blindly. One breakdown may generate a PLC alarm, a drive fault, an HMI alarm, and several work orders. The metric needs a consistent rule for identifying the underlying failure event.</p>
+<h2 id="10-common-mtbf-calculation-errors">10. Common MTBF Calculation Errors</h2>
+<table>
+<thead>
+<tr>
+<th>Error</th>
+<th>Why it matters</th>
+<th>Correct practice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Using calendar time instead of operating time</td>
+<td>Distorts the exposure denominator</td>
+<td>Define the time basis explicitly</td>
+</tr>
+<tr>
+<td>Counting every alarm as a failure</td>
+<td>Inflates failure counts</td>
+<td>Deduplicate events and apply the failure definition</td>
+</tr>
+<tr>
+<td>Ignoring operating-hour differences</td>
+<td>Makes assets appear incomparable</td>
+<td>Normalize by exposure</td>
+</tr>
+<tr>
+<td>Mixing unrelated equipment types</td>
+<td>Produces misleading population averages</td>
+<td>Segment by asset class and duty</td>
+</tr>
+<tr>
+<td>Including planned maintenance as failure downtime</td>
+<td>Confuses failure-related and planned events</td>
+<td>Define event and downtime categories separately</td>
+</tr>
+<tr>
+<td>Excluding difficult-to-diagnose failures</td>
+<td>Artificially improves MTBF</td>
+<td>Maintain consistent event capture</td>
+</tr>
+<tr>
+<td>Changing failure definitions between periods</td>
+<td>Creates false trends</td>
+<td>Maintain controlled metric definitions</td>
+</tr>
+<tr>
+<td>Using too little data</td>
+<td>Makes the result unstable</td>
+<td>Report sample size and exposure</td>
+</tr>
+<tr>
+<td>Assuming MTBF predicts the next failure time</td>
+<td>Misinterprets an average</td>
+<td>Use reliability models appropriate to the asset</td>
+</tr>
+<tr>
+<td>Ignoring censored or incomplete observations</td>
+<td>Can bias reliability estimates</td>
+<td>Use suitable statistical methods when required</td>
+</tr>
+</tbody>
+</table>
+<h2 id="11-mtbf-and-availability">11. MTBF and Availability</h2>
+<p>For a repairable system with a suitable steady-state model, availability can be approximated using MTBF and MTTR:</p>
+<div class="math-display">\[ A=\frac{\text{MTBF}}{\text{MTBF}+\text{MTTR}} \]</div>
+<p>Here, MTTR must represent the restoration duration appropriate to the availability model. If it includes only hands-on repair time while the asset waits hours for parts or authorization, the calculated availability may overstate real operational availability.</p>
+<h3 id="example_1">Example</h3>
+<p>Suppose a machine has:</p>
+<ul>
+<li>MTBF = 100 operating hours.</li>
+<li>Mean restoration time = 5 hours.</li>
+</ul>
+<p>Then:</p>
+<div class="math-display">\[ A=\frac{100}{100+5}=0.9524 \]</div>
+<p>The simplified inherent-style availability estimate is approximately 95.24%.</p>
+<p>This is a model-based estimate, not necessarily the machine's actual production availability. Actual availability may also be affected by waiting for parts, scheduled maintenance, setup, staffing, upstream and downstream constraints, and other downtime categories.</p>
+<h2 id="12-mtbf-improvement-methods">12. MTBF Improvement Methods</h2>
+<p>MTBF improves when qualifying failures occur less frequently relative to the defined operating exposure.</p>
+<h3 id="121-engineering-improvements">12.1 Engineering improvements</h3>
+<ul>
+<li>Eliminate recurring failure mechanisms through root cause analysis.</li>
+<li>Improve component selection and derating where justified.</li>
+<li>Improve electrical noise immunity, grounding, and shielding.</li>
+<li>Protect cables and connectors against vibration and mechanical damage.</li>
+<li>Improve cooling, ventilation, and enclosure sealing.</li>
+<li>Reduce contamination and moisture exposure.</li>
+<li>Correct mechanical alignment, lubrication, and loading issues.</li>
+<li>Remove known firmware, configuration, and compatibility defects.</li>
+<li>Improve design for maintainability and diagnostics.</li>
+</ul>
+<h3 id="122-maintenance-improvements">12.2 Maintenance improvements</h3>
+<ul>
+<li>Perform preventive tasks based on demonstrated failure modes.</li>
+<li>Use condition monitoring where it can detect degradation.</li>
+<li>Verify installation and commissioning after component replacement.</li>
+<li>Improve spare-part quality and supplier control.</li>
+<li>Maintain approved backups and configuration baselines.</li>
+<li>Train technicians to diagnose root causes rather than repeatedly reset faults.</li>
+<li>Review recurring breakdowns and overdue corrective actions.</li>
+<li>Use failure analysis to revise PM tasks and inspection intervals.</li>
+</ul>
+<p>More preventive maintenance does not automatically improve MTBF. Unnecessary intervention can introduce defects, damage connectors, misconfigure equipment, or create maintenance-induced failures. The objective is effective maintenance, not simply more maintenance.</p>
+<h2 id="13-mtbf-analysis-by-failure-mode">13. MTBF Analysis by Failure Mode</h2>
+<p>An overall machine MTBF can hide the behavior of individual subsystems.</p>
+<p>Suppose a station has failures involving:</p>
+<ul>
+<li>Sensors.</li>
+<li>VFDs.</li>
+<li>PLC hardware.</li>
+<li>Mechanical fixtures.</li>
+<li>Industrial networks.</li>
+</ul>
+<p>Calculate and trend reliability at the appropriate subsystem level when sufficient data exists. This helps identify whether a particular component dominates recurring breakdowns.</p>
+<p>Do not add subsystem MTBF values to estimate the machine's MTBF. For a series system that fails when any component fails, component failure rates may be combined under restrictive assumptions, but system architecture, redundancy, common-cause failures, and component dependencies must be considered.</p>
+<h2 id="14-mtbf-reporting-in-excel-and-power-bi">14. MTBF Reporting in Excel and Power BI</h2>
+<p>A maintenance dashboard should present MTBF with enough context to prevent misinterpretation.</p>
+<h3 id="recommended-dashboard-measures">Recommended dashboard measures</h3>
+<ul>
+<li>MTBF by asset and subsystem.</li>
+<li>MTBF trend by week or month.</li>
+<li>Failure count and total operating hours.</li>
+<li>Top recurring failure modes.</li>
+<li>MTBF before and after corrective actions.</li>
+<li>MTBF by equipment category.</li>
+<li>Data completeness and event-classification status.</li>
+<li>Confidence or sample-size indicators where statistical analysis is appropriate.</li>
+</ul>
+<h3 id="example-dataset">Example dataset</h3>
+<table>
+<thead>
+<tr>
+<th>Asset</th>
+<th>Operating hours</th>
+<th>Failures</th>
+<th>Observed MTBF</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Conveyor CV-01</td>
+<td>720</td>
+<td>6</td>
+<td>120 hours</td>
+</tr>
+<tr>
+<td>CNC MC-02</td>
+<td>900</td>
+<td>3</td>
+<td>300 hours</td>
+</tr>
+<tr>
+<td>Robot RB-03</td>
+<td>800</td>
+<td>4</td>
+<td>200 hours</td>
+</tr>
+<tr>
+<td>Test Bench TB-04</td>
+<td>600</td>
+<td>2</td>
+<td>300 hours</td>
+</tr>
+</tbody>
+</table>
+<p>These figures are illustrative. The apparent ranking does not establish which asset is more reliable overall because the equipment types, failure definitions, operating conditions, and consequences may differ.</p>
+<h3 id="basic-excel-calculation">Basic Excel calculation</h3>
+<p>If operating hours are in cell <code>B2</code> and qualifying failures are in cell <code>C2</code>, a formula that avoids division by zero is:</p>
+<pre><code>=IF(C2&gt;0,B2/C2,&quot;N/A&quot;)
+</code></pre>
+<p>For zero failures, report the metric as unavailable for that sample rather than displaying zero MTBF or treating it as infinite demonstrated reliability.</p>
+<h2 id="15-reliability-statistics-and-interpretation">15. Reliability Statistics and Interpretation</h2>
+<p>The ordinary MTBF calculation is a useful descriptive measure. More advanced analysis may be required when comparing reliability formally or making predictions.</p>
+<p>Under an exponential time-to-failure model with a constant failure rate, the probability of surviving without a failure for time <span class="math-inline">\(t\)</span> is:</p>
+<div class="math-display">\[ R(t)=e^{-t/\text{MTBF}} \]</div>
+<p>This model assumes a constant failure rate and appropriate independence assumptions. It may not describe equipment with wear-out, infant mortality, changing loads, or time-dependent failure mechanisms.</p>
+<p>For an exponential model, the probability of at least one failure by time <span class="math-inline">\(t\)</span> is:</p>
+<div class="math-display">\[ P(T\leq t)=1-e^{-t/\text{MTBF}} \]</div>
+<p>For example, if MTBF is 100 operating hours and the assumptions hold, the probability of at least one failure within the next 100 operating hours is approximately 63.2%, not 100%.</p>
+<p>This illustrates why MTBF is an average, not a guaranteed replacement interval or countdown timer.</p>
+<h2 id="16-mtbf-in-rca-capa-and-continuous-improvement">16. MTBF in RCA, CAPA, and Continuous Improvement</h2>
+<p>MTBF becomes more useful when linked to root cause analysis and corrective and preventive action.</p>
+<p>A practical improvement cycle is:</p>
+<pre><code>Collect failure and operating-hour data
+              ↓
+Validate event definitions and data quality
+              ↓
+Identify recurring failure modes
+              ↓
+Investigate root causes
+              ↓
+Implement corrective actions
+              ↓
+Verify the effectiveness of the changes
+              ↓
+Compare MTBF using consistent definitions
+              ↓
+Standardize successful improvements
+</code></pre>
+<p>When measuring the effect of a corrective action, compare equivalent periods and operating conditions where possible. Record changes in production volume, duty cycle, hardware revisions, or event-reporting practices that might affect the result.</p>
+<h2 id="17-practical-industrial-example">17. Practical Industrial Example</h2>
+<p>Scenario: A production test bench experiences repeated failures involving a sensor input and PLC sequence.</p>
+<h3 id="initial-observation">Initial observation</h3>
+<ul>
+<li>Operating exposure: 1,200 hours.</li>
+<li>Qualifying failures: 12.</li>
+<li>Observed MTBF: 100 operating hours.</li>
+</ul>
+<div class="math-display">\[ \text{MTBF}=\frac{1200}{12}=100\text{ hours} \]</div>
+<h3 id="investigation">Investigation</h3>
+<p>The maintenance team classifies failures by cause and discovers that a significant portion involves intermittent sensor signals. Investigation identifies a damaged cable near a moving assembly.</p>
+<h3 id="corrective-action">Corrective action</h3>
+<p>The cable is replaced, routing and strain relief are improved, and the sensor signal is checked under normal operating movement.</p>
+<h3 id="follow-up">Follow-up</h3>
+<p>During the next comparable reporting period, the bench accumulates 1,000 operating hours with 4 qualifying failures.</p>
+<div class="math-display">\[ \text{MTBF}=\frac{1000}{4}=250\text{ hours} \]</div>
+<p>The observed MTBF increased from 100 to 250 hours, a 150% increase. The result supports further evaluation of the improvement, but the team should confirm that event definitions, operating exposure, and operating conditions remained comparable and that other failure modes were not overlooked.</p>
+<h2 id="18-interview-questions-and-answers">18. Interview Questions and Answers</h2>
+<p>Q1. What is MTBF?</p>
+<p>MTBF is the average operating time between qualifying failures of a repairable asset.</p>
+<p>Q2. What is the formula for MTBF?</p>
+<p>MTBF equals total defined operating time divided by the number of qualifying failures.</p>
+<p>Q3. Does a high MTBF guarantee reliability?</p>
+<p>No. It describes observed or estimated average time between failures under a defined scope and set of assumptions. It does not guarantee future failure-free operation.</p>
+<p>Q4. What is the difference between MTBF and MTTF?</p>
+<p>MTBF is generally used for repairable assets between failures. MTTF is commonly used for the time to failure of non-repairable items, although terminology varies by application and standard.</p>
+<p>Q5. Can MTBF be calculated when there are zero failures?</p>
+<p>The ordinary observed formula cannot produce a finite MTBF from zero failures. Report the exposure and zero observed failures, then use an appropriate statistical method if an estimate or confidence bound is required.</p>
+<p>Q6. How can MTBF be improved?</p>
+<p>Reduce the frequency of qualifying failures through root cause elimination, suitable design, effective preventive or predictive maintenance, correct installation, and controlled configuration management.</p>
+<p>Q7. Why should MTBF be calculated separately for subsystems?</p>
+<p>A whole-machine metric may hide recurring failures concentrated in a particular component or subsystem.</p>
+<p>Q8. Is MTBF the same as availability?</p>
+<p>No. MTBF measures average time between failures; availability measures the proportion of defined time that an asset is available. Restoration time and other downtime categories can affect availability.</p>
+<p>Q9. Why must failure definitions remain consistent?</p>
+<p>Changing which events count as failures can alter MTBF even when actual equipment reliability has not changed.</p>
+<p>Q10. How is MTBF useful in maintenance planning?</p>
+<p>It supports reliability trending, asset prioritization, recurring-failure analysis, maintenance strategy evaluation, and assessment of corrective actions.</p>
+<h2 id="19-final-mtbf-checklist">19. Final MTBF Checklist</h2>
+<ul>
+<li>Asset and subsystem boundaries defined.</li>
+<li>Qualifying failure definition documented.</li>
+<li>Operating-time basis documented.</li>
+<li>Operating-hour data verified.</li>
+<li>Duplicate alarms and related events handled consistently.</li>
+<li>Failure count checked against maintenance records.</li>
+<li>MTBF calculated using consistent units.</li>
+<li>Zero-failure samples handled correctly.</li>
+<li>Small sample sizes and uncertainty acknowledged.</li>
+<li>Results compared only across meaningful equipment populations.</li>
+<li>Recurring failure modes investigated.</li>
+<li>Corrective actions evaluated using comparable data.</li>
+<li>Trends and supporting records maintained in the approved reporting system.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\34_Maint_Metrics\01_Key_Metrics\02_MTTR - MTTR</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

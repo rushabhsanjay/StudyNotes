@@ -1,0 +1,1764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robot Component Replacement</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Robot Component Replacement</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and Scope</a></li>
+<li><a href="#2-understanding-the-robot-system">2. Understanding the Robot System</a><ul>
+<li><a href="#21-major-robot-system-components">2.1 Major robot-system components</a></li>
+</ul>
+</li>
+<li><a href="#3-robot-types-and-replacement-considerations">3. Robot Types and Replacement Considerations</a></li>
+<li><a href="#4-safety-requirements-before-replacement">4. Safety Requirements Before Replacement</a><ul>
+<li><a href="#41-principal-hazards">4.1 Principal hazards</a></li>
+<li><a href="#42-required-safety-procedure">4.2 Required safety procedure</a></li>
+<li><a href="#43-gravity-and-brake-hazards">4.3 Gravity and brake hazards</a></li>
+<li><a href="#44-safety-related-component-replacement">4.4 Safety-related component replacement</a></li>
+</ul>
+</li>
+<li><a href="#5-pre-replacement-identification-and-preparation">5. Pre-Replacement Identification and Preparation</a><ul>
+<li><a href="#51-information-to-record">5.1 Information to record</a></li>
+<li><a href="#52-compatibility-checks">5.2 Compatibility checks</a></li>
+</ul>
+</li>
+<li><a href="#6-backup-and-preservation-of-robot-data">6. Backup and Preservation of Robot Data</a><ul>
+<li><a href="#61-what-to-back-up">6.1 What to back up</a></li>
+<li><a href="#62-backup-procedure">6.2 Backup procedure</a></li>
+<li><a href="#63-mastering-and-calibration-data">6.3 Mastering and calibration data</a></li>
+</ul>
+</li>
+<li><a href="#7-standard-robot-component-replacement-procedure">7. Standard Robot Component Replacement Procedure</a><ul>
+<li><a href="#71-phase-a-diagnose-the-fault">7.1 Phase A: Diagnose the fault</a></li>
+<li><a href="#72-phase-b-prepare-the-job">7.2 Phase B: Prepare the job</a></li>
+<li><a href="#73-phase-c-isolate-and-remove">7.3 Phase C: Isolate and remove</a></li>
+<li><a href="#74-phase-d-install-the-replacement">7.4 Phase D: Install the replacement</a></li>
+<li><a href="#75-phase-e-restore-configuration">7.5 Phase E: Restore configuration</a></li>
+<li><a href="#76-phase-f-commission-and-release">7.6 Phase F: Commission and release</a></li>
+</ul>
+</li>
+<li><a href="#8-replacing-robot-controller-components">8. Replacing Robot Controller Components</a><ul>
+<li><a href="#81-controller-power-supply">8.1 Controller power supply</a></li>
+<li><a href="#82-cpu-or-controller-unit">8.2 CPU or controller unit</a></li>
+<li><a href="#83-servo-amplifier">8.3 Servo amplifier</a></li>
+<li><a href="#84-cooling-fan-or-thermal-component">8.4 Cooling fan or thermal component</a></li>
+</ul>
+</li>
+<li><a href="#9-replacing-robot-motors-and-feedback-components">9. Replacing Robot Motors and Feedback Components</a><ul>
+<li><a href="#91-robot-servo-motor">9.1 Robot servo motor</a></li>
+<li><a href="#92-encoder-or-resolver">9.2 Encoder or resolver</a></li>
+<li><a href="#93-motor-brake">9.3 Motor brake</a></li>
+</ul>
+</li>
+<li><a href="#10-replacing-teach-pendants-and-cables">10. Replacing Teach Pendants and Cables</a><ul>
+<li><a href="#101-pre-replacement-checks">10.1 Pre-replacement checks</a></li>
+<li><a href="#102-installation-and-validation">10.2 Installation and validation</a></li>
+</ul>
+</li>
+<li><a href="#11-replacing-batteries-and-preserving-position-data">11. Replacing Batteries and Preserving Position Data</a><ul>
+<li><a href="#111-before-battery-replacement">11.1 Before battery replacement</a></li>
+<li><a href="#112-after-battery-replacement">11.2 After battery replacement</a></li>
+</ul>
+</li>
+<li><a href="#12-replacing-robot-cables-and-dress-packs">12. Replacing Robot Cables and Dress Packs</a><ul>
+<li><a href="#121-common-cable-related-failures">12.1 Common cable-related failures</a></li>
+<li><a href="#122-replacement-requirements">12.2 Replacement requirements</a></li>
+</ul>
+</li>
+<li><a href="#13-replacing-end-of-arm-tooling-and-grippers">13. Replacing End-of-Arm Tooling and Grippers</a><ul>
+<li><a href="#131-before-replacement">13.1 Before replacement</a></li>
+<li><a href="#132-mechanical-and-electrical-checks">13.2 Mechanical and electrical checks</a></li>
+<li><a href="#133-tcp-payload-and-frame-validation">13.3 TCP, payload, and frame validation</a></li>
+</ul>
+</li>
+<li><a href="#14-replacing-robot-mechanical-components">14. Replacing Robot Mechanical Components</a><ul>
+<li><a href="#141-reducers-and-gear-units">14.1 Reducers and gear units</a></li>
+<li><a href="#142-bearings-and-joint-components">14.2 Bearings and joint components</a></li>
+<li><a href="#143-mechanical-replacement-and-mastering">14.3 Mechanical replacement and mastering</a></li>
+</ul>
+</li>
+<li><a href="#15-replacing-safety-related-robot-components">15. Replacing Safety-Related Robot Components</a><ul>
+<li><a href="#151-required-controls">15.1 Required controls</a></li>
+<li><a href="#152-safety-validation-examples">15.2 Safety validation examples</a></li>
+</ul>
+</li>
+<li><a href="#16-robot-controller-software-and-configuration-compatibility">16. Robot Controller Software and Configuration Compatibility</a><ul>
+<li><a href="#161-compatibility-checks">16.1 Compatibility checks</a></li>
+<li><a href="#162-restoration-discipline">16.2 Restoration discipline</a></li>
+</ul>
+</li>
+<li><a href="#17-robot-plc-communication-and-io-validation">17. Robot-PLC Communication and I/O Validation</a><ul>
+<li><a href="#171-typical-signals">17.1 Typical signals</a></li>
+<li><a href="#172-validation-sequence">17.2 Validation sequence</a></li>
+</ul>
+</li>
+<li><a href="#18-robot-mastering-calibration-and-accuracy-verification">18. Robot Mastering, Calibration, and Accuracy Verification</a><ul>
+<li><a href="#181-when-to-investigate-mastering-or-calibration">18.1 When to investigate mastering or calibration</a></li>
+<li><a href="#182-verification-principles">18.2 Verification principles</a></li>
+</ul>
+</li>
+<li><a href="#19-post-replacement-commissioning">19. Post-Replacement Commissioning</a><ul>
+<li><a href="#191-staged-testing">19.1 Staged testing</a></li>
+</ul>
+</li>
+<li><a href="#20-troubleshooting-after-robot-component-replacement">20. Troubleshooting After Robot Component Replacement</a><ul>
+<li><a href="#201-fault-investigation-discipline">20.1 Fault investigation discipline</a></li>
+</ul>
+</li>
+<li><a href="#21-documentation-and-change-control">21. Documentation and Change Control</a><ul>
+<li><a href="#211-minimum-replacement-record">21.1 Minimum replacement record</a></li>
+<li><a href="#212-change-control-triggers">21.2 Change-control triggers</a></li>
+</ul>
+</li>
+<li><a href="#22-spare-parts-and-obsolescence-management">22. Spare-Parts and Obsolescence Management</a><ul>
+<li><a href="#221-recommended-spare-register">22.1 Recommended spare register</a></li>
+<li><a href="#222-recommended-controls">22.2 Recommended controls</a></li>
+</ul>
+</li>
+<li><a href="#23-root-cause-analysis-after-replacement">23. Root Cause Analysis After Replacement</a><ul>
+<li><a href="#231-example-repeated-servo-amplifier-failure">23.1 Example: Repeated servo amplifier failure</a></li>
+<li><a href="#232-rca-workflow">23.2 RCA workflow</a></li>
+</ul>
+</li>
+<li><a href="#24-practical-example-replacing-a-robot-servo-amplifier">24. Practical Example: Replacing a Robot Servo Amplifier</a><ul>
+<li><a href="#step-1-diagnose">Step 1: Diagnose</a></li>
+<li><a href="#step-2-prepare">Step 2: Prepare</a></li>
+<li><a href="#step-3-replace">Step 3: Replace</a></li>
+<li><a href="#step-4-restore-configuration">Step 4: Restore configuration</a></li>
+<li><a href="#step-5-validate">Step 5: Validate</a></li>
+<li><a href="#step-6-close-the-job">Step 6: Close the job</a></li>
+</ul>
+</li>
+<li><a href="#25-key-performance-indicators">25. Key Performance Indicators</a></li>
+<li><a href="#26-interview-questions-and-answers">26. Interview Questions and Answers</a></li>
+<li><a href="#27-final-robot-component-replacement-checklist">27. Final Robot Component Replacement Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\33_SOP_WI\05_Component_Replacement\04_Robot - Robot</code></p>
+<h2 id="1-purpose-and-scope">1. Purpose and Scope</h2>
+<p>Industrial robot component replacement is the controlled removal and installation of a faulty, damaged, obsolete, or incompatible component while preserving the robot's mechanical integrity, control configuration, application accuracy, communication, and safety functions.</p>
+<p>In a production environment, a robot system is more than the robot arm. It includes the controller, servo amplifiers, motors, feedback devices, dress pack, end-of-arm tooling, safety circuits, fieldbus connections, process equipment, and machine interfaces.</p>
+<p>A replacement procedure must account for the complete system because a component can appear functional while introducing a dangerous motion condition, position error, communication fault, or production-quality defect.</p>
+<p>Typical replacement activities include:</p>
+<ul>
+<li>Robot controller or controller cabinet components.</li>
+<li>Servo amplifier or drive module.</li>
+<li>Robot motors and encoder or resolver feedback components.</li>
+<li>Teach pendant and pendant cables.</li>
+<li>Batteries used for supported memory retention or position-data retention.</li>
+<li>Robot cables, dress packs, connectors, and communication interfaces.</li>
+<li>End-of-arm tooling, grippers, sensors, and tool-change components.</li>
+<li>Safety-related devices and approved safety-system components.</li>
+<li>Cooling fans, power supplies, and other OEM-serviceable components.</li>
+<li>Robot mechanical components, such as reducers, gear units, bearings, and brakes, where the OEM permits the repair.</li>
+</ul>
+<p>Core principle: A robot component replacement is complete only after the correct hardware is installed, the approved configuration is restored, required safety functions are validated, and the robot's motion and process performance meet the defined acceptance criteria.</p>
+<h2 id="2-understanding-the-robot-system">2. Understanding the Robot System</h2>
+<p>A typical industrial robot cell contains several interacting subsystems.</p>
+<pre><code>Robot program / PLC / Cell controller
+                 ↓
+        Robot controller
+                 ↓
+       Servo amplifiers
+                 ↓
+       Robot servo motors
+                 ↓
+      Gear units and joints
+                 ↓
+        Robot tool / payload
+
+Encoder or resolver feedback
+                 ↓
+        Robot controller
+
+Safety devices
+                 ↓
+Approved safety control system
+                 ↓
+Validated robot and cell safety functions
+
+Process devices
+                 ↓
+Welding / handling / dispensing / machining
+</code></pre>
+<p>This is a conceptual arrangement. Actual architecture varies by robot manufacturer, controller generation, application, and cell safety design.</p>
+<h3 id="21-major-robot-system-components">2.1 Major robot-system components</h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+<th>Typical replacement concern</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Robot manipulator</td>
+<td>Provides the articulated mechanical structure</td>
+<td>Mechanical integrity, axis alignment, calibration</td>
+</tr>
+<tr>
+<td>Robot controller</td>
+<td>Executes robot programs and coordinates motion</td>
+<td>Controller compatibility, system backup, software version</td>
+</tr>
+<tr>
+<td>Servo amplifier</td>
+<td>Drives the robot motors</td>
+<td>Axis assignment, motor compatibility, drive configuration</td>
+</tr>
+<tr>
+<td>Servo motor</td>
+<td>Produces torque for each robot axis</td>
+<td>Motor identity, feedback, brake, mechanical mounting</td>
+</tr>
+<tr>
+<td>Encoder or resolver</td>
+<td>Provides position or speed feedback</td>
+<td>Feedback compatibility, orientation, calibration</td>
+</tr>
+<tr>
+<td>Teach pendant</td>
+<td>Provides programming and operator interaction</td>
+<td>Model compatibility, cable, enable switch, emergency-stop interface</td>
+</tr>
+<tr>
+<td>Controller power supply</td>
+<td>Supplies control-system power</td>
+<td>Correct voltage, capacity, wiring, and protection</td>
+</tr>
+<tr>
+<td>Robot dress pack</td>
+<td>Carries power, signal, air, or process connections</td>
+<td>Routing, bend radius, abrasion, interference</td>
+</tr>
+<tr>
+<td>Tool or gripper</td>
+<td>Holds or manipulates the workpiece</td>
+<td>Payload, center of gravity, tooling configuration</td>
+</tr>
+<tr>
+<td>Tool changer</td>
+<td>Enables automatic tool exchange</td>
+<td>Mechanical locking, sensor feedback, utility connections</td>
+</tr>
+<tr>
+<td>Safety controller or device</td>
+<td>Implements designated safety functions</td>
+<td>Approved hardware, configuration, validation</td>
+</tr>
+<tr>
+<td>Communication module</td>
+<td>Connects the robot to the PLC or cell network</td>
+<td>Protocol, device identity, I/O mapping</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-robot-types-and-replacement-considerations">3. Robot Types and Replacement Considerations</h2>
+<table>
+<thead>
+<tr>
+<th>Robot type</th>
+<th>Common application</th>
+<th>Important replacement considerations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Articulated robot</td>
+<td>Welding, handling, assembly, machining</td>
+<td>Axis configuration, payload, reach, tool and base calibration</td>
+</tr>
+<tr>
+<td>SCARA robot</td>
+<td>High-speed assembly and pick-and-place</td>
+<td>Joint geometry, vertical axis, motion tuning</td>
+</tr>
+<tr>
+<td>Cartesian robot</td>
+<td>Linear positioning and gantry applications</td>
+<td>Axis alignment, travel limits, linear feedback</td>
+</tr>
+<tr>
+<td>Delta robot</td>
+<td>High-speed picking and sorting</td>
+<td>Kinematic configuration, tool alignment, calibration</td>
+</tr>
+<tr>
+<td>Collaborative robot</td>
+<td>Human-adjacent applications under specified conditions</td>
+<td>Safety configuration, force limits, application risk assessment</td>
+</tr>
+<tr>
+<td>Dedicated machine robot</td>
+<td>Specialized production processes</td>
+<td>OEM-specific hardware and process integration</td>
+</tr>
+</tbody>
+</table>
+<p>A component from one robot family should not be assumed compatible with another, even if the connectors or external dimensions look similar.</p>
+<h2 id="4-safety-requirements-before-replacement">4. Safety Requirements Before Replacement</h2>
+<p>Robot systems can move unexpectedly due to stored energy, controller restart, external commands, gravity, brake release, or incorrect configuration. Robot safety must be established before any component is touched.</p>
+<h3 id="41-principal-hazards">4.1 Principal hazards</h3>
+<ul>
+<li>Unexpected robot motion or automatic restart.</li>
+<li>Electric shock from controller and drive power circuits.</li>
+<li>Stored electrical energy in drive DC buses.</li>
+<li>Gravity-driven movement of robot axes after brake release.</li>
+<li>Dropped payloads or tooling.</li>
+<li>Pinch and crush points at robot joints and tooling.</li>
+<li>Pneumatic or hydraulic energy in grippers and process equipment.</li>
+<li>Hot welding equipment, spindles, dispensing equipment, or process tooling.</li>
+<li>Unexpected motion from PLC, remote controller, or automatic cell commands.</li>
+<li>Incorrect safety configuration after component replacement.</li>
+<li>Electrostatic discharge damage to electronic modules.</li>
+</ul>
+<h3 id="42-required-safety-procedure">4.2 Required safety procedure</h3>
+<ol>
+<li>Identify the robot, controller, affected axis, and component.</li>
+<li>Review the OEM maintenance instructions and the cell-specific risk controls.</li>
+<li>Stop the robot using the approved operating procedure.</li>
+<li>Place the complete cell in its required safe state.</li>
+<li>Isolate electrical, pneumatic, hydraulic, and other relevant energy sources.</li>
+<li>Apply the approved lockout/tagout procedure.</li>
+<li>Account for shared supplies, external axes, gravity loads, and stored energy.</li>
+<li>Wait for the specified electrical discharge time and verify the required absence of voltage.</li>
+<li>Secure the robot, external axes, tooling, and payload against unexpected movement where required.</li>
+<li>Confirm the required safety conditions before beginning work.</li>
+</ol>
+<p>A robot's emergency-stop button is not a substitute for the required energy-isolation procedure. Likewise, a controller being switched off does not prove that every hazardous energy source has been isolated.</p>
+<h3 id="43-gravity-and-brake-hazards">4.3 Gravity and brake hazards</h3>
+<p>Some robot axes can move under gravity if a motor brake is released, a motor is removed, or a mechanical transmission is disturbed. The risk depends on the robot geometry, axis position, payload, and manufacturer's design.</p>
+<p>Before replacing a motor, brake, reducer, or other load-bearing component:</p>
+<ul>
+<li>Follow the manufacturer's specified support and locking procedure.</li>
+<li>Confirm the permitted robot position for the repair.</li>
+<li>Support the arm or external axis using approved equipment where required.</li>
+<li>Account for the tool and workpiece payload.</li>
+<li>Never rely on servo torque alone to support a load during maintenance.</li>
+<li>Do not release a brake without understanding the expected movement and the approved method.</li>
+</ul>
+<p>Never improvise a support method for a robot arm or suspended axis. The forces and stored mechanical energy can be substantial.</p>
+<h3 id="44-safety-related-component-replacement">4.4 Safety-related component replacement</h3>
+<p>Safety-related components may include emergency-stop devices, enabling switches, safety scanners, interlocks, safety I/O, safety controllers, and robot safety options.</p>
+<p>Replacement may require verification of:</p>
+<ul>
+<li>Correct part number and safety rating.</li>
+<li>Approved wiring and channel configuration.</li>
+<li>Safety configuration and parameter integrity.</li>
+<li>Required reset and restart behavior.</li>
+<li>Protective-stop and emergency-stop response.</li>
+<li>Guard and interlock operation.</li>
+<li>Safety-rated monitored functions where implemented.</li>
+<li>Documented validation and authorization.</li>
+</ul>
+<p>Do not bypass a safety input or force a safety signal to make the robot move after replacement. Any permitted diagnostic procedure must follow the OEM and site-approved safety process.</p>
+<h2 id="5-pre-replacement-identification-and-preparation">5. Pre-Replacement Identification and Preparation</h2>
+<p>The first task is to identify exactly what is installed and what the replacement must preserve.</p>
+<h3 id="51-information-to-record">5.1 Information to record</h3>
+<ul>
+<li>Robot manufacturer, model, serial number, and robot type.</li>
+<li>Controller model and hardware generation.</li>
+<li>Robot axis count and configuration.</li>
+<li>Component manufacturer, part number, revision, and serial number where applicable.</li>
+<li>Robot software version and relevant option packages.</li>
+<li>Controller and robot backup status.</li>
+<li>Affected axis, joint, tool, and application.</li>
+<li>Fault code, alarm history, and conditions preceding the failure.</li>
+<li>Motor, amplifier, encoder, or mechanical component identity as applicable.</li>
+<li>PLC interface, network identity, and I/O assignments.</li>
+<li>Tool data, payload, center of gravity, and tool-center-point data.</li>
+<li>Base, user-frame, mastering, calibration, and motion configuration.</li>
+<li>Safety configuration and validation requirements.</li>
+<li>OEM replacement instructions and required special tools.</li>
+</ul>
+<h3 id="52-compatibility-checks">5.2 Compatibility checks</h3>
+<table>
+<thead>
+<tr>
+<th>Factor</th>
+<th>What to verify</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Robot model</td>
+<td>Component is approved for the exact robot family and configuration</td>
+</tr>
+<tr>
+<td>Controller generation</td>
+<td>Hardware and software support the component</td>
+</tr>
+<tr>
+<td>Axis assignment</td>
+<td>Component matches the correct joint or axis</td>
+</tr>
+<tr>
+<td>Electrical rating</td>
+<td>Voltage, current, power, and connector requirements match</td>
+</tr>
+<tr>
+<td>Feedback interface</td>
+<td>Encoder or resolver type and supported configuration match</td>
+</tr>
+<tr>
+<td>Firmware and software</td>
+<td>Required versions and options are compatible</td>
+</tr>
+<tr>
+<td>Mechanical interface</td>
+<td>Mounting, shaft, coupling, dimensions, and orientation match</td>
+</tr>
+<tr>
+<td>Safety rating</td>
+<td>Component supports the required safety architecture</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>Protocol, address, device profile, and I/O mapping are compatible</td>
+</tr>
+<tr>
+<td>Application data</td>
+<td>Tooling, payload, frames, calibration, and process settings remain valid</td>
+</tr>
+<tr>
+<td>Environmental rating</td>
+<td>Temperature, contamination, vibration, and enclosure requirements are satisfied</td>
+</tr>
+</tbody>
+</table>
+<p>An approved successor part may require configuration changes or a documented migration procedure. Similar part numbers are not proof of compatibility.</p>
+<h2 id="6-backup-and-preservation-of-robot-data">6. Backup and Preservation of Robot Data</h2>
+<p>A robot controller may contain years of accumulated engineering configuration. Replacing hardware without a verified backup can turn a component fault into a much larger recovery problem.</p>
+<h3 id="61-what-to-back-up">6.1 What to back up</h3>
+<table>
+<thead>
+<tr>
+<th>Data</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Robot programs</td>
+<td>Preserves production and motion logic</td>
+</tr>
+<tr>
+<td>System configuration</td>
+<td>Preserves controller and robot setup</td>
+</tr>
+<tr>
+<td>Software and option information</td>
+<td>Establishes compatibility and supported functionality</td>
+</tr>
+<tr>
+<td>Mastering or calibration data</td>
+<td>Preserves the relationship between encoder position and robot joint coordinates</td>
+</tr>
+<tr>
+<td>Tool data</td>
+<td>Defines the tool-center point and tool orientation</td>
+</tr>
+<tr>
+<td>Payload data</td>
+<td>Defines mass and center of gravity for the installed tooling and workpiece</td>
+</tr>
+<tr>
+<td>User and work frames</td>
+<td>Preserves workpiece and fixture coordinate systems</td>
+</tr>
+<tr>
+<td>Motion and process parameters</td>
+<td>Preserves approved motion and process behavior</td>
+</tr>
+<tr>
+<td>I/O mapping</td>
+<td>Preserves the relationship between logical signals and physical interfaces</td>
+</tr>
+<tr>
+<td>Network configuration</td>
+<td>Preserves PLC and cell communication</td>
+</tr>
+<tr>
+<td>Safety configuration</td>
+<td>Supports controlled restoration and required safety validation</td>
+</tr>
+<tr>
+<td>Fault history</td>
+<td>Helps diagnose the original failure</td>
+</tr>
+<tr>
+<td>Controller and hardware identity</td>
+<td>Supports recovery and traceability</td>
+</tr>
+</tbody>
+</table>
+<h3 id="62-backup-procedure">6.2 Backup procedure</h3>
+<ol>
+<li>Identify the correct robot and controller.</li>
+<li>Check whether a current, approved backup already exists.</li>
+<li>Create a fresh backup using the supported OEM method when safe and permitted.</li>
+<li>Include programs, system configuration, and applicable option data.</li>
+<li>Preserve mastering, calibration, tool, payload, and frame information using the supported method.</li>
+<li>Record the robot software version, controller generation, and backup date.</li>
+<li>Verify that the backup is readable and suitable for the intended recovery.</li>
+<li>Store it in the approved repository with access control and revision information.</li>
+</ol>
+<p>A program backup is not necessarily a complete controller backup. Some backup methods omit system data, calibration values, safety configuration, licenses, or hardware-specific settings.</p>
+<h3 id="63-mastering-and-calibration-data">6.3 Mastering and calibration data</h3>
+<p>Robot mastering establishes the relationship between the feedback system and the robot's defined joint reference positions. Calibration may also involve geometric parameters that characterize the robot's actual kinematics.</p>
+<p>Losing or changing these values can affect robot accuracy even when the robot powers up and executes a program without an obvious fault.</p>
+<p>Before replacing a motor, encoder, resolver, joint, reducer, or controller component that affects position data:</p>
+<ul>
+<li>Determine whether the replacement procedure can affect mastering or calibration.</li>
+<li>Preserve the relevant approved data.</li>
+<li>Follow the OEM procedure for restoring or verifying mastering.</li>
+<li>Perform the required calibration or accuracy checks.</li>
+<li>Confirm that the affected robot motion remains within acceptance limits.</li>
+</ul>
+<p>Do not assume that a zero displayed on the pendant means the robot is mechanically or geometrically calibrated.</p>
+<h2 id="7-standard-robot-component-replacement-procedure">7. Standard Robot Component Replacement Procedure</h2>
+<p>The procedure below is a general framework. The exact sequence, tools, torque values, calibration steps, and safety requirements must come from the applicable OEM documentation.</p>
+<h3 id="71-phase-a-diagnose-the-fault">7.1 Phase A: Diagnose the fault</h3>
+<ol>
+<li>Record the alarm code and complete alarm text.</li>
+<li>Capture the operating state, affected axis, and conditions before the fault.</li>
+<li>Check the alarm history and related controller diagnostics.</li>
+<li>Inspect relevant cables, connectors, power supplies, cooling, and communication.</li>
+<li>Check whether the problem follows a particular axis, movement, tool, or process.</li>
+<li>Distinguish a hardware fault from configuration, mechanical, process, or communication issues.</li>
+<li>Confirm that the proposed component replacement addresses the diagnosed cause.</li>
+</ol>
+<p>A servo amplifier alarm can be caused by a motor cable fault, a motor winding problem, a feedback fault, a mechanical obstruction, or a supply issue. Replacing the amplifier without checking those possibilities can lead to repeat failure.</p>
+<h3 id="72-phase-b-prepare-the-job">7.2 Phase B: Prepare the job</h3>
+<ol>
+<li>Confirm the exact component and approved replacement part.</li>
+<li>Obtain the correct OEM procedure and required tools.</li>
+<li>Verify backup availability and preservation of critical data.</li>
+<li>Review the robot's current position, payload, and mechanical support requirements.</li>
+<li>Plan the removal and installation sequence.</li>
+<li>Identify connectors, cable routes, and mounting arrangements.</li>
+<li>Define the post-replacement commissioning and acceptance tests.</li>
+<li>Obtain the required work authorization.</li>
+</ol>
+<h3 id="73-phase-c-isolate-and-remove">7.3 Phase C: Isolate and remove</h3>
+<ol>
+<li>Stop the robot and establish the required safe state.</li>
+<li>Isolate all relevant electrical and other energy sources.</li>
+<li>Apply lockout/tagout and verify the required safe conditions.</li>
+<li>Secure gravity-loaded axes and attached tooling where necessary.</li>
+<li>Wait for the OEM-specified electrical discharge time and verify the required absence of voltage.</li>
+<li>Label connectors and wiring before disconnection.</li>
+<li>Disconnect the component using the manufacturer's instructions.</li>
+<li>Protect exposed connectors and electronic components from contamination and ESD.</li>
+<li>Remove the component with suitable support and tools.</li>
+<li>Inspect the surrounding assembly for damage, contamination, loose fasteners, overheating, and cable wear.</li>
+</ol>
+<p>Do not use excessive force to remove a connector, shaft, motor, or mechanical assembly. If the component does not release as expected, stop and check the approved disassembly procedure.</p>
+<h3 id="74-phase-d-install-the-replacement">7.4 Phase D: Install the replacement</h3>
+<ol>
+<li>Verify the part number and revision against the approved replacement.</li>
+<li>Inspect the new component for shipping damage.</li>
+<li>Confirm the mounting surface, coupling, shaft, and connector condition.</li>
+<li>Install the component in the specified orientation.</li>
+<li>Use the OEM-specified fasteners, torque values, tools, and assembly sequence.</li>
+<li>Reconnect power, feedback, control, and communication wiring as applicable.</li>
+<li>Restore cable routing, shielding, grounding, and strain relief.</li>
+<li>Verify connectors are fully seated and correctly locked.</li>
+<li>Restore protective covers and required cooling arrangements.</li>
+<li>Inspect the complete installation before re-energization.</li>
+</ol>
+<p>Do not invent torque values or substitute generic connector pinouts. These details depend on the exact component and robot generation.</p>
+<h3 id="75-phase-e-restore-configuration">7.5 Phase E: Restore configuration</h3>
+<ol>
+<li>Verify the replacement hardware is recognized by the controller.</li>
+<li>Check hardware identity, firmware compatibility, and relevant diagnostic status.</li>
+<li>Restore approved configuration using the supported OEM method.</li>
+<li>Verify axis assignment, feedback settings, and applicable motor data.</li>
+<li>Confirm tool, payload, frame, and motion data where relevant.</li>
+<li>Check PLC communication and I/O mapping.</li>
+<li>Restore safety-related configuration through the approved process where applicable.</li>
+<li>Verify mastering and calibration status if the replacement can affect them.</li>
+<li>Record any configuration conversion or change.</li>
+<li>Resolve configuration mismatches before allowing normal production motion.</li>
+</ol>
+<h3 id="76-phase-f-commission-and-release">7.6 Phase F: Commission and release</h3>
+<ol>
+<li>Complete the required electrical and mechanical inspection.</li>
+<li>Confirm that the controller starts without unresolved faults.</li>
+<li>Verify the pendant, communication, and required status signals.</li>
+<li>Check the required safety functions using the approved validation procedure.</li>
+<li>Establish the approved test conditions and motion restrictions.</li>
+<li>Perform the OEM-prescribed initial movement or test.</li>
+<li>Verify the affected axis and related robot motion.</li>
+<li>Check mastering, calibration, and positioning accuracy as required.</li>
+<li>Validate tool, payload, process, and PLC interfaces.</li>
+<li>Confirm the required production sequence and quality criteria.</li>
+<li>Obtain the required authorization to return the cell to service.</li>
+<li>Update the maintenance and configuration records.</li>
+</ol>
+<h2 id="8-replacing-robot-controller-components">8. Replacing Robot Controller Components</h2>
+<p>Controller component replacement may involve power supplies, CPU or main-controller hardware, memory modules, communication boards, servo amplifiers, cooling units, or other OEM-serviceable modules.</p>
+<h3 id="81-controller-power-supply">8.1 Controller power supply</h3>
+<p>Before replacement, check:</p>
+<ul>
+<li>Input supply and protection.</li>
+<li>Output voltage and current requirements.</li>
+<li>Power connectors and terminal condition.</li>
+<li>Evidence of overheating or contamination.</li>
+<li>Whether the fault is caused by an external short or overload.</li>
+<li>Compatibility with the controller generation.</li>
+</ul>
+<p>After replacement, verify the controller's diagnostic status, connected modules, communications, and required system functions.</p>
+<h3 id="82-cpu-or-controller-unit">8.2 CPU or controller unit</h3>
+<p>Replacing the main controller can have a much larger impact than replacing a peripheral module. The replacement may require approved software, system data, licenses, network settings, robot configuration, and safety data.</p>
+<p>Verify:</p>
+<ul>
+<li>Exact controller model and hardware generation.</li>
+<li>Supported software and option packages.</li>
+<li>Backup compatibility and completeness.</li>
+<li>Hardware identity and licensing requirements.</li>
+<li>Network and PLC integration.</li>
+<li>Mastering and calibration preservation.</li>
+<li>Safety configuration and validation requirements.</li>
+<li>OEM recovery and commissioning procedure.</li>
+</ul>
+<p>Do not assume that installing the same nominal controller model automatically restores the original machine configuration.</p>
+<h3 id="83-servo-amplifier">8.3 Servo amplifier</h3>
+<p>A servo amplifier controls one or more robot axes according to the specific controller architecture. Before replacement, identify the correct module and axis mapping.</p>
+<p>Check:</p>
+<ul>
+<li>Amplifier model and current rating.</li>
+<li>Supported motor and feedback combinations.</li>
+<li>Axis assignment and configuration.</li>
+<li>Power and motor connections.</li>
+<li>Cooling and ventilation.</li>
+<li>Relevant fault history.</li>
+<li>Compatible software and firmware.</li>
+<li>Required drive initialization or configuration transfer.</li>
+</ul>
+<p>After replacement, verify the affected axis under the prescribed test conditions. Check for overcurrent, feedback, communication, and axis-configuration faults before proceeding to normal operation.</p>
+<h3 id="84-cooling-fan-or-thermal-component">8.4 Cooling fan or thermal component</h3>
+<p>Overtemperature alarms may result from failed fans, blocked air paths, dirty filters, high ambient temperature, or excessive loading.</p>
+<p>After replacement:</p>
+<ul>
+<li>Confirm correct fan or thermal-component specification.</li>
+<li>Verify airflow direction and mounting.</li>
+<li>Clean the permitted cooling paths according to the OEM procedure.</li>
+<li>Check filters, vents, and surrounding equipment.</li>
+<li>Verify the cooling system operates correctly.</li>
+<li>Confirm that the underlying overheating cause has been addressed.</li>
+</ul>
+<p>Replacing a fan without correcting blocked ventilation may only postpone the next shutdown.</p>
+<h2 id="9-replacing-robot-motors-and-feedback-components">9. Replacing Robot Motors and Feedback Components</h2>
+<p>Robot motors and their feedback devices are closely linked to motion control. Replacement can affect joint position, direction, brake operation, and mastering.</p>
+<h3 id="91-robot-servo-motor">9.1 Robot servo motor</h3>
+<p>Before replacing a robot motor, verify:</p>
+<ul>
+<li>Exact motor model and approved replacement.</li>
+<li>Motor mounting and shaft interface.</li>
+<li>Electrical connector and feedback arrangement.</li>
+<li>Brake type and required control.</li>
+<li>Mechanical load and support requirements.</li>
+<li>Relevant mastering and calibration procedure.</li>
+<li>Required fasteners and specified tightening sequence.</li>
+<li>Motor and feedback cable condition.</li>
+</ul>
+<p>After replacement, follow the OEM procedure for motor recognition, feedback verification, brake checks, mastering, and motion validation.</p>
+<h3 id="92-encoder-or-resolver">9.2 Encoder or resolver</h3>
+<p>An encoder or resolver provides position or speed feedback to the motion-control system. A fault can cause position errors, feedback alarms, unstable operation, or an inability to enable the axis.</p>
+<p>Possible causes include:</p>
+<ul>
+<li>Damaged feedback cable.</li>
+<li>Loose or contaminated connector.</li>
+<li>Incorrect feedback component.</li>
+<li>Damaged sensor or coupling.</li>
+<li>Incompatible replacement hardware.</li>
+<li>Incorrect feedback configuration.</li>
+<li>Electrical noise or grounding problems.</li>
+</ul>
+<p>The replacement procedure may require specific mechanical positioning, alignment, parameter restoration, or mastering. Follow the exact OEM instructions.</p>
+<p>Important distinction: Restoring the feedback signal does not automatically restore the robot's reference position. The required mastering or calibration process must also be completed when applicable.</p>
+<h3 id="93-motor-brake">9.3 Motor brake</h3>
+<p>A robot motor brake may hold an axis when the motor is not actively driving it. Brake replacement can involve electrical, mechanical, and load-support risks.</p>
+<p>Verify:</p>
+<ul>
+<li>Correct brake and motor compatibility.</li>
+<li>Specified brake-control voltage and wiring.</li>
+<li>Mechanical load support before disassembly.</li>
+<li>Required air gaps or mechanical settings where applicable.</li>
+<li>Brake release and engagement sequence.</li>
+<li>Brake monitoring and diagnostic behavior.</li>
+<li>Required holding or functional tests.</li>
+</ul>
+<p>Never use repeated brake-release attempts as a substitute for diagnosing the fault. A brake that fails to hold the specified load requires the approved corrective action before normal operation resumes.</p>
+<h2 id="10-replacing-teach-pendants-and-cables">10. Replacing Teach Pendants and Cables</h2>
+<p>The teach pendant provides the operator interface for robot status, programming, jogging, and supported maintenance functions. Depending on the system, it may include an enabling device and emergency-stop circuit.</p>
+<h3 id="101-pre-replacement-checks">10.1 Pre-replacement checks</h3>
+<ul>
+<li>Confirm the pendant model and controller compatibility.</li>
+<li>Check the cable and connector condition.</li>
+<li>Record any pendant-specific configuration.</li>
+<li>Determine whether the pendant includes safety-related controls.</li>
+<li>Review the OEM connection and replacement procedure.</li>
+<li>Confirm that the replacement device is approved for the intended controller.</li>
+</ul>
+<h3 id="102-installation-and-validation">10.2 Installation and validation</h3>
+<ol>
+<li>Establish the required safe state.</li>
+<li>Isolate the relevant equipment as specified by the OEM.</li>
+<li>Disconnect the original pendant using the approved method.</li>
+<li>Inspect the controller connector and cable routing.</li>
+<li>Connect the compatible replacement.</li>
+<li>Confirm communication with the controller.</li>
+<li>Verify displayed robot and controller status.</li>
+<li>Test applicable enabling and emergency-stop functions according to the approved procedure.</li>
+<li>Verify permitted manual-mode behavior and the required safety response.</li>
+<li>Document the replacement and test results.</li>
+</ol>
+<p>A pendant that displays menus and allows program viewing is not necessarily safe for operation. The applicable enabling device, emergency-stop function, mode control, and other safety-related features must be verified.</p>
+<h2 id="11-replacing-batteries-and-preserving-position-data">11. Replacing Batteries and Preserving Position Data</h2>
+<p>Some robot systems use batteries to retain specific memory or position-related data when power is removed. The battery function, replacement method, and consequences of data loss differ by controller and robot generation.</p>
+<h3 id="111-before-battery-replacement">11.1 Before battery replacement</h3>
+<ul>
+<li>Identify the exact battery and its supported application.</li>
+<li>Check the OEM maintenance schedule and replacement procedure.</li>
+<li>Review any low-battery alarm and its urgency.</li>
+<li>Determine which data the battery supports.</li>
+<li>Confirm whether the replacement procedure requires the controller to remain powered.</li>
+<li>Establish whether the task is permitted under the applicable electrical-safety rules.</li>
+<li>Preserve the relevant backup and calibration information.</li>
+</ul>
+<p>Do not assume all robot batteries have the same function. A battery may support memory retention, position-data retention, or another manufacturer-specific purpose.</p>
+<h3 id="112-after-battery-replacement">11.2 After battery replacement</h3>
+<ul>
+<li>Confirm the battery is correctly installed and connected.</li>
+<li>Verify the alarm status.</li>
+<li>Check retained data using the supported diagnostic method.</li>
+<li>Confirm mastering and calibration status if affected.</li>
+<li>Follow the OEM procedure if any position data has been lost.</li>
+<li>Record the replacement date and battery identification.</li>
+</ul>
+<p>Do not power down or energize a controller in a way that conflicts with the OEM battery-replacement procedure. Some procedures have strict conditions intended to prevent data loss.</p>
+<h2 id="12-replacing-robot-cables-and-dress-packs">12. Replacing Robot Cables and Dress Packs</h2>
+<p>Robot cables experience repeated bending, twisting, vibration, and movement. A cable can fail intermittently and cause faults that appear to originate in the motor, encoder, or controller.</p>
+<h3 id="121-common-cable-related-failures">12.1 Common cable-related failures</h3>
+<ul>
+<li>Broken conductors inside the insulation.</li>
+<li>Damaged shielding or grounding.</li>
+<li>Connector pin damage.</li>
+<li>Cable abrasion or crushing.</li>
+<li>Excessive bend radius violations.</li>
+<li>Incorrect cable routing or clamping.</li>
+<li>Oil, coolant, heat, or chemical damage.</li>
+<li>Intermittent feedback or communication faults.</li>
+<li>Damage caused by collision or excessive robot motion.</li>
+</ul>
+<h3 id="122-replacement-requirements">12.2 Replacement requirements</h3>
+<ol>
+<li>Identify the exact cable part number and intended application.</li>
+<li>Check whether the cable is designed for continuous robot motion.</li>
+<li>Record the original routing and connector orientation.</li>
+<li>Establish the required safe state and isolation.</li>
+<li>Replace the cable according to the OEM routing procedure.</li>
+<li>Maintain specified bend radius, torsion limits, and strain relief.</li>
+<li>Restore grounding and shielding as specified.</li>
+<li>Ensure the cable does not interfere with the robot, tool, fixture, or workpiece.</li>
+<li>Inspect the full motion envelope.</li>
+<li>Perform the approved motion and communication checks.</li>
+</ol>
+<p>Do not substitute ordinary flexible cable for a robot-rated cable unless the engineering authority has approved the replacement. Static electrical compatibility does not prove suitability for repeated robotic motion.</p>
+<h2 id="13-replacing-end-of-arm-tooling-and-grippers">13. Replacing End-of-Arm Tooling and Grippers</h2>
+<p>End-of-arm tooling (EOAT) is the equipment attached to the robot flange to grip, weld, dispense, inspect, machine, or otherwise interact with a workpiece.</p>
+<p>A tooling replacement can affect payload, center of gravity, tool-center-point data, collision risk, and process quality.</p>
+<h3 id="131-before-replacement">13.1 Before replacement</h3>
+<p>Record:</p>
+<ul>
+<li>Tool model and identification.</li>
+<li>Mechanical flange interface.</li>
+<li>Tool-center-point (TCP) data.</li>
+<li>Tool orientation and user-frame relationship.</li>
+<li>Tool mass and center of gravity.</li>
+<li>Workpiece mass and gripping arrangement.</li>
+<li>Pneumatic, hydraulic, electrical, and communication connections.</li>
+<li>Gripper-open and gripper-closed feedback.</li>
+<li>Tool-change and process interlocks.</li>
+<li>Relevant robot program and process parameters.</li>
+</ul>
+<h3 id="132-mechanical-and-electrical-checks">13.2 Mechanical and electrical checks</h3>
+<ul>
+<li>Verify the flange and fasteners.</li>
+<li>Confirm correct mounting and orientation.</li>
+<li>Check tool retention and locking mechanisms.</li>
+<li>Verify utility connections and routing.</li>
+<li>Inspect hoses and cables throughout the motion range.</li>
+<li>Confirm sensor placement and feedback.</li>
+<li>Verify workpiece retention under the approved operating conditions.</li>
+<li>Check for interference with fixtures and adjacent equipment.</li>
+</ul>
+<h3 id="133-tcp-payload-and-frame-validation">13.3 TCP, payload, and frame validation</h3>
+<p>The TCP describes the tool's reference point and orientation relative to the robot flange. Payload data describes the mass properties of the attached tooling and, where relevant, the carried workpiece.</p>
+<p>Incorrect TCP data can cause the robot to follow an incorrect tool path. Incorrect payload or center-of-gravity data can affect dynamic performance, stopping behavior, and mechanical loading.</p>
+<p>After replacing tooling:</p>
+<ol>
+<li>Verify the tool identity and mechanical installation.</li>
+<li>Restore the approved tool and payload configuration.</li>
+<li>Perform TCP calibration if required by the replacement.</li>
+<li>Verify user frames and work-object relationships.</li>
+<li>Confirm tool and workpiece sensing.</li>
+<li>Validate approach, pick, place, and process paths.</li>
+<li>Check collision clearances under the approved test conditions.</li>
+<li>Confirm product quality and process acceptance.</li>
+</ol>
+<p>Never assume that a replacement tool has the same TCP, mass, center of gravity, or gripping behavior as the original.</p>
+<h2 id="14-replacing-robot-mechanical-components">14. Replacing Robot Mechanical Components</h2>
+<p>Mechanical replacement may involve reducers, bearings, joints, structural parts, couplings, or other components that affect robot geometry and load handling.</p>
+<p>These repairs often require specialist equipment and manufacturer-specific procedures.</p>
+<h3 id="141-reducers-and-gear-units">14.1 Reducers and gear units</h3>
+<p>Before replacement, verify:</p>
+<ul>
+<li>Correct reducer and robot-axis identification.</li>
+<li>Gear ratio and approved part number.</li>
+<li>Lubrication requirements.</li>
+<li>Mechanical alignment and mounting.</li>
+<li>Permitted robot position and support method.</li>
+<li>Specified fasteners and torque procedure.</li>
+<li>Backlash or accuracy acceptance criteria.</li>
+<li>Required mastering or calibration procedure.</li>
+</ul>
+<p>After replacement, verify smooth movement, abnormal noise, leakage where applicable, joint behavior, and the required positioning accuracy.</p>
+<h3 id="142-bearings-and-joint-components">14.2 Bearings and joint components</h3>
+<p>Bearing or joint work can affect alignment, friction, mechanical play, and the robot's ability to maintain repeatable motion.</p>
+<p>Inspect for:</p>
+<ul>
+<li>Abnormal play or backlash.</li>
+<li>Binding or uneven movement.</li>
+<li>Lubrication problems.</li>
+<li>Contamination or damage.</li>
+<li>Incorrect installation or preload where applicable.</li>
+<li>Signs of collision or overload.</li>
+<li>Required alignment and calibration.</li>
+</ul>
+<p>Use OEM-defined limits and measurement methods. Do not declare a joint acceptable merely because it can be moved manually.</p>
+<h3 id="143-mechanical-replacement-and-mastering">14.3 Mechanical replacement and mastering</h3>
+<p>Replacing a mechanical component can change the relationship between the encoder's readings and the robot's actual geometry. Whether mastering is required depends on the affected component and the OEM procedure.</p>
+<p>Before returning the robot to production, establish whether the repair requires mastering, calibration, accuracy testing, or a formal engineering assessment.</p>
+<h2 id="15-replacing-safety-related-robot-components">15. Replacing Safety-Related Robot Components</h2>
+<p>Safety-related replacement requires special control because the component may be part of a safety function that protects personnel from hazardous motion.</p>
+<p>Examples include:</p>
+<ul>
+<li>Emergency-stop devices.</li>
+<li>Enabling switches.</li>
+<li>Guard interlocks.</li>
+<li>Safety scanners and light curtains.</li>
+<li>Safety I/O modules.</li>
+<li>Safety controllers.</li>
+<li>Safety communication components.</li>
+<li>Robot safety options and safety-rated monitoring devices.</li>
+</ul>
+<h3 id="151-required-controls">15.1 Required controls</h3>
+<ul>
+<li>Use the exact approved component or an engineering-approved equivalent.</li>
+<li>Verify the required safety rating and compatibility.</li>
+<li>Preserve the approved safety architecture and configuration.</li>
+<li>Check wiring, channels, diagnostics, and device identity.</li>
+<li>Verify the required reset and restart behavior.</li>
+<li>Test the relevant safety function using the approved validation method.</li>
+<li>Document the test results and authorization.</li>
+</ul>
+<p>Do not infer safety integrity from a component's physical appearance, standard I/O status, or absence of a fault alarm.</p>
+<h3 id="152-safety-validation-examples">15.2 Safety validation examples</h3>
+<table>
+<thead>
+<tr>
+<th>Safety function</th>
+<th>Example of required validation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Emergency stop</td>
+<td>Verify the specified stop response and required reset behavior</td>
+</tr>
+<tr>
+<td>Guard interlock</td>
+<td>Verify that opening the protected access produces the intended safety response</td>
+</tr>
+<tr>
+<td>Enabling device</td>
+<td>Verify the prescribed enabling behavior in the applicable manual mode</td>
+</tr>
+<tr>
+<td>Safety scanner</td>
+<td>Verify detection and response according to the approved protective-field configuration</td>
+</tr>
+<tr>
+<td>Safe torque or motion function</td>
+<td>Verify the implemented safety function and relevant diagnostic behavior</td>
+</tr>
+<tr>
+<td>Safety communication</td>
+<td>Verify device identity, configuration, diagnostics, and required fault response</td>
+</tr>
+</tbody>
+</table>
+<p>The exact test must follow the risk assessment, OEM instructions, applicable standards, and site safety procedure. A generic checklist cannot replace the system's required safety validation.</p>
+<h2 id="16-robot-controller-software-and-configuration-compatibility">16. Robot Controller Software and Configuration Compatibility</h2>
+<p>Replacing hardware can require software migration or restoration. Different controller generations may use different project formats, options, communication configurations, and safety architectures.</p>
+<h3 id="161-compatibility-checks">16.1 Compatibility checks</h3>
+<ul>
+<li>Robot controller generation and supported software version.</li>
+<li>Robot model and kinematic configuration.</li>
+<li>Required application packages and licenses.</li>
+<li>Program and system configuration compatibility.</li>
+<li>Hardware-specific parameters and option modules.</li>
+<li>PLC communication and I/O mapping.</li>
+<li>Tool, payload, frame, and motion settings.</li>
+<li>Mastering and calibration data.</li>
+<li>Safety configuration and required validation.</li>
+<li>Approved firmware or software update requirements.</li>
+</ul>
+<h3 id="162-restoration-discipline">16.2 Restoration discipline</h3>
+<ol>
+<li>Identify the replacement hardware and target software version.</li>
+<li>Verify that the backup is compatible with the target controller.</li>
+<li>Preserve the original backup unchanged.</li>
+<li>Use the manufacturer's supported restoration or migration method.</li>
+<li>Review conversion warnings and unsupported options.</li>
+<li>Verify system configuration and application data.</li>
+<li>Check mastering and calibration status.</li>
+<li>Validate PLC communication and relevant I/O.</li>
+<li>Complete the required safety and functional checks.</li>
+<li>Record software, firmware, and configuration revisions.</li>
+</ol>
+<p>Avoid unnecessary software upgrades during a hardware replacement. If an upgrade is necessary, treat it as a controlled change with its own compatibility assessment, backup, rollback strategy, and validation plan.</p>
+<h2 id="17-robot-plc-communication-and-io-validation">17. Robot-PLC Communication and I/O Validation</h2>
+<p>Industrial robots commonly exchange commands and status information with a PLC or cell controller through hardwired signals, industrial Ethernet, or a supported fieldbus.</p>
+<h3 id="171-typical-signals">17.1 Typical signals</h3>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Typical purpose</th>
+<th>What to verify</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Robot ready</td>
+<td>Indicates the robot is ready for a defined operation</td>
+<td>Actual status definition and permissive conditions</td>
+</tr>
+<tr>
+<td>Cycle start</td>
+<td>Requests the programmed cycle</td>
+<td>Command mapping and start conditions</td>
+</tr>
+<tr>
+<td>Program number or selection</td>
+<td>Identifies the required robot routine</td>
+<td>Mapping, valid program, and selection logic</td>
+</tr>
+<tr>
+<td>Cycle running</td>
+<td>Indicates active program execution</td>
+<td>Correct status and PLC interpretation</td>
+</tr>
+<tr>
+<td>Cycle complete</td>
+<td>Indicates the defined completion condition</td>
+<td>Completion logic and sequence handshake</td>
+</tr>
+<tr>
+<td>Robot fault</td>
+<td>Indicates a robot fault condition</td>
+<td>Fault mapping and alarm handling</td>
+</tr>
+<tr>
+<td>Robot at home</td>
+<td>Indicates a defined home or safe position</td>
+<td>Actual position criteria and application meaning</td>
+</tr>
+<tr>
+<td>Gripper feedback</td>
+<td>Confirms a tool or gripper state</td>
+<td>Sensor operation and signal mapping</td>
+</tr>
+<tr>
+<td>Part present</td>
+<td>Indicates workpiece detection</td>
+<td>Sensor, wiring, and process logic</td>
+</tr>
+<tr>
+<td>Communication healthy</td>
+<td>Indicates the required communication state</td>
+<td>Protocol, connection, data validity, and timeout handling</td>
+</tr>
+</tbody>
+</table>
+<p>Signal names are examples. The actual robot and PLC interface must be checked against the approved I/O list, program logic, and interface specification.</p>
+<h3 id="172-validation-sequence">17.2 Validation sequence</h3>
+<ol>
+<li>Verify the robot controller and PLC are communicating.</li>
+<li>Confirm the correct device identity and network configuration.</li>
+<li>Check the input and output mapping.</li>
+<li>Verify the robot-ready and fault indications.</li>
+<li>Confirm program selection and start-handshake behavior.</li>
+<li>Check cycle-running and cycle-complete signals.</li>
+<li>Validate gripper, tooling, and process feedback.</li>
+<li>Verify communication-loss behavior.</li>
+<li>Confirm that interlocks prevent unintended cycle initiation.</li>
+<li>Test the complete cell sequence under approved conditions.</li>
+</ol>
+<p>A successful network connection does not prove that the correct program is selected, the I/O mapping is correct, or the machine sequence is safe.</p>
+<h2 id="18-robot-mastering-calibration-and-accuracy-verification">18. Robot Mastering, Calibration, and Accuracy Verification</h2>
+<p>Mastering and calibration must be treated as separate concepts, even though they are related.</p>
+<p>Mastering establishes the reference relationship between the robot's joint feedback and its defined reference positions.</p>
+<p>Calibration may determine or refine the robot's geometric parameters so its actual motion and positioning match the required coordinate model. The exact terminology and process depend on the manufacturer.</p>
+<h3 id="181-when-to-investigate-mastering-or-calibration">18.1 When to investigate mastering or calibration</h3>
+<ul>
+<li>Motor or feedback replacement.</li>
+<li>Encoder or resolver replacement.</li>
+<li>Certain reducer, joint, or mechanical repairs.</li>
+<li>Controller replacement or restoration that affects position data.</li>
+<li>Battery-related loss of retained position information.</li>
+<li>Collision or mechanical damage.</li>
+<li>Unexpected position deviations.</li>
+<li>Failure to reach established accuracy or repeatability criteria.</li>
+</ul>
+<h3 id="182-verification-principles">18.2 Verification principles</h3>
+<ul>
+<li>Follow the OEM mastering procedure for the exact robot model.</li>
+<li>Use the specified mastering tools, marks, references, and measurements.</li>
+<li>Do not guess offsets from the displayed joint position.</li>
+<li>Confirm the relevant data was preserved or restored correctly.</li>
+<li>Perform calibration if the repair requires it.</li>
+<li>Verify motion and positioning using approved test methods.</li>
+<li>Document the results and any deviation from the original baseline.</li>
+</ul>
+<p>Robot repeatability and absolute accuracy are not identical. A robot may repeatedly reach the same location while still being offset from the intended absolute position. The acceptance test must match the process requirement.</p>
+<h2 id="19-post-replacement-commissioning">19. Post-Replacement Commissioning</h2>
+<p>Commissioning should be planned before the component is removed, not improvised after the machine is waiting for production.</p>
+<h3 id="191-staged-testing">19.1 Staged testing</h3>
+<p>Stage 1: Installation inspection</p>
+<ul>
+<li>Check mounting, wiring, connectors, grounding, and cable routing.</li>
+<li>Confirm required covers and guards are restored.</li>
+<li>Verify that the work area is clear of tools and loose parts.</li>
+</ul>
+<p>Stage 2: Controller and diagnostics</p>
+<ul>
+<li>Restore power according to the approved procedure.</li>
+<li>Check controller startup and module recognition.</li>
+<li>Review alarm history and active faults.</li>
+<li>Confirm required communication and status signals.</li>
+</ul>
+<p>Stage 3: Safety validation</p>
+<ul>
+<li>Verify the relevant safety functions according to the approved procedure.</li>
+<li>Confirm guard interlocks, emergency-stop response, enabling devices, and applicable safety-rated motion functions.</li>
+<li>Document the result before permitting the relevant operating mode.</li>
+</ul>
+<p>Stage 4: Controlled motion</p>
+<ul>
+<li>Establish the approved test conditions and permitted operating mode.</li>
+<li>Test the affected axis or component using the OEM procedure.</li>
+<li>Check direction, motion response, feedback, noise, and abnormal vibration.</li>
+<li>Verify limits and the intended stopping behavior.</li>
+</ul>
+<p>Stage 5: Application validation</p>
+<ul>
+<li>Verify tool and payload configuration.</li>
+<li>Check approach and process paths.</li>
+<li>Validate PLC handshakes and interlocks.</li>
+<li>Check tooling and process-device feedback.</li>
+<li>Confirm cycle behavior and product-quality requirements.</li>
+</ul>
+<p>Stage 6: Return to production</p>
+<ul>
+<li>Review test results and unresolved issues.</li>
+<li>Obtain the required authorization.</li>
+<li>Update maintenance records and approved backups.</li>
+<li>Monitor the first production cycles according to the site procedure.</li>
+</ul>
+<p>Testing in manual or reduced-speed mode does not automatically validate automatic-mode operation or every safety function. Each required condition must be checked according to the approved commissioning plan.</p>
+<h2 id="20-troubleshooting-after-robot-component-replacement">20. Troubleshooting After Robot Component Replacement</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Diagnostic approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Controller fails to start</td>
+<td>Power, module compatibility, or configuration issue</td>
+<td>Check approved supply conditions, diagnostics, and module identity</td>
+</tr>
+<tr>
+<td>Servo amplifier alarm</td>
+<td>Wiring, motor, feedback, supply, or configuration fault</td>
+<td>Review the exact alarm and relevant axis diagnostics</td>
+</tr>
+<tr>
+<td>Robot cannot enable motion</td>
+<td>Interlock, safety condition, configuration, or fault remains</td>
+<td>Review the permitted operating state and diagnostic messages</td>
+</tr>
+<tr>
+<td>Position error after motor replacement</td>
+<td>Mastering, feedback, or mechanical configuration issue</td>
+<td>Verify feedback integrity and OEM mastering requirements</td>
+</tr>
+<tr>
+<td>Robot moves in an unexpected direction</td>
+<td>Incorrect feedback, axis configuration, or wiring</td>
+<td>Stop safely and verify the approved configuration</td>
+</tr>
+<tr>
+<td>Robot accuracy has changed</td>
+<td>Calibration, mastering, tooling, frame, or mechanical issue</td>
+<td>Compare approved data and perform required verification</td>
+</tr>
+<tr>
+<td>Robot oscillates or vibrates</td>
+<td>Mechanical problem, tuning, payload, or feedback issue</td>
+<td>Inspect the affected axis and follow the OEM diagnostic method</td>
+</tr>
+<tr>
+<td>Communication with PLC fails</td>
+<td>Network, device identity, I/O mapping, or software mismatch</td>
+<td>Check connection status, device configuration, and interface data</td>
+</tr>
+<tr>
+<td>Gripper fails to operate</td>
+<td>Utility connection, output mapping, sensor, or mechanical fault</td>
+<td>Verify tooling hardware and the relevant control signals</td>
+</tr>
+<tr>
+<td>Robot cable fault recurs</td>
+<td>Incorrect routing, cable damage, or unsuitable cable type</td>
+<td>Inspect the full motion envelope and cable specification</td>
+</tr>
+<tr>
+<td>Overtemperature alarm returns</td>
+<td>Cooling problem, excessive loading, or environmental condition</td>
+<td>Check airflow, thermal conditions, and the underlying cause</td>
+</tr>
+<tr>
+<td>Safety fault remains active</td>
+<td>Wiring, device configuration, safety validation, or hardware mismatch</td>
+<td>Follow the approved safety diagnostics and validation procedure</td>
+</tr>
+<tr>
+<td>Battery alarm returns</td>
+<td>Incorrect battery, connection, or charging/monitoring issue</td>
+<td>Check the OEM battery specification and diagnostics</td>
+</tr>
+<tr>
+<td>Robot program behaves differently</td>
+<td>Program, frame, tool, payload, or software configuration changed</td>
+<td>Compare the approved configuration and program revision</td>
+</tr>
+</tbody>
+</table>
+<h3 id="201-fault-investigation-discipline">20.1 Fault investigation discipline</h3>
+<ol>
+<li>Capture the exact alarm and relevant operating conditions.</li>
+<li>Identify which component or subsystem is affected.</li>
+<li>Compare the installed configuration with the approved baseline.</li>
+<li>Check wiring, mechanical installation, feedback, and communication.</li>
+<li>Verify mastering and calibration status where relevant.</li>
+<li>Check the complete robot-cell interface.</li>
+<li>Resolve the underlying cause before repeated reset attempts.</li>
+<li>Perform the defined retest and document the outcome.</li>
+</ol>
+<p>Do not repeatedly reset a safety-related or motion fault without identifying the initiating condition. Clearing an alarm is not the same as correcting the fault.</p>
+<h2 id="21-documentation-and-change-control">21. Documentation and Change Control</h2>
+<p>Robot maintenance records should allow another engineer to understand what failed, what was replaced, what changed, and how the cell was proven safe and functional.</p>
+<h3 id="211-minimum-replacement-record">21.1 Minimum replacement record</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Work order</td>
+<td>Maintenance work-order reference</td>
+</tr>
+<tr>
+<td>Asset identification</td>
+<td>Robot, controller, cell, and affected axis</td>
+</tr>
+<tr>
+<td>Fault description</td>
+<td>Alarm, symptoms, operating conditions, and diagnostics</td>
+</tr>
+<tr>
+<td>Removed component</td>
+<td>Model, part number, revision, and serial number where available</td>
+</tr>
+<tr>
+<td>Replacement component</td>
+<td>Model, part number, revision, and serial number where available</td>
+</tr>
+<tr>
+<td>Backup reference</td>
+<td>Approved backup filename, revision, and location</td>
+</tr>
+<tr>
+<td>Software configuration</td>
+<td>Controller software, firmware, and relevant options</td>
+</tr>
+<tr>
+<td>Data preservation</td>
+<td>Mastering, calibration, tool, payload, and frame status as applicable</td>
+</tr>
+<tr>
+<td>Configuration changes</td>
+<td>Parameter, program, network, or safety changes</td>
+</tr>
+<tr>
+<td>Test results</td>
+<td>Electrical, motion, communication, safety, and process validation</td>
+</tr>
+<tr>
+<td>Final status</td>
+<td>Pass, fail, or restricted operation</td>
+</tr>
+<tr>
+<td>Approval</td>
+<td>Required maintenance, engineering, production, and safety authorization</td>
+</tr>
+<tr>
+<td>Follow-up actions</td>
+<td>Root-cause actions, spare-stock changes, or additional investigation</td>
+</tr>
+</tbody>
+</table>
+<h3 id="212-change-control-triggers">21.2 Change-control triggers</h3>
+<p>Engineering review may be required when the replacement involves:</p>
+<ul>
+<li>A different robot or controller generation.</li>
+<li>A different motor, encoder, amplifier, or feedback system.</li>
+<li>Changes to mastering or calibration.</li>
+<li>Changes to tool, payload, or work-frame data.</li>
+<li>Program conversion or software upgrades.</li>
+<li>Changes to PLC communication or I/O mapping.</li>
+<li>Changes to safety hardware or configuration.</li>
+<li>A change in motion limits, stopping behavior, or application performance.</li>
+<li>Replacement of mechanical components that affect accuracy or structural integrity.</li>
+</ul>
+<p>The change record should capture the reason, approved configuration, validation evidence, and rollback or recovery plan.</p>
+<h2 id="22-spare-parts-and-obsolescence-management">22. Spare-Parts and Obsolescence Management</h2>
+<p>Robot spare parts can be expensive and model-specific. Maintaining a controlled spare strategy reduces recovery time and prevents the use of unapproved substitutes.</p>
+<h3 id="221-recommended-spare-register">22.1 Recommended spare register</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Robot and controller family</td>
+<td>Identifies compatible equipment</td>
+</tr>
+<tr>
+<td>Component description</td>
+<td>Identifies the function of the spare</td>
+</tr>
+<tr>
+<td>OEM part number</td>
+<td>Establishes the exact component identity</td>
+</tr>
+<tr>
+<td>Approved successor</td>
+<td>Identifies a validated replacement part</td>
+</tr>
+<tr>
+<td>Compatibility conditions</td>
+<td>Records hardware, firmware, and configuration restrictions</td>
+</tr>
+<tr>
+<td>Criticality</td>
+<td>Defines the impact of a component failure</td>
+</tr>
+<tr>
+<td>Lead time</td>
+<td>Supports replenishment planning</td>
+</tr>
+<tr>
+<td>Stock quantity</td>
+<td>Shows available inventory</td>
+</tr>
+<tr>
+<td>Storage requirements</td>
+<td>Preserves the component's condition</td>
+</tr>
+<tr>
+<td>Configuration backup</td>
+<td>Links to required software or parameter data</td>
+</tr>
+<tr>
+<td>Obsolescence status</td>
+<td>Identifies discontinued or unsupported components</td>
+</tr>
+<tr>
+<td>Validation requirements</td>
+<td>Defines the checks required before use</td>
+</tr>
+</tbody>
+</table>
+<h3 id="222-recommended-controls">22.2 Recommended controls</h3>
+<ul>
+<li>Separate confirmed compatible parts from parts requiring engineering approval.</li>
+<li>Maintain current OEM documentation and approved successor information.</li>
+<li>Preserve relevant configuration backups for critical controllers and drives.</li>
+<li>Track shelf life and storage requirements where applicable.</li>
+<li>Review long-lead-time and obsolete components.</li>
+<li>Record part substitutions and their validation evidence.</li>
+<li>Do not install a spare solely because its connector or enclosure appears identical.</li>
+</ul>
+<h2 id="23-root-cause-analysis-after-replacement">23. Root Cause Analysis After Replacement</h2>
+<p>Component replacement restores service only if the initiating fault is corrected. Repeated replacement without root-cause investigation increases cost and downtime.</p>
+<h3 id="231-example-repeated-servo-amplifier-failure">23.1 Example: Repeated servo amplifier failure</h3>
+<p>Possible contributing causes include:</p>
+<ul>
+<li>Motor cable insulation damage.</li>
+<li>Motor winding or feedback failure.</li>
+<li>Incorrect grounding or shielding.</li>
+<li>Cooling restrictions.</li>
+<li>Excessive mechanical load.</li>
+<li>Supply disturbances.</li>
+<li>Incorrect component selection.</li>
+<li>Environmental contamination.</li>
+<li>An application or configuration problem.</li>
+</ul>
+<h3 id="232-rca-workflow">23.2 RCA workflow</h3>
+<ol>
+<li>Define the failure and its production impact.</li>
+<li>Collect alarms, event history, inspection findings, and test results.</li>
+<li>Identify the failure mode.</li>
+<li>Separate the immediate failed component from the underlying cause.</li>
+<li>Test the plausible causes using approved methods.</li>
+<li>Implement corrective action.</li>
+<li>Validate the replacement and the corrected system.</li>
+<li>Monitor for recurrence.</li>
+<li>Update the maintenance instructions, spare register, and failure history.</li>
+</ol>
+<p>For example, if repeated robot cable faults occur at a particular joint, the corrective action may need to address cable routing, bend radius, torsion, clamping, or motion interference rather than simply stocking more cables.</p>
+<h2 id="24-practical-example-replacing-a-robot-servo-amplifier">24. Practical Example: Replacing a Robot Servo Amplifier</h2>
+<p>Scenario: A robot repeatedly reports an axis-related amplifier fault. Diagnosis confirms that the amplifier is defective, and an approved replacement is available.</p>
+<h3 id="step-1-diagnose">Step 1: Diagnose</h3>
+<ul>
+<li>Record the exact alarm and affected axis.</li>
+<li>Review the alarm history and conditions preceding the fault.</li>
+<li>Check the motor, motor cable, feedback cable, and relevant supply conditions.</li>
+<li>Investigate mechanical resistance or damage.</li>
+<li>Confirm the amplifier is the diagnosed cause.</li>
+<li>Verify the replacement part and controller compatibility.</li>
+</ul>
+<h3 id="step-2-prepare">Step 2: Prepare</h3>
+<ul>
+<li>Preserve the approved controller and system backup.</li>
+<li>Record the amplifier identity and axis assignment.</li>
+<li>Review the OEM replacement procedure.</li>
+<li>Identify any mastering or calibration implications.</li>
+<li>Plan the required safety and functional validation.</li>
+</ul>
+<h3 id="step-3-replace">Step 3: Replace</h3>
+<ul>
+<li>Establish the approved safe state and isolate the required energy sources.</li>
+<li>Apply the required lockout/tagout procedure.</li>
+<li>Wait for the specified electrical discharge time and verify safe conditions.</li>
+<li>Secure any affected mechanical load as required.</li>
+<li>Label and disconnect the relevant power, motor, feedback, and communication connections.</li>
+<li>Remove the amplifier according to the OEM instructions.</li>
+<li>Install the approved replacement and restore the connections.</li>
+<li>Inspect the installation before restoring power.</li>
+</ul>
+<h3 id="step-4-restore-configuration">Step 4: Restore configuration</h3>
+<ul>
+<li>Verify that the controller recognizes the amplifier.</li>
+<li>Confirm the correct axis assignment and hardware compatibility.</li>
+<li>Restore the approved configuration using the supported method.</li>
+<li>Verify relevant feedback and motor settings.</li>
+<li>Check controller diagnostics and PLC communication.</li>
+<li>Confirm whether mastering or calibration is required.</li>
+</ul>
+<h3 id="step-5-validate">Step 5: Validate</h3>
+<ul>
+<li>Complete the required electrical and installation inspections.</li>
+<li>Verify controller startup and active fault status.</li>
+<li>Validate the applicable safety functions.</li>
+<li>Test the affected axis using the prescribed procedure.</li>
+<li>Check position feedback, direction, motion response, and abnormal noise.</li>
+<li>Verify relevant robot programs, tool data, and process behavior.</li>
+<li>Obtain the required authorization before production release.</li>
+</ul>
+<h3 id="step-6-close-the-job">Step 6: Close the job</h3>
+<ul>
+<li>Record the removed and installed amplifier.</li>
+<li>Document the original fault and root cause.</li>
+<li>Update the approved configuration backup where necessary.</li>
+<li>Record validation results and approvals.</li>
+<li>Update spare inventory and maintenance history.</li>
+</ul>
+<p>Key lesson: A replacement amplifier does not prove that the motor, cable, feedback device, mechanical axis, or safety configuration is healthy. The complete affected system must be validated.</p>
+<h2 id="25-key-performance-indicators">25. Key Performance Indicators</h2>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Robot-related downtime</td>
+<td>Measures production interruption caused by robot failures</td>
+</tr>
+<tr>
+<td>Mean Time to Repair (MTTR)</td>
+<td>Measures repair duration using a consistent site definition</td>
+</tr>
+<tr>
+<td>Repeat failure rate</td>
+<td>Identifies recurring component or system problems</td>
+</tr>
+<tr>
+<td>First-time fix rate</td>
+<td>Measures repairs completed without repeat intervention</td>
+</tr>
+<tr>
+<td>Backup availability</td>
+<td>Measures access to approved robot configurations</td>
+</tr>
+<tr>
+<td>Backup restoration success</td>
+<td>Measures whether configurations can be restored successfully</td>
+</tr>
+<tr>
+<td>Mastering and calibration compliance</td>
+<td>Tracks completion of required position-reference checks</td>
+</tr>
+<tr>
+<td>Spare availability</td>
+<td>Measures readiness of critical replacement components</td>
+</tr>
+<tr>
+<td>Documentation compliance</td>
+<td>Measures completeness of maintenance and validation records</td>
+</tr>
+<tr>
+<td>Post-repair defect rate</td>
+<td>Tracks quality issues associated with restored equipment</td>
+</tr>
+</tbody>
+</table>
+<p>KPI definitions should be standardized. For example, MTTR may measure active repair time or the complete elapsed time from failure to approved production release. Mixing those definitions makes comparisons misleading.</p>
+<h2 id="26-interview-questions-and-answers">26. Interview Questions and Answers</h2>
+<p>Q1. What should be checked before replacing a robot component?</p>
+<p>Confirm the exact component, diagnose the fault, verify compatibility, preserve the required backup data, review the OEM procedure, and define the safety and commissioning requirements.</p>
+<p>Q2. Why is robot mastering important?</p>
+<p>Mastering establishes the reference relationship between joint feedback and defined robot positions. Losing or changing mastering data can affect motion accuracy and coordinate consistency.</p>
+<p>Q3. What is the difference between mastering and calibration?</p>
+<p>Mastering establishes joint reference positions. Calibration may determine or refine the robot's geometric parameters to improve the relationship between commanded and actual motion. Exact procedures vary by manufacturer.</p>
+<p>Q4. Why should the motor and feedback cable be checked before replacing a servo amplifier?</p>
+<p>A cable, motor, or feedback fault can trigger amplifier alarms and may damage or disrupt the replacement if the underlying problem remains.</p>
+<p>Q5. What data should be backed up before controller replacement?</p>
+<p>Programs, system configuration, relevant software and option information, mastering and calibration data, tool and payload data, frames, I/O mapping, network settings, and required safety configuration.</p>
+<p>Q6. Why can a robot run programs but still fail its accuracy requirement?</p>
+<p>The program may execute while mastering, calibration, tool-center-point data, payload, frames, or mechanical alignment is incorrect.</p>
+<p>Q7. What must be validated after replacing a robot motor?</p>
+<p>Verify motor compatibility, feedback, brake behavior, mechanical installation, mastering or calibration requirements, axis motion, and application accuracy.</p>
+<p>Q8. Why is a robot-rated cable important?</p>
+<p>Robot cables must withstand the specified repeated bending, torsion, movement, and environmental exposure. Ordinary flexible cable may fail prematurely.</p>
+<p>Q9. What must be checked after replacing a gripper?</p>
+<p>Mechanical retention, utilities, sensors, I/O mapping, tool-center-point data, payload, center of gravity, workpiece handling, collision clearance, and process quality.</p>
+<p>Q10. When can a robot cell return to production?</p>
+<p>After the component and configuration are verified, required safety functions are validated, motion and process tests meet acceptance criteria, documentation is complete, and authorized personnel approve release.</p>
+<h2 id="27-final-robot-component-replacement-checklist">27. Final Robot Component Replacement Checklist</h2>
+<ul>
+<li>Correct robot, controller, axis, and component identified.</li>
+<li>Root cause investigated and replacement justified.</li>
+<li>Replacement compatibility confirmed.</li>
+<li>Approved backups preserved and checked.</li>
+<li>Mastering, calibration, tool, payload, and frame implications reviewed.</li>
+<li>Required energy isolation and mechanical securing completed.</li>
+<li>Original wiring, connectors, and routing documented.</li>
+<li>Component installed according to OEM instructions.</li>
+<li>Wiring, grounding, shielding, and mounting inspected.</li>
+<li>Controller configuration and communication verified.</li>
+<li>Relevant mastering or calibration requirements completed.</li>
+<li>Safety functions validated through the approved procedure.</li>
+<li>Controlled motion and application tests completed.</li>
+<li>PLC interface, tooling, and process behavior validated.</li>
+<li>Acceptance criteria met and return-to-service approval obtained.</li>
+<li>Maintenance records and approved backups updated.</li>
+<li>Root cause, corrective actions, and spare-stock changes documented.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\33_SOP_WI\05_Component_Replacement\05_CNC - CNC</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

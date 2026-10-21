@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>02. Functions &amp; FBs: Reusable Logic</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">02. Functions &amp; FBs: Reusable Logic</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-why-reusable-logic-is-needed">2. Why Reusable Logic Is Needed</a></li>
+<li><a href="#3-function-fc">3. Function (FC)</a><ul>
+<li><a href="#31-what-is-a-function">3.1 What Is a Function?</a></li>
+<li><a href="#32-example-pressure-scaling-function">3.2 Example: Pressure Scaling Function</a></li>
+<li><a href="#33-characteristics-of-an-fc">3.3 Characteristics of an FC</a></li>
+</ul>
+</li>
+<li><a href="#4-function-block-fb">4. Function Block (FB)</a><ul>
+<li><a href="#41-what-is-a-function-block">4.1 What Is a Function Block?</a></li>
+<li><a href="#42-example-conveyor-control-fb">4.2 Example: Conveyor Control FB</a></li>
+<li><a href="#43-why-instance-data-matters">4.3 Why Instance Data Matters</a></li>
+<li><a href="#44-does-an-fb-automatically-retain-everything">4.4 Does an FB Automatically Retain Everything?</a></li>
+</ul>
+</li>
+<li><a href="#5-fc-versus-fb">5. FC Versus FB</a></li>
+<li><a href="#6-rockwell-siemens-and-mitsubishi-terminology">6. Rockwell, Siemens, and Mitsubishi Terminology</a></li>
+<li><a href="#7-inputs-outputs-parameters-and-internal-variables">7. Inputs, Outputs, Parameters, and Internal Variables</a><ul>
+<li><a href="#71-inputs">7.1 Inputs</a></li>
+<li><a href="#72-outputs">7.2 Outputs</a></li>
+<li><a href="#73-parameters">7.3 Parameters</a></li>
+<li><a href="#74-internal-variables">7.4 Internal Variables</a></li>
+</ul>
+</li>
+<li><a href="#8-designing-a-reusable-motor-control-block">8. Designing a Reusable Motor-Control Block</a><ul>
+<li><a href="#expected-behavior">Expected behavior</a></li>
+<li><a href="#why-reuse-helps">Why reuse helps</a></li>
+</ul>
+</li>
+<li><a href="#9-stateful-logic-and-scan-execution">9. Stateful Logic and Scan Execution</a></li>
+<li><a href="#10-reusable-logic-for-machine-stations">10. Reusable Logic for Machine Stations</a></li>
+<li><a href="#11-common-design-mistakes">11. Common Design Mistakes</a></li>
+<li><a href="#12-testing-reusable-logic">12. Testing Reusable Logic</a><ul>
+<li><a href="#stage-1-interface-testing">Stage 1: Interface testing</a></li>
+<li><a href="#stage-2-normal-operation-testing">Stage 2: Normal-operation testing</a></li>
+<li><a href="#stage-3-boundary-testing">Stage 3: Boundary testing</a></li>
+<li><a href="#stage-4-fault-testing">Stage 4: Fault testing</a></li>
+<li><a href="#stage-5-multi-instance-testing">Stage 5: Multi-instance testing</a></li>
+<li><a href="#stage-6-integration-testing">Stage 6: Integration testing</a></li>
+<li><a href="#stage-7-regression-testing">Stage 7: Regression testing</a></li>
+</ul>
+</li>
+<li><a href="#13-interview-questions-and-answers">13. Interview Questions and Answers</a></li>
+<li><a href="#14-practical-exercises">14. Practical Exercises</a><ul>
+<li><a href="#exercise-1-create-a-reusable-scaling-function">Exercise 1: Create a reusable scaling function</a></li>
+<li><a href="#exercise-2-create-a-motor-control-fb">Exercise 2: Create a motor-control FB</a></li>
+<li><a href="#exercise-3-create-multiple-instances">Exercise 3: Create multiple instances</a></li>
+<li><a href="#exercise-4-modify-and-regression-test">Exercise 4: Modify and regression-test</a></li>
+</ul>
+</li>
+<li><a href="#15-final-mental-model">15. Final Mental Model</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>Functions and function blocks are reusable units of PLC logic. Instead of writing the same control logic repeatedly for every motor, conveyor, valve, robot interface, or machine station, the programmer develops a common logic unit and reuses it with different inputs, outputs, and parameters.</p>
+<p>The main benefits are:</p>
+<ul>
+<li>Reduced duplicate code.</li>
+<li>Consistent machine behavior.</li>
+<li>Easier testing and troubleshooting.</li>
+<li>Faster commissioning of similar equipment.</li>
+<li>Easier maintenance and future modification.</li>
+<li>Better separation between machine logic and individual device logic.</li>
+</ul>
+<p>The central principle is write the logic once, define its interface clearly, and reuse it wherever the same behavior is required.</p>
+<h2 id="2-why-reusable-logic-is-needed">2. Why Reusable Logic Is Needed</h2>
+<p>Consider a production line with 20 conveyors. Each conveyor needs some combination of:</p>
+<ul>
+<li>Start and stop commands.</li>
+<li>Run feedback.</li>
+<li>Fault feedback.</li>
+<li>Start permissives.</li>
+<li>Start timeout monitoring.</li>
+<li>Fault handling.</li>
+<li>Running status.</li>
+</ul>
+<p>One approach is to write the complete logic separately for every conveyor. That creates duplicated code and makes future changes difficult.</p>
+<p>Suppose a start-timeout requirement changes from 3 seconds to 4 seconds. With duplicated logic, the programmer may have to modify 20 separate sections and verify every modification.</p>
+<p>A reusable design instead creates one common conveyor-control block and instantiates it for each conveyor.</p>
+<pre><code>Common Conveyor Logic
+        |
+        +-- Conveyor 1 instance
+        |
+        +-- Conveyor 2 instance
+        |
+        +-- Conveyor 3 instance
+        |
+        +-- ...
+        |
+        +-- Conveyor 20 instance
+</code></pre>
+<p>The common logic is shared, but each conveyor has its own input signals, output signals, and required operating state.</p>
+<p>Important: Reuse does not mean that every device must behave identically. Device-specific differences should be handled through parameters, clearly defined options, or separate specialized logic.</p>
+<h2 id="3-function-fc">3. Function (FC)</h2>
+<h3 id="31-what-is-a-function">3.1 What Is a Function?</h3>
+<p>In Siemens S7 programming, a Function (FC) is a reusable logic block that can receive inputs, perform calculations or logic operations, and return outputs.</p>
+<p>An FC does not have its own instance data block in the same way an FB does. It can use local variables during execution, and its outputs can be used by the calling program.</p>
+<p>Typical applications include:</p>
+<ul>
+<li>Analog scaling.</li>
+<li>Engineering-unit conversion.</li>
+<li>Range checking.</li>
+<li>Mathematical calculations.</li>
+<li>Data validation.</li>
+<li>Generating a derived status.</li>
+<li>Evaluating a set of inputs against defined conditions.</li>
+</ul>
+<h3 id="32-example-pressure-scaling-function">3.2 Example: Pressure Scaling Function</h3>
+<p>Suppose multiple machines use pressure transmitters with the same configured raw range and engineering range.</p>
+<p>Instead of implementing the scaling formula separately for each sensor, create a reusable function.</p>
+<p>Conceptual interface:</p>
+<pre><code>FC_Scale_Pressure
+
+Inputs:
+    Raw_Value
+    Raw_Min
+    Raw_Max
+    EU_Min
+    EU_Max
+
+Output:
+    Pressure_Bar
+</code></pre>
+<p>The function implements the linear scaling equation:</p>
+<div class="math-display">\[ EU = \frac{Raw-Raw\_{\min}}{Raw\_{\max}-Raw\_{\min}} \times(EU\_{\max}-EU\_{\min})+EU\_{\min} \]</div>
+<p>Each sensor can use the same function with its own raw value and configured limits.</p>
+<p>For example:</p>
+<pre><code>Pressure_Station_1 =
+    FC_Scale_Pressure(Raw_Pressure_1, ...)
+
+Pressure_Station_2 =
+    FC_Scale_Pressure(Raw_Pressure_2, ...)
+</code></pre>
+<p>This is conceptual pseudocode, not exact vendor syntax.</p>
+<p>The implementation must handle invalid ranges, such as <code>Raw_Max = Raw_Min</code>, and should validate raw values and sensor-fault conditions as required.</p>
+<h3 id="33-characteristics-of-an-fc">3.3 Characteristics of an FC</h3>
+<ul>
+<li>Encapsulates a specific calculation or logic operation.</li>
+<li>Accepts inputs and produces outputs through its interface.</li>
+<li>Can be called from multiple locations.</li>
+<li>Does not have its own Siemens FB-style instance data block.</li>
+<li>Is useful when instance-specific retained state is not required.</li>
+</ul>
+<p>An FC can still read or modify external/global data if its implementation allows it. That is technically possible, but excessive reliance on global state makes reusable logic harder to test and maintain.</p>
+<h2 id="4-function-block-fb">4. Function Block (FB)</h2>
+<h3 id="41-what-is-a-function-block">4.1 What Is a Function Block?</h3>
+<p>In Siemens S7 programming, a Function Block (FB) is a reusable logic unit that operates with associated instance data.</p>
+<p>That instance data can retain internal values between calls according to the data declarations, CPU behavior, and memory configuration.</p>
+<p>An FB is particularly useful when equipment must maintain its own operating state.</p>
+<p>Examples include:</p>
+<ul>
+<li>Motor control.</li>
+<li>Conveyor sequencing.</li>
+<li>Valve control.</li>
+<li>Robot handshake management.</li>
+<li>Pneumatic-cylinder sequencing.</li>
+<li>Machine-station control.</li>
+<li>Fault and timeout management.</li>
+</ul>
+<h3 id="42-example-conveyor-control-fb">4.2 Example: Conveyor Control FB</h3>
+<p>Consider a conveyor that requires a start command, stop command, run feedback, and start timeout.</p>
+<p>A conceptual interface might be:</p>
+<pre><code>FB_Conveyor
+
+Inputs:
+    Start_Request
+    Stop_Request
+    Run_Feedback
+    Drive_Fault
+    Permissive_OK
+
+Parameters:
+    Start_Timeout
+
+Outputs:
+    Run_Command
+    Running
+    Faulted
+
+Internal state:
+    Start_Timer_State
+    Sequence_State
+    Fault_Latched
+</code></pre>
+<p>The FB contains the reusable control logic. Each conveyor instance receives its own signals and has its own associated state.</p>
+<p>For example:</p>
+<pre><code>FB_Conveyor_1 + Instance_Data_1
+FB_Conveyor_2 + Instance_Data_2
+FB_Conveyor_3 + Instance_Data_3
+</code></pre>
+<p>The three conveyors can use the same logic while maintaining separate operating states.</p>
+<h3 id="43-why-instance-data-matters">4.3 Why Instance Data Matters</h3>
+<p>Imagine that Conveyor 1 is waiting for run feedback while Conveyor 2 is already running.</p>
+<p>If both conveyors use the same timer state and fault latch, one conveyor's behavior could interfere with the other.</p>
+<p>Separate instance data allows each conveyor to retain its own:</p>
+<ul>
+<li>Timer state.</li>
+<li>Sequence step.</li>
+<li>Fault latch.</li>
+<li>Previous operating state.</li>
+<li>Internal diagnostic information.</li>
+</ul>
+<p>This is one of the most important reasons to use FBs for equipment control.</p>
+<h3 id="44-does-an-fb-automatically-retain-everything">4.4 Does an FB Automatically Retain Everything?</h3>
+<p>No. An FB's associated instance data allows state to persist between calls, but persistence across a power cycle or restart depends on the variable declarations, retention settings, startup logic, and controller behavior.</p>
+<p>Three concepts must be kept separate:</p>
+<ul>
+<li>Persistence between calls: Internal values can remain available when the FB is called again.</li>
+<li>Persistence between scans: Values may remain stored while the program executes repeatedly.</li>
+<li>Persistence across restart: Values survive a controller restart or power interruption only when the relevant memory and initialization behavior support it.</li>
+</ul>
+<p>Do not assume that every internal value is automatically retained through a power cycle.</p>
+<h2 id="5-fc-versus-fb">5. FC Versus FB</h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>FC</th>
+<th>FB</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Main purpose</td>
+<td>Reusable calculations or logic</td>
+<td>Reusable logic that may maintain instance-specific state</td>
+</tr>
+<tr>
+<td>Siemens instance DB</td>
+<td>Not required</td>
+<td>Normally associated with an instance DB or supported instance-data arrangement</td>
+</tr>
+<tr>
+<td>Internal state between calls</td>
+<td>No dedicated instance data of its own</td>
+<td>Can retain state in instance data</td>
+</tr>
+<tr>
+<td>Typical examples</td>
+<td>Scaling, comparison, calculations</td>
+<td>Motor, conveyor, valve, sequence control</td>
+</tr>
+<tr>
+<td>Multiple instances</td>
+<td>Can be called repeatedly with different inputs</td>
+<td>Each instance can maintain separate state</td>
+</tr>
+<tr>
+<td>Best suited for</td>
+<td>Stateless or externally managed operations</td>
+<td>Stateful equipment behavior</td>
+</tr>
+</tbody>
+</table>
+<p>The choice is not simply based on block size. A small timer-based controller may need an FB because it requires independent state, while a large calculation may be perfectly suitable for an FC.</p>
+<h2 id="6-rockwell-siemens-and-mitsubishi-terminology">6. Rockwell, Siemens, and Mitsubishi Terminology</h2>
+<p>The general engineering concept is portable, but the exact implementation differs by vendor.</p>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>Siemens S7 / TIA Portal</th>
+<th>Rockwell Logix</th>
+<th>Mitsubishi PLCs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reusable calculation</td>
+<td>FC</td>
+<td>Routine, Add-On Instruction, or other reusable logic arrangement</td>
+<td>Function or reusable program component where supported</td>
+</tr>
+<tr>
+<td>Reusable stateful control</td>
+<td>FB with instance data</td>
+<td>Add-On Instruction with its parameters and internal data, or another structured design</td>
+<td>Function block where supported</td>
+</tr>
+<tr>
+<td>Execution organization</td>
+<td>OBs call FCs and FBs</td>
+<td>Tasks schedule programs; routines and instructions execute within them</td>
+<td>Depends on CPU family and project structure</td>
+</tr>
+<tr>
+<td>Instance-specific state</td>
+<td>FB instance data</td>
+<td>AOI instance data and other supported tag structures</td>
+<td>Depends on the function-block or program implementation</td>
+</tr>
+</tbody>
+</table>
+<p>A Siemens FB and a Rockwell Add-On Instruction have related purposes, but they are not identical in their execution model, data handling, interface rules, or programming behavior.</p>
+<p>When maintaining an existing machine, use the native design conventions of its PLC platform rather than translating every term literally.</p>
+<h2 id="7-inputs-outputs-parameters-and-internal-variables">7. Inputs, Outputs, Parameters, and Internal Variables</h2>
+<p>A reusable block is only as useful as its interface.</p>
+<p>A well-designed interface separates the information entering the block, the results leaving it, and the internal data used to manage its behavior.</p>
+<h3 id="71-inputs">7.1 Inputs</h3>
+<p>Inputs provide information to the block.</p>
+<p>For a motor-control block, these might include:</p>
+<ul>
+<li>Start request.</li>
+<li>Stop request.</li>
+<li>Drive fault.</li>
+<li>Run feedback.</li>
+<li>Permissive status.</li>
+</ul>
+<p>Inputs should have clear meanings. For example, <code>Permissive_OK</code> should have a documented definition rather than being a mysterious Boolean that someone created during commissioning at 2 a.m.</p>
+<h3 id="72-outputs">7.2 Outputs</h3>
+<p>Outputs communicate the block's results.</p>
+<p>Examples include:</p>
+<ul>
+<li>Run command.</li>
+<li>Running status.</li>
+<li>Fault status.</li>
+<li>Start timeout.</li>
+<li>Ready status.</li>
+</ul>
+<p>A block should define whether an output represents a request, a command, a physical feedback signal, or a calculated status. Those concepts are not interchangeable.</p>
+<h3 id="73-parameters">7.3 Parameters</h3>
+<p>Parameters configure behavior without changing the core logic.</p>
+<p>For example:</p>
+<pre><code>Start_Timeout = 3.0 seconds
+</code></pre>
+<p>Two conveyors might use the same FB with different timeout settings.</p>
+<p>Parameters may also define operating limits, scaling ranges, modes, and other configuration values. Whether a parameter can change during execution depends on the platform and its interface semantics.</p>
+<h3 id="74-internal-variables">7.4 Internal Variables</h3>
+<p>Internal variables support the block's implementation.</p>
+<p>Examples include:</p>
+<ul>
+<li>Current sequence step.</li>
+<li>Timer state.</li>
+<li>Previous input state.</li>
+<li>Internal fault latch.</li>
+<li>Temporary calculation result.</li>
+</ul>
+<p>Internal variables should not be exposed unnecessarily. A clear interface helps other programmers use the block without needing to understand every implementation detail.</p>
+<h2 id="8-designing-a-reusable-motor-control-block">8. Designing a Reusable Motor-Control Block</h2>
+<p>Consider a motor driven by a VFD.</p>
+<p>The control block should not merely switch a Boolean output. It should define how requests, permissives, feedback, and faults interact.</p>
+<p>A conceptual interface:</p>
+<pre><code>FB_Motor
+
+Inputs:
+    Start_Request
+    Stop_Request
+    Permissive_OK
+    Drive_Fault
+    Run_Feedback
+
+Parameters:
+    Start_Timeout
+
+Outputs:
+    Run_Command
+    Running
+    Start_Timeout_Fault
+    Faulted
+</code></pre>
+<p>A simplified control relationship could be:</p>
+<pre><code>Run_Command =
+    Start_Request
+    AND NOT Stop_Request
+    AND Permissive_OK
+    AND NOT Drive_Fault
+    AND NOT Faulted
+</code></pre>
+<p>This is an illustrative Boolean relationship, not a complete motor-control design. Real implementations must account for stop priorities, command latching, feedback timeouts, restart behavior, drive interfaces, operating modes, and the machine's safety architecture.</p>
+<h3 id="expected-behavior">Expected behavior</h3>
+<table>
+<thead>
+<tr>
+<th>Condition</th>
+<th>Expected response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Start requested, permissives valid, no fault</td>
+<td>Start command may be issued</td>
+</tr>
+<tr>
+<td>Stop requested</td>
+<td>Stop command takes priority according to the design</td>
+</tr>
+<tr>
+<td>Permissive lost</td>
+<td>Command is removed or the defined response is initiated</td>
+</tr>
+<tr>
+<td>Drive fault active</td>
+<td>Normal run command is inhibited</td>
+</tr>
+<tr>
+<td>Run feedback does not arrive in time</td>
+<td>Start timeout is detected</td>
+</tr>
+<tr>
+<td>Fault is cleared</td>
+<td>Restart behavior follows the documented reset and permissive rules</td>
+</tr>
+</tbody>
+</table>
+<h3 id="why-reuse-helps">Why reuse helps</h3>
+<p>The same control block can be used for multiple motors, while each instance has separate feedback, timeout state, and fault information.</p>
+<p>If the timeout logic needs improvement, the common block can be updated and validated instead of manually editing a dozen duplicated implementations.</p>
+<p>However, a change to a common block can affect every instance that uses it. Reusable logic reduces duplication, but it also increases the importance of regression testing.</p>
+<h2 id="9-stateful-logic-and-scan-execution">9. Stateful Logic and Scan Execution</h2>
+<p>A common mistake is to assume that a reusable block executes only once when called.</p>
+<p>In many PLC architectures, a block called from cyclic logic executes on each call. If its caller runs every cycle, the block can execute repeatedly.</p>
+<p>For a timer-based sequence, repeated execution may be exactly what is required.</p>
+<p>For an event-driven operation, the block may need an edge detector or an explicit state transition to prevent repeated actions.</p>
+<p>Example:</p>
+<pre><code>Cycle_Complete
+      |
+      v
+Detect rising edge
+      |
+      v
+Increment completed-cycle count
+</code></pre>
+<p>Without edge detection or equivalent logic, a signal that remains true for several scans could increment a counter repeatedly, depending on the counter logic.</p>
+<p>Similarly, if a block writes an output every scan, another block writing to the same output can create unexpected behavior.</p>
+<p>Best practice: Define the execution conditions and output ownership of every reusable block.</p>
+<h2 id="10-reusable-logic-for-machine-stations">10. Reusable Logic for Machine Stations</h2>
+<p>A manufacturing line can use a common station-control design.</p>
+<pre><code>FB_Station
+    |
+    +-- Station 1 instance
+    |
+    +-- Station 2 instance
+    |
+    +-- Station 3 instance
+</code></pre>
+<p>Each station can have its own:</p>
+<ul>
+<li>Operating mode.</li>
+<li>Sequence state.</li>
+<li>Timeout monitoring.</li>
+<li>Fault state.</li>
+<li>Equipment-ready status.</li>
+<li>Cycle-complete status.</li>
+</ul>
+<p>However, stations may have different hardware or process requirements. A station that controls a clamp and a robot may need specialized logic beyond the common station template.</p>
+<p>A practical architecture often combines common reusable blocks with station-specific sequence logic.</p>
+<h2 id="11-common-design-mistakes">11. Common Design Mistakes</h2>
+<table>
+<thead>
+<tr>
+<th>Mistake</th>
+<th>Consequence</th>
+<th>Better approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reusing logic without separate instance state</td>
+<td>Devices interfere with one another</td>
+<td>Use independent instance data where required</td>
+</tr>
+<tr>
+<td>Putting every variable in global scope</td>
+<td>Hidden dependencies and difficult troubleshooting</td>
+<td>Use clear interfaces and suitable data scope</td>
+</tr>
+<tr>
+<td>Creating one enormous universal block</td>
+<td>Excessive complexity and many special cases</td>
+<td>Divide logic by responsibility</td>
+</tr>
+<tr>
+<td>Duplicating identical logic everywhere</td>
+<td>Inconsistent behavior after modifications</td>
+<td>Use reusable blocks where appropriate</td>
+</tr>
+<tr>
+<td>Changing a shared block without testing instances</td>
+<td>Unexpected effects across many devices</td>
+<td>Perform regression testing</td>
+</tr>
+<tr>
+<td>Unclear input and output names</td>
+<td>Incorrect block integration</td>
+<td>Use explicit names and documented meanings</td>
+</tr>
+<tr>
+<td>Assuming FB data always survives restart</td>
+<td>Unexpected initialization or retained states</td>
+<td>Verify retention and startup configuration</td>
+</tr>
+<tr>
+<td>Calling logic under unexpected conditions</td>
+<td>Missing or repeated state transitions</td>
+<td>Trace call conditions and execution order</td>
+</tr>
+<tr>
+<td>Using ordinary control logic as a safety function</td>
+<td>Inadequate safety protection</td>
+<td>Use the required safety-rated architecture</td>
+</tr>
+</tbody>
+</table>
+<h2 id="12-testing-reusable-logic">12. Testing Reusable Logic</h2>
+<p>A reusable block should be tested independently where practical, then tested again in the context of the complete machine.</p>
+<h3 id="stage-1-interface-testing">Stage 1: Interface testing</h3>
+<p>Verify that the block accepts the correct inputs and produces the expected outputs.</p>
+<h3 id="stage-2-normal-operation-testing">Stage 2: Normal-operation testing</h3>
+<p>Test the expected sequence with valid inputs and feedback.</p>
+<h3 id="stage-3-boundary-testing">Stage 3: Boundary testing</h3>
+<p>Test values at configured limits, timeout boundaries, and transitions between states.</p>
+<h3 id="stage-4-fault-testing">Stage 4: Fault testing</h3>
+<p>Simulate missing feedback, invalid data, lost permissives, and fault signals.</p>
+<h3 id="stage-5-multi-instance-testing">Stage 5: Multi-instance testing</h3>
+<p>Run multiple instances simultaneously. Confirm that one instance's state does not affect another.</p>
+<h3 id="stage-6-integration-testing">Stage 6: Integration testing</h3>
+<p>Test the block within the complete station or line, including HMI commands, PLC-to-PLC communication, drives, robots, and relevant interlocks.</p>
+<h3 id="stage-7-regression-testing">Stage 7: Regression testing</h3>
+<p>After modifying a shared block, repeat the tests that verify its existing behavior across all relevant instances.</p>
+<p>For industrial equipment, simulation and offline validation should be followed by approved commissioning tests under controlled conditions.</p>
+<h2 id="13-interview-questions-and-answers">13. Interview Questions and Answers</h2>
+<p>Q1. What is reusable logic in a PLC?</p>
+<p>Logic developed once and used in multiple places through a defined interface, reducing duplication and promoting consistent behavior.</p>
+<p>Q2. What is the main difference between an FC and an FB in Siemens S7?</p>
+<p>An FC does not have its own instance data block like an FB. An FB uses associated instance data and is suitable for logic requiring instance-specific state.</p>
+<p>Q3. Why use an FB for a motor or conveyor?</p>
+<p>The block can manage the equipment's operating logic, timer state, sequence state, and fault information independently for each instance.</p>
+<p>Q4. Can the same FB control several motors?</p>
+<p>Yes. Multiple instances can use the same block logic while maintaining separate instance data and receiving different signals and parameters.</p>
+<p>Q5. Does a reusable block execute automatically?</p>
+<p>Not simply because it exists. It must be called or scheduled through the program's configured execution mechanism.</p>
+<p>Q6. What happens if a common block is modified?</p>
+<p>The modification may affect all instances using that block. Regression testing is necessary to verify that existing applications continue to behave correctly.</p>
+<p>Q7. What is an instance data block?</p>
+<p>In Siemens S7 programming, it stores data associated with an FB instance, including its instance-specific variables and state according to the block's declarations.</p>
+<p>Q8. Why are clear interfaces important?</p>
+<p>They define what data a block needs and what results it produces, reducing hidden dependencies and making testing and integration easier.</p>
+<p>Q9. What is the difference between reusable logic and a library?</p>
+<p>Reusable logic is the logic itself and its implementation. A library is an organized collection of reusable components, types, templates, or related engineering assets.</p>
+<p>Q10. Are Siemens FBs and Rockwell Add-On Instructions identical?</p>
+<p>No. They address related reuse requirements, but their programming models, interfaces, execution behavior, and data-handling rules differ.</p>
+<h2 id="14-practical-exercises">14. Practical Exercises</h2>
+<p>Complete these exercises in a simulator or offline project.</p>
+<h3 id="exercise-1-create-a-reusable-scaling-function">Exercise 1: Create a reusable scaling function</h3>
+<p>Create a function that accepts a raw analog value and range parameters and returns an engineering-unit value.</p>
+<p>Test:</p>
+<ul>
+<li>Minimum and maximum inputs.</li>
+<li>Midpoint values.</li>
+<li>Invalid ranges.</li>
+<li>Values outside the configured range.</li>
+</ul>
+<h3 id="exercise-2-create-a-motor-control-fb">Exercise 2: Create a motor-control FB</h3>
+<p>Develop a motor-control block with simulated start and stop requests, permissive status, drive fault, run feedback, and start timeout.</p>
+<p>Test:</p>
+<ul>
+<li>Normal start and stop.</li>
+<li>Missing run feedback.</li>
+<li>Fault during operation.</li>
+<li>Loss of permissive.</li>
+<li>Reset and restart behavior.</li>
+</ul>
+<h3 id="exercise-3-create-multiple-instances">Exercise 3: Create multiple instances</h3>
+<p>Use the same block for three simulated motors.</p>
+<p>Give each motor different inputs and timeout parameters. Confirm that each motor maintains its own operating state and that a fault on one motor does not automatically fault the others unless the designed interlock requires it.</p>
+<h3 id="exercise-4-modify-and-regression-test">Exercise 4: Modify and regression-test</h3>
+<p>Change a shared timeout or fault-handling rule. Repeat the tests for all three instances and verify that the change has not introduced unintended behavior.</p>
+<h2 id="15-final-mental-model">15. Final Mental Model</h2>
+<p>Think of reusable PLC logic as a separation between a common design and each equipment instance.</p>
+<pre><code>Reusable logic design
+        |
+        +-- Instance 1 + its data
+        |
+        +-- Instance 2 + its data
+        |
+        +-- Instance 3 + its data
+</code></pre>
+<ul>
+<li>FC: Reusable logic, commonly suited to calculations and operations without its own instance-specific state.</li>
+<li>FB: Reusable logic with associated instance data, suited to stateful equipment behavior.</li>
+<li>Interface: Defines inputs, outputs, and parameters.</li>
+<li>Instance: A particular use of the reusable logic with its own associated data.</li>
+<li>Testing: Verifies the block itself and every relevant application that uses it.</li>
+</ul>
+<p>The goal is not to create the fewest blocks possible. It is to create blocks that are understandable, independently testable, and reusable without hiding important machine behavior.</p>
+<p>Next topic in your study sequence:</p>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\02_Auto_Tech\01_PLC\06_Program_Structure\03_Libraries</code></p>
+<p>03_Libraries: Libraries: Standard blocks</p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

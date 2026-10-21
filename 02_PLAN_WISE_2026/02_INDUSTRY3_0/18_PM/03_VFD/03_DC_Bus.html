@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VFD DC Bus</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">VFD DC Bus</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-position-of-the-dc-bus-in-a-vfd">2. Position of the DC Bus in a VFD</a></li>
+<li><a href="#3-main-functions-of-the-dc-bus">3. Main Functions of the DC Bus</a></li>
+<li><a href="#4-main-dc-bus-components">4. Main DC Bus Components</a></li>
+<li><a href="#5-ac-input-voltage-and-expected-dc-bus-voltage">5. AC Input Voltage and Expected DC Bus Voltage</a></li>
+<li><a href="#6-dc-bus-positive-and-negative-terminals">6. DC Bus Positive and Negative Terminals</a></li>
+<li><a href="#7-dc-link-capacitors">7. DC Link Capacitors</a><ul>
+<li><a href="#71-purpose">7.1 Purpose</a></li>
+<li><a href="#72-capacitor-aging">7.2 Capacitor aging</a></li>
+<li><a href="#73-equivalent-series-resistance">7.3 Equivalent series resistance</a></li>
+<li><a href="#74-capacitor-service-life">7.4 Capacitor service life</a></li>
+</ul>
+</li>
+<li><a href="#8-dc-bus-ripple">8. DC Bus Ripple</a><ul>
+<li><a href="#81-causes-of-excessive-ripple">8.1 Causes of excessive ripple</a></li>
+<li><a href="#82-why-ripple-matters">8.2 Why ripple matters</a></li>
+<li><a href="#83-measurement-considerations">8.3 Measurement considerations</a></li>
+</ul>
+</li>
+<li><a href="#9-precharge-circuit">9. Precharge Circuit</a><ul>
+<li><a href="#91-why-precharge-is-necessary">9.1 Why precharge is necessary</a></li>
+<li><a href="#92-common-precharge-faults">9.2 Common precharge faults</a></li>
+</ul>
+</li>
+<li><a href="#10-dc-bus-overvoltage">10. DC Bus Overvoltage</a><ul>
+<li><a href="#101-common-causes">10.1 Common causes</a></li>
+<li><a href="#102-why-deceleration-causes-overvoltage">10.2 Why deceleration causes overvoltage</a></li>
+<li><a href="#103-troubleshooting-sequence">10.3 Troubleshooting sequence</a></li>
+</ul>
+</li>
+<li><a href="#11-dc-bus-undervoltage">11. DC Bus Undervoltage</a><ul>
+<li><a href="#111-common-causes">11.1 Common causes</a></li>
+<li><a href="#112-typical-symptoms">11.2 Typical symptoms</a></li>
+<li><a href="#113-diagnostic-approach">11.3 Diagnostic approach</a></li>
+</ul>
+</li>
+<li><a href="#12-braking-resistor-and-dc-bus-interaction">12. Braking Resistor and DC Bus Interaction</a></li>
+<li><a href="#13-dc-bus-in-common-dc-bus-and-regenerative-systems">13. DC Bus in Common DC Bus and Regenerative Systems</a><ul>
+<li><a href="#131-common-dc-bus-systems">13.1 Common DC bus systems</a></li>
+<li><a href="#132-regenerative-drives">13.2 Regenerative drives</a></li>
+</ul>
+</li>
+<li><a href="#14-dc-bus-safety-and-stored-energy">14. DC Bus Safety and Stored Energy</a><ul>
+<li><a href="#141-required-precautions">14.1 Required precautions</a></li>
+<li><a href="#142-important-warnings">14.2 Important warnings</a></li>
+</ul>
+</li>
+<li><a href="#15-dc-bus-fault-diagnosis-table">15. DC Bus Fault Diagnosis Table</a></li>
+<li><a href="#16-practical-industrial-example-conveyor-vfd-overvoltage">16. Practical Industrial Example: Conveyor VFD Overvoltage</a><ul>
+<li><a href="#situation">Situation</a></li>
+<li><a href="#technical-interpretation">Technical interpretation</a></li>
+<li><a href="#investigation">Investigation</a></li>
+<li><a href="#corrective-action">Corrective action</a></li>
+</ul>
+</li>
+<li><a href="#17-preventive-maintenance-checklist">17. Preventive Maintenance Checklist</a><ul>
+<li><a href="#external-and-environmental-checks">External and environmental checks</a></li>
+<li><a href="#operational-checks">Operational checks</a></li>
+<li><a href="#internal-inspection-and-testing">Internal inspection and testing</a></li>
+<li><a href="#documentation">Documentation</a></li>
+</ul>
+</li>
+<li><a href="#18-maintenance-records-and-trend-analysis">18. Maintenance Records and Trend Analysis</a></li>
+<li><a href="#19-key-engineering-principles">19. Key Engineering Principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>The DC bus, also called the DC link, is the intermediate DC voltage section inside a Variable Frequency Drive (VFD). It receives DC power from the input rectifier, smooths and stores electrical energy, and supplies the inverter section that generates variable-frequency, variable-voltage AC for the motor.</p>
+<p>The DC bus is one of the most important internal sections of a VFD because its voltage stability directly affects motor operation, acceleration, deceleration, and drive fault conditions.</p>
+<p>In industrial maintenance, DC bus problems can cause unexpected VFD trips, repeated production interruptions, overheating, capacitor failures, and damage to power electronic components.</p>
+<h2 id="2-position-of-the-dc-bus-in-a-vfd">2. Position of the DC Bus in a VFD</h2>
+<pre><code>3-Phase AC Supply
+       ↓
+Input Protection and Filtering
+       ↓
+Rectifier
+(AC to DC conversion)
+       ↓
+DC Bus / DC Link
+(Capacitors, possible inductors)
+       ↓
+Inverter
+(IGBTs or other switching devices)
+       ↓
+Variable Voltage / Variable Frequency AC
+       ↓
+Induction Motor or Other Compatible Motor
+</code></pre>
+<p>Supporting circuits may include a precharge circuit, DC bus voltage sensing, a braking chopper, a braking resistor, and a discharge circuit. Their presence and arrangement depend on the VFD model and power rating.</p>
+<h2 id="3-main-functions-of-the-dc-bus">3. Main Functions of the DC Bus</h2>
+<p>The DC bus performs several related functions.</p>
+<ul>
+<li>Energy storage: DC link capacitors store electrical energy and supply it during short changes in load demand.</li>
+<li>Voltage smoothing: Capacitors reduce the voltage ripple produced by rectification.</li>
+<li>Energy transfer: The DC bus transfers energy from the rectifier to the inverter.</li>
+<li>Dynamic support: Stored energy helps the drive handle rapid changes in motor torque and current.</li>
+<li>Braking energy handling: During deceleration, energy returned by the motor can raise DC bus voltage. A braking circuit or regenerative front end may be required to manage this energy.</li>
+<li>Fault monitoring: The VFD monitors DC bus voltage to detect undervoltage, overvoltage, and certain internal power-stage problems.</li>
+</ul>
+<p>The DC bus does not independently control motor speed. The inverter switches the DC voltage to produce the output waveform required by the drive control system.</p>
+<h2 id="4-main-dc-bus-components">4. Main DC Bus Components</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+<th>Common maintenance concern</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DC link capacitors</td>
+<td>Store energy and reduce voltage ripple</td>
+<td>Aging, increased ESR, leakage, bulging</td>
+</tr>
+<tr>
+<td>DC link inductor or choke</td>
+<td>Reduces current ripple and helps limit disturbances</td>
+<td>Overheating, insulation damage, loose connections</td>
+</tr>
+<tr>
+<td>Precharge resistor</td>
+<td>Limits initial capacitor charging current</td>
+<td>Open circuit, overheating, resistance drift</td>
+</tr>
+<tr>
+<td>Precharge relay or contactor</td>
+<td>Bypasses the precharge resistor when appropriate</td>
+<td>Welded contacts, failure to close</td>
+</tr>
+<tr>
+<td>Voltage sensing circuit</td>
+<td>Measures DC bus voltage for drive control and protection</td>
+<td>Incorrect readings, sensor or circuit failure</td>
+</tr>
+<tr>
+<td>Discharge circuit</td>
+<td>Reduces stored voltage after shutdown</td>
+<td>Excessive discharge time or circuit failure</td>
+</tr>
+<tr>
+<td>Braking chopper</td>
+<td>Switches braking energy into a resistor when fitted</td>
+<td>Chopper fault, overtemperature, switching failure</td>
+</tr>
+<tr>
+<td>Braking resistor</td>
+<td>Converts braking energy into heat</td>
+<td>Overheating, open circuit, incorrect resistance</td>
+</tr>
+<tr>
+<td>DC bus terminals</td>
+<td>Provide DC connections where the drive design exposes them</td>
+<td>Loose terminals, contamination, insulation damage</td>
+</tr>
+</tbody>
+</table>
+<p>Not every drive has all these components as separate, accessible parts. Some are integrated into the power module or control board.</p>
+<h2 id="5-ac-input-voltage-and-expected-dc-bus-voltage">5. AC Input Voltage and Expected DC Bus Voltage</h2>
+<p>The expected DC bus voltage depends on the supply voltage, rectifier topology, loading, input impedance, and DC link design.</p>
+<p>For a conventional three-phase diode rectifier, two useful approximations are:</p>
+<p>- Average rectified voltage under continuous current conditions:</p>
+<div class="math-display">\[ V\_{DC} \approx 1.35 \times V\_{LL} \]</div>
+<p>- Idealized peak voltage when a capacitor charges near the AC line-to-line peak:</p>
+<div class="math-display">\[ V\_{DC} \approx \sqrt{2} \times V\_{LL} \]</div>
+<p>Here, <span class="math-inline">\(V\_{LL}\)</span> is the RMS voltage measured between two supply phases.</p>
+<p>For a nominal 400 V three-phase supply:</p>
+<div class="math-display">\[ V\_{DC,\ average} \approx 1.35 \times 400 = 540\text{ V} \]</div>
+<div class="math-display">\[ V\_{DC,\ peak} \approx 1.414 \times 400 = 566\text{ V} \]</div>
+<p>These values are approximations, not universal operating limits or fault thresholds. Actual DC bus voltage varies with the drive design, supply voltage, load, ripple, and rectifier characteristics. Regenerative and active-front-end drives can behave differently.</p>
+<p>For maintenance, use the manufacturer's specified normal operating range and fault thresholds for the exact drive model.</p>
+<h2 id="6-dc-bus-positive-and-negative-terminals">6. DC Bus Positive and Negative Terminals</h2>
+<p>Some VFDs expose DC bus terminals for approved external braking units, common DC bus systems, or other manufacturer-supported arrangements.</p>
+<p>Common terminal labels include:</p>
+<table>
+<thead>
+<tr>
+<th>Terminal label</th>
+<th>Typical meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DC+ or P/+</td>
+<td>Positive DC bus</td>
+</tr>
+<tr>
+<td>DC- or N/-</td>
+<td>Negative DC bus</td>
+</tr>
+<tr>
+<td>BR, B1, B2 or similar</td>
+<td>Possible braking circuit terminals; model-dependent</td>
+</tr>
+<tr>
+<td>PE</td>
+<td>Protective earth</td>
+</tr>
+</tbody>
+</table>
+<p>Terminal names vary by manufacturer and model. A terminal labelled <code>B1</code> or <code>B2</code>, for example, must not automatically be assumed to have the same function across different drives.</p>
+<p>Important maintenance rules:</p>
+<ul>
+<li>Confirm the exact terminal assignment in the manufacturer's wiring diagram.</li>
+<li>Do not connect the DC bus of two drives together unless the drives explicitly support a common DC bus arrangement.</li>
+<li>Do not assume that an accessible DC terminal is safe to touch after the AC supply has been isolated.</li>
+<li>Never confuse protective earth with DC negative. They serve different electrical purposes.</li>
+</ul>
+<h2 id="7-dc-link-capacitors">7. DC Link Capacitors</h2>
+<h3 id="71-purpose">7.1 Purpose</h3>
+<p>The rectifier converts AC into pulsating DC. DC link capacitors smooth this voltage and provide a temporary energy reserve.</p>
+<p>When the inverter demands rapidly changing power, the capacitors help supply the difference between instantaneous input power and output power.</p>
+<h3 id="72-capacitor-aging">7.2 Capacitor aging</h3>
+<p>Electrolytic capacitors commonly used in industrial drives can degrade with age, temperature, ripple current, and operating conditions.</p>
+<p>Potential symptoms include:</p>
+<ul>
+<li>Increasing DC bus ripple.</li>
+<li>Repeated undervoltage or overvoltage faults under load.</li>
+<li>Unexpected trips during acceleration or heavy loading.</li>
+<li>Excessive internal temperature.</li>
+<li>Capacitor leakage, bulging, or vent operation where visible.</li>
+<li>Reduced drive reliability after years of high-temperature operation.</li>
+</ul>
+<p>A capacitor can degrade electrically without visible physical damage. Conversely, visible swelling or leakage is a strong reason to stop using the affected equipment and arrange qualified assessment.</p>
+<h3 id="73-equivalent-series-resistance">7.3 Equivalent series resistance</h3>
+<p>Equivalent series resistance (ESR) represents the resistive component of a capacitor's internal losses. Increased ESR can cause greater heating and voltage ripple.</p>
+<p>Capacitance and ESR measurements may help determine capacitor condition, but testing must follow the drive manufacturer's approved procedure. Internal capacitors must be safely isolated and discharged before any permitted component-level testing.</p>
+<p>Do not use a generic capacitance or ESR threshold to judge every VFD. Acceptance limits depend on capacitor specifications and the drive design.</p>
+<h3 id="74-capacitor-service-life">7.4 Capacitor service life</h3>
+<p>Capacitor life is affected by:</p>
+<ul>
+<li>Ambient temperature and cabinet cooling.</li>
+<li>Ripple current and electrical loading.</li>
+<li>Operating hours and duty cycle.</li>
+<li>Ventilation blockage and dust accumulation.</li>
+<li>The manufacturer's component-life assumptions.</li>
+<li>Previous overloads and abnormal operating conditions.</li>
+</ul>
+<p>Preventive replacement should be based on manufacturer guidance, actual operating conditions, condition assessment, and the criticality of the equipment.</p>
+<h2 id="8-dc-bus-ripple">8. DC Bus Ripple</h2>
+<p>DC bus ripple is the variation in DC voltage around its average value.</p>
+<p>A simplified representation is:</p>
+<pre><code>DC bus voltage
+      ↑
+      |       /¯\      /¯\      /¯\
+      |------/---\----/---\----/---\----- Average DC level
+      |     /     \  /     \  /     \
+      |
+      +--------------------------------→ Time
+</code></pre>
+<p>This illustration is conceptual. Real ripple waveforms depend on the rectifier, capacitor arrangement, supply frequency, load, and drive topology.</p>
+<h3 id="81-causes-of-excessive-ripple">8.1 Causes of excessive ripple</h3>
+<ul>
+<li>Aged or degraded DC link capacitors.</li>
+<li>Input phase loss or severe phase imbalance.</li>
+<li>Abnormal rectifier operation.</li>
+<li>Loose or damaged input connections.</li>
+<li>Excessive electrical loading.</li>
+<li>Abnormal input supply conditions.</li>
+<li>A faulty DC link inductor, where fitted.</li>
+<li>Internal power-stage faults.</li>
+</ul>
+<h3 id="82-why-ripple-matters">8.2 Why ripple matters</h3>
+<p>Excessive ripple increases electrical stress on the DC link capacitors and power electronics. It can reduce operating stability and contribute to nuisance trips or premature component failure.</p>
+<p>Ripple should be assessed against the manufacturer's specified limits and measurement method. Measuring a DC value alone may not reveal a ripple-related problem.</p>
+<h3 id="83-measurement-considerations">8.3 Measurement considerations</h3>
+<p>DC bus measurements inside a VFD can expose personnel to lethal voltage and stored capacitor energy. Internal measurements must only be performed by appropriately qualified personnel using manufacturer-approved procedures and correctly rated instruments, probes, and accessories.</p>
+<p>Do not attach an ordinary grounded oscilloscope probe directly to a high-voltage DC bus. The grounding arrangement can create a dangerous short circuit. Any waveform measurement requires a suitable differential measurement system and a method approved for the equipment and installation.</p>
+<h2 id="9-precharge-circuit">9. Precharge Circuit</h2>
+<h3 id="91-why-precharge-is-necessary">9.1 Why precharge is necessary</h3>
+<p>When a VFD is first connected to its supply, the DC link capacitors may initially have very low voltage. They can draw a large inrush current as they charge.</p>
+<p>The precharge circuit limits this initial current to protect the rectifier, capacitors, contactors, and upstream electrical system.</p>
+<p>A common arrangement is:</p>
+<pre><code>AC Supply
+    ↓
+Rectifier
+    ↓
+Precharge Resistor in Charging Path
+    ↓
+DC Link Capacitors Charge
+    ↓
+Precharge Bypass Operates
+    ↓
+Normal DC Bus Operation
+</code></pre>
+<p>The exact circuit arrangement varies by drive.</p>
+<h3 id="92-common-precharge-faults">9.2 Common precharge faults</h3>
+<table>
+<thead>
+<tr>
+<th>Fault condition</th>
+<th>Possible symptom</th>
+<th>Diagnostic direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Precharge resistor open circuit</td>
+<td>DC bus fails to rise correctly or drive will not start</td>
+<td>Qualified inspection of the precharge circuit</td>
+</tr>
+<tr>
+<td>Precharge relay fails to close</td>
+<td>Drive remains in precharge or trips during startup</td>
+<td>Check control sequence and relay operation</td>
+</tr>
+<tr>
+<td>Bypass contacts welded</td>
+<td>Excessive inrush on the next power-up</td>
+<td>Inspect switching device and associated damage</td>
+</tr>
+<tr>
+<td>Capacitor short circuit</td>
+<td>Excessive current or protective trip</td>
+<td>Isolate and assess the DC link and power stage</td>
+</tr>
+<tr>
+<td>Auxiliary supply failure</td>
+<td>Precharge sequence does not complete</td>
+<td>Check the control supply and related diagnostics</td>
+</tr>
+<tr>
+<td>Loose connection</td>
+<td>Intermittent startup or heating</td>
+<td>Inspect connections after safe isolation</td>
+</tr>
+</tbody>
+</table>
+<p>Repeatedly cycling power to overcome a startup fault is not a valid repair strategy. It can increase stress on the precharge components and worsen the failure.</p>
+<h2 id="10-dc-bus-overvoltage">10. DC Bus Overvoltage</h2>
+<p>A DC bus overvoltage occurs when the bus voltage rises above the drive's permitted threshold.</p>
+<h3 id="101-common-causes">10.1 Common causes</h3>
+<ul>
+<li>Motor deceleration is too rapid for the load inertia.</li>
+<li>A high-inertia load regenerates energy into the DC bus.</li>
+<li>A braking resistor is open, incorrectly specified, disconnected, or thermally protected.</li>
+<li>A braking chopper has failed or is disabled.</li>
+<li>The incoming supply voltage is too high.</li>
+<li>The supply experiences switching disturbances or transients.</li>
+<li>A regenerative energy path is unavailable or malfunctioning.</li>
+<li>The drive's deceleration or braking parameters are unsuitable for the application.</li>
+</ul>
+<h3 id="102-why-deceleration-causes-overvoltage">10.2 Why deceleration causes overvoltage</h3>
+<p>During motoring, electrical energy is converted into mechanical energy. During deceleration, the motor can operate as a generator and return energy to the drive.</p>
+<p>In a conventional non-regenerative drive, this returned energy can raise DC bus voltage because the input rectifier generally cannot send that energy back to the supply.</p>
+<p>A braking chopper may switch a braking resistor across the DC bus to convert excess electrical energy into heat. If the drive does not have an appropriate braking arrangement, the deceleration profile may need to be changed within the machine's safe operating limits.</p>
+<h3 id="103-troubleshooting-sequence">10.3 Troubleshooting sequence</h3>
+<ol>
+<li>Record the exact fault code, operating mode, load condition, and event time.</li>
+<li>Determine whether the fault occurs during deceleration, stopping, supply switching, or normal running.</li>
+<li>Review the configured deceleration time against the mechanical load and machine requirements.</li>
+<li>Check the braking resistor and chopper arrangement against the manufacturer's design and ratings.</li>
+<li>Review supply voltage and related fault history.</li>
+<li>Inspect connections and cooling after safe isolation.</li>
+<li>Escalate suspected internal power-stage failures for qualified testing or repair.</li>
+</ol>
+<p>Do not simply raise the overvoltage trip limit or disable protection. Those protections exist because power electronics have finite voltage ratings.</p>
+<h2 id="11-dc-bus-undervoltage">11. DC Bus Undervoltage</h2>
+<p>A DC bus undervoltage occurs when the bus voltage falls below the drive's specified operating threshold.</p>
+<h3 id="111-common-causes">11.1 Common causes</h3>
+<ul>
+<li>Supply voltage sag.</li>
+<li>Input phase loss or severe phase imbalance.</li>
+<li>Loose incoming supply terminals.</li>
+<li>Upstream contactor or breaker problems.</li>
+<li>Excessive voltage drop during acceleration.</li>
+<li>Rectifier failure.</li>
+<li>Degraded DC link capacitors.</li>
+<li>Internal DC bus sensing or control circuit faults.</li>
+</ul>
+<h3 id="112-typical-symptoms">11.2 Typical symptoms</h3>
+<ul>
+<li>VFD trips when a motor accelerates.</li>
+<li>Drive stops during a high-torque demand.</li>
+<li>Several drives trip simultaneously during a supply disturbance.</li>
+<li>Drive faults correlate with operation of other high-power equipment.</li>
+<li>DC bus voltage drops below the normal range during load changes.</li>
+</ul>
+<h3 id="113-diagnostic-approach">11.3 Diagnostic approach</h3>
+<p>Compare the timing of the fault with other plant events. If multiple drives trip together, investigate the common supply, transformer, distribution panel, or upstream switching event before assuming that every drive has an independent internal failure.</p>
+<p>If only one drive is affected, inspect its incoming circuit, local connections, loading, and internal diagnostics. Capacitor or rectifier faults should be considered when the external supply is verified as healthy.</p>
+<h2 id="12-braking-resistor-and-dc-bus-interaction">12. Braking Resistor and DC Bus Interaction</h2>
+<p>A braking resistor is used in applications where the motor returns significant energy during deceleration and the drive is equipped to dissipate that energy.</p>
+<p>Common applications include:</p>
+<ul>
+<li>High-inertia conveyors.</li>
+<li>Hoists and lifting equipment with suitable drive architectures.</li>
+<li>Centrifuges.</li>
+<li>Rapid-cycle positioning systems.</li>
+<li>Machine tools requiring controlled deceleration.</li>
+<li>Applications with frequent stopping and reversing.</li>
+</ul>
+<p>The resistor converts electrical energy into heat. Its resistance, power rating, duty cycle, and thermal protection must match the drive and application requirements.</p>
+<p>Maintenance checks include:</p>
+<ul>
+<li>Confirming the specified resistance and power rating.</li>
+<li>Inspecting resistor connections and wiring insulation.</li>
+<li>Checking thermal switches or other protection, where fitted.</li>
+<li>Checking ventilation and clearance around the resistor.</li>
+<li>Inspecting for heat damage or discoloration.</li>
+<li>Reviewing braking-related fault history.</li>
+</ul>
+<p>Braking resistors can reach hazardous temperatures. Do not touch or inspect them closely until the equipment has been safely isolated and cooled.</p>
+<p>Not every VFD contains a braking chopper. Some drives require an external braking unit, while regenerative drives can return energy to the supply through a suitable active front end.</p>
+<h2 id="13-dc-bus-in-common-dc-bus-and-regenerative-systems">13. DC Bus in Common DC Bus and Regenerative Systems</h2>
+<h3 id="131-common-dc-bus-systems">13.1 Common DC bus systems</h3>
+<p>In some multi-drive systems, several drives share a DC bus. A drive operating in regenerative mode may supply energy to another drive that is motoring, reducing the amount of energy dissipated as heat.</p>
+<p>Potential benefits include improved energy utilization and reduced braking-resistor demand. However, the system requires compatible drive hardware, correctly designed bus protection, appropriate precharge arrangements, and approved connection methods.</p>
+<p>Do not create a common DC bus by connecting the DC terminals of ordinary VFDs without explicit manufacturer support and an engineered design.</p>
+<h3 id="132-regenerative-drives">13.2 Regenerative drives</h3>
+<p>A regenerative front end can transfer braking energy back to the AC supply when the system is designed for it. This differs from a conventional diode-rectifier drive that generally cannot return energy to the supply through its input rectifier.</p>
+<p>Regenerative systems introduce additional design and maintenance considerations, including line-side power electronics, filtering, control configuration, grounding, and supply interaction.</p>
+<h2 id="14-dc-bus-safety-and-stored-energy">14. DC Bus Safety and Stored Energy</h2>
+<p>A VFD DC bus can remain lethal after the incoming supply has been switched off. DC link capacitors store energy, and some faults can prevent normal discharge.</p>
+<p>Safe isolation is essential before opening the drive or performing internal maintenance.</p>
+<h3 id="141-required-precautions">14.1 Required precautions</h3>
+<ul>
+<li>Follow the site's electrical isolation, lockout/tagout, permit, and arc-flash procedures.</li>
+<li>Isolate all possible energy sources, including external DC supplies, shared DC bus connections, and auxiliary supplies where applicable.</li>
+<li>Wait for the discharge period specified by the manufacturer.</li>
+<li>Verify the absence of voltage using an appropriately rated instrument and the approved test method.</li>
+<li>Test the relevant DC terminals and other prescribed points, including DC-to-PE checks where specified.</li>
+<li>Verify the measuring instrument before and after testing according to the site's approved procedure.</li>
+<li>Use the required PPE and barriers for the task.</li>
+<li>Restrict internal repairs to qualified personnel.</li>
+</ul>
+<h3 id="142-important-warnings">14.2 Important warnings</h3>
+<ul>
+<li>A dark display does not prove that the DC bus is discharged.</li>
+<li>A status LED is not a substitute for voltage verification.</li>
+<li>The manufacturer's stated waiting time does not replace a measured absence-of-voltage check where required.</li>
+<li>Never short DC bus terminals to discharge capacitors.</li>
+<li>Never assume that a drive is safe because its motor has stopped.</li>
+<li>Do not perform internal live measurements unless the task is specifically authorized, justified by the risk assessment, and performed using the approved procedure and equipment.</li>
+</ul>
+<h2 id="15-dc-bus-fault-diagnosis-table">15. DC Bus Fault Diagnosis Table</h2>
+<table>
+<thead>
+<tr>
+<th>Observed condition</th>
+<th>Possible causes</th>
+<th>Initial diagnostic direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Overvoltage during deceleration</td>
+<td>Excessive regeneration, short deceleration time, braking circuit fault</td>
+<td>Review deceleration profile and braking system</td>
+</tr>
+<tr>
+<td>Undervoltage during acceleration</td>
+<td>Supply sag, excessive load demand, weak input connection</td>
+<td>Review supply conditions and loading</td>
+</tr>
+<tr>
+<td>Excessive ripple</td>
+<td>Capacitor degradation, phase loss, rectifier or input issue</td>
+<td>Assess ripple and input supply using approved methods</td>
+</tr>
+<tr>
+<td>Drive fails to start</td>
+<td>Precharge fault, low supply, internal power-stage fault</td>
+<td>Review startup diagnostics and supply health</td>
+</tr>
+<tr>
+<td>Repeated faults across multiple drives</td>
+<td>Common supply disturbance or upstream switching issue</td>
+<td>Investigate the common electrical supply</td>
+</tr>
+<tr>
+<td>One drive trips repeatedly</td>
+<td>Local supply issue, load problem, internal component degradation</td>
+<td>Compare local supply, load, and fault history</td>
+</tr>
+<tr>
+<td>Abnormal heating near braking equipment</td>
+<td>Excessive braking duty, ventilation problem, incorrect resistor</td>
+<td>Check application duty, ratings, and thermal protection</td>
+</tr>
+<tr>
+<td>DC bus remains charged longer than expected</td>
+<td>Discharge circuit issue, design-specific discharge behavior</td>
+<td>Follow manufacturer instructions and arrange qualified assessment</td>
+</tr>
+</tbody>
+</table>
+<p>These are diagnostic directions, not definitive diagnoses. The exact fault code, drive model, electrical measurements, and application conditions determine the correct conclusion.</p>
+<h2 id="16-practical-industrial-example-conveyor-vfd-overvoltage">16. Practical Industrial Example: Conveyor VFD Overvoltage</h2>
+<h3 id="situation">Situation</h3>
+<p>A production conveyor operates normally but trips on DC bus overvoltage whenever the PLC commands a rapid stop. The fault occurs more frequently when the conveyor is carrying a heavy load.</p>
+<h3 id="technical-interpretation">Technical interpretation</h3>
+<p>The motor and load contain kinetic energy during operation. Rapid deceleration can return energy through the motor to the VFD's DC bus. If the bus cannot absorb or dissipate that energy quickly enough, its voltage rises and the drive trips.</p>
+<h3 id="investigation">Investigation</h3>
+<ol>
+<li>Record the fault code and correlate it with PLC stop commands and the conveyor's operating state.</li>
+<li>Confirm whether the event occurs during commanded deceleration rather than during steady-speed running.</li>
+<li>Review the VFD's deceleration parameters and compare them with the mechanical requirements.</li>
+<li>Check whether a braking resistor or regenerative arrangement is specified for the application.</li>
+<li>If a braking resistor is installed, have qualified personnel verify its specified resistance, wiring, thermal protection, and associated chopper circuit.</li>
+<li>Review whether a recent parameter change, mechanical modification, or increase in load coincided with the fault.</li>
+<li>Test the revised settings under an approved commissioning procedure and verify that stopping distance and machine safety remain acceptable.</li>
+</ol>
+<h3 id="corrective-action">Corrective action</h3>
+<p>If the cause is an overly aggressive deceleration profile, an approved increase in deceleration time may reduce regenerative energy peaks. If the application requires fast stopping, the correct solution may involve a properly sized braking system or regenerative drive architecture.</p>
+<p>Do not compromise emergency-stop performance or machine safety to eliminate a VFD fault. Emergency stopping and ordinary process deceleration are different functions and must be engineered accordingly.</p>
+<h2 id="17-preventive-maintenance-checklist">17. Preventive Maintenance Checklist</h2>
+<h3 id="external-and-environmental-checks">External and environmental checks</h3>
+<ul>
+<li>Check cabinet ventilation, cooling fans, filters, and airflow.</li>
+<li>Check for dust, moisture, conductive contamination, and signs of overheating.</li>
+<li>Inspect accessible power connections for discoloration, insulation damage, and other signs of deterioration.</li>
+<li>Check protective earth connections according to the approved maintenance procedure.</li>
+<li>Inspect braking resistors and their ventilation clearances where fitted.</li>
+</ul>
+<h3 id="operational-checks">Operational checks</h3>
+<ul>
+<li>Review DC bus overvoltage and undervoltage fault history.</li>
+<li>Correlate faults with acceleration, deceleration, loading, and supply events.</li>
+<li>Compare DC bus readings with manufacturer specifications and historical baselines.</li>
+<li>Investigate abnormal ripple or unexplained bus voltage fluctuations.</li>
+<li>Review precharge-related startup failures.</li>
+<li>Review braking duty and resistor thermal events where applicable.</li>
+</ul>
+<h3 id="internal-inspection-and-testing">Internal inspection and testing</h3>
+<ul>
+<li>Isolate and verify the equipment safe before opening the drive.</li>
+<li>Inspect capacitors for visible leakage, bulging, or damage when permitted by the manufacturer's maintenance instructions.</li>
+<li>Inspect internal connections and power components for heat damage.</li>
+<li>Perform capacitor, rectifier, precharge, and DC bus measurements only where the approved procedure permits them.</li>
+<li>Arrange component replacement or drive repair when measurements exceed specified limits.</li>
+</ul>
+<h3 id="documentation">Documentation</h3>
+<ul>
+<li>Record drive model, serial number, and equipment identification.</li>
+<li>Record the fault code, timestamp, operating condition, and associated PLC sequence.</li>
+<li>Record measured values, instrument details where required, and the applicable acceptance limits.</li>
+<li>Record the corrective action and post-maintenance verification.</li>
+<li>Update SAP PM notifications, maintenance orders, and relevant failure records.</li>
+<li>Update spare-parts and repair records if a capacitor assembly, power module, braking component, or complete VFD is replaced.</li>
+</ul>
+<h2 id="18-maintenance-records-and-trend-analysis">18. Maintenance Records and Trend Analysis</h2>
+<p>DC bus condition is more useful when assessed over time rather than as a single reading.</p>
+<p>Useful trend parameters include:</p>
+<ul>
+<li>DC bus voltage during steady operation.</li>
+<li>Minimum and maximum bus voltage during acceleration and deceleration.</li>
+<li>Frequency and timing of undervoltage or overvoltage faults.</li>
+<li>Input supply voltage and phase imbalance where measured.</li>
+<li>Drive load percentage and operating duty.</li>
+<li>Cabinet temperature and cooling-system condition.</li>
+<li>Capacitor replacement date and maintenance history.</li>
+<li>Braking resistor temperature or duty indicators where available.</li>
+</ul>
+<p>Where the drive exposes suitable diagnostic data, these parameters can be logged through the drive's communication interface or collected by a PLC, SCADA, or maintenance-monitoring system. The availability and accuracy of such values depend on the drive model and its configuration.</p>
+<p>A trend showing increasing fault frequency, worsening ripple, or a growing relationship between load and bus voltage can help prioritize inspection before an unplanned production stoppage.</p>
+<h2 id="19-key-engineering-principles">19. Key Engineering Principles</h2>
+<ul>
+<li>The DC bus is the energy link between the rectifier and inverter.</li>
+<li>DC link capacitors smooth voltage and store energy, but their condition degrades with operating stress and age.</li>
+<li>Excessive DC bus voltage during deceleration often indicates regenerative energy that the system cannot handle adequately.</li>
+<li>DC bus undervoltage may originate in the supply, input connections, rectifier, capacitors, or internal sensing circuits.</li>
+<li>Precharge protects the drive during initial capacitor charging.</li>
+<li>Braking resistors dissipate energy only when the drive has a compatible braking arrangement.</li>
+<li>Common DC bus and regenerative configurations require purpose-designed hardware and approved engineering.</li>
+<li>A VFD's DC bus can remain dangerous after supply isolation. Safe isolation, the manufacturer's discharge time, and verified absence of voltage are essential.</li>
+<li>Fault history, operating context, and trend data should be used together to determine root cause.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\18_PM\03_VFD\04_Params - Parameters</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

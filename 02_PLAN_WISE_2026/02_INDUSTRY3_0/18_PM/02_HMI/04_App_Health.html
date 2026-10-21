@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HMI Application Health</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">HMI Application Health</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-what-constitutes-a-healthy-hmi-application">2. What constitutes a healthy HMI application?</a></li>
+<li><a href="#3-hmi-application-architecture">3. HMI application architecture</a></li>
+<li><a href="#4-runtime-and-application-startup-health">4. Runtime and application startup health</a><ul>
+<li><a href="#diagnostic-checks">Diagnostic checks</a></li>
+</ul>
+</li>
+<li><a href="#5-screen-and-navigation-health">5. Screen and navigation health</a></li>
+<li><a href="#6-tag-and-data-health">6. Tag and data health</a><ul>
+<li><a href="#common-data-quality-problems">Common data-quality problems</a></li>
+<li><a href="#example-analog-scaling">Example: Analog scaling</a></li>
+</ul>
+</li>
+<li><a href="#7-data-freshness-and-stale-values">7. Data freshness and stale values</a></li>
+<li><a href="#8-alarm-and-event-health">8. Alarm and event health</a><ul>
+<li><a href="#important-distinctions">Important distinctions</a></li>
+</ul>
+</li>
+<li><a href="#9-hmi-to-plc-command-health">9. HMI-to-PLC command health</a></li>
+<li><a href="#10-performance-and-responsiveness">10. Performance and responsiveness</a><ul>
+<li><a href="#performance-indicators">Performance indicators</a></li>
+</ul>
+</li>
+<li><a href="#11-storage-and-data-persistence-health">11. Storage and data persistence health</a></li>
+<li><a href="#12-user-access-and-application-security">12. User access and application security</a></li>
+<li><a href="#13-hmi-application-health-monitoring">13. HMI application health monitoring</a></li>
+<li><a href="#14-systematic-troubleshooting-procedure">14. Systematic troubleshooting procedure</a><ul>
+<li><a href="#step-1-define-the-symptom">Step 1: Define the symptom</a></li>
+<li><a href="#step-2-check-the-basic-system-state">Step 2: Check the basic system state</a></li>
+<li><a href="#step-3-check-application-behavior">Step 3: Check application behavior</a></li>
+<li><a href="#step-4-check-data-and-communication">Step 4: Check data and communication</a></li>
+<li><a href="#step-5-check-plc-side-behavior">Step 5: Check PLC-side behavior</a></li>
+<li><a href="#step-6-check-recent-changes">Step 6: Check recent changes</a></li>
+<li><a href="#step-7-correct-and-verify">Step 7: Correct and verify</a></li>
+</ul>
+</li>
+<li><a href="#15-practical-industrial-example">15. Practical industrial example</a></li>
+<li><a href="#16-preventive-maintenance-checklist">16. Preventive maintenance checklist</a><ul>
+<li><a href="#routine-application-checks">Routine application checks</a></li>
+<li><a href="#periodic-engineering-checks">Periodic engineering checks</a></li>
+</ul>
+</li>
+<li><a href="#17-key-principles">17. Key principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>HMI application health is the condition of the HMI software, runtime environment, configuration, and supporting resources that determine whether the operator interface functions correctly, reliably, and consistently.</p>
+<p>An HMI can have a working display and responsive touchscreen while its application is unhealthy. For example, screens may open normally, but PLC values may be stale, alarms may not update, recipes may fail to save, or the application may repeatedly freeze.</p>
+<p>Application health monitoring helps maintenance engineers identify software-related problems before they cause production delays, incorrect operator decisions, or loss of required process information.</p>
+<p>The objective is to verify that the HMI application is running correctly, displaying valid information, processing operator actions, communicating with connected devices, and maintaining required data.</p>
+<h2 id="2-what-constitutes-a-healthy-hmi-application">2. What constitutes a healthy HMI application?</h2>
+<p>A healthy HMI application should satisfy several conditions:</p>
+<ul>
+<li>Runtime health: The HMI application starts and remains operational.</li>
+<li>Screen health: Screens, navigation, graphics, and controls behave correctly.</li>
+<li>Data health: Displayed values correspond to valid and sufficiently recent data.</li>
+<li>Communication health: Required PLC and device connections remain functional.</li>
+<li>Command health: Operator requests are processed and their outcomes are displayed correctly.</li>
+<li>Alarm health: Alarms are generated, displayed, updated, and acknowledged according to the application design.</li>
+<li>Storage health: Required configuration, recipes, and records can be accessed and saved.</li>
+<li>Performance health: Screen updates and user interactions occur within acceptable time limits.</li>
+<li>Security health: Access controls and permissions function as intended.</li>
+<li>Recovery health: The application can be restored using the approved project and recovery procedure.</li>
+</ul>
+<p>A green status indicator alone does not establish application health. It may represent only one subsystem, such as communication status, rather than the complete HMI application.</p>
+<h2 id="3-hmi-application-architecture">3. HMI application architecture</h2>
+<p>A typical HMI application depends on multiple layers working together.</p>
+<pre><code>Operator
+   ↓
+Display and Touchscreen
+   ↓
+HMI Application and Runtime
+   ├── Screens and Navigation
+   ├── Tags and Data Processing
+   ├── Alarms and Events
+   ├── Recipes and Data Logging
+   └── User Management
+   ↓
+Communication Driver
+   ↓
+Industrial Network
+   ↓
+PLC and Connected Devices
+</code></pre>
+<p>The HMI may also depend on an operating system, local storage, databases, license services, network infrastructure, and time synchronization.</p>
+<p>A fault in any layer can affect application behavior. Effective troubleshooting therefore requires identifying the failing layer instead of treating every visible problem as an HMI hardware failure.</p>
+<h2 id="4-runtime-and-application-startup-health">4. Runtime and application startup health</h2>
+<p>The HMI runtime is the environment that executes the HMI application on the panel or industrial PC.</p>
+<p>Runtime-related problems may include:</p>
+<ul>
+<li>Application fails to start.</li>
+<li>Application starts and then closes unexpectedly.</li>
+<li>Runtime repeatedly restarts.</li>
+<li>Screens remain blank or partially rendered.</li>
+<li>Application freezes during startup.</li>
+<li>Required libraries or components are missing.</li>
+<li>Project files are incompatible with the installed runtime.</li>
+<li>A license or activation requirement prevents normal operation.</li>
+</ul>
+<h3 id="diagnostic-checks">Diagnostic checks</h3>
+<ol>
+<li>Confirm that the HMI operating system or panel has completed startup.</li>
+<li>Check whether the runtime application is running.</li>
+<li>Review error messages and available diagnostic logs.</li>
+<li>Verify the installed runtime version and the project's compatibility.</li>
+<li>Check available RAM and storage capacity.</li>
+<li>Confirm that required files, libraries, and configuration are present.</li>
+<li>Review recent changes, including project downloads, software updates, and configuration modifications.</li>
+<li>Restore or reinstall application components only through an approved procedure.</li>
+</ol>
+<p>Repeatedly restarting an application without identifying the cause can hide useful diagnostic evidence and leave the underlying fault unresolved.</p>
+<h2 id="5-screen-and-navigation-health">5. Screen and navigation health</h2>
+<p>Screen health concerns the correct presentation and operation of the HMI's visual elements.</p>
+<p>Common issues include missing graphics, incorrect text, broken navigation, overlapping objects, invisible controls, and screens that fail to refresh.</p>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Diagnostic approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Blank screen area</td>
+<td>Missing object, rendering problem, or incorrect visibility condition</td>
+<td>Check object properties and runtime diagnostics</td>
+</tr>
+<tr>
+<td>Incorrect value displayed</td>
+<td>Wrong tag mapping, stale data, or scaling error</td>
+<td>Verify the tag source, value, units, and update status</td>
+</tr>
+<tr>
+<td>Navigation button does nothing</td>
+<td>Incorrect event configuration or navigation target</td>
+<td>Check the button action and destination screen</td>
+</tr>
+<tr>
+<td>Screen changes slowly</td>
+<td>Heavy graphics, excessive scripts, or runtime resource limitations</td>
+<td>Examine application workload and runtime performance</td>
+</tr>
+<tr>
+<td>Text or graphics are clipped</td>
+<td>Resolution, scaling, or layout mismatch</td>
+<td>Verify display resolution and object positioning</td>
+</tr>
+<tr>
+<td>Object appears only sometimes</td>
+<td>Visibility conditions or state-dependent logic</td>
+<td>Inspect the conditions controlling object visibility</td>
+</tr>
+<tr>
+<td>Controls overlap</td>
+<td>Incorrect screen layout or resolution conversion</td>
+<td>Review screen dimensions and object coordinates</td>
+</tr>
+</tbody>
+</table>
+<p>A visually correct screen can still contain a serious functional defect. For example, a displayed motor status may be mapped to the wrong PLC tag. Screen verification must include both appearance and data correctness.</p>
+<h2 id="6-tag-and-data-health">6. Tag and data health</h2>
+<p>An HMI tag connects an application object to a data source, such as a PLC variable, internal HMI variable, or database field.</p>
+<p>Data health means that the displayed value is correct, valid, current, and interpreted using the correct engineering units.</p>
+<h3 id="common-data-quality-problems">Common data-quality problems</h3>
+<ul>
+<li>Incorrect PLC address or symbolic tag mapping.</li>
+<li>Tag name changed in the PLC project without updating the HMI.</li>
+<li>Data type mismatch.</li>
+<li>Incorrect scaling or engineering-unit conversion.</li>
+<li>Stale values after communication loss.</li>
+<li>Invalid values displayed as if they were current.</li>
+<li>Internal HMI variables not updated as intended.</li>
+<li>Incorrect array indexing or data-block offsets.</li>
+<li>Excessive polling that increases communication or runtime load.</li>
+</ul>
+<h3 id="example-analog-scaling">Example: Analog scaling</h3>
+<p>Suppose a PLC receives a 4–20 mA signal representing a pressure range of 0–10 bar.</p>
+<p>The normalized pressure is:</p>
+<div class="math-display">\[ P = \frac{I-4}{20-4}\times 10 \]</div>
+<p>Where <span class="math-inline">\(I\)</span> is the measured current in mA and <span class="math-inline">\(P\)</span> is the pressure in bar.</p>
+<p>If the current is 12 mA:</p>
+<div class="math-display">\[ P = \frac{12-4}{16}\times 10 = 5\text{ bar} \]</div>
+<p>If the HMI displays 50 bar, the problem could be incorrect scaling, a wrong tag, an incorrect engineering range, or a mismatch between the PLC's value representation and the HMI's interpretation.</p>
+<p>The displayed value must be checked against the PLC value, signal range, and intended units.</p>
+<h2 id="7-data-freshness-and-stale-values">7. Data freshness and stale values</h2>
+<p>A displayed value is not necessarily current merely because it remains visible on the screen.</p>
+<p>For example, a motor's running indicator may remain green after communication with the PLC has failed if the HMI does not invalidate stale data.</p>
+<p>Application health should therefore include the validity and freshness of data.</p>
+<p>Useful checks include:</p>
+<ul>
+<li>Communication status for the relevant device.</li>
+<li>Last successful data update, where supported.</li>
+<li>Tag quality or validity indicators.</li>
+<li>Configured communication timeout.</li>
+<li>Whether the HMI distinguishes current, invalid, and stale values.</li>
+<li>Whether communication recovery refreshes the displayed state correctly.</li>
+</ul>
+<p>A robust application should make communication failures visible and avoid presenting old values as confirmed current conditions.</p>
+<h2 id="8-alarm-and-event-health">8. Alarm and event health</h2>
+<p>HMI alarms communicate abnormal operating conditions, equipment faults, and events requiring operator attention.</p>
+<p>Application health requires more than checking whether an alarm screen opens. The complete alarm lifecycle must behave correctly.</p>
+<p>Typical checks include:</p>
+<ul>
+<li>Alarm conditions are mapped to the correct PLC tags.</li>
+<li>Alarm activation and clearing follow the intended logic.</li>
+<li>Alarm text identifies the actual equipment and fault.</li>
+<li>Alarm priority is assigned appropriately.</li>
+<li>Timestamps are meaningful and consistent.</li>
+<li>Acknowledgement works as designed.</li>
+<li>Historical alarm records are retained where required.</li>
+<li>Communication failures do not silently suppress important indications.</li>
+<li>Alarm lists and filters display the correct events.</li>
+</ul>
+<h3 id="important-distinctions">Important distinctions</h3>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Alarm condition</td>
+<td>The process or equipment state that triggers an alarm</td>
+</tr>
+<tr>
+<td>Alarm activation</td>
+<td>The HMI or alarm system registers the alarm condition</td>
+</tr>
+<tr>
+<td>Acknowledgement</td>
+<td>An operator confirms awareness of the alarm</td>
+</tr>
+<tr>
+<td>Alarm clearing</td>
+<td>The underlying alarm condition returns to the configured normal state</td>
+</tr>
+<tr>
+<td>Alarm history</td>
+<td>A retained record of alarm occurrences and relevant events</td>
+</tr>
+</tbody>
+</table>
+<p>Acknowledging an alarm does not necessarily clear the underlying fault. The HMI should represent these states correctly.</p>
+<h2 id="9-hmi-to-plc-command-health">9. HMI-to-PLC command health</h2>
+<p>An HMI button typically generates a request that is transmitted to the PLC. The PLC then evaluates the request according to its logic, interlocks, operating mode, and current machine state.</p>
+<p>A command can fail at several different points:</p>
+<ol>
+<li>The touchscreen does not register the input.</li>
+<li>The HMI application does not execute the configured action.</li>
+<li>The command is not written to the intended PLC tag.</li>
+<li>The PLC receives the command but rejects it because a permissive is missing.</li>
+<li>The PLC issues an output command, but the connected device does not respond.</li>
+<li>The device operates, but feedback does not return correctly to the HMI.</li>
+</ol>
+<p>For example, a conveyor Start button may work correctly while the PLC refuses to start the conveyor because a guard-door interlock is open.</p>
+<p>The HMI must distinguish between command requested, command accepted, and machine operation confirmed.</p>
+<p>Safety-related actions must follow the approved safety architecture. A normal HMI command must not be used to bypass safety interlocks or substitute for a safety-rated function.</p>
+<h2 id="10-performance-and-responsiveness">10. Performance and responsiveness</h2>
+<p>Application performance describes how quickly and consistently the HMI responds to operator actions and updates process information.</p>
+<p>Factors affecting performance include:</p>
+<ul>
+<li>CPU utilization on the HMI or industrial PC.</li>
+<li>Available RAM.</li>
+<li>Storage speed and free capacity.</li>
+<li>Number of active screens and graphical objects.</li>
+<li>Script execution time.</li>
+<li>Tag polling frequency.</li>
+<li>Communication latency.</li>
+<li>Alarm and trend processing workload.</li>
+<li>Database or network dependencies.</li>
+<li>Operating-system and runtime faults.</li>
+</ul>
+<h3 id="performance-indicators">Performance indicators</h3>
+<table>
+<thead>
+<tr>
+<th>Indicator</th>
+<th>What it measures</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Runtime availability</td>
+<td>Whether the application remains operational</td>
+<td>Identifies crashes and unexpected restarts</td>
+</tr>
+<tr>
+<td>Screen response time</td>
+<td>Time taken for a screen or navigation action to complete</td>
+<td>Measures operator-interface responsiveness</td>
+</tr>
+<tr>
+<td>Tag update latency</td>
+<td>Delay between a source value changing and the HMI reflecting it</td>
+<td>Identifies stale or delayed process information</td>
+</tr>
+<tr>
+<td>Communication error rate</td>
+<td>Frequency of failed or timed-out exchanges</td>
+<td>Highlights connectivity or configuration problems</td>
+</tr>
+<tr>
+<td>CPU utilization</td>
+<td>Processor workload</td>
+<td>Helps identify resource saturation</td>
+</tr>
+<tr>
+<td>RAM usage</td>
+<td>Working memory consumption</td>
+<td>Helps identify memory pressure</td>
+</tr>
+<tr>
+<td>Free storage</td>
+<td>Remaining usable persistent storage</td>
+<td>Identifies risk of failed writes or startup problems</td>
+</tr>
+<tr>
+<td>Application restart count</td>
+<td>Number of unexpected restarts over a period</td>
+<td>Highlights instability</td>
+</tr>
+<tr>
+<td>Alarm processing delay</td>
+<td>Delay between the source condition and the expected alarm indication</td>
+<td>Helps evaluate alarm responsiveness</td>
+</tr>
+</tbody>
+</table>
+<p>Targets should be defined according to the machine's requirements and the HMI manufacturer's specifications. There is no single response-time threshold appropriate for every HMI application.</p>
+<h2 id="11-storage-and-data-persistence-health">11. Storage and data persistence health</h2>
+<p>HMI application health also depends on whether required information can be stored and retrieved correctly.</p>
+<p>Potential problems include:</p>
+<ul>
+<li>Full internal storage.</li>
+<li>Corrupted application or configuration files.</li>
+<li>Failed recipe writes.</li>
+<li>Missing historical records.</li>
+<li>Database connection failures.</li>
+<li>Incorrect log-retention configuration.</li>
+<li>Storage-device degradation.</li>
+<li>Power interruption during a critical write.</li>
+</ul>
+<p>Maintenance checks should verify that required recipes can be saved, application configuration is preserved, and logs are available according to the retention policy.</p>
+<p>Before deleting files, clearing logs, formatting media, or reinstalling the runtime, preserve required data and follow the approved recovery procedure.</p>
+<h2 id="12-user-access-and-application-security">12. User access and application security</h2>
+<p>The HMI may expose machine commands, production settings, maintenance functions, and administrative controls.</p>
+<p>Application health includes ensuring that these functions are accessible only to the intended users.</p>
+<p>Verify that:</p>
+<ul>
+<li>User roles and permissions operate correctly.</li>
+<li>Unauthorized users cannot access restricted functions.</li>
+<li>Administrative access is controlled.</li>
+<li>Default or obsolete accounts are handled according to site policy.</li>
+<li>User-management configuration is backed up securely where supported.</li>
+<li>Application changes are traceable.</li>
+<li>Security-related faults are recorded and investigated.</li>
+</ul>
+<p>An application can be technically operational while still being unhealthy from a security perspective if unauthorized users can change machine parameters or access maintenance controls.</p>
+<h2 id="13-hmi-application-health-monitoring">13. HMI application health monitoring</h2>
+<p>Monitoring can be performed through built-in diagnostics, engineering software, operating-system tools, event logs, and external monitoring systems.</p>
+<p>A practical monitoring structure is:</p>
+<pre><code>HMI Health Monitoring
+        ↓
+Runtime Status
+        ↓
+Screen and Tag Diagnostics
+        ↓
+PLC Communication Status
+        ↓
+Alarms and Event Processing
+        ↓
+Storage and Resource Usage
+        ↓
+Health Record and Corrective Action
+</code></pre>
+<p>Possible monitoring methods include:</p>
+<ul>
+<li>Manufacturer-provided runtime diagnostics.</li>
+<li>HMI system alarms and logs.</li>
+<li>Engineering software online diagnostics.</li>
+<li>Operating-system performance monitoring for PC-based HMIs.</li>
+<li>PLC communication status tags.</li>
+<li>Database and historian connectivity checks.</li>
+<li>Centralized maintenance dashboards.</li>
+</ul>
+<p>External monitoring must not overload the HMI, interfere with production, or expose control-system services unnecessarily.</p>
+<h2 id="14-systematic-troubleshooting-procedure">14. Systematic troubleshooting procedure</h2>
+<p>When an HMI application behaves abnormally, isolate the fault before changing the project.</p>
+<h3 id="step-1-define-the-symptom">Step 1: Define the symptom</h3>
+<p>Record the exact behavior, affected screens, time of occurrence, error messages, and whether the fault is continuous or intermittent.</p>
+<h3 id="step-2-check-the-basic-system-state">Step 2: Check the basic system state</h3>
+<p>Verify panel power, runtime status, display response, available storage, and system diagnostics.</p>
+<h3 id="step-3-check-application-behavior">Step 3: Check application behavior</h3>
+<p>Test navigation, screen objects, scripts, alarms, recipes, and other functions that do not depend on the PLC where possible.</p>
+<h3 id="step-4-check-data-and-communication">Step 4: Check data and communication</h3>
+<p>Verify PLC connection status, tag mappings, data quality, update behavior, and communication errors.</p>
+<h3 id="step-5-check-plc-side-behavior">Step 5: Check PLC-side behavior</h3>
+<p>If a command reaches the PLC, inspect permissives, interlocks, mode conditions, output commands, and feedback. Follow the required authorization and safety procedures.</p>
+<h3 id="step-6-check-recent-changes">Step 6: Check recent changes</h3>
+<p>Review application downloads, project revisions, firmware changes, network modifications, operating-system updates, and configuration changes.</p>
+<h3 id="step-7-correct-and-verify">Step 7: Correct and verify</h3>
+<p>Apply the approved correction, test the affected functions, confirm that unrelated functions remain operational, and record the result.</p>
+<p>Do not immediately reload the HMI project or reboot the complete system. Either action may remove useful evidence, disrupt production, or conceal the underlying fault.</p>
+<h2 id="15-practical-industrial-example">15. Practical industrial example</h2>
+<p>Consider a production-line HMI that displays conveyor speed, motor status, and fault alarms. Operators report that the screen is responsive, but the speed value remains unchanged even while the conveyor speed varies.</p>
+<p>A structured diagnosis proceeds as follows:</p>
+<ol>
+<li>Confirm whether the physical conveyor speed is actually changing.</li>
+<li>Check the corresponding PLC variable online using the approved engineering tool.</li>
+<li>Compare the PLC value with the HMI tag mapping.</li>
+<li>Check whether the HMI tag is updating and whether its data quality is valid.</li>
+<li>Verify scaling, engineering units, and display formatting.</li>
+<li>Inspect communication diagnostics if the PLC value is correct but the HMI remains stale.</li>
+<li>Correct the identified mapping, scaling, or communication issue.</li>
+<li>Verify that the HMI updates correctly over the required operating range.</li>
+</ol>
+<p>If the PLC value changes correctly but the HMI tag points to an obsolete address, the fault is in the HMI configuration, not the sensor or drive.</p>
+<p>This distinction avoids unnecessary replacement of healthy field equipment.</p>
+<h2 id="16-preventive-maintenance-checklist">16. Preventive maintenance checklist</h2>
+<h3 id="routine-application-checks">Routine application checks</h3>
+<ul>
+<li>Confirm that the HMI runtime starts and remains operational.</li>
+<li>Verify screen navigation and essential operator controls.</li>
+<li>Check that displayed values are current and correctly scaled.</li>
+<li>Verify PLC communication and tag quality.</li>
+<li>Check alarm activation, acknowledgement, and clearing.</li>
+<li>Confirm recipe saving and required data logging.</li>
+<li>Review runtime errors and unexpected restarts.</li>
+<li>Check free RAM and persistent storage where supported.</li>
+</ul>
+<h3 id="periodic-engineering-checks">Periodic engineering checks</h3>
+<ul>
+<li>Compare the installed application with the approved project revision.</li>
+<li>Verify HMI project backups and recovery documentation.</li>
+<li>Check firmware, runtime, and engineering-software compatibility.</li>
+<li>Review user permissions and application security.</li>
+<li>Check performance trends and recurring faults.</li>
+<li>Document changes and corrective actions in the approved maintenance system.</li>
+</ul>
+<h2 id="17-key-principles">17. Key principles</h2>
+<ul>
+<li>HMI application health covers runtime, screens, data, communication, alarms, storage, performance, and security.</li>
+<li>A responsive display does not prove that process information is current or correct.</li>
+<li>HMI requests, PLC acceptance, and actual machine feedback must be distinguished.</li>
+<li>Troubleshooting should isolate the display, application, communication, PLC logic, and field-device layers.</li>
+<li>Project restoration and application changes must follow backup, authorization, and validation procedures.</li>
+<li>Effective application health monitoring reduces avoidable downtime and helps prevent misleading operator indications.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\18_PM\02_HMI\05_Comm - Communication</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

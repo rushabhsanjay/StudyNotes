@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Industrial Scanner Backup and Disaster Recovery</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Industrial Scanner Backup and Disaster Recovery</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and scope</a></li>
+<li><a href="#2-scanner-system-architecture">2. Scanner system architecture</a></li>
+<li><a href="#3-essential-terminology">3. Essential terminology</a></li>
+<li><a href="#4-scanner-types-and-backup-differences">4. Scanner types and backup differences</a></li>
+<li><a href="#5-what-must-be-backed-up">5. What must be backed up?</a></li>
+<li><a href="#6-scanner-backup-methods">6. Scanner backup methods</a><ul>
+<li><a href="#61-device-configuration-export">6.1 Device configuration export</a></li>
+<li><a href="#62-parameter-report">6.2 Parameter report</a></li>
+<li><a href="#63-plc-and-engineering-project-backup">6.3 PLC and engineering-project backup</a></li>
+<li><a href="#64-firmware-and-software-recovery">6.4 Firmware and software recovery</a></li>
+</ul>
+</li>
+<li><a href="#7-scanner-configuration-parameters">7. Scanner configuration parameters</a><ul>
+<li><a href="#71-symbology-and-decoding-settings">7.1 Symbology and decoding settings</a></li>
+<li><a href="#72-trigger-and-timing-configuration">7.2 Trigger and timing configuration</a></li>
+<li><a href="#73-data-formatting">7.3 Data formatting</a></li>
+<li><a href="#74-match-code-and-validation-rules">7.4 Match-code and validation rules</a></li>
+</ul>
+</li>
+<li><a href="#8-network-and-plc-integration">8. Network and PLC integration</a><ul>
+<li><a href="#81-common-integration-methods">8.1 Common integration methods</a></li>
+<li><a href="#82-plc-handshake">8.2 PLC handshake</a></li>
+<li><a href="#83-recovery-verification">8.3 Recovery verification</a></li>
+</ul>
+</li>
+<li><a href="#9-scanner-recovery-and-restoration-procedure">9. Scanner recovery and restoration procedure</a><ul>
+<li><a href="#91-pre-restoration-checklist">9.1 Pre-restoration checklist</a></li>
+<li><a href="#92-restoration-sequence">9.2 Restoration sequence</a></li>
+<li><a href="#93-scanner-replacement">9.3 Scanner replacement</a></li>
+</ul>
+</li>
+<li><a href="#10-common-scanner-disaster-recovery-scenarios">10. Common scanner disaster-recovery scenarios</a><ul>
+<li><a href="#101-scanner-configuration-lost">10.1 Scanner configuration lost</a></li>
+<li><a href="#102-scanner-produces-frequent-no-reads">10.2 Scanner produces frequent no-reads</a></li>
+<li><a href="#103-wrong-code-is-accepted">10.3 Wrong code is accepted</a></li>
+<li><a href="#104-scanner-communicates-but-the-plc-receives-incorrect-data">10.4 Scanner communicates but the PLC receives incorrect data</a></li>
+<li><a href="#105-scanner-firmware-update-causes-failure">10.5 Scanner firmware update causes failure</a></li>
+<li><a href="#106-scanner-replacement-with-an-obsolete-model-successor">10.6 Scanner replacement with an obsolete-model successor</a></li>
+</ul>
+</li>
+<li><a href="#11-scanner-backup-troubleshooting">11. Scanner backup troubleshooting</a></li>
+<li><a href="#12-practical-maintenance-implementation">12. Practical maintenance implementation</a><ul>
+<li><a href="#121-scanner-backup-register">12.1 Scanner backup register</a></li>
+<li><a href="#122-suggested-folder-structure">12.2 Suggested folder structure</a></li>
+<li><a href="#123-work-order-integration">12.3 Work-order integration</a></li>
+</ul>
+</li>
+<li><a href="#13-recovery-drills-and-audit">13. Recovery drills and audit</a><ul>
+<li><a href="#131-recovery-drill">13.1 Recovery drill</a></li>
+<li><a href="#132-audit-checklist">13.2 Audit checklist</a></li>
+</ul>
+</li>
+<li><a href="#14-scanner-backup-management-kpis">14. Scanner backup management KPIs</a></li>
+<li><a href="#15-interview-questions-and-technical-answers">15. Interview questions and technical answers</a></li>
+<li><a href="#16-final-engineering-principles">16. Final engineering principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-and-scope">1. Purpose and scope</h2>
+<p>Industrial scanners are used to identify products, read barcodes and 2D codes, measure dimensions, detect objects, and support traceability. In manufacturing, scanner systems may be connected to PLCs, robots, conveyors, vision controllers, MES, ERP, and quality databases.</p>
+<p>Scanner backup and disaster recovery preserve the configuration needed to restore correct identification and data exchange after device failure, configuration loss, accidental changes, firmware updates, controller replacement, or obsolescence migration.</p>
+<p>A scanner may power up and communicate while still reading incorrectly because its code format, trigger mode, decoder settings, communication protocol, device mapping, or application configuration has changed. Recovery must verify both the scanner configuration and the complete production transaction.</p>
+<p>The objectives are to:</p>
+<ul>
+<li>Preserve scanner configuration and application parameters.</li>
+<li>Maintain barcode and 2D-code reading performance.</li>
+<li>Preserve trigger, timing, and decoding settings.</li>
+<li>Restore PLC, robot, and network communication.</li>
+<li>Maintain product identification and traceability.</li>
+<li>Preserve firmware, software, and configuration compatibility.</li>
+<li>Verify read-result handling, reject logic, and fault reporting.</li>
+<li>Reduce downtime following scanner or controller failure.</li>
+<li>Support replacement and migration of obsolete scanner models.</li>
+</ul>
+<p>Core principle: Scanner recovery is complete only when the device reads the required codes correctly and the production system receives and processes the results correctly.</p>
+<h2 id="2-scanner-system-architecture">2. Scanner system architecture</h2>
+<pre><code>Product / Label / Barcode / 2D Code
+                  ↓
+         Scanner Optics or Sensor
+                  ↓
+       Decoder / Scanner Controller
+                  ├── Device Configuration
+                  ├── Code Types and Decoding
+                  ├── Trigger and Timing Settings
+                  ├── Communication Parameters
+                  └── Read Result and Diagnostics
+                            ↓
+                PLC / Industrial Network
+                            ↓
+          HMI / MES / ERP / Traceability
+                            ↓
+         Routing / Sorting / Reject Mechanism
+
+Supporting systems:
+Engineering software, configuration files, firmware,
+network settings, reference labels, backup repository,
+device manuals, and recovery procedures
+</code></pre>
+<p>The architecture varies by scanner type. A handheld scanner may store settings internally and communicate through USB or serial interfaces. A fixed industrial barcode reader may use Ethernet-based protocols, digital I/O, and a dedicated engineering application. A laser scanner, RFID reader, safety laser scanner, and dimensional laser measurement sensor have different backup and validation requirements.</p>
+<h2 id="3-essential-terminology">3. Essential terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+<th>Industrial example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Barcode scanner</td>
+<td>Device that reads encoded information from a printed or marked symbol</td>
+<td>Reading a component label</td>
+</tr>
+<tr>
+<td>1D barcode</td>
+<td>Linear arrangement of bars and spaces</td>
+<td>Code 128</td>
+</tr>
+<tr>
+<td>2D code</td>
+<td>Two-dimensional encoded symbol</td>
+<td>Data Matrix or QR code</td>
+</tr>
+<tr>
+<td>Decoder</td>
+<td>Software or hardware that interprets the captured symbol</td>
+<td>Decoding a Data Matrix</td>
+</tr>
+<tr>
+<td>Trigger</td>
+<td>Signal or event that initiates a read</td>
+<td>PLC sensor detects a part</td>
+</tr>
+<tr>
+<td>Read rate</td>
+<td>Number of successful reads relative to attempted reads under defined conditions</td>
+<td>Successful reads per 1,000 attempts</td>
+</tr>
+<tr>
+<td>No-read</td>
+<td>Failure to obtain a valid code result</td>
+<td>Damaged label cannot be decoded</td>
+</tr>
+<tr>
+<td>Misread</td>
+<td>Incorrect or unintended data is returned</td>
+<td>Wrong code accepted for a part</td>
+</tr>
+<tr>
+<td>Good-read output</td>
+<td>Signal indicating a valid read according to configured rules</td>
+<td>PLC receives read-complete status</td>
+</tr>
+<tr>
+<td>No-read output</td>
+<td>Signal indicating no valid result was obtained</td>
+<td>PLC activates a reject sequence</td>
+</tr>
+<tr>
+<td>Symbology</td>
+<td>Barcode format and encoding rules</td>
+<td>Code 128, Data Matrix</td>
+</tr>
+<tr>
+<td>Check digit</td>
+<td>Character used to help detect certain data-entry or decoding errors</td>
+<td>Barcode validation</td>
+</tr>
+<tr>
+<td>Match code</td>
+<td>Expected code or rule used to validate a decoded result</td>
+<td>Comparing the read part ID with an order</td>
+</tr>
+<tr>
+<td>Protocol</td>
+<td>Rules governing communication between devices</td>
+<td>PROFINET or EtherNet/IP</td>
+</tr>
+<tr>
+<td>Device profile</td>
+<td>Configuration describing a device's supported data and behavior</td>
+<td>PLC device integration</td>
+</tr>
+<tr>
+<td>Firmware</td>
+<td>Software embedded in the scanner</td>
+<td>Scanner operating firmware</td>
+</tr>
+<tr>
+<td>Configuration export</td>
+<td>Saved copy of supported scanner settings</td>
+<td>Device parameter backup</td>
+</tr>
+<tr>
+<td>Read-quality metric</td>
+<td>Measure of symbol or reading quality, depending on scanner capability</td>
+<td>Decode quality or grading result</td>
+</tr>
+<tr>
+<td>RFID reader</td>
+<td>Device that communicates with radio-frequency identification tags</td>
+<td>Reading a pallet tag</td>
+</tr>
+<tr>
+<td>Safety laser scanner</td>
+<td>Safety device that monitors protective fields and hazardous zones</td>
+<td>Machine access protection</td>
+</tr>
+</tbody>
+</table>
+<p>A safety laser scanner is not equivalent to a barcode reader. Its safety configuration and validation requirements are substantially different and must follow the approved safety process.</p>
+<h2 id="4-scanner-types-and-backup-differences">4. Scanner types and backup differences</h2>
+<table>
+<thead>
+<tr>
+<th>Scanner type</th>
+<th>Typical application</th>
+<th>Main backup considerations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Handheld barcode scanner</td>
+<td>Manual part identification</td>
+<td>Configuration profiles, symbology settings, interface mode, and pairing data where applicable</td>
+</tr>
+<tr>
+<td>Fixed industrial barcode reader</td>
+<td>Conveyor and assembly-line identification</td>
+<td>Device configuration, trigger settings, code rules, communication, and firmware</td>
+</tr>
+<tr>
+<td>2D code reader</td>
+<td>Data Matrix or QR identification</td>
+<td>Decoder settings, code quality rules, application configuration, and communication</td>
+</tr>
+<tr>
+<td>Laser barcode scanner</td>
+<td>Reading linear codes at speed</td>
+<td>Scan configuration, trigger timing, interface settings, and device-specific parameters</td>
+</tr>
+<tr>
+<td>RFID reader</td>
+<td>Reading electronic tags</td>
+<td>Antenna configuration, tag protocol, read zones, communication, and application settings</td>
+</tr>
+<tr>
+<td>Laser measurement scanner</td>
+<td>Distance or profile measurement</td>
+<td>Calibration, measurement configuration, coordinate data, and application settings</td>
+</tr>
+<tr>
+<td>Safety laser scanner</td>
+<td>Protective-field monitoring</td>
+<td>Approved safety configuration, validation records, and manufacturer-specific recovery procedure</td>
+</tr>
+</tbody>
+</table>
+<p>The exact backup method depends on the device model and firmware. Do not apply a barcode-reader recovery procedure to an RFID, measurement, or safety scanner without confirming that it is appropriate.</p>
+<h2 id="5-what-must-be-backed-up">5. What must be backed up?</h2>
+<p>The required backup scope depends on whether configuration is stored inside the scanner, in an engineering workstation, in a PLC project, or in a central management system.</p>
+<table>
+<thead>
+<tr>
+<th>Backup item</th>
+<th>Typical contents</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Device configuration</td>
+<td>Supported scanner parameters and operating mode</td>
+<td>Restores expected behavior</td>
+</tr>
+<tr>
+<td>Decoder settings</td>
+<td>Enabled code types, decoding options, and validation rules</td>
+<td>Preserves identification capability</td>
+</tr>
+<tr>
+<td>Trigger configuration</td>
+<td>Trigger source, timing, and operating mode</td>
+<td>Ensures correct read timing</td>
+</tr>
+<tr>
+<td>Communication settings</td>
+<td>IP address, protocol, ports, and interface parameters</td>
+<td>Restores connectivity</td>
+</tr>
+<tr>
+<td>PLC integration</td>
+<td>Device profile, I/O mapping, and data layout</td>
+<td>Restores control-system communication</td>
+</tr>
+<tr>
+<td>Read-result handling</td>
+<td>Good-read, no-read, timeout, and output logic</td>
+<td>Preserves production sequence</td>
+</tr>
+<tr>
+<td>Data formatting</td>
+<td>Prefixes, suffixes, delimiters, and output formats</td>
+<td>Maintains downstream compatibility</td>
+</tr>
+<tr>
+<td>Match-code rules</td>
+<td>Expected data, comparison rules, and validation logic</td>
+<td>Prevents incorrect part identification</td>
+</tr>
+<tr>
+<td>Firmware information</td>
+<td>Installed firmware version and approved upgrade package</td>
+<td>Supports compatible recovery</td>
+</tr>
+<tr>
+<td>Engineering software</td>
+<td>Configuration utility and required version</td>
+<td>Supports maintenance and restoration</td>
+</tr>
+<tr>
+<td>License information</td>
+<td>Supported options and activation requirements</td>
+<td>Preserves software functionality</td>
+</tr>
+<tr>
+<td>Network configuration</td>
+<td>Device address, communication settings, and relevant switch records</td>
+<td>Restores network integration</td>
+</tr>
+<tr>
+<td>Reference codes</td>
+<td>Approved labels, barcodes, and 2D-code samples</td>
+<td>Supports functional verification</td>
+</tr>
+<tr>
+<td>Diagnostics</td>
+<td>Fault history and relevant performance records</td>
+<td>Supports failure investigation</td>
+</tr>
+<tr>
+<td>Physical setup records</td>
+<td>Mounting position, orientation, distance, and lighting where applicable</td>
+<td>Supports repeatable reading</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Wiring, interface specifications, manuals, and recovery procedures</td>
+<td>Supports maintenance</td>
+</tr>
+<tr>
+<td>Validation records</td>
+<td>Read-rate checks, code validation, and acceptance-test results</td>
+<td>Establishes recovery evidence</td>
+</tr>
+</tbody>
+</table>
+<p>Some scanners do not support exporting every parameter. In such cases, preserve the available device configuration along with a controlled parameter report, screenshots where permitted, engineering files, and documented manual settings.</p>
+<h2 id="6-scanner-backup-methods">6. Scanner backup methods</h2>
+<h3 id="61-device-configuration-export">6.1 Device configuration export</h3>
+<p>A device configuration export is usually the primary backup for a fixed industrial scanner.</p>
+<p>It may preserve:</p>
+<ul>
+<li>Enabled symbologies.</li>
+<li>Decoder settings.</li>
+<li>Trigger modes.</li>
+<li>Communication parameters.</li>
+<li>Output formatting.</li>
+<li>Read-result rules.</li>
+<li>Supported application settings.</li>
+</ul>
+<p>Recommended procedure:</p>
+<ol>
+<li>Identify the scanner model, serial number, firmware, and installed options.</li>
+<li>Connect using the supported engineering software or device interface.</li>
+<li>Retrieve the current configuration.</li>
+<li>Confirm whether the retrieved settings match the approved production revision.</li>
+<li>Export the configuration using the supported method.</li>
+<li>Save the file with the asset ID, revision, and date.</li>
+<li>Verify that the file can be opened or reviewed using compatible software.</li>
+<li>Record any parameters that are not included in the export.</li>
+</ol>
+<p>A configuration export is not necessarily a full device image. It may omit firmware, network infrastructure settings, PLC logic, or other externally stored dependencies.</p>
+<h3 id="62-parameter-report">6.2 Parameter report</h3>
+<p>A parameter report is a readable record of scanner settings. It is particularly useful when a device does not provide a complete configuration export.</p>
+<p>Record, where applicable:</p>
+<ul>
+<li>Scanner identification.</li>
+<li>Firmware and software versions.</li>
+<li>Enabled code types.</li>
+<li>Trigger and timing settings.</li>
+<li>Exposure or illumination parameters for imaging readers.</li>
+<li>Read-quality rules.</li>
+<li>Communication configuration.</li>
+<li>Data format and output mapping.</li>
+<li>Match-code and validation rules.</li>
+<li>Relevant error-handling behavior.</li>
+</ul>
+<p>A parameter report helps rebuild a configuration, but manual entry can introduce mistakes. Verify all critical settings after restoration.</p>
+<h3 id="63-plc-and-engineering-project-backup">6.3 PLC and engineering-project backup</h3>
+<p>Scanner behavior may depend on PLC logic and the engineering project.</p>
+<p>Preserve:</p>
+<ul>
+<li>PLC program and hardware configuration.</li>
+<li>Scanner device profile.</li>
+<li>I/O mapping.</li>
+<li>Network configuration.</li>
+<li>Trigger and handshake logic.</li>
+<li>Read-result data structure.</li>
+<li>Timeout and retry logic.</li>
+<li>Fault and reject handling.</li>
+<li>Relevant HMI screens and diagnostic tags.</li>
+</ul>
+<p>A scanner configuration can be correct while the PLC interprets the returned data incorrectly. Backup and recovery must include both sides of the interface.</p>
+<h3 id="64-firmware-and-software-recovery">6.4 Firmware and software recovery</h3>
+<p>Firmware and engineering software must be compatible with the scanner hardware and the approved production configuration.</p>
+<p>Preserve:</p>
+<ul>
+<li>Firmware version and approved installation package where permitted.</li>
+<li>Engineering software installer and version.</li>
+<li>Required drivers and device libraries.</li>
+<li>License or activation recovery information.</li>
+<li>Compatibility notes.</li>
+<li>Upgrade and downgrade restrictions.</li>
+<li>Approved restoration instructions.</li>
+</ul>
+<p>Do not upgrade firmware simply because a newer version exists. Changes in decoding behavior, communication, or configuration formats may affect production.</p>
+<h2 id="7-scanner-configuration-parameters">7. Scanner configuration parameters</h2>
+<h3 id="71-symbology-and-decoding-settings">7.1 Symbology and decoding settings</h3>
+<p>A scanner may support Code 128, Code 39, EAN/UPC, Interleaved 2 of 5, Data Matrix, QR Code, and other formats.</p>
+<p>Preserve the required symbologies and relevant restrictions, including:</p>
+<ul>
+<li>Enabled and disabled code types.</li>
+<li>Minimum and maximum data length.</li>
+<li>Check-digit validation.</li>
+<li>Character restrictions.</li>
+<li>Code quality requirements.</li>
+<li>Multi-code selection rules.</li>
+<li>Duplicate-code handling.</li>
+<li>Expected code position or region, where supported.</li>
+</ul>
+<p>Enabling every available symbology is not always desirable. It may increase the chance of accepting an unintended code in an environment containing several labels.</p>
+<h3 id="72-trigger-and-timing-configuration">7.2 Trigger and timing configuration</h3>
+<p>The trigger determines when the scanner attempts to read a code.</p>
+<p>Common trigger methods include:</p>
+<ul>
+<li>PLC digital input.</li>
+<li>Photoelectric sensor.</li>
+<li>Fieldbus command.</li>
+<li>Ethernet command.</li>
+<li>Continuous reading.</li>
+<li>Presentation or manual trigger.</li>
+<li>Encoder-based or position-synchronized trigger, where supported.</li>
+</ul>
+<p>Verify trigger source, polarity, timing, exposure or acquisition timing, timeout, and trigger-reset behavior.</p>
+<p>For example, a conveyor sensor may trigger the reader before a label enters the field of view. The scanner may be healthy but consistently return no-read results because the trigger position or delay is incorrect.</p>
+<h3 id="73-data-formatting">7.3 Data formatting</h3>
+<p>Scanner output may include prefixes, suffixes, delimiters, or status fields.</p>
+<p>Examples include:</p>
+<ul>
+<li>Prefix identifying the source station.</li>
+<li>Suffix indicating end of message.</li>
+<li>Carriage return or line feed.</li>
+<li>Data-length information.</li>
+<li>Read-status information.</li>
+<li>Structured field formatting.</li>
+</ul>
+<p>If a scanner is configured to append a different terminator after recovery, the PLC or PC may fail to recognize the message boundary. Verify the entire data format, not just the decoded characters.</p>
+<h3 id="74-match-code-and-validation-rules">7.4 Match-code and validation rules</h3>
+<p>Some systems compare the scanned value against an expected product ID, order number, recipe, or process step.</p>
+<p>Preserve:</p>
+<ul>
+<li>Expected code source.</li>
+<li>Exact or partial matching rules.</li>
+<li>Case sensitivity where relevant.</li>
+<li>Permitted character sets.</li>
+<li>Length and check-digit validation.</li>
+<li>Product-to-code mapping.</li>
+<li>Duplicate or sequence rules.</li>
+<li>Behavior for unexpected or missing codes.</li>
+</ul>
+<p>A successful decode does not necessarily mean the correct product was identified. Decoding and application-level validation are separate checks.</p>
+<h2 id="8-network-and-plc-integration">8. Network and PLC integration</h2>
+<h3 id="81-common-integration-methods">8.1 Common integration methods</h3>
+<table>
+<thead>
+<tr>
+<th>Interface</th>
+<th>Typical use</th>
+<th>Recovery checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Digital I/O</td>
+<td>Trigger and status signals</td>
+<td>Verify wiring, polarity, mapping, and timing</td>
+</tr>
+<tr>
+<td>Serial communication</td>
+<td>Legacy devices and simple data transfer</td>
+<td>Verify baud rate, parity, stop bits, and message format</td>
+</tr>
+<tr>
+<td>TCP/IP</td>
+<td>Scanner-to-PC or controller communication</td>
+<td>Verify addressing, ports, connection handling, and data format</td>
+</tr>
+<tr>
+<td>EtherNet/IP</td>
+<td>Industrial controller integration</td>
+<td>Verify device identity, assemblies, data mapping, and connection settings</td>
+</tr>
+<tr>
+<td>PROFINET</td>
+<td>PLC and device integration</td>
+<td>Verify device name, address, device description, and I/O mapping</td>
+</tr>
+<tr>
+<td>USB or keyboard emulation</td>
+<td>Handheld scanner input</td>
+<td>Verify interface mode, formatting, and host behavior</td>
+</tr>
+<tr>
+<td>RFID-specific interface</td>
+<td>Tag identification and application data</td>
+<td>Verify reader configuration, tag protocol, and data mapping</td>
+</tr>
+</tbody>
+</table>
+<p>These are common examples. Actual capabilities depend on the scanner model and installed options.</p>
+<h3 id="82-plc-handshake">8.2 PLC handshake</h3>
+<p>Typical scanner interfaces use signals such as:</p>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Typical purpose</th>
+<th>Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Trigger</td>
+<td>Requests a scan</td>
+<td>Confirm trigger source and sequence</td>
+</tr>
+<tr>
+<td>Busy</td>
+<td>Indicates a read operation is in progress</td>
+<td>Verify status behavior</td>
+</tr>
+<tr>
+<td>Complete</td>
+<td>Indicates the read attempt has finished</td>
+<td>Verify timing and reset behavior</td>
+</tr>
+<tr>
+<td>Good read</td>
+<td>Indicates a valid decoded result</td>
+<td>Test with approved codes</td>
+</tr>
+<tr>
+<td>No read</td>
+<td>Indicates no valid code was decoded</td>
+<td>Test with unreadable or absent codes</td>
+</tr>
+<tr>
+<td>Fault</td>
+<td>Indicates a device or communication fault</td>
+<td>Verify alarm handling</td>
+</tr>
+<tr>
+<td>Data valid</td>
+<td>Indicates result data is ready for use</td>
+<td>Confirm data-valid timing</td>
+</tr>
+<tr>
+<td>Acknowledge</td>
+<td>Confirms the result was received or processed</td>
+<td>Verify handshake completion</td>
+</tr>
+<tr>
+<td>Reset</td>
+<td>Clears a supported status or fault</td>
+<td>Confirm approved reset behavior</td>
+</tr>
+</tbody>
+</table>
+<p>Actual signal names and sequences vary. The device manual and PLC interface specification define the authoritative behavior.</p>
+<h3 id="83-recovery-verification">8.3 Recovery verification</h3>
+<p>After restoring scanner configuration:</p>
+<ol>
+<li>Verify network or physical interface connectivity.</li>
+<li>Confirm the PLC recognizes the scanner.</li>
+<li>Trigger a read using the approved method.</li>
+<li>Check the decoded value against the known reference code.</li>
+<li>Verify result formatting and data type.</li>
+<li>Confirm the PLC reads the correct value.</li>
+<li>Test no-read, timeout, and fault handling.</li>
+<li>Verify the downstream process response.</li>
+<li>Confirm traceability records contain the expected data.</li>
+<li>Save the validated configuration and test results.</li>
+</ol>
+<p>Do not force a production output or bypass a reject sequence simply to demonstrate that communication is working.</p>
+<h2 id="9-scanner-recovery-and-restoration-procedure">9. Scanner recovery and restoration procedure</h2>
+<h3 id="91-pre-restoration-checklist">9.1 Pre-restoration checklist</h3>
+<ul>
+<li>Identify scanner type, model, serial number, and firmware version.</li>
+<li>Retrieve the latest approved device configuration.</li>
+<li>Verify configuration revision and backup scope.</li>
+<li>Confirm compatible engineering software and required licenses.</li>
+<li>Retrieve relevant PLC and network configuration.</li>
+<li>Confirm device addressing and communication requirements.</li>
+<li>Identify the approved reference codes and expected decoded values.</li>
+<li>Record the physical mounting position and trigger arrangement.</li>
+<li>Check the intended recovery method against manufacturer instructions.</li>
+<li>Place the machine in its approved maintenance or commissioning state.</li>
+<li>Determine the required read-performance and functional acceptance tests.</li>
+</ul>
+<h3 id="92-restoration-sequence">9.2 Restoration sequence</h3>
+<ol>
+<li>Diagnose the failure and define the recovery scope.</li>
+<li>Record the existing device identity and fault information.</li>
+<li>Isolate the affected equipment as required by the maintenance procedure.</li>
+<li>Confirm replacement hardware and firmware compatibility.</li>
+<li>Restore the supported scanner configuration.</li>
+<li>Reapply any parameters not included in the configuration export.</li>
+<li>Restore the required network, serial, or industrial communication settings.</li>
+<li>Verify PLC device configuration, I/O mapping, and handshake logic.</li>
+<li>Check trigger position, timing, and physical scanner alignment.</li>
+<li>Verify data formatting, code validation, and match-code rules.</li>
+<li>Test using known reference codes.</li>
+<li>Verify good-read, no-read, timeout, and fault handling.</li>
+<li>Confirm downstream traceability, routing, and reject behavior.</li>
+<li>Record the results and obtain the required release approval.</li>
+<li>Archive the verified final configuration.</li>
+</ol>
+<h3 id="93-scanner-replacement">9.3 Scanner replacement</h3>
+<p>When replacing a failed scanner, compare the old and replacement units for:</p>
+<ul>
+<li>Supported code types and decoding capability.</li>
+<li>Resolution and optical characteristics.</li>
+<li>Working distance and field of view.</li>
+<li>Triggering and timing capability.</li>
+<li>Electrical interface and supply requirements.</li>
+<li>Network protocols and device profiles.</li>
+<li>Data formatting and output behavior.</li>
+<li>Firmware and engineering-software compatibility.</li>
+<li>Mounting arrangement and environmental rating.</li>
+</ul>
+<p>A physically compatible replacement is not necessarily functionally equivalent. Validate its reading performance and interface behavior before production release.</p>
+<h2 id="10-common-scanner-disaster-recovery-scenarios">10. Common scanner disaster-recovery scenarios</h2>
+<h3 id="101-scanner-configuration-lost">10.1 Scanner configuration lost</h3>
+<p>Symptoms: The scanner powers up but has reverted to default settings or no longer reads the required codes.</p>
+<p>Possible causes include configuration reset, failed memory, incorrect replacement device, or an incomplete restore.</p>
+<p>Corrective actions:</p>
+<ol>
+<li>Identify the correct scanner and approved configuration revision.</li>
+<li>Restore the saved configuration using the supported procedure.</li>
+<li>Verify enabled code types, trigger settings, data formatting, and communication.</li>
+<li>Test with approved reference codes.</li>
+<li>Confirm the PLC receives the correct result.</li>
+<li>Save the verified configuration.</li>
+</ol>
+<h3 id="102-scanner-produces-frequent-no-reads">10.2 Scanner produces frequent no-reads</h3>
+<p>Potential causes include:</p>
+<ul>
+<li>Incorrect trigger timing.</li>
+<li>Damaged, dirty, or poorly printed codes.</li>
+<li>Incorrect working distance or scanner alignment.</li>
+<li>Inadequate lighting or exposure for imaging readers.</li>
+<li>Incorrect decoder settings.</li>
+<li>Wrong code type or length restrictions.</li>
+<li>Excessive conveyor speed or insufficient reading time.</li>
+<li>Physical vibration or label-position variation.</li>
+</ul>
+<p>Compare the current settings with the approved baseline. Inspect the physical label and scanner setup before changing decoding parameters.</p>
+<h3 id="103-wrong-code-is-accepted">10.3 Wrong code is accepted</h3>
+<p>A scanner may read a valid code from the wrong label or product.</p>
+<p>Investigate:</p>
+<ul>
+<li>Multiple codes in the scanner's field of view.</li>
+<li>Incorrect code-selection rules.</li>
+<li>Missing match-code validation.</li>
+<li>Wrong product recipe or job selection.</li>
+<li>Incorrect data-length or character restrictions.</li>
+<li>PLC logic that accepts stale or previous results.</li>
+<li>Incorrect association between the read result and the current part.</li>
+</ul>
+<p>Verify both scanner-level decoding and application-level product validation. Where the process requires it, ensure each read result is associated with the correct trigger and product.</p>
+<h3 id="104-scanner-communicates-but-the-plc-receives-incorrect-data">10.4 Scanner communicates but the PLC receives incorrect data</h3>
+<p>Possible causes include:</p>
+<ul>
+<li>Incorrect I/O mapping.</li>
+<li>Wrong protocol or device profile.</li>
+<li>Data type or byte-order mismatch.</li>
+<li>Changed prefix, suffix, or delimiter.</li>
+<li>Incorrect message length.</li>
+<li>Stale data retained from a previous read.</li>
+<li>Trigger and acknowledge sequence mismatch.</li>
+</ul>
+<p>Check the complete path from scanner output through communication mapping to PLC application logic. A green network status indicator is not evidence that the application data is correct.</p>
+<h3 id="105-scanner-firmware-update-causes-failure">10.5 Scanner firmware update causes failure</h3>
+<ul>
+<li>Confirm the installed firmware version.</li>
+<li>Check compatibility with the hardware model and engineering software.</li>
+<li>Review whether the update changed configuration formats or behavior.</li>
+<li>Restore the approved configuration if compatible.</li>
+<li>Follow the manufacturer-supported recovery or rollback procedure.</li>
+<li>Revalidate reading performance and communication.</li>
+</ul>
+<p>Do not downgrade firmware unless the manufacturer supports the procedure for the installed device.</p>
+<h3 id="106-scanner-replacement-with-an-obsolete-model-successor">10.6 Scanner replacement with an obsolete-model successor</h3>
+<ol>
+<li>Record the original scanner's configuration and performance requirements.</li>
+<li>Identify the approved successor and its supported protocols.</li>
+<li>Compare optical, electrical, mechanical, and environmental specifications.</li>
+<li>Review device profiles, PLC mapping, and data formatting.</li>
+<li>Recreate or convert the configuration using the supported method.</li>
+<li>Verify code-reading capability at actual operating speed.</li>
+<li>Test traceability, fault handling, and reject logic.</li>
+<li>Document differences and approve the migration.</li>
+</ol>
+<h2 id="11-scanner-backup-troubleshooting">11. Scanner backup troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Corrective action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Configuration export fails</td>
+<td>Software incompatibility or access issue</td>
+<td>Verify the supported software and access method</td>
+</tr>
+<tr>
+<td>Configuration cannot be loaded</td>
+<td>Different device model or firmware</td>
+<td>Confirm compatibility and conversion requirements</td>
+</tr>
+<tr>
+<td>Scanner reads the wrong code</td>
+<td>Multiple codes or incorrect selection rules</td>
+<td>Restrict selection and verify validation logic</td>
+</tr>
+<tr>
+<td>No-read rate increases</td>
+<td>Poor label quality, timing, alignment, or decoder settings</td>
+<td>Check physical conditions and approved parameters</td>
+</tr>
+<tr>
+<td>PLC receives truncated data</td>
+<td>Incorrect message length or formatting</td>
+<td>Verify protocol and output format</td>
+</tr>
+<tr>
+<td>PLC receives old data</td>
+<td>Stale result handling or incorrect handshake</td>
+<td>Verify trigger-to-result association and data-valid behavior</td>
+</tr>
+<tr>
+<td>Scanner does not trigger</td>
+<td>Incorrect input mapping, polarity, or trigger mode</td>
+<td>Check wiring, configuration, and PLC sequence</td>
+</tr>
+<tr>
+<td>Replacement scanner fails to connect</td>
+<td>Addressing, protocol, device-profile, or compatibility issue</td>
+<td>Verify the complete communication configuration</td>
+</tr>
+<tr>
+<td>Scanner works at low speed but fails in production</td>
+<td>Insufficient read time, vibration, or trigger-position error</td>
+<td>Validate timing and physical installation</td>
+</tr>
+<tr>
+<td>Read results are not traceable</td>
+<td>Incorrect result mapping or database interface</td>
+<td>Check identifiers, logging, and downstream data handling</td>
+</tr>
+<tr>
+<td>Firmware update breaks configuration</td>
+<td>Unsupported version or changed parameter behavior</td>
+<td>Follow the approved recovery procedure</td>
+</tr>
+<tr>
+<td>Scanner reports faults after restore</td>
+<td>Missing dependencies or invalid device settings</td>
+<td>Review diagnostics and compare with the approved configuration</td>
+</tr>
+</tbody>
+</table>
+<h2 id="12-practical-maintenance-implementation">12. Practical maintenance implementation</h2>
+<h3 id="121-scanner-backup-register">12.1 Scanner backup register</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Asset ID</td>
+<td>Plant-approved scanner identifier</td>
+</tr>
+<tr>
+<td>Application</td>
+<td>Part identification, traceability, measurement, or other purpose</td>
+</tr>
+<tr>
+<td>Manufacturer and model</td>
+<td>Exact scanner identification</td>
+</tr>
+<tr>
+<td>Serial number</td>
+<td>Device-specific identification</td>
+</tr>
+<tr>
+<td>Firmware version</td>
+<td>Installed firmware revision</td>
+</tr>
+<tr>
+<td>Engineering software</td>
+<td>Tool name and version</td>
+</tr>
+<tr>
+<td>Configuration revision</td>
+<td>Approved scanner configuration revision</td>
+</tr>
+<tr>
+<td>Code types</td>
+<td>Required barcode or 2D-code formats</td>
+</tr>
+<tr>
+<td>Trigger method</td>
+<td>Sensor, PLC, network command, or other supported method</td>
+</tr>
+<tr>
+<td>Interface</td>
+<td>Digital I/O, serial, TCP/IP, fieldbus, or other interface</td>
+</tr>
+<tr>
+<td>PLC mapping</td>
+<td>Relevant device and result mapping</td>
+</tr>
+<tr>
+<td>Data format</td>
+<td>Approved output structure and delimiters</td>
+</tr>
+<tr>
+<td>Backup date</td>
+<td>Actual backup completion date</td>
+</tr>
+<tr>
+<td>Storage location</td>
+<td>Controlled repository path</td>
+</tr>
+<tr>
+<td>Restore-test date</td>
+<td>Date of latest successful recovery test</td>
+</tr>
+<tr>
+<td>Validation result</td>
+<td>Read-performance and functional test status</td>
+</tr>
+<tr>
+<td>Responsible owner</td>
+<td>Assigned engineering or maintenance role</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Current, overdue, failed, or under review</td>
+</tr>
+</tbody>
+</table>
+<h3 id="122-suggested-folder-structure">12.2 Suggested folder structure</h3>
+<pre><code>SCANNER_BACKUP_SYSTEM/
+    01_ASSET_REGISTER/
+    02_APPROVED_BACKUPS/
+        SCANNER_1059/
+            DEVICE_CONFIGURATION/
+            PARAMETER_REPORTS/
+            FIRMWARE_AND_SOFTWARE/
+            PLC_AND_NETWORK_CONFIGURATION/
+            COMMUNICATION_PROFILES/
+            REFERENCE_CODES/
+            VALIDATION_RESULTS/
+            DIAGNOSTICS/
+            CHANGE_HISTORY/
+            RECOVERY_PROCEDURE/
+    03_INDEPENDENT_RECOVERY_COPIES/
+    04_RESTORE_TEST_RECORDS/
+    05_MIGRATION_RECORDS/
+</code></pre>
+<p>Use the actual asset identifiers and plant-approved naming conventions. Store configuration files and engineering projects in access-controlled locations.</p>
+<h3 id="123-work-order-integration">12.3 Work-order integration</h3>
+<p>For scanner breakdowns and configuration changes:</p>
+<ol>
+<li>Record the asset ID, fault, and affected production process.</li>
+<li>Capture relevant diagnostics and read-performance information.</li>
+<li>Retrieve the approved backup and recovery procedure.</li>
+<li>Verify the scanner, firmware, and software compatibility.</li>
+<li>Restore or repair the device.</li>
+<li>Validate code reading, communication, and result handling.</li>
+<li>Verify reject behavior and traceability.</li>
+<li>Obtain the required release approval.</li>
+<li>Archive the verified final configuration.</li>
+<li>Update the backup register and work-order history.</li>
+</ol>
+<h2 id="13-recovery-drills-and-audit">13. Recovery drills and audit</h2>
+<h3 id="131-recovery-drill">13.1 Recovery drill</h3>
+<p>A recovery drill verifies that the saved configuration and documentation can restore the required scanner behavior.</p>
+<ol>
+<li>Select a test device or approved controlled recovery exercise.</li>
+<li>Retrieve the released backup package.</li>
+<li>Verify file integrity, revision, and device compatibility.</li>
+<li>Confirm that engineering software and required licenses are available.</li>
+<li>Restore the configuration using the documented method.</li>
+<li>Verify trigger, decoding, and communication settings.</li>
+<li>Test known reference codes and expected results.</li>
+<li>Test no-read and fault behavior.</li>
+<li>Verify PLC mapping and downstream result handling.</li>
+<li>Record recovery time, issues, and corrective actions.</li>
+</ol>
+<p>A successful configuration restore does not prove that the scanner can read labels reliably under actual production conditions. Physical and process validation remain necessary.</p>
+<h3 id="132-audit-checklist">13.2 Audit checklist</h3>
+<ul>
+<li>Critical scanners are recorded in the asset register.</li>
+<li>Approved device configurations are backed up.</li>
+<li>Firmware and software dependencies are documented.</li>
+<li>Code types, trigger settings, and data formats are recorded.</li>
+<li>PLC and network configuration is preserved.</li>
+<li>Reference codes and acceptance criteria are available.</li>
+<li>Independent recovery copies are maintained.</li>
+<li>Backup integrity and revision currency are checked.</li>
+<li>Restore tests are completed at the defined interval.</li>
+<li>Read performance is verified under representative conditions.</li>
+<li>No-read, timeout, and fault handling are tested.</li>
+<li>Traceability and reject logic are verified.</li>
+<li>Obsolete devices have a replacement or migration plan.</li>
+<li>Configuration changes trigger required backup updates.</li>
+</ul>
+<h2 id="14-scanner-backup-management-kpis">14. Scanner backup management KPIs</h2>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Calculation</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backup coverage</td>
+<td>Scanners with required backups divided by scanners requiring backups, multiplied by 100%</td>
+<td>Measures backup availability</td>
+</tr>
+<tr>
+<td>Backup currency</td>
+<td>Scanners with current approved backups divided by scanners requiring backups, multiplied by 100%</td>
+<td>Measures configuration currency</td>
+</tr>
+<tr>
+<td>Restore-test success</td>
+<td>Successful restoration tests divided by completed restoration tests, multiplied by 100%</td>
+<td>Measures demonstrated recoverability</td>
+</tr>
+<tr>
+<td>Read success rate</td>
+<td>Successful valid reads divided by valid read attempts, multiplied by 100%</td>
+<td>Measures reading performance</td>
+</tr>
+<tr>
+<td>No-read rate</td>
+<td>No-read outcomes divided by valid read attempts, multiplied by 100%</td>
+<td>Measures reading failures</td>
+</tr>
+<tr>
+<td>Recovery time</td>
+<td>Time from recovery start to approved functional restoration</td>
+<td>Measures recovery performance</td>
+</tr>
+<tr>
+<td>Configuration mismatch rate</td>
+<td>Audited scanners with unapproved configuration differences divided by scanners audited, multiplied by 100%</td>
+<td>Measures configuration control</td>
+</tr>
+<tr>
+<td>Traceability success rate</td>
+<td>Correctly recorded transactions divided by transactions tested, multiplied by 100%</td>
+<td>Measures data integrity</td>
+</tr>
+</tbody>
+</table>
+<p>Use clearly defined test conditions when comparing read rates. Label quality, code position, line speed, lighting, and the number of codes in the field of view can all affect performance.</p>
+<p>For example, if 995 out of 1,000 valid read attempts return the expected code:</p>
+<div class="math-display">\[ \text{Read success rate}=\frac{995}{1000}\times100=99.5\\% \]</div>
+<p>This result describes the tested conditions only. It does not prove that the scanner will achieve the same rate with every product, label quality, or production speed.</p>
+<h2 id="15-interview-questions-and-technical-answers">15. Interview questions and technical answers</h2>
+<p>1. Why is scanner backup more than saving the device settings?</p>
+<p>The scanner also depends on firmware, communication configuration, PLC mapping, trigger logic, data formatting, and downstream validation.</p>
+<p>2. What is the difference between a no-read and a misread?</p>
+<p>A no-read means no valid code was returned. A misread means the returned value is incorrect or not the intended code for the current product.</p>
+<p>3. Why should multiple barcode symbologies not always be enabled?</p>
+<p>Unnecessary symbologies can increase the chance of accepting an unintended code in an environment containing multiple labels.</p>
+<p>4. Why might a scanner work locally but fail in automatic production?</p>
+<p>The trigger sequence, PLC mapping, data format, communication timing, or result-handling logic may be incorrect.</p>
+<p>5. What should be checked after scanner replacement?</p>
+<p>Verify hardware compatibility, configuration, firmware, trigger behavior, code-reading performance, communication, and downstream data handling.</p>
+<p>6. Why is a reference-code test important after restoration?</p>
+<p>It confirms that the scanner returns the expected value under the test conditions rather than merely indicating that a scan was attempted.</p>
+<p>7. What is the difference between decoding and match-code validation?</p>
+<p>Decoding extracts data from a symbol. Match-code validation determines whether that data meets the application-specific expectation.</p>
+<p>8. Why is stale scanner data dangerous?</p>
+<p>The PLC may associate a previous part's code with the current part, causing traceability errors or incorrect process decisions.</p>
+<p>9. Is successful network communication sufficient for scanner acceptance?</p>
+<p>No. Correct decoding, data formatting, handshake behavior, fault handling, and production integration must also be verified.</p>
+<p>10. What is the most important result after scanner recovery?</p>
+<p>The scanner must return the correct identification data and the complete production system must process that data correctly under the approved acceptance conditions.</p>
+<h2 id="16-final-engineering-principles">16. Final engineering principles</h2>
+<ul>
+<li>Preserve the approved scanner configuration and its external dependencies.</li>
+<li>Record firmware, software, trigger, and communication settings.</li>
+<li>Verify decoding and data-format rules after restoration.</li>
+<li>Check the complete PLC-to-scanner handshake.</li>
+<li>Validate against known reference codes and representative production conditions.</li>
+<li>Test no-read, timeout, and fault behavior.</li>
+<li>Confirm traceability and reject handling before production release.</li>
+<li>Maintain independent, revision-controlled recovery copies.</li>
+<li>Use manufacturer-supported restoration and migration procedures.</li>
+<li>Archive the verified final configuration after every approved recovery or major change.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\25_Backup_DR\01_Systems_Backup\09_Printer - Printer</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

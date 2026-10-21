@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robot Positioning</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Robot Positioning</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and purpose</a></li>
+<li><a href="#2-what-must-be-positioned">2. What must be positioned?</a></li>
+<li><a href="#3-robot-positioning-architecture">3. Robot positioning architecture</a></li>
+<li><a href="#4-coordinate-systems-used-in-industrial-robots">4. Coordinate systems used in industrial robots</a><ul>
+<li><a href="#41-world-coordinate-system">4.1 World coordinate system</a></li>
+<li><a href="#42-robot-base-coordinate-system">4.2 Robot base coordinate system</a></li>
+<li><a href="#43-joint-coordinate-system">4.3 Joint coordinate system</a></li>
+<li><a href="#44-tool-coordinate-system">4.4 Tool coordinate system</a></li>
+<li><a href="#45-work-object-or-user-coordinate-system">4.5 Work-object or user coordinate system</a></li>
+</ul>
+</li>
+<li><a href="#5-cartesian-position-and-orientation">5. Cartesian position and orientation</a><ul>
+<li><a href="#51-why-orientation-matters">5.1 Why orientation matters</a></li>
+</ul>
+</li>
+<li><a href="#6-robot-positioning-terminology">6. Robot positioning terminology</a></li>
+<li><a href="#7-tool-centre-point-tcp">7. Tool Centre Point (TCP)</a><ul>
+<li><a href="#71-definition">7.1 Definition</a></li>
+<li><a href="#72-why-tcp-calibration-is-important">7.2 Why TCP calibration is important</a></li>
+<li><a href="#73-tcp-calibration-methods">7.3 TCP calibration methods</a></li>
+<li><a href="#74-conceptual-pivot-calibration">7.4 Conceptual pivot calibration</a></li>
+<li><a href="#75-tcp-verification">7.5 TCP verification</a></li>
+</ul>
+</li>
+<li><a href="#8-robot-mastering-and-calibration">8. Robot mastering and calibration</a><ul>
+<li><a href="#81-mastering">8.1 Mastering</a></li>
+<li><a href="#82-robot-calibration">8.2 Robot calibration</a></li>
+</ul>
+</li>
+<li><a href="#9-workpiece-and-fixture-positioning">9. Workpiece and fixture positioning</a><ul>
+<li><a href="#91-fixture-datums">9.1 Fixture datums</a></li>
+<li><a href="#92-sources-of-workpiece-position-error">9.2 Sources of workpiece-position error</a></li>
+<li><a href="#93-mechanical-locating-versus-robot-correction">9.3 Mechanical locating versus robot correction</a></li>
+</ul>
+</li>
+<li><a href="#10-robot-positioning-methods">10. Robot positioning methods</a></li>
+<li><a href="#11-robot-motion-types-and-path-behavior">11. Robot motion types and path behavior</a><ul>
+<li><a href="#111-joint-interpolated-motion">11.1 Joint-interpolated motion</a></li>
+<li><a href="#112-linear-motion">11.2 Linear motion</a></li>
+<li><a href="#113-circular-motion">11.3 Circular motion</a></li>
+<li><a href="#114-blending-and-corner-behavior">11.4 Blending and corner behavior</a></li>
+<li><a href="#115-speed-acceleration-and-payload">11.5 Speed, acceleration, and payload</a></li>
+</ul>
+</li>
+<li><a href="#12-positioning-accuracy-and-error-analysis">12. Positioning accuracy and error analysis</a><ul>
+<li><a href="#121-error-vector-calculation">12.1 Error-vector calculation</a></li>
+<li><a href="#122-repeatability-range">12.2 Repeatability range</a></li>
+<li><a href="#123-position-and-orientation-must-both-be-measured">12.3 Position and orientation must both be measured</a></li>
+</ul>
+</li>
+<li><a href="#13-robot-positioning-during-installation">13. Robot positioning during installation</a><ul>
+<li><a href="#131-before-installation">13.1 Before installation</a></li>
+<li><a href="#132-mechanical-installation-sequence">13.2 Mechanical installation sequence</a></li>
+<li><a href="#133-commissioning-sequence">13.3 Commissioning sequence</a></li>
+</ul>
+</li>
+<li><a href="#14-robot-positioning-in-robotic-welding">14. Robot positioning in robotic welding</a><ul>
+<li><a href="#141-important-positioning-requirements">14.1 Important positioning requirements</a></li>
+<li><a href="#142-example-welding-point-shifted-from-the-actual-seam">14.2 Example: welding point shifted from the actual seam</a></li>
+<li><a href="#143-robot-touch-sensing-and-seam-finding">14.3 Robot touch sensing and seam finding</a></li>
+</ul>
+</li>
+<li><a href="#15-robot-positioning-with-conveyors-and-external-axes">15. Robot positioning with conveyors and external axes</a><ul>
+<li><a href="#151-fixed-position-operation">15.1 Fixed-position operation</a></li>
+<li><a href="#152-conveyor-tracking">15.2 Conveyor tracking</a></li>
+<li><a href="#153-external-robot-axes">15.3 External robot axes</a></li>
+</ul>
+</li>
+<li><a href="#16-robot-positioning-with-vision-systems">16. Robot positioning with vision systems</a><ul>
+<li><a href="#161-typical-vision-guided-sequence">16.1 Typical vision-guided sequence</a></li>
+<li><a href="#162-camera-calibration-and-hand-eye-calibration">16.2 Camera calibration and hand-eye calibration</a></li>
+<li><a href="#163-vision-system-failure-modes">16.3 Vision-system failure modes</a></li>
+</ul>
+</li>
+<li><a href="#17-robot-collision-avoidance-and-reachability">17. Robot collision avoidance and reachability</a><ul>
+<li><a href="#171-reachability">17.1 Reachability</a></li>
+<li><a href="#172-singularities">17.2 Singularities</a></li>
+<li><a href="#173-collision-prevention-checks">17.3 Collision-prevention checks</a></li>
+</ul>
+</li>
+<li><a href="#18-troubleshooting-robot-positioning-faults">18. Troubleshooting robot positioning faults</a><ul>
+<li><a href="#181-a-disciplined-fault-isolation-method">18.1 A disciplined fault-isolation method</a></li>
+</ul>
+</li>
+<li><a href="#19-robot-positioning-acceptance-and-validation">19. Robot positioning acceptance and validation</a></li>
+<li><a href="#20-documentation-and-change-management">20. Documentation and change management</a></li>
+<li><a href="#21-interview-questions-and-answers">21. Interview questions and answers</a><ul>
+<li><a href="#q1-what-is-the-difference-between-robot-accuracy-and-repeatability">Q1. What is the difference between robot accuracy and repeatability?</a></li>
+<li><a href="#q2-what-is-a-tcp">Q2. What is a TCP?</a></li>
+<li><a href="#q3-what-happens-if-the-tcp-is-incorrect">Q3. What happens if the TCP is incorrect?</a></li>
+<li><a href="#q4-what-is-mastering">Q4. What is mastering?</a></li>
+<li><a href="#q5-what-is-the-difference-between-mastering-and-tcp-calibration">Q5. What is the difference between mastering and TCP calibration?</a></li>
+<li><a href="#q6-what-is-a-work-object-frame">Q6. What is a work-object frame?</a></li>
+<li><a href="#q7-why-does-a-robot-miss-a-welding-seam-even-when-the-program-has-not-changed">Q7. Why does a robot miss a welding seam even when the program has not changed?</a></li>
+<li><a href="#q8-what-is-the-difference-between-joint-and-linear-motion">Q8. What is the difference between joint and linear motion?</a></li>
+<li><a href="#q9-what-is-a-robot-singularity">Q9. What is a robot singularity?</a></li>
+<li><a href="#q10-how-does-conveyor-tracking-work">Q10. How does conveyor tracking work?</a></li>
+<li><a href="#q11-what-is-hand-eye-calibration">Q11. What is hand-eye calibration?</a></li>
+<li><a href="#q12-why-is-a-robots-repeatability-specification-not-enough-to-guarantee-weld-quality">Q12. Why is a robot's repeatability specification not enough to guarantee weld quality?</a></li>
+<li><a href="#q13-how-would-you-troubleshoot-a-consistent-5-mm-positional-shift">Q13. How would you troubleshoot a consistent 5 mm positional shift?</a></li>
+<li><a href="#q14-why-can-a-target-be-reachable-in-simulation-but-fail-in-the-actual-cell">Q14. Why can a target be reachable in simulation but fail in the actual cell?</a></li>
+<li><a href="#q15-what-should-be-verified-after-replacing-a-robot-tool">Q15. What should be verified after replacing a robot tool?</a></li>
+</ul>
+</li>
+<li><a href="#22-practical-revision-checklist">22. Practical revision checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition-and-purpose">1. Definition and purpose</h2>
+<p>Robot positioning is the process of establishing, measuring, commanding, and verifying the position and orientation of an industrial robot, its tool, and the workpiece relative to the required manufacturing coordinate system.</p>
+<p>In automotive manufacturing, robot positioning is critical for robotic welding, adhesive dispensing, sealing, material handling, machine tending, inspection, and assembly. The robot must reach the intended location with acceptable accuracy, repeatability, orientation, and process timing.</p>
+<p>Robot positioning is not simply moving the robot to a coordinate. The final result depends on robot calibration, coordinate frames, tool geometry, workpiece location, mechanical installation, controller configuration, program data, payload, and the condition of the complete cell.</p>
+<p>For example, a robot may repeatedly move to the same programmed point while consistently welding in the wrong location. The robot can be repeatable while the tool frame, workpiece datum, fixture, or program offset is incorrect.</p>
+<h2 id="2-what-must-be-positioned">2. What must be positioned?</h2>
+<p>A robotic cell contains several related but distinct positioning references:</p>
+<ul>
+<li>Robot base: The fixed reference from which the robot's motion is defined.</li>
+<li>Robot flange: The mechanical interface at the end of the robot arm.</li>
+<li>Tool centre point (TCP): The defined reference point of the tool, such as the welding gun tip or gripper reference.</li>
+<li>Workpiece: The component being processed.</li>
+<li>Fixture or nest: The equipment that locates and supports the workpiece.</li>
+<li>Work object or user frame: A coordinate frame used to describe the workpiece or process area.</li>
+<li>Target point: A programmed destination for the TCP or another defined robot reference.</li>
+<li>Process point: The position and orientation required to perform the operation correctly.</li>
+</ul>
+<p>The distinction matters because the robot flange can be at the correct coordinates while the actual tool tip is not, particularly if the TCP definition is incorrect.</p>
+<h2 id="3-robot-positioning-architecture">3. Robot positioning architecture</h2>
+<pre><code>Robot foundation and base alignment
+    ↓
+Robot mechanical geometry and calibration
+    ↓
+Robot controller and coordinate systems
+    ↓
+Tool mounting and TCP definition
+    ↓
+Workpiece and fixture coordinate definition
+    ↓
+Programmed targets and motion instructions
+    ↓
+Robot motion and approach trajectory
+    ↓
+Process execution: weld / dispense / grip / inspect
+    ↓
+Verification of position and process result
+</code></pre>
+<p>A positioning problem can originate at any layer. Re-teaching the robot is not necessarily the correct solution if the underlying issue is a loose fixture, incorrect tool data, a moved base, or a changed workpiece datum.</p>
+<h2 id="4-coordinate-systems-used-in-industrial-robots">4. Coordinate systems used in industrial robots</h2>
+<p>Robot controllers use coordinate frames to describe position and orientation. Common frames include the world, base, joint, tool, and work-object or user frames. The exact names and available frame types depend on the robot manufacturer and controller.</p>
+<h3 id="41-world-coordinate-system">4.1 World coordinate system</h3>
+<p>The world frame is a reference coordinate system for the robot cell or a larger installation. Its relationship to the robot base is defined by the cell configuration.</p>
+<p>It is useful when multiple robots, fixtures, conveyors, or stations must be related to a common reference.</p>
+<h3 id="42-robot-base-coordinate-system">4.2 Robot base coordinate system</h3>
+<p>The base frame is attached to the robot base. Cartesian movement expressed in this frame is interpreted relative to the robot's base coordinate system.</p>
+<p>If the robot base is relocated or its reference is incorrectly established, programmed relationships to external equipment may no longer be correct.</p>
+<h3 id="43-joint-coordinate-system">4.3 Joint coordinate system</h3>
+<p>In joint coordinates, each robot axis is commanded to a specified joint position, usually expressed in degrees for revolute axes and suitable linear units for prismatic axes.</p>
+<p>Joint movement is useful for:</p>
+<ul>
+<li>Moving to a known configuration.</li>
+<li>Approaching a target while avoiding a particular posture.</li>
+<li>Maintenance and setup operations.</li>
+<li>Moving through a known joint-space path.</li>
+</ul>
+<p>A joint target does not directly specify the TCP's Cartesian position. The resulting TCP pose depends on the robot's geometry, joint values, and configured tool data.</p>
+<h3 id="44-tool-coordinate-system">4.4 Tool coordinate system</h3>
+<p>The tool frame is attached to the robot tool or its defined TCP. Tool-coordinate movement is useful for moving along the tool's own axes.</p>
+<p>For example, a welding gun may need to approach a panel along its tool Z-axis. If the tool frame is correctly defined, the movement can be programmed relative to the tool orientation rather than the robot base.</p>
+<h3 id="45-work-object-or-user-coordinate-system">4.5 Work-object or user coordinate system</h3>
+<p>A work-object frame describes the component, fixture, or working area. Instead of defining every target relative to the robot base, targets can be defined relative to this frame.</p>
+<p>This helps when:</p>
+<ul>
+<li>The same process is performed on multiple fixtures.</li>
+<li>A component's location changes within a known range.</li>
+<li>A fixture is replaced or adjusted.</li>
+<li>A robot program must be reused across similar workstations.</li>
+</ul>
+<p>A work-object frame must represent the real installation. Changing its coordinates to hide an uncorrected mechanical fault may make one target work while introducing errors elsewhere.</p>
+<h2 id="5-cartesian-position-and-orientation">5. Cartesian position and orientation</h2>
+<p>A robot tool pose includes both position and orientation.</p>
+<p>Position is generally represented by three coordinates:</p>
+<ul>
+<li><span class="math-inline">\(X\)</span>: position along the X-axis.</li>
+<li><span class="math-inline">\(Y\)</span>: position along the Y-axis.</li>
+<li><span class="math-inline">\(Z\)</span>: position along the Z-axis.</li>
+</ul>
+<p>Orientation describes how the tool is rotated relative to the reference frame. Depending on the controller, it may be represented using Euler angles, a rotation matrix, a quaternion, or a manufacturer-specific orientation representation.</p>
+<p>A Cartesian target can be represented conceptually as:</p>
+<div class="math-display">\[ \mathbf{p}= \begin{bmatrix} X\\\Y\\\Z \end{bmatrix} \]</div>
+<p>A complete pose can be represented by a homogeneous transformation matrix:</p>
+<div class="math-display">\[ \mathbf{T}= \begin{bmatrix} \mathbf{R} &amp; \mathbf{p}\\\ 0\ 0\ 0 &amp; 1 \end{bmatrix} \]</div>
+<p>Here, <span class="math-inline">\(\mathbf{R}\)</span> is a <span class="math-inline">\(3\times3\)</span> rotation matrix and <span class="math-inline">\(\mathbf{p}\)</span> is the position vector.</p>
+<p>The matrix describes the position and orientation of one coordinate frame relative to another. The direction of the transformation must be interpreted consistently: a transform from tool to base is not interchangeable with a transform from base to tool.</p>
+<h3 id="51-why-orientation-matters">5.1 Why orientation matters</h3>
+<p>A robot can reach the correct XYZ location with an incorrect orientation.</p>
+<p>Examples:</p>
+<ul>
+<li>A welding gun tip reaches the seam but the gun angle is incorrect.</li>
+<li>A gripper reaches a component but its jaws are rotated incorrectly.</li>
+<li>A dispensing nozzle reaches the path but the nozzle angle changes the bead geometry.</li>
+<li>A camera reaches the inspection point but the viewing direction causes glare or hides the feature.</li>
+</ul>
+<p>For many manufacturing processes, position and orientation must be validated together.</p>
+<h2 id="6-robot-positioning-terminology">6. Robot positioning terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+<th>Practical significance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Accuracy</td>
+<td>Closeness of the achieved position to the intended position</td>
+<td>Determines how close the robot gets to the nominal target</td>
+</tr>
+<tr>
+<td>Repeatability</td>
+<td>Ability to return to the same position under defined conditions</td>
+<td>Important for repetitive production</td>
+</tr>
+<tr>
+<td>Resolution</td>
+<td>Smallest change in a command or measurement that the system can represent</td>
+<td>Does not by itself establish actual positioning accuracy</td>
+</tr>
+<tr>
+<td>TCP</td>
+<td>Defined tool reference point</td>
+<td>Links robot motion to the actual working end of the tool</td>
+</tr>
+<tr>
+<td>Calibration</td>
+<td>Establishing or correcting the relationship between measured values and reference values</td>
+<td>May apply to robot geometry, tool data, external axes, or measurement systems</td>
+</tr>
+<tr>
+<td>Mastering</td>
+<td>Establishing reference positions for robot axes according to the controller's procedure</td>
+<td>Incorrect mastering can corrupt the relationship between joint positions and robot geometry</td>
+</tr>
+<tr>
+<td>Teaching</td>
+<td>Recording or specifying positions and motion instructions for a program</td>
+<td>Creates the robot's intended path and targets</td>
+</tr>
+<tr>
+<td>Work-object frame</td>
+<td>Coordinate frame associated with the workpiece or fixture</td>
+<td>Enables targets to be expressed relative to the process area</td>
+</tr>
+<tr>
+<td>Path accuracy</td>
+<td>Closeness of the actual trajectory to the intended trajectory</td>
+<td>Important for welding, sealing, cutting, and dispensing</td>
+</tr>
+<tr>
+<td>Path repeatability</td>
+<td>Consistency of repeated trajectories</td>
+<td>Important for process consistency</td>
+</tr>
+<tr>
+<td>Singularity</td>
+<td>A robot configuration where certain Cartesian motions become unavailable or poorly conditioned</td>
+<td>Can cause abrupt joint motion or loss of motion flexibility</td>
+</tr>
+<tr>
+<td>Payload</td>
+<td>Mass and inertia carried by the robot, including the tool and applicable attachments</td>
+<td>Affects dynamic performance, wear, and achievable motion</td>
+</tr>
+<tr>
+<td>Reach</td>
+<td>The robot's available working envelope</td>
+<td>Determines whether the robot can access required targets and postures</td>
+</tr>
+<tr>
+<td>Backlash</td>
+<td>Mechanical lost motion in a transmission or mechanism</td>
+<td>Can affect positioning and reversal behavior where present</td>
+</tr>
+<tr>
+<td>Compliance</td>
+<td>Deflection under applied force or torque</td>
+<td>Can change the achieved tool pose under load</td>
+</tr>
+</tbody>
+</table>
+<p>Accuracy and repeatability are different specifications. A robot can be highly repeatable but have a systematic positional offset. The relevant definitions, measurement conditions, and specifications should be taken from the robot manufacturer and the applicable test method.</p>
+<h2 id="7-tool-centre-point-tcp">7. Tool Centre Point (TCP)</h2>
+<h3 id="71-definition">7.1 Definition</h3>
+<p>The Tool Centre Point (TCP) is the defined reference point used by the robot controller to describe the tool's position and orientation. Its location depends on the tool geometry and the chosen process reference.</p>
+<p>Examples:</p>
+<ul>
+<li>Welding robot: electrode tip or defined welding reference point.</li>
+<li>Gripper robot: centre of the gripping reference or a specified pickup point.</li>
+<li>Dispensing robot: nozzle tip or process reference.</li>
+<li>Inspection robot: camera reference point or calibrated sensor reference.</li>
+</ul>
+<p>The TCP is not necessarily the physical centre of the flange. It is a tool-specific reference defined relative to the robot flange.</p>
+<h3 id="72-why-tcp-calibration-is-important">7.2 Why TCP calibration is important</h3>
+<p>Suppose the tool is replaced and the new tool tip is 8 mm longer than the previous one. If the old TCP data remains active, the controller will calculate the tool pose using incorrect geometry. The robot flange may follow its expected trajectory while the real tip misses the required location.</p>
+<p>Typical symptoms of incorrect TCP data include:</p>
+<ul>
+<li>Consistent offsets between the taught target and the actual tool tip.</li>
+<li>Position errors that change with tool orientation.</li>
+<li>Incorrect approach and withdrawal paths.</li>
+<li>Different process results after tool replacement.</li>
+<li>A tool tip that appears correct in one orientation but deviates in another.</li>
+</ul>
+<h3 id="73-tcp-calibration-methods">7.3 TCP calibration methods</h3>
+<p>Common methods include:</p>
+<ul>
+<li>Multi-orientation pivot method: The robot rotates the tool around a common physical reference point. The controller uses the measured poses to estimate the TCP offset.</li>
+<li>Known-reference method: The tool is brought into contact with a precisely defined reference using an approved procedure.</li>
+<li>Measurement-based method: A calibrated measuring device or dedicated tool-calibration station determines the tool reference.</li>
+<li>Manufacturer-specific calibration procedure: Some systems use dedicated software, fixtures, sensors, or automated calibration routines.</li>
+</ul>
+<p>The chosen method must match the robot controller, tool geometry, and required accuracy. Contact-based calibration must use controlled, low-risk procedures and must not damage the tool or reference.</p>
+<h3 id="74-conceptual-pivot-calibration">7.4 Conceptual pivot calibration</h3>
+<p>If the tool tip remains stationary while the robot flange changes orientation, the controller can use the different flange poses to calculate the tool offset.</p>
+<pre><code>Robot pose A → Tool tip touches reference point
+Robot pose B → Tool tip remains at same reference point
+Robot pose C → Tool tip remains at same reference point
+    ↓
+Controller calculates the common tool reference
+    ↓
+TCP data is checked and saved
+    ↓
+Independent verification at additional poses
+</code></pre>
+<p>The method depends on the tool tip remaining at the same reference point and on sufficiently different, well-conditioned robot orientations. Repeating nearly identical poses may produce poor calibration.</p>
+<h3 id="75-tcp-verification">7.5 TCP verification</h3>
+<p>After calibration:</p>
+<ol>
+<li>Verify the tool is mounted securely.</li>
+<li>Confirm the active tool data and TCP selection.</li>
+<li>Move the TCP to a suitable reference using an approved low-speed setup procedure.</li>
+<li>Rotate the tool through different orientations while checking whether the TCP remains at the reference point.</li>
+<li>Verify additional targets and approach directions.</li>
+<li>Record the calibration result and tool identifier.</li>
+<li>Revalidate relevant process points before production release.</li>
+</ol>
+<p>A successful calibration routine does not automatically prove that the tool is mechanically secure, undamaged, or suitable for the required process.</p>
+<h2 id="8-robot-mastering-and-calibration">8. Robot mastering and calibration</h2>
+<h3 id="81-mastering">8.1 Mastering</h3>
+<p>Mastering establishes the reference relationship between robot axis positions and the controller's robot model. Depending on the manufacturer, this may involve mastering marks, reference positions, absolute encoders, calibration fixtures, or specified recovery procedures.</p>
+<p>Mastering may be required after certain encoder, motor, gearbox, or controller-related events, or when the controller indicates that the axis reference is invalid.</p>
+<p>Incorrect mastering can cause:</p>
+<ul>
+<li>Robot positions to shift.</li>
+<li>Previously taught targets to be reached incorrectly.</li>
+<li>Unexpected changes in joint configuration.</li>
+<li>Collision risks when running existing programs.</li>
+</ul>
+<p>Do not perform mastering as a general troubleshooting experiment. Follow the exact controller-specific procedure and confirm the consequences for existing programs and calibration data.</p>
+<h3 id="82-robot-calibration">8.2 Robot calibration</h3>
+<p>Robot calibration concerns the relationship between the controller's model and the actual robot geometry or measured reference positions. The term can refer to different procedures depending on the manufacturer and context.</p>
+<p>A useful distinction is:</p>
+<ul>
+<li>Mastering: Establishes the required reference for robot axes.</li>
+<li>TCP calibration: Establishes the tool reference relative to the flange.</li>
+<li>Work-object calibration: Establishes the workpiece or fixture coordinate frame.</li>
+<li>Robot geometric calibration: Estimates or corrects model parameters that affect the relationship between joint coordinates and the robot's physical pose.</li>
+<li>External-axis calibration: Establishes the relationship between an external mechanism and its coordinate reference.</li>
+</ul>
+<p>These procedures are related but not interchangeable.</p>
+<h2 id="9-workpiece-and-fixture-positioning">9. Workpiece and fixture positioning</h2>
+<p>Robot positioning is only as reliable as the relationship between the robot, the tool, and the component being processed.</p>
+<p>A component may be located by:</p>
+<ul>
+<li>Fixture datum surfaces.</li>
+<li>Locating pins and bushes.</li>
+<li>Mechanical stops.</li>
+<li>Clamps and supports.</li>
+<li>Pallet locating features.</li>
+<li>Vision-based part localization.</li>
+<li>Probing or measurement systems.</li>
+<li>External position sensors.</li>
+</ul>
+<h3 id="91-fixture-datums">9.1 Fixture datums</h3>
+<p>A datum is a defined reference used to establish a component's location or orientation. The fixture must locate the component consistently relative to the process requirement.</p>
+<p>If the component is shifted in the fixture, the robot may execute the same program perfectly but still process the wrong physical location.</p>
+<h3 id="92-sources-of-workpiece-position-error">9.2 Sources of workpiece-position error</h3>
+<ul>
+<li>Incorrect fixture installation.</li>
+<li>Worn locating pins or bushes.</li>
+<li>Loose or damaged clamps.</li>
+<li>Incorrect pallet orientation.</li>
+<li>Variation in the component itself.</li>
+<li>Debris between locating surfaces.</li>
+<li>Fixture thermal expansion or distortion.</li>
+<li>Inconsistent seating or clamping force.</li>
+<li>Incorrect work-object frame.</li>
+<li>Wrong part variant or fixture recipe.</li>
+</ul>
+<h3 id="93-mechanical-locating-versus-robot-correction">9.3 Mechanical locating versus robot correction</h3>
+<p>Mechanical locating should establish the component's intended reference wherever the process design requires it. Robot offsets, vision correction, or sensor-based compensation can then address defined residual variation within validated limits.</p>
+<p>Software offsets should not conceal loose fixtures, damaged locating features, or uncontrolled part variation. Compensation is useful when deliberately engineered; it is a poor substitute for restoring the physical datum.</p>
+<h2 id="10-robot-positioning-methods">10. Robot positioning methods</h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>How it works</th>
+<th>Suitable use</th>
+<th>Main limitation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fixed taught points</td>
+<td>The robot follows previously taught targets</td>
+<td>Stable fixtures and repeatable part locations</td>
+<td>Sensitive to changes in tool, fixture, or workpiece position</td>
+</tr>
+<tr>
+<td>Work-object-based programming</td>
+<td>Targets are defined relative to a workpiece or fixture frame</td>
+<td>Similar processes at known fixture locations</td>
+<td>Depends on correct frame calibration and fixture consistency</td>
+</tr>
+<tr>
+<td>Encoder-based tracking</td>
+<td>Robot motion is synchronized with a measured moving axis</td>
+<td>Moving conveyors and continuous-process applications</td>
+<td>Requires correct tracking calibration and timing</td>
+</tr>
+<tr>
+<td>Vision-guided positioning</td>
+<td>A camera identifies the part or relevant features</td>
+<td>Variable part position and flexible automation</td>
+<td>Depends on calibration, lighting, image quality, and detection confidence</td>
+</tr>
+<tr>
+<td>Force or compliance-based positioning</td>
+<td>Force/torque sensing or compliant mechanisms guide contact</td>
+<td>Assembly, insertion, and surface following</td>
+<td>Requires suitable force limits, control strategy, and tooling</td>
+</tr>
+<tr>
+<td>Touch sensing or probing</td>
+<td>A sensor or tool detects physical references</td>
+<td>Locating seams, surfaces, or reference features</td>
+<td>Contact conditions, accessibility, and sensor repeatability affect results</td>
+</tr>
+<tr>
+<td>External measurement correction</td>
+<td>A measurement system estimates the difference from the intended pose</td>
+<td>High-accuracy cells and calibrated processes</td>
+<td>Requires a valid measurement chain and controlled compensation</td>
+</tr>
+</tbody>
+</table>
+<p>The best method is determined by process variation, accuracy requirements, cycle time, cost, maintainability, and risk. More sensors do not automatically produce better positioning if the reference frames and calibration chain are wrong.</p>
+<h2 id="11-robot-motion-types-and-path-behavior">11. Robot motion types and path behavior</h2>
+<h3 id="111-joint-interpolated-motion">11.1 Joint-interpolated motion</h3>
+<p>Joint-interpolated motion commands the robot's axes to move from one joint configuration to another. The controller coordinates the axes to complete the movement.</p>
+<p>Typical uses include:</p>
+<ul>
+<li>Moving between separated process locations.</li>
+<li>Moving to a safe or standby position.</li>
+<li>Reaching a known target configuration.</li>
+<li>Approaching a work area where the exact Cartesian path is not critical.</li>
+</ul>
+<p>The TCP generally does not follow a straight line during joint-interpolated motion.</p>
+<h3 id="112-linear-motion">11.2 Linear motion</h3>
+<p>Linear motion commands the TCP to follow a straight Cartesian path between defined poses, subject to the controller's motion model and constraints.</p>
+<p>Typical uses include:</p>
+<ul>
+<li>Approaching a welding location.</li>
+<li>Retracting a gripper from a fixture.</li>
+<li>Moving a dispensing nozzle along a defined line.</li>
+<li>Insertion or extraction where a controlled approach direction is needed.</li>
+</ul>
+<p>The controller must find a feasible joint trajectory that achieves the commanded Cartesian motion while respecting axis limits and configuration constraints.</p>
+<h3 id="113-circular-motion">11.3 Circular motion</h3>
+<p>Circular motion commands the TCP along a circular arc or other controller-defined circular path using specified geometric references.</p>
+<p>Typical uses include:</p>
+<ul>
+<li>Following curved seams.</li>
+<li>Applying material along an arc.</li>
+<li>Processing circular features.</li>
+<li>Moving around a component edge.</li>
+</ul>
+<p>The exact programming method and required intermediate points vary by controller.</p>
+<h3 id="114-blending-and-corner-behavior">11.4 Blending and corner behavior</h3>
+<p>Many controllers allow motion blending so that the robot can pass near an intermediate target without fully stopping. This can reduce cycle time and create smoother paths.</p>
+<p>However:</p>
+<ul>
+<li>The robot may not pass exactly through the programmed intermediate point.</li>
+<li>Excessive blending may reduce process accuracy.</li>
+<li>Sharp changes in direction can create dynamic loads or process variation.</li>
+<li>Process-critical points may require a defined stop or tighter path tolerance.</li>
+</ul>
+<p>A target used only for navigation may tolerate blending. A weld start point, dispensing corner, inspection point, or precise insertion location may require stricter behavior.</p>
+<h3 id="115-speed-acceleration-and-payload">11.5 Speed, acceleration, and payload</h3>
+<p>Robot motion settings influence actual performance. Higher speed and acceleration can increase dynamic deflection, vibration, settling time, and stress on tooling or workpieces.</p>
+<p>Payload configuration should include the tool and all carried attachments as applicable. The centre of gravity and inertia can matter as much as mass, especially when the load is offset from the flange.</p>
+<h2 id="12-positioning-accuracy-and-error-analysis">12. Positioning accuracy and error analysis</h2>
+<p>Positioning errors can arise from several independent or interacting sources.</p>
+<table>
+<thead>
+<tr>
+<th>Error source</th>
+<th>Example effect</th>
+<th>Verification method</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Robot geometric error</td>
+<td>Target offset varies across the working envelope</td>
+<td>Manufacturer procedure or calibrated measurement</td>
+</tr>
+<tr>
+<td>Incorrect mastering</td>
+<td>Existing taught targets shift</td>
+<td>Check controller status and reference procedure</td>
+</tr>
+<tr>
+<td>Incorrect TCP</td>
+<td>Tool tip deviates from the commanded pose</td>
+<td>Recheck TCP calibration</td>
+</tr>
+<tr>
+<td>Incorrect work-object frame</td>
+<td>Targets are displaced relative to the workpiece</td>
+<td>Verify fixture datums and frame calibration</td>
+</tr>
+<tr>
+<td>Fixture wear</td>
+<td>Workpiece location changes over time</td>
+<td>Inspect locating features and measure repeatability</td>
+</tr>
+<tr>
+<td>Tool deformation</td>
+<td>Tool reference shifts under load</td>
+<td>Inspect tool and compare loaded versus unloaded conditions</td>
+</tr>
+<tr>
+<td>Payload mismatch</td>
+<td>Dynamic behavior and path performance degrade</td>
+<td>Verify payload mass, centre of gravity, and inertia data</td>
+</tr>
+<tr>
+<td>Mechanical looseness</td>
+<td>Position varies with direction or load</td>
+<td>Inspect mounting, joints, tool connections, and fixtures</td>
+</tr>
+<tr>
+<td>Thermal effects</td>
+<td>Position changes as equipment warms up</td>
+<td>Compare measurements under defined temperature conditions</td>
+</tr>
+<tr>
+<td>External-axis error</td>
+<td>Workpiece and robot motion become misaligned</td>
+<td>Verify external-axis reference and synchronization</td>
+</tr>
+<tr>
+<td>Measurement uncertainty</td>
+<td>Reported error is affected by the measuring system</td>
+<td>Check calibration, resolution, alignment, and measurement method</td>
+</tr>
+</tbody>
+</table>
+<h3 id="121-error-vector-calculation">12.1 Error-vector calculation</h3>
+<p>If the intended point is <span class="math-inline">\(\mathbf{p}\_{target}\)</span> and the measured point is <span class="math-inline">\(\mathbf{p}\_{actual}\)</span>, the positional error vector is:</p>
+<div class="math-display">\[ \mathbf{e}=\mathbf{p}\_{actual}-\mathbf{p}\_{target} \]</div>
+<p>The magnitude of the three-dimensional positional error is:</p>
+<div class="math-display">\[ e=\sqrt{e_x^2+e_y^2+e_z^2} \]</div>
+<p>For example, if the measured offsets are <span class="math-inline">\(3\)</span> mm in X, <span class="math-inline">\(-4\)</span> mm in Y, and <span class="math-inline">\(2\)</span> mm in Z:</p>
+<div class="math-display">\[ e=\sqrt{3^2+(-4)^2+2^2} \]</div>
+<div class="math-display">\[ e=\sqrt{29}\approx5.39\text{ mm} \]</div>
+<p>This describes the magnitude of the measured positional deviation. It does not include orientation error, measurement uncertainty, or whether the result satisfies the process tolerance.</p>
+<h3 id="122-repeatability-range">12.2 Repeatability range</h3>
+<p>For repeated measurements along one axis:</p>
+<div class="math-display">\[ R=x\_{max}-x\_{min} \]</div>
+<p>If repeated X-position measurements range from <span class="math-inline">\(99.6\)</span> mm to <span class="math-inline">\(100.4\)</span> mm:</p>
+<div class="math-display">\[ R=100.4-99.6=0.8\text{ mm} \]</div>
+<p>This range describes the spread of those observations. It is not by itself a complete repeatability specification because the number of samples, test conditions, measurement method, and statistical definition also matter.</p>
+<h3 id="123-position-and-orientation-must-both-be-measured">12.3 Position and orientation must both be measured</h3>
+<p>A robot pose can have a small positional error but an unacceptable orientation error. Conversely, orientation may be correct while the TCP is displaced.</p>
+<p>A valid acceptance method should define:</p>
+<ul>
+<li>The target position and orientation.</li>
+<li>The measurement reference frame.</li>
+<li>The test locations and approach directions.</li>
+<li>The number of repetitions.</li>
+<li>The load and operating conditions.</li>
+<li>The measurement instrument and uncertainty.</li>
+<li>The acceptance tolerances.</li>
+</ul>
+<h2 id="13-robot-positioning-during-installation">13. Robot positioning during installation</h2>
+<p>Robot positioning during site installation begins with the physical base and progresses through calibration, tool setup, frame definition, and process validation.</p>
+<h3 id="131-before-installation">13.1 Before installation</h3>
+<p>Verify the approved layout, robot model, payload requirements, reach, mounting orientation, foundation design, utility routing, and surrounding equipment clearances.</p>
+<p>Check:</p>
+<ul>
+<li>Robot and controller identification.</li>
+<li>Foundation dimensions and mounting interfaces.</li>
+<li>Anchor-bolt specification and installation requirements.</li>
+<li>Robot operating envelope and potential collision zones.</li>
+<li>Cable routing and dress-pack clearance.</li>
+<li>Tool, fixture, conveyor, and safety-equipment interfaces.</li>
+<li>Access for maintenance and emergency recovery.</li>
+</ul>
+<p>The robot should not be positioned solely to maximize reach. The installation must also provide feasible joint configurations, collision-free trajectories, maintenance access, and appropriate cable movement.</p>
+<h3 id="132-mechanical-installation-sequence">13.2 Mechanical installation sequence</h3>
+<ol>
+<li>Verify the foundation against the approved drawings and requirements.</li>
+<li>Confirm the mounting surface, anchor locations, and specified tolerances.</li>
+<li>Lift and position the robot using the manufacturer's approved handling method.</li>
+<li>Install and tighten mounting fasteners according to the specified procedure.</li>
+<li>Verify the robot base orientation and installation reference.</li>
+<li>Install the tool and confirm its mechanical mounting.</li>
+<li>Inspect cable routing, dress-pack movement, and clearance.</li>
+<li>Install and verify the fixture, workpiece supports, and relevant external axes.</li>
+<li>Complete the required electrical, pneumatic, hydraulic, and communication connections.</li>
+<li>Record installation measurements and unresolved deviations.</li>
+</ol>
+<p>Do not assume that tightening the mounting bolts establishes correct robot calibration. The physical installation, controller reference, and process frames must each be verified.</p>
+<h3 id="133-commissioning-sequence">13.3 Commissioning sequence</h3>
+<pre><code>Installation inspection
+    ↓
+Controller and safety-system checks
+    ↓
+Robot reference and mastering verification
+    ↓
+Tool mounting and TCP calibration
+    ↓
+Fixture and work-object calibration
+    ↓
+Low-speed motion verification
+    ↓
+Collision and clearance assessment
+    ↓
+Process-point teaching and validation
+    ↓
+Controlled cycle testing
+    ↓
+Quality verification and acceptance
+</code></pre>
+<p>The exact sequence must follow the robot manufacturer's procedures and the approved commissioning and safety plans. Safety validation must not be replaced by a general motion test.</p>
+<h2 id="14-robot-positioning-in-robotic-welding">14. Robot positioning in robotic welding</h2>
+<p>Robotic welding is particularly sensitive to the relationship between the robot TCP, welding gun, fixture, component geometry, and programmed seam.</p>
+<h3 id="141-important-positioning-requirements">14.1 Important positioning requirements</h3>
+<ul>
+<li>The electrode or process reference must reach the intended weld location.</li>
+<li>The gun orientation must suit the joint and process requirements.</li>
+<li>Electrode condition and tool geometry must remain within the defined limits.</li>
+<li>The workpiece must be located consistently in the fixture.</li>
+<li>The robot must approach and retract without collision.</li>
+<li>The weld sequence must coordinate with clamps, part-present sensors, and process equipment.</li>
+<li>The weld result must be checked using the defined quality method.</li>
+</ul>
+<h3 id="142-example-welding-point-shifted-from-the-actual-seam">14.2 Example: welding point shifted from the actual seam</h3>
+<p>Suppose a robot repeatedly produces a weld that is 4 mm away from the intended seam.</p>
+<p>A structured investigation should check:</p>
+<ol>
+<li>Workpiece: Is the component seated correctly? Are the locating pins, supports, and clamps in good condition?</li>
+<li>Tool: Has the welding gun tip changed, worn, or been replaced without updating TCP data?</li>
+<li>Frames: Is the active work-object frame correct? Has the fixture moved?</li>
+<li>Program: Is the correct program, part variant, tool, and offset active?</li>
+<li>Robot reference: Has mastering or calibration changed?</li>
+<li>External equipment: Is conveyor tracking or external-axis synchronization involved?</li>
+<li>Measurement: Was the seam location measured using a reliable and suitable reference?</li>
+</ol>
+<p>If all weld points are displaced by a similar amount, a common frame or datum error is plausible. If the error changes with tool orientation or robot posture, TCP, geometric, mechanical, or dynamic effects deserve closer investigation. These are diagnostic clues, not definitive proof.</p>
+<h3 id="143-robot-touch-sensing-and-seam-finding">14.3 Robot touch sensing and seam finding</h3>
+<p>Some welding systems use touch sensing, laser seam tracking, or other sensors to locate the actual seam.</p>
+<p>These systems can compensate for defined workpiece variation, but they require:</p>
+<ul>
+<li>Correct sensor calibration and mounting.</li>
+<li>Valid detection settings.</li>
+<li>Defined search ranges and failure handling.</li>
+<li>Suitable workpiece and seam conditions.</li>
+<li>Clear limits on the compensation that can be applied.</li>
+<li>Verification that the corrected path remains safe and process-capable.</li>
+</ul>
+<p>A seam-finding system should report failed or implausible measurements instead of silently applying an excessive offset.</p>
+<h2 id="15-robot-positioning-with-conveyors-and-external-axes">15. Robot positioning with conveyors and external axes</h2>
+<p>When a robot works with a moving conveyor, turntable, positioner, or linear track, the controller must account for the relationship between the robot and the moving equipment.</p>
+<h3 id="151-fixed-position-operation">15.1 Fixed-position operation</h3>
+<p>The conveyor brings the workpiece to a defined station and stops. The fixture then locates and clamps the part before the robot starts processing.</p>
+<p>This approach is comparatively straightforward because the workpiece is stationary during the robot's process cycle.</p>
+<h3 id="152-conveyor-tracking">15.2 Conveyor tracking</h3>
+<p>In conveyor tracking, robot movement is coordinated with the measured conveyor motion. An encoder or other feedback device provides movement information to the tracking system.</p>
+<p>Important requirements include:</p>
+<ul>
+<li>Correct encoder scaling and direction.</li>
+<li>Accurate relationship between the encoder and actual conveyor travel.</li>
+<li>Correct workpiece detection and tracking initialization.</li>
+<li>Synchronized controller timing.</li>
+<li>Handling of stops, speed changes, missing parts, and tracking loss.</li>
+<li>Defined behavior when the tracking data becomes invalid.</li>
+</ul>
+<p>If the encoder measures motor rotation but the belt slips, the measured movement may differ from the actual workpiece movement. The tracking system must be suitable for the mechanical arrangement.</p>
+<h3 id="153-external-robot-axes">15.3 External robot axes</h3>
+<p>An external axis can move a robot, workpiece, or positioner independently of the robot's internal axes. Examples include a linear track, rotary positioner, or servo-driven workpiece table.</p>
+<p>The control system must account for:</p>
+<ul>
+<li>External-axis reference and calibration.</li>
+<li>Axis limits and motion coordination.</li>
+<li>Workpiece and tool frames.</li>
+<li>Payload and inertia.</li>
+<li>Collision zones and cable management.</li>
+<li>Interlocks and coordinated stop behavior.</li>
+</ul>
+<p>Poor synchronization between the robot and an external axis can create path errors even if each axis appears to operate correctly on its own.</p>
+<h2 id="16-robot-positioning-with-vision-systems">16. Robot positioning with vision systems</h2>
+<p>Vision-guided positioning estimates the location or pose of a part using image data. The robot then uses that estimate to select or correct its motion.</p>
+<h3 id="161-typical-vision-guided-sequence">16.1 Typical vision-guided sequence</h3>
+<pre><code>Part arrives
+    ↓
+Camera trigger and image acquisition
+    ↓
+Feature or object detection
+    ↓
+Position and orientation estimation
+    ↓
+Coordinate transformation into the robot frame
+    ↓
+Validation of detection confidence and limits
+    ↓
+Robot target correction
+    ↓
+Robot movement and process execution
+    ↓
+Process-result verification
+</code></pre>
+<h3 id="162-camera-calibration-and-hand-eye-calibration">16.2 Camera calibration and hand-eye calibration</h3>
+<p>Camera calibration establishes relevant camera parameters, such as the relationship between image coordinates and geometric measurements.</p>
+<p>Hand-eye calibration establishes the relationship between the camera and the robot or tool, depending on the camera arrangement.</p>
+<p>Common arrangements include:</p>
+<ul>
+<li>Fixed camera: Camera mounted independently of the robot.</li>
+<li>Eye-in-hand: Camera mounted on the robot or tool assembly.</li>
+</ul>
+<p>The calibration procedure must suit the camera geometry and installation. A correct image detection is not enough if the transformation from camera coordinates to robot coordinates is wrong.</p>
+<h3 id="163-vision-system-failure-modes">16.3 Vision-system failure modes</h3>
+<ul>
+<li>Poor lighting or reflections.</li>
+<li>Occluded or damaged features.</li>
+<li>Incorrect camera calibration.</li>
+<li>Incorrect hand-eye transformation.</li>
+<li>Wrong part model or recipe.</li>
+<li>Detection of the wrong feature.</li>
+<li>Excessive part variation.</li>
+<li>Communication or timing errors.</li>
+<li>Stale coordinates from a previous part.</li>
+<li>A detected pose outside the robot's feasible reach.</li>
+</ul>
+<p>A robust system validates detection quality, part identity, coordinate plausibility, and timing before allowing the robot to act on the result.</p>
+<h2 id="17-robot-collision-avoidance-and-reachability">17. Robot collision avoidance and reachability</h2>
+<p>A target can be geometrically valid but unreachable in the robot's current configuration. It can also be reachable while the path to it collides with a fixture, conveyor, tool, or another robot.</p>
+<h3 id="171-reachability">17.1 Reachability</h3>
+<p>Reachability depends on:</p>
+<ul>
+<li>Robot model and joint limits.</li>
+<li>Target position and orientation.</li>
+<li>Tool geometry and TCP.</li>
+<li>Robot mounting orientation.</li>
+<li>External-axis position.</li>
+<li>Payload and motion constraints.</li>
+<li>The required approach and withdrawal path.</li>
+</ul>
+<p>A target inside a robot's approximate reach envelope is not necessarily reachable with the required orientation or joint configuration.</p>
+<h3 id="172-singularities">17.2 Singularities</h3>
+<p>A singularity is a robot configuration where the mapping between joint motion and Cartesian motion loses rank or becomes poorly conditioned. Near a singularity, small Cartesian movements can demand large or rapid joint changes, depending on the robot and trajectory.</p>
+<p>Potential symptoms include:</p>
+<ul>
+<li>Abrupt joint motion.</li>
+<li>Unexpected changes in wrist orientation.</li>
+<li>Motion restrictions.</li>
+<li>Speed limitations.</li>
+<li>Controller warnings or faults.</li>
+</ul>
+<p>Possible mitigations include changing the approach direction, adjusting the path, selecting a different valid robot configuration, or modifying the cell design. Changes must preserve process requirements and collision clearance.</p>
+<h3 id="173-collision-prevention-checks">17.3 Collision-prevention checks</h3>
+<ul>
+<li>Verify the complete tool and payload geometry.</li>
+<li>Check approach, process, and withdrawal paths.</li>
+<li>Include fixtures, clamps, cables, dress packs, and carried components.</li>
+<li>Consider all relevant external-axis positions.</li>
+<li>Check shared workspaces when multiple robots operate in the same cell.</li>
+<li>Validate the actual installation against the simulation.</li>
+<li>Use approved low-speed setup and commissioning procedures.</li>
+</ul>
+<p>Offline simulation is valuable, but it does not prove that the installed cell is collision-free. Differences in geometry, cable routing, calibration, and actual equipment position must be addressed during commissioning.</p>
+<h2 id="18-troubleshooting-robot-positioning-faults">18. Troubleshooting robot positioning faults</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible causes</th>
+<th>Diagnostic checks</th>
+<th>Corrective action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>All targets are shifted by a similar amount</td>
+<td>Fixture movement, incorrect work-object frame, robot base reference issue</td>
+<td>Measure a known datum and verify active frames</td>
+<td>Correct the verified datum or frame problem</td>
+</tr>
+<tr>
+<td>Tool tip is incorrect but flange appears correct</td>
+<td>Incorrect TCP, tool replacement, loose tool mounting</td>
+<td>Verify tool identity, mounting, and TCP calibration</td>
+<td>Restore correct tool geometry and verify targets</td>
+</tr>
+<tr>
+<td>Position error changes with tool orientation</td>
+<td>Incorrect TCP, tool deformation, geometric error, compliance</td>
+<td>Compare several orientations and inspect the tool</td>
+<td>Correct the demonstrated cause and recalibrate if required</td>
+</tr>
+<tr>
+<td>Position varies between repeated cycles</td>
+<td>Loose fixture, inconsistent clamping, mechanical play, unstable sensing</td>
+<td>Repeat measurements under controlled conditions</td>
+<td>Restore mechanical repeatability or correct the sensing issue</td>
+</tr>
+<tr>
+<td>Robot cannot reach a target</td>
+<td>Joint limits, wrong frame, incorrect target, unsuitable orientation</td>
+<td>Check target coordinates, active tool/frame, and joint configuration</td>
+<td>Correct target or cell configuration within process limits</td>
+</tr>
+<tr>
+<td>Robot moves unexpectedly near a target</td>
+<td>Wrong active tool or frame, incorrect program data, unexpected configuration</td>
+<td>Verify program selection, tool data, frame data, and target values</td>
+<td>Correct configuration and validate at reduced speed</td>
+</tr>
+<tr>
+<td>Robot reports a mastering or reference fault</td>
+<td>Invalid axis reference or controller-detected calibration issue</td>
+<td>Read controller diagnostics and inspect maintenance history</td>
+<td>Follow the manufacturer-specific recovery procedure</td>
+</tr>
+<tr>
+<td>Weld location drifts over time</td>
+<td>Tool wear, fixture wear, thermal effects, mechanical movement</td>
+<td>Trend measured offsets and inspect relevant components</td>
+<td>Correct wear or thermal/mechanical cause and revalidate</td>
+</tr>
+<tr>
+<td>Conveyor-tracked path is displaced</td>
+<td>Encoder scaling, belt slip, tracking initialization, timing error</td>
+<td>Compare encoder movement with actual workpiece travel</td>
+<td>Correct the tracking reference, mechanics, or synchronization</td>
+</tr>
+<tr>
+<td>Vision-guided target is wrong</td>
+<td>Camera calibration, transformation error, detection error, stale data</td>
+<td>Inspect image result, calibration, part ID, and coordinate transformation</td>
+<td>Correct and validate the vision-to-robot measurement chain</td>
+</tr>
+<tr>
+<td>Position changes under load</td>
+<td>Incorrect payload data, tool flex, loose mounting, excessive dynamic demand</td>
+<td>Compare loaded and unloaded behavior and inspect tool rigidity</td>
+<td>Correct payload configuration or mechanical design</td>
+</tr>
+<tr>
+<td>Robot stops or slows unexpectedly</td>
+<td>Singularity, axis limits, collision monitoring, motion constraints</td>
+<td>Review controller messages, trajectory, and joint positions</td>
+<td>Modify the path or configuration after engineering verification</td>
+</tr>
+</tbody>
+</table>
+<h3 id="181-a-disciplined-fault-isolation-method">18.1 A disciplined fault-isolation method</h3>
+<ol>
+<li>Record the exact symptom, program, target, tool, frame, and operating conditions.</li>
+<li>Determine whether the error affects position, orientation, trajectory, repeatability, or reachability.</li>
+<li>Compare commanded and measured results using a defined reference.</li>
+<li>Check whether the error is constant, direction-dependent, posture-dependent, load-dependent, or time-dependent.</li>
+<li>Verify tool mounting, TCP, work-object frame, fixture location, mastering status, and active program data.</li>
+<li>Inspect mechanical components after applying the appropriate hazardous-energy controls.</li>
+<li>Change one verified cause at a time and repeat the measurement.</li>
+<li>Record the correction, affected programs, calibration data, and acceptance evidence.</li>
+</ol>
+<p>Avoid changing several offsets at once. Doing so may hide the original cause and make future faults much harder to diagnose.</p>
+<h2 id="19-robot-positioning-acceptance-and-validation">19. Robot positioning acceptance and validation</h2>
+<p>Robot positioning should be accepted against the specified process requirement and a defined measurement method.</p>
+<table>
+<thead>
+<tr>
+<th>Validation item</th>
+<th>What to verify</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Base installation</td>
+<td>Mounting, foundation, orientation, and specified installation tolerances</td>
+</tr>
+<tr>
+<td>Mastering and calibration</td>
+<td>Controller reference status and completion of required procedures</td>
+</tr>
+<tr>
+<td>TCP</td>
+<td>Tool identity, mounting, calibration, and verification</td>
+</tr>
+<tr>
+<td>Work-object frame</td>
+<td>Relationship to actual fixture datums and workpiece</td>
+</tr>
+<tr>
+<td>Position accuracy</td>
+<td>Measured position compared with the intended target under defined conditions</td>
+</tr>
+<tr>
+<td>Orientation accuracy</td>
+<td>Measured tool orientation compared with the required orientation</td>
+</tr>
+<tr>
+<td>Repeatability</td>
+<td>Repeated measurements using the specified test method</td>
+</tr>
+<tr>
+<td>Path performance</td>
+<td>Trajectory meets process and path-tolerance requirements</td>
+</tr>
+<tr>
+<td>Payload</td>
+<td>Correct tool, mass, centre of gravity, and inertia configuration</td>
+</tr>
+<tr>
+<td>Reachability</td>
+<td>Required targets and paths are feasible in the installed cell</td>
+</tr>
+<tr>
+<td>Collision clearance</td>
+<td>Tool, robot, cables, fixtures, and external axes clear the intended path</td>
+</tr>
+<tr>
+<td>Process result</td>
+<td>Weld, assembly, dispensing, inspection, or other process meets its quality criteria</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Calibration records, program backup, frame data, test results, and unresolved deviations</td>
+</tr>
+</tbody>
+</table>
+<p>Measurement should use a suitable instrument and reference system. The acceptance tolerance must account for the process requirement and the uncertainty of the measurement method.</p>
+<p>A robot's published repeatability value is not a guarantee of the final workpiece process accuracy. The complete error chain includes the robot, tool, fixture, component, measurement system, and process.</p>
+<h2 id="20-documentation-and-change-management">20. Documentation and change management</h2>
+<p>Robot positioning data is part of the machine's controlled configuration. Important records include:</p>
+<ul>
+<li>Robot model, serial number, and mounting configuration.</li>
+<li>Controller version and relevant software configuration.</li>
+<li>Mastering or reference data, where supported and appropriate.</li>
+<li>Tool identifiers, TCP values, payload, centre of gravity, and inertia.</li>
+<li>Work-object and user-frame data.</li>
+<li>External-axis calibration and configuration.</li>
+<li>Program versions and approved process offsets.</li>
+<li>Fixture and locating-datum details.</li>
+<li>Calibration and validation reports.</li>
+<li>Collision and reachability assessment results.</li>
+<li>Fault history and corrective actions.</li>
+<li>Approved backup and restoration procedure.</li>
+</ul>
+<p>Any change to the tool, fixture, robot mounting, external axis, controller configuration, or workpiece datum should be assessed for its effect on positioning and process quality.</p>
+<p>After a change, verify which programs, frames, tools, and safety or process validations are affected. Do not assume that an old program remains valid simply because it can still be loaded.</p>
+<h2 id="21-interview-questions-and-answers">21. Interview questions and answers</h2>
+<h3 id="q1-what-is-the-difference-between-robot-accuracy-and-repeatability">Q1. What is the difference between robot accuracy and repeatability?</h3>
+<p>Accuracy describes how closely the robot reaches the intended target. Repeatability describes how consistently it returns to the same position under defined conditions. A robot can repeatedly reach the wrong point because of an incorrect frame or systematic offset.</p>
+<h3 id="q2-what-is-a-tcp">Q2. What is a TCP?</h3>
+<p>The Tool Centre Point is the defined tool reference used by the controller to calculate the tool pose. Correct TCP data is essential because the process acts at the tool, not necessarily at the robot flange.</p>
+<h3 id="q3-what-happens-if-the-tcp-is-incorrect">Q3. What happens if the TCP is incorrect?</h3>
+<p>The controller calculates the tool position using incorrect geometry. The resulting tool-tip error can vary with orientation, causing inaccurate welding, gripping, dispensing, or other operations.</p>
+<h3 id="q4-what-is-mastering">Q4. What is mastering?</h3>
+<p>Mastering establishes the required reference relationship between robot axis positions and the controller's robot model. It must be performed according to the manufacturer-specific procedure when required.</p>
+<h3 id="q5-what-is-the-difference-between-mastering-and-tcp-calibration">Q5. What is the difference between mastering and TCP calibration?</h3>
+<p>Mastering concerns the robot axes' reference relationship. TCP calibration establishes the tool reference relative to the flange. One does not replace the other.</p>
+<h3 id="q6-what-is-a-work-object-frame">Q6. What is a work-object frame?</h3>
+<p>It is a coordinate frame associated with the workpiece, fixture, or working area. It allows targets to be programmed relative to the process reference instead of being defined only in robot-base coordinates.</p>
+<h3 id="q7-why-does-a-robot-miss-a-welding-seam-even-when-the-program-has-not-changed">Q7. Why does a robot miss a welding seam even when the program has not changed?</h3>
+<p>The tool, fixture, workpiece, frame, mastering data, or external equipment may have changed. The robot may also be affected by wear, deformation, payload mismatch, or incorrect calibration.</p>
+<h3 id="q8-what-is-the-difference-between-joint-and-linear-motion">Q8. What is the difference between joint and linear motion?</h3>
+<p>Joint motion coordinates the robot axes between joint configurations and generally does not produce a straight TCP path. Linear motion commands the TCP to follow a straight Cartesian path, subject to the controller's constraints.</p>
+<h3 id="q9-what-is-a-robot-singularity">Q9. What is a robot singularity?</h3>
+<p>It is a configuration where certain Cartesian movements become unavailable or poorly conditioned. It may lead to abrupt joint movement, speed limitations, or motion restrictions.</p>
+<h3 id="q10-how-does-conveyor-tracking-work">Q10. How does conveyor tracking work?</h3>
+<p>A tracking system uses measured conveyor movement, typically from an encoder, to coordinate robot motion with the moving workpiece. Correct scaling, synchronization, initialization, and error handling are essential.</p>
+<h3 id="q11-what-is-hand-eye-calibration">Q11. What is hand-eye calibration?</h3>
+<p>It establishes the relationship between a camera coordinate frame and the robot or tool coordinate frame. It enables image-based measurements to be transformed into robot-relevant coordinates.</p>
+<h3 id="q12-why-is-a-robots-repeatability-specification-not-enough-to-guarantee-weld-quality">Q12. Why is a robot's repeatability specification not enough to guarantee weld quality?</h3>
+<p>The specification describes robot performance under defined conditions. Actual process quality also depends on TCP calibration, fixture location, workpiece variation, tool condition, path behavior, and the welding process itself.</p>
+<h3 id="q13-how-would-you-troubleshoot-a-consistent-5-mm-positional-shift">Q13. How would you troubleshoot a consistent 5 mm positional shift?</h3>
+<p>Verify the physical datum, fixture, active work-object frame, TCP, program selection, and robot reference status. Measure the error against a known reference before changing offsets.</p>
+<h3 id="q14-why-can-a-target-be-reachable-in-simulation-but-fail-in-the-actual-cell">Q14. Why can a target be reachable in simulation but fail in the actual cell?</h3>
+<p>The installed cell may differ from the model in geometry, mounting, tool dimensions, calibration, cable routing, or external-axis configuration. The target may also require an infeasible orientation or joint configuration.</p>
+<h3 id="q15-what-should-be-verified-after-replacing-a-robot-tool">Q15. What should be verified after replacing a robot tool?</h3>
+<p>Check secure mounting, tool identity, TCP calibration, payload and inertia data, cable routing, clearance, and all affected process points. Revalidate the applicable process before production release.</p>
+<h2 id="22-practical-revision-checklist">22. Practical revision checklist</h2>
+<ul>
+<li>Explain robot base, flange, TCP, work-object, and world frames.</li>
+<li>Distinguish Cartesian position from tool orientation.</li>
+<li>Explain accuracy, repeatability, resolution, mastering, and calibration.</li>
+<li>Describe TCP calibration and verification methods.</li>
+<li>Explain fixture datums and the difference between mechanical locating and software correction.</li>
+<li>Compare joint, linear, and circular motion.</li>
+<li>Explain path blending, payload, inertia, reachability, and singularities.</li>
+<li>Calculate a three-dimensional positional error and interpret repeatability measurements.</li>
+<li>Describe robot positioning in welding, assembly, and dispensing.</li>
+<li>Explain conveyor tracking, external axes, vision guidance, and hand-eye calibration.</li>
+<li>Diagnose common positioning errors using evidence rather than random offsets.</li>
+<li>Describe installation, commissioning, acceptance, and change-control requirements.</li>
+</ul>
+<p>The key engineering principle is that robot positioning depends on the entire reference chain: robot geometry, axis reference, tool, fixture, workpiece, coordinate frames, motion program, and process verification. A robot that moves without an alarm is not necessarily positioned correctly.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\12_Site_Exec\01_Mechanical\08_Tooling - Tooling</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

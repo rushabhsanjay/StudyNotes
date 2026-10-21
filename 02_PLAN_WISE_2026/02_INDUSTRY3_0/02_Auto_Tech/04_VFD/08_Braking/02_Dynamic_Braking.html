@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>02_Dynamic_Braking - Dynamic Braking</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">02_Dynamic_Braking - Dynamic Braking</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-why-is-dynamic-braking-needed">2. Why is dynamic braking needed?</a></li>
+<li><a href="#3-dynamic-braking-architecture">3. Dynamic braking architecture</a><ul>
+<li><a href="#main-components">Main components</a></li>
+</ul>
+</li>
+<li><a href="#4-how-dynamic-braking-works">4. How dynamic braking works</a><ul>
+<li><a href="#step-1-normal-operation">Step 1: Normal operation</a></li>
+<li><a href="#step-2-deceleration-command">Step 2: Deceleration command</a></li>
+<li><a href="#step-3-motor-regenerates-energy">Step 3: Motor regenerates energy</a></li>
+<li><a href="#step-4-dc-bus-voltage-rises">Step 4: DC bus voltage rises</a></li>
+<li><a href="#step-5-braking-chopper-activates">Step 5: Braking chopper activates</a></li>
+<li><a href="#step-6-resistor-dissipates-energy">Step 6: Resistor dissipates energy</a></li>
+<li><a href="#step-7-braking-ends">Step 7: Braking ends</a></li>
+</ul>
+</li>
+<li><a href="#5-what-is-a-braking-chopper">5. What is a braking chopper?</a></li>
+<li><a href="#6-why-does-the-dc-bus-voltage-rise-during-braking">6. Why does the DC bus voltage rise during braking?</a></li>
+<li><a href="#7-how-much-braking-energy-must-be-dissipated">7. How much braking energy must be dissipated?</a><ul>
+<li><a href="#example">Example</a></li>
+</ul>
+</li>
+<li><a href="#8-braking-resistor-selection">8. Braking resistor selection</a><ul>
+<li><a href="#electrical-relationships">Electrical relationships</a></li>
+</ul>
+</li>
+<li><a href="#9-dynamic-braking-versus-dc-braking">9. Dynamic braking versus DC braking</a></li>
+<li><a href="#10-dynamic-braking-versus-regenerative-braking">10. Dynamic braking versus regenerative braking</a></li>
+<li><a href="#11-applications-in-industrial-automation">11. Applications in industrial automation</a><ul>
+<li><a href="#automotive-conveyors">Automotive conveyors</a></li>
+<li><a href="#high-inertia-spindles">High-inertia spindles</a></li>
+<li><a href="#centrifuges">Centrifuges</a></li>
+<li><a href="#hoists-and-lowering-applications">Hoists and lowering applications</a></li>
+</ul>
+</li>
+<li><a href="#12-common-faults-and-troubleshooting">12. Common faults and troubleshooting</a><ul>
+<li><a href="#practical-troubleshooting-sequence">Practical troubleshooting sequence</a></li>
+</ul>
+</li>
+<li><a href="#13-safety-considerations">13. Safety considerations</a></li>
+<li><a href="#14-interview-questions-and-answers">14. Interview questions and answers</a></li>
+<li><a href="#15-practical-exercises">15. Practical exercises</a></li>
+<li><a href="#16-final-mental-model">16. Final mental model</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\02_Auto_Tech\04_VFD\08_Braking\02_Dynamic_Braking</code></p>
+<h2 id="1-definition">1. Definition</h2>
+<p>Dynamic braking is a motor-braking method in which the motor acts as a generator during deceleration, converting mechanical energy into electrical energy. A braking circuit directs this energy into a braking resistor, where it is dissipated as heat.</p>
+<p>In a VFD-controlled AC motor, dynamic braking is commonly used when a load must decelerate faster than it could through a normal ramp stop without causing the DC bus voltage to rise excessively.</p>
+<p>It is particularly useful for high-inertia loads, rapid stopping cycles, and applications where the motor regenerates energy during deceleration.</p>
+<p>The key principle is:</p>
+<p>The motor generates electrical energy during braking, and the braking resistor converts that energy into heat.</p>
+<p>Dynamic braking does not return the energy to the electrical supply. That is the main distinction between dynamic and regenerative braking.</p>
+<h2 id="2-why-is-dynamic-braking-needed">2. Why is dynamic braking needed?</h2>
+<p>Consider a motor driving a heavy conveyor carrying automotive fixtures.</p>
+<p>When the drive reduces motor speed, the rotating motor and conveyor still contain kinetic energy. The load cannot simply lose this energy because a stop command was issued. Physics remains annoyingly indifferent to PLC commands.</p>
+<p>During deceleration, the motor may operate as a generator. The generated energy flows back through the inverter toward the VFD's DC bus.</p>
+<p>If the drive cannot return this energy to the supply or dissipate it appropriately, the DC bus voltage can rise and trigger an overvoltage fault.</p>
+<p>Dynamic braking provides a path for that energy to be dissipated.</p>
+<p>Typical applications include:</p>
+<ul>
+<li>High-inertia conveyors.</li>
+<li>Centrifuges and other rotating machinery.</li>
+<li>Machine spindles requiring rapid deceleration.</li>
+<li>Certain hoisting and lowering applications, with appropriate mechanical and safety design.</li>
+<li>Machines with frequent start-stop cycles.</li>
+<li>Applications where regenerative power is not required to be recovered.</li>
+</ul>
+<h2 id="3-dynamic-braking-architecture">3. Dynamic braking architecture</h2>
+<p>A typical resistor-based dynamic braking arrangement consists of a rectifier, DC bus, inverter, braking chopper, braking resistor, motor, and mechanical load.</p>
+<pre><code>      Three-phase AC supply
+               |
+               v
+         Input rectifier
+               |
+               v
+           DC bus
+          +       -
+          |       |
+          v       |
+      Inverter    |
+          |       |
+          v       |
+       AC motor   |
+          |       |
+          v       |
+      Mechanical load
+          |
+          | During deceleration
+          v
+      Motor generates
+      electrical energy
+          |
+          v
+      Inverter / DC bus
+          |
+          v
+      Braking chopper
+          |
+          v
+      Braking resistor
+          |
+          v
+      Energy dissipated
+          as heat
+</code></pre>
+<p>This is a simplified conceptual diagram. The actual power path and component arrangement depend on the drive topology.</p>
+<h3 id="main-components">Main components</h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Input rectifier</td>
+<td>Converts incoming AC into DC for a conventional voltage-source VFD</td>
+</tr>
+<tr>
+<td>DC bus</td>
+<td>Stores and transfers electrical energy within the drive</td>
+</tr>
+<tr>
+<td>Inverter</td>
+<td>Converts DC into controlled AC for motor operation</td>
+</tr>
+<tr>
+<td>Braking chopper</td>
+<td>Switches the resistor circuit to control DC bus voltage</td>
+</tr>
+<tr>
+<td>Braking resistor</td>
+<td>Converts electrical braking energy into heat</td>
+</tr>
+<tr>
+<td>Motor</td>
+<td>Operates as a generator when the load drives it during deceleration</td>
+</tr>
+</tbody>
+</table>
+<p>Not every VFD has an integrated braking chopper. Some require an external braking unit, and some small drives do not support resistor-based dynamic braking at all.</p>
+<h2 id="4-how-dynamic-braking-works">4. How dynamic braking works</h2>
+<h3 id="step-1-normal-operation">Step 1: Normal operation</h3>
+<p>The VFD supplies controlled AC power to the motor. The motor converts electrical energy into mechanical power to drive the load.</p>
+<h3 id="step-2-deceleration-command">Step 2: Deceleration command</h3>
+<p>The PLC or drive receives a stop command. The drive begins reducing its speed reference according to the configured deceleration ramp.</p>
+<h3 id="step-3-motor-regenerates-energy">Step 3: Motor regenerates energy</h3>
+<p>The moving load continues rotating the motor while the drive applies braking torque. The motor converts some of the mechanical energy into electrical energy.</p>
+<p>For a typical diode-rectifier VFD, the input rectifier does not normally allow this regenerated energy to flow back to the AC supply.</p>
+<h3 id="step-4-dc-bus-voltage-rises">Step 4: DC bus voltage rises</h3>
+<p>The regenerated energy enters the DC bus. If the energy is not removed quickly enough, the bus voltage rises.</p>
+<h3 id="step-5-braking-chopper-activates">Step 5: Braking chopper activates</h3>
+<p>When the DC bus reaches the braking threshold, the braking chopper switches the resistor into the circuit. The exact threshold and switching method depend on the drive.</p>
+<h3 id="step-6-resistor-dissipates-energy">Step 6: Resistor dissipates energy</h3>
+<p>Current flows through the braking resistor, converting electrical energy into heat. This limits the DC bus voltage and allows the drive to continue controlled deceleration, within its operating limits.</p>
+<h3 id="step-7-braking-ends">Step 7: Braking ends</h3>
+<p>As the generated energy decreases, the chopper reduces or stops resistor conduction. The motor eventually reaches the commanded stopping condition.</p>
+<h2 id="5-what-is-a-braking-chopper">5. What is a braking chopper?</h2>
+<p>A braking chopper is a power-electronic switching circuit that connects a braking resistor to the DC bus when required.</p>
+<p>It typically uses a power semiconductor, such as an IGBT, controlled by the drive's braking circuit.</p>
+<p>The chopper switches the resistor circuit on and off rapidly. By controlling how much energy is dissipated, it helps prevent the DC bus voltage from exceeding its permitted operating range.</p>
+<pre><code>          DC bus (+)
+              |
+              v
+       Braking resistor
+              |
+              v
+      Power semiconductor
+       (braking chopper)
+              |
+              v
+          DC bus (-)
+</code></pre>
+<p>The actual circuit arrangement may differ by manufacturer and braking-unit design.</p>
+<p>Important distinction: The resistor dissipates the energy. The chopper controls when and how the resistor is connected.</p>
+<h2 id="6-why-does-the-dc-bus-voltage-rise-during-braking">6. Why does the DC bus voltage rise during braking?</h2>
+<p>The DC bus contains capacitance and stores electrical energy. During regeneration, electrical energy from the motor is fed back into this bus.</p>
+<p>For the bus capacitor, the stored energy is:</p>
+<div class="math-display">\[ E = \frac{1}{2}CV^2 \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(E\)</span> = stored energy in joules.</li>
+<li><span class="math-inline">\(C\)</span> = effective DC bus capacitance in farads.</li>
+<li><span class="math-inline">\(V\)</span> = DC bus voltage in volts.</li>
+</ul>
+<p>Because energy is proportional to voltage squared, even a moderate increase in DC bus voltage represents a significant increase in stored energy.</p>
+<p>If the drive cannot remove or return the incoming energy fast enough, the DC bus may reach its overvoltage threshold.</p>
+<p>The braking chopper and resistor provide an energy-dissipation path. A regenerative drive instead uses a suitable power-conversion stage to return energy to the supply.</p>
+<h2 id="7-how-much-braking-energy-must-be-dissipated">7. How much braking energy must be dissipated?</h2>
+<p>For a rotating object, kinetic energy is:</p>
+<div class="math-display">\[ E_k = \frac{1}{2}J\omega^2 \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(E_k\)</span> = rotational kinetic energy in joules.</li>
+<li><span class="math-inline">\(J\)</span> = equivalent rotational inertia in kg·m².</li>
+<li><span class="math-inline">\(\omega\)</span> = angular speed in rad/s.</li>
+</ul>
+<p>For a load that decelerates from an initial speed to zero, this is the ideal rotational energy that must be removed, before accounting for friction, other losses, and energy consumed by the driven process.</p>
+<h3 id="example">Example</h3>
+<p>Suppose the total equivalent rotating inertia is <span class="math-inline">\(J = 0.8\text{ kg·m}^2\)</span>, and the initial angular speed is <span class="math-inline">\(100\text{ rad/s}\)</span>.</p>
+<div class="math-display">\[ E_k = \frac{1}{2}(0.8)(100)^2 \]</div>
+<div class="math-display">\[ E_k = 4000\text{ J} \]</div>
+<p>The ideal initial rotational kinetic energy is 4,000 J, or 4 kJ.</p>
+<p>If that energy were dissipated uniformly over two seconds, the average power associated with that energy would be:</p>
+<div class="math-display">\[ P\_{\text{avg}} = \frac{E}{t} \]</div>
+<div class="math-display">\[ P\_{\text{avg}} = \frac{4000}{2} = 2000\text{ W} \]</div>
+<p>That is 2 kW average power for this simplified example. The actual resistor design must account for the real deceleration profile, reflected load inertia, energy from gravity or the process, braking frequency, thermal limits, and the manufacturer's specifications.</p>
+<h2 id="8-braking-resistor-selection">8. Braking resistor selection</h2>
+<p>The braking resistor must be compatible with the drive and the expected braking duty.</p>
+<p>Important selection factors include:</p>
+<table>
+<thead>
+<tr>
+<th>Factor</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Minimum permitted resistance</td>
+<td>A resistance that is too low can cause excessive chopper current and damage</td>
+</tr>
+<tr>
+<td>Resistance value</td>
+<td>Determines current and instantaneous power at a given voltage</td>
+</tr>
+<tr>
+<td>Peak power</td>
+<td>Must tolerate the power during the most demanding braking event</td>
+</tr>
+<tr>
+<td>Energy per stop</td>
+<td>Determines the heat produced in each braking cycle</td>
+</tr>
+<tr>
+<td>Average power</td>
+<td>Depends on how often braking occurs and how much energy is dissipated</td>
+</tr>
+<tr>
+<td>Duty cycle</td>
+<td>Frequent stops may cause thermal accumulation</td>
+</tr>
+<tr>
+<td>Thermal protection</td>
+<td>Helps protect against overheating, depending on the system design</td>
+</tr>
+<tr>
+<td>Environmental installation</td>
+<td>Ventilation, enclosure, clearances, and nearby combustible materials matter</td>
+</tr>
+</tbody>
+</table>
+<p>A resistor cannot be selected safely using only the motor's rated power. The load inertia, speed, deceleration time, braking frequency, DC bus voltage, and drive specifications all affect selection.</p>
+<h3 id="electrical-relationships">Electrical relationships</h3>
+<p>For a simplified resistor circuit:</p>
+<div class="math-display">\[ I = \frac{V}{R} \]</div>
+<div class="math-display">\[ P = \frac{V^2}{R} \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(I\)</span> = resistor current.</li>
+<li><span class="math-inline">\(V\)</span> = voltage across the resistor.</li>
+<li><span class="math-inline">\(R\)</span> = resistance.</li>
+<li><span class="math-inline">\(P\)</span> = instantaneous resistor power.</li>
+</ul>
+<p>At a fixed voltage, reducing resistance increases current and power. This is why the drive manufacturer's minimum permitted resistance is critical.</p>
+<p>These equations describe the resistor's electrical behavior at a given voltage. They do not, by themselves, determine the correct resistor for a real braking duty.</p>
+<h2 id="9-dynamic-braking-versus-dc-braking">9. Dynamic braking versus DC braking</h2>
+<p>These methods both help slow a motor, but the mechanisms are different.</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>DC braking</th>
+<th>Dynamic braking</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Main mechanism</td>
+<td>DC current injected into the stator</td>
+<td>Motor regenerates energy; resistor dissipates it</td>
+</tr>
+<tr>
+<td>Primary energy path</td>
+<td>Energy is dissipated mainly through motor losses</td>
+<td>Regenerated energy is dissipated in the braking resistor</td>
+</tr>
+<tr>
+<td>Braking resistor</td>
+<td>Not normally required for DC injection itself</td>
+<td>Required in a resistor-based dynamic braking system</td>
+</tr>
+<tr>
+<td>Main thermal concern</td>
+<td>Motor winding heating</td>
+<td>Resistor heating, plus motor and drive losses</td>
+</tr>
+<tr>
+<td>Typical use</td>
+<td>Stopping assistance at suitable speeds</td>
+<td>Rapid deceleration and higher braking-energy demands</td>
+</tr>
+<tr>
+<td>DC bus overvoltage management</td>
+<td>Not its primary purpose</td>
+<td>A major reason for using the braking circuit</td>
+</tr>
+<tr>
+<td>Zero-speed holding</td>
+<td>Not reliable</td>
+<td>Not provided by the resistor circuit</td>
+</tr>
+</tbody>
+</table>
+<p>A drive may combine methods, such as a deceleration ramp followed by DC injection. The correct sequence depends on the application and VFD capabilities.</p>
+<h2 id="10-dynamic-braking-versus-regenerative-braking">10. Dynamic braking versus regenerative braking</h2>
+<p>This distinction is particularly important.</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Dynamic braking</th>
+<th>Regenerative braking</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Energy source</td>
+<td>Mechanical energy from the rotating or driven load</td>
+<td>Mechanical energy from the rotating or driven load</td>
+</tr>
+<tr>
+<td>Electrical energy destination</td>
+<td>Braking resistor</td>
+<td>Electrical supply or another supported energy-recovery system</td>
+</tr>
+<tr>
+<td>Main result</td>
+<td>Energy becomes heat</td>
+<td>Energy is recovered electrically</td>
+</tr>
+<tr>
+<td>Braking resistor</td>
+<td>Used in resistor-based dynamic braking</td>
+<td>Not normally required for energy returned to the supply</td>
+</tr>
+<tr>
+<td>Additional hardware</td>
+<td>Braking chopper and appropriately rated resistor, if not integrated</td>
+<td>Regenerative-capable power-conversion hardware</td>
+</tr>
+<tr>
+<td>Energy efficiency</td>
+<td>Braking energy is wasted as heat</td>
+<td>Some braking energy can be reused</td>
+</tr>
+<tr>
+<td>Installation and cost</td>
+<td>May be simpler for suitable applications</td>
+<td>May require more complex hardware and system integration</td>
+</tr>
+</tbody>
+</table>
+<p>A conventional diode-front-end VFD with a braking resistor is not the same as a regenerative VFD. The resistor dissipates energy instead of sending it back to the electrical grid.</p>
+<h2 id="11-applications-in-industrial-automation">11. Applications in industrial automation</h2>
+<h3 id="automotive-conveyors">Automotive conveyors</h3>
+<p>A loaded conveyor needs to stop quickly at a station. Dynamic braking can help meet the deceleration requirement and reduce DC bus overvoltage during braking.</p>
+<h3 id="high-inertia-spindles">High-inertia spindles</h3>
+<p>A spindle with significant rotating inertia can regenerate substantial energy during a rapid stop. A correctly sized dynamic braking system can dissipate that energy.</p>
+<h3 id="centrifuges">Centrifuges</h3>
+<p>A centrifuge may take a long time to coast down naturally. Dynamic braking can provide controlled deceleration, subject to process and mechanical constraints.</p>
+<h3 id="hoists-and-lowering-applications">Hoists and lowering applications</h3>
+<p>A descending load can drive the motor and cause sustained regeneration. Dynamic braking may be used in some designs, but the mechanical brake, drive, thermal duty, and safety system must be engineered for the actual load. It must not be assumed that a braking resistor alone provides safe load holding.</p>
+<h2 id="12-common-faults-and-troubleshooting">12. Common faults and troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DC bus overvoltage during deceleration</td>
+<td>Braking resistor absent, incorrect resistor value, chopper fault, deceleration too aggressive</td>
+<td>Check the exact fault code, braking circuit, resistor specification, and ramp</td>
+</tr>
+<tr>
+<td>Motor takes too long to stop</td>
+<td>Dynamic braking not enabled, braking capacity inadequate, ramp too long</td>
+<td>Check drive configuration and load requirements</td>
+</tr>
+<tr>
+<td>Resistor overheats</td>
+<td>Excessive braking duty, undersized resistor, poor ventilation, failed thermal protection</td>
+<td>Review braking energy, cycle frequency, resistor rating, and installation</td>
+</tr>
+<tr>
+<td>Braking chopper fault</td>
+<td>Chopper damage, wiring fault, incompatible resistor, overcurrent</td>
+<td>Follow the drive manufacturer's diagnostic procedure</td>
+</tr>
+<tr>
+<td>Resistor open circuit</td>
+<td>Failed resistor, broken cable, loose termination, thermal protection open</td>
+<td>Isolate safely and verify resistance and wiring</td>
+</tr>
+<tr>
+<td>Resistor short circuit or resistance too low</td>
+<td>Wrong component, internal failure, wiring error</td>
+<td>Stop operation and inspect against the manufacturer's requirements</td>
+</tr>
+<tr>
+<td>Braking works once but faults after repeated stops</td>
+<td>Average thermal duty exceeds system capability</td>
+<td>Review stop frequency, resistor thermal capacity, and cooling</td>
+</tr>
+<tr>
+<td>Drive trips at the same point during every stop</td>
+<td>Ramp or braking threshold issue, insufficient braking capacity, mechanical condition</td>
+<td>Trend DC bus voltage and inspect braking parameters and load</td>
+</tr>
+</tbody>
+</table>
+<h3 id="practical-troubleshooting-sequence">Practical troubleshooting sequence</h3>
+<p>If a VFD trips with a DC bus overvoltage fault during a conveyor stop:</p>
+<ol>
+<li>Record the exact fault code and operating conditions.</li>
+<li>Determine whether the drive has an integrated braking chopper or requires an external braking unit.</li>
+<li>Verify that dynamic braking is enabled and the hardware is correctly installed.</li>
+<li>Check the resistor's specified resistance and power/energy ratings against the drive manual.</li>
+<li>Inspect the resistor wiring and braking-unit fault indicators.</li>
+<li>Review the deceleration ramp and the machine's actual load inertia.</li>
+<li>Check whether frequent stops are causing thermal limitations.</li>
+<li>Verify the final result under approved commissioning conditions.</li>
+</ol>
+<p>Do not immediately reduce the deceleration time further. If the drive is already overvoltage-limited, demanding a faster stop can make the problem worse.</p>
+<h2 id="13-safety-considerations">13. Safety considerations</h2>
+<ul>
+<li>Braking resistors can become extremely hot during operation.</li>
+<li>Install them with the specified clearances, ventilation, enclosure protection, and temperature safeguards.</li>
+<li>Keep combustible materials away from hot braking equipment.</li>
+<li>Follow the manufacturer's instructions for resistor wiring, protective devices, and thermal switches.</li>
+<li>The braking resistor and chopper can carry hazardous voltage even when the motor is stopped.</li>
+<li>Isolate power and follow the manufacturer's DC bus discharge and voltage-verification procedure before servicing the drive.</li>
+<li>Dynamic braking does not provide dependable zero-speed holding or replace a required mechanical brake.</li>
+<li>A braking resistor's failure must be considered in the machine's stopping and fault-response design.</li>
+</ul>
+<h2 id="14-interview-questions-and-answers">14. Interview questions and answers</h2>
+<p>Q1. What is dynamic braking in a VFD?</p>
+<p>Dynamic braking is a method in which the motor regenerates electrical energy during deceleration and a braking resistor dissipates that energy as heat.</p>
+<p>Q2. Why does DC bus voltage rise during deceleration?</p>
+<p>The motor can return electrical energy to the DC bus. If that energy accumulates faster than the drive can remove it, the bus voltage rises.</p>
+<p>Q3. What is a braking chopper?</p>
+<p>It is a power-electronic switching circuit that connects the braking resistor to the DC bus when required.</p>
+<p>Q4. What does the braking resistor do?</p>
+<p>It converts electrical braking energy into heat.</p>
+<p>Q5. Why can an incorrectly selected resistor damage a drive?</p>
+<p>Resistance below the permitted minimum can cause excessive current, while inadequate power or energy capacity can cause overheating and failure.</p>
+<p>Q6. What is the difference between dynamic and regenerative braking?</p>
+<p>Dynamic braking dissipates braking energy in a resistor. Regenerative braking returns energy to the electrical supply or another supported energy-recovery system.</p>
+<p>Q7. Can dynamic braking hold a motor at zero speed?</p>
+<p>No. It removes kinetic or other driving energy during braking but does not provide reliable mechanical holding.</p>
+<p>Q8. Why does a drive overheat or trip after repeated stops?</p>
+<p>The braking resistor or other drive components may be exceeding their thermal or electrical limits because of excessive braking energy or duty cycle.</p>
+<p>Q9. Why is the deceleration ramp important?</p>
+<p>It affects how quickly the motor must lose energy. A more aggressive ramp may require greater instantaneous braking power and can trigger overvoltage or current limits.</p>
+<p>Q10. Does every VFD support a braking resistor?</p>
+<p>No. Some drives include an integrated chopper, some support an external braking unit, and others do not support resistor-based dynamic braking.</p>
+<h2 id="15-practical-exercises">15. Practical exercises</h2>
+<ol>
+<li>Draw the dynamic braking energy path from the motor to the DC bus and braking resistor.</li>
+<li>Explain the function of the braking chopper.</li>
+<li>Calculate the rotational kinetic energy of a load with <span class="math-inline">\(J = 0.5\text{ kg·m}^2\)</span> rotating at <span class="math-inline">\(80\text{ rad/s}\)</span>.</li>
+<li>Explain why a braking resistor that is too low in resistance can damage the drive.</li>
+<li>Compare DC braking, dynamic braking, and regenerative braking.</li>
+<li>Diagnose a VFD that trips on overvoltage only during rapid deceleration.</li>
+<li>Explain why resistor average power and peak power are both important.</li>
+<li>Develop a maintenance inspection checklist for a VFD braking resistor.</li>
+</ol>
+<h2 id="16-final-mental-model">16. Final mental model</h2>
+<ul>
+<li>During motoring: Electrical energy flows from the supply through the VFD to the motor.</li>
+<li>During dynamic braking: The load drives the motor, and the motor regenerates energy.</li>
+<li>DC bus: Receives the regenerated energy, causing its voltage to rise if the energy is not removed.</li>
+<li>Braking chopper: Controls the connection of the braking resistor.</li>
+<li>Braking resistor: Converts the energy into heat.</li>
+<li>Main design constraints: Resistance, peak power, energy per stop, average power, duty cycle, and thermal installation.</li>
+<li>Limitation: Dynamic braking is not a mechanical holding brake and does not return energy to the supply.</li>
+</ul>
+<p>The most important diagnostic distinction is this: a DC bus overvoltage fault during deceleration may indicate that regenerated energy is not being handled adequately. The cause could be braking hardware, configuration, load inertia, or the required stopping profile, so check the full system before changing parameters.</p>
+<p>Next topic in sequence:</p>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\02_Auto_Tech\04_VFD\08_Braking\03_Regenerative</code></p>
+<p>03_Regenerative - Regenerative: Energy returned to supply</p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

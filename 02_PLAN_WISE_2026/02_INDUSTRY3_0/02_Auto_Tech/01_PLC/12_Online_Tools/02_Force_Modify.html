@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>02_Force_Modify: Force &amp; Modify, Force I/O Safely</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">02_Force_Modify: Force &amp; Modify, Force I/O Safely</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-force-vs-modify-vs-normal-operation">2. Force vs Modify vs Normal Operation</a></li>
+<li><a href="#3-understanding-forcing">3. Understanding Forcing</a><ul>
+<li><a href="#important-distinctions">Important distinctions</a></li>
+</ul>
+</li>
+<li><a href="#4-understanding-modify-write-value">4. Understanding Modify / Write Value</a></li>
+<li><a href="#5-why-engineers-use-forces-and-value-modifications">5. Why Engineers Use Forces and Value Modifications</a></li>
+<li><a href="#6-the-difference-between-a-force-and-a-physical-test">6. The Difference Between a Force and a Physical Test</a></li>
+<li><a href="#7-risks-of-forcing-inputs">7. Risks of Forcing Inputs</a></li>
+<li><a href="#8-risks-of-forcing-outputs">8. Risks of Forcing Outputs</a></li>
+<li><a href="#9-why-modifying-internal-tags-can-be-dangerous">9. Why Modifying Internal Tags Can Be Dangerous</a></li>
+<li><a href="#10-force-status-and-force-management">10. Force Status and Force Management</a></li>
+<li><a href="#11-safe-workflow-before-applying-a-force-or-writing-a-value">11. Safe Workflow Before Applying a Force or Writing a Value</a><ul>
+<li><a href="#step-1-identify-the-exact-signal">Step 1: Identify the exact signal</a></li>
+<li><a href="#step-2-trace-its-use">Step 2: Trace its use</a></li>
+<li><a href="#step-3-understand-the-physical-consequence">Step 3: Understand the physical consequence</a></li>
+<li><a href="#step-4-establish-authorization-and-safe-machine-conditions">Step 4: Establish authorization and safe machine conditions</a></li>
+<li><a href="#step-5-define-the-test">Step 5: Define the test</a></li>
+<li><a href="#step-6-apply-only-the-approved-operation">Step 6: Apply only the approved operation</a></li>
+<li><a href="#step-7-observe-the-result">Step 7: Observe the result</a></li>
+<li><a href="#step-8-restore-and-verify">Step 8: Restore and verify</a></li>
+<li><a href="#step-9-document-the-outcome">Step 9: Document the outcome</a></li>
+</ul>
+</li>
+<li><a href="#12-safe-vs-unsafe-examples">12. Safe vs Unsafe Examples</a></li>
+<li><a href="#13-vendor-specific-considerations">13. Vendor-Specific Considerations</a><ul>
+<li><a href="#rockwell-automation-studio-5000-logix-designer">Rockwell Automation: Studio 5000 Logix Designer</a></li>
+<li><a href="#siemens-tia-portal">Siemens: TIA Portal</a></li>
+<li><a href="#mitsubishi-gx-works2-gx-works3">Mitsubishi: GX Works2 / GX Works3</a></li>
+</ul>
+</li>
+<li><a href="#14-troubleshooting-problems-related-to-forces-and-writes">14. Troubleshooting Problems Related to Forces and Writes</a></li>
+<li><a href="#15-practical-example-sensor-fault-on-an-automated-fixture">15. Practical Example: Sensor Fault on an Automated Fixture</a><ul>
+<li><a href="#reported-problem">Reported problem</a></li>
+<li><a href="#correct-diagnostic-approach">Correct diagnostic approach</a></li>
+</ul>
+</li>
+<li><a href="#16-force-and-modify-record">16. Force and Modify Record</a></li>
+<li><a href="#17-interview-questions-and-answers">17. Interview Questions and Answers</a></li>
+<li><a href="#18-practical-exercises">18. Practical Exercises</a></li>
+<li><a href="#19-final-mental-model">19. Final Mental Model</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>In PLC engineering, forcing and modifying values are operations that influence signals or variables while troubleshooting, commissioning, or testing a control system.</p>
+<p>They are not the same operation.</p>
+<ul>
+<li>Force: Overrides or substitutes a signal or I/O state through a PLC platform's forcing mechanism.</li>
+<li>Modify / Write Value: Changes the value of a supported variable through an engineering-software operation.</li>
+<li>Normal program execution: The controller evaluates its logic using the actual inputs, program instructions, configuration and current operating state.</li>
+</ul>
+<p>These operations can help isolate faults, but they can also make the machine behave differently from its normal control logic. A forced input may tell the program that a sensor is active even when the physical sensor has not detected anything.</p>
+<p>Core rule: Never force or modify a production PLC signal merely to make a sequence continue. First understand what the signal represents, what depends on it, and what physical action could follow.</p>
+<h2 id="2-force-vs-modify-vs-normal-operation">2. Force vs Modify vs Normal Operation</h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Normal operation</th>
+<th>Force</th>
+<th>Modify / write value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Purpose</td>
+<td>Execute the intended control program.</td>
+<td>Override or substitute a supported signal according to platform rules.</td>
+<td>Change a variable's value through a supported write operation.</td>
+</tr>
+<tr>
+<td>Source of value</td>
+<td>Actual input data, program logic and configured behavior.</td>
+<td>Forcing mechanism and configured forced state.</td>
+<td>Engineering-software write operation, followed by the controller's normal execution rules.</td>
+</tr>
+<tr>
+<td>Physical input affected?</td>
+<td>The actual input is read according to the hardware and program configuration.</td>
+<td>A supported input signal may be overridden in the controller's logic path.</td>
+<td>Usually changes a variable, not the physical sensor itself.</td>
+</tr>
+<tr>
+<td>Physical output affected?</td>
+<td>The program and configured output logic determine the command.</td>
+<td>A supported output may be forced, potentially causing physical action.</td>
+<td>A writable output or command variable may change the resulting action.</td>
+</tr>
+<tr>
+<td>Persistence</td>
+<td>Depends on the program and signal.</td>
+<td>Depends on the force mechanism and controller configuration.</td>
+<td>The value may be overwritten by logic, retain its value, or change according to program execution.</td>
+</tr>
+<tr>
+<td>Main concern</td>
+<td>Faults in the real system or program.</td>
+<td>The program may act on an artificial signal or an overridden output.</td>
+<td>The written value may be unsafe, temporary or inconsistent with program assumptions.</td>
+</tr>
+</tbody>
+</table>
+<p>Terminology and exact behavior differ between PLC manufacturers and controller families. Always consult the relevant platform documentation before performing either operation.</p>
+<h2 id="3-understanding-forcing">3. Understanding Forcing</h2>
+<p>A force allows an engineer to override a supported signal or I/O state under specific controller rules.</p>
+<p>Consider a part-detection sensor.</p>
+<pre><code>Physical Part
+     |
+     v
+Sensor
+     |
+     v
+PLC Input Channel
+     |
+     v
+Part_Detected
+     |
+     v
+Sequence Logic
+     |
+     v
+Clamp Command
+</code></pre>
+<p>During normal operation, the PLC input reflects the signal received from the sensor, subject to the input module and program configuration.</p>
+<p>If <code>Part_Detected</code> is forced TRUE, the program may interpret the part as present even if the sensor is not detecting one. The sequence could then issue a clamp command or advance to another step.</p>
+<p>The sensor has not been repaired, and the physical condition has not changed. Only the controller's interpretation or signal behavior has been overridden.</p>
+<h3 id="important-distinctions">Important distinctions</h3>
+<ul>
+<li>A force does not repair a sensor, cable, input module or communication fault.</li>
+<li>A forced value does not prove that the corresponding physical condition exists.</li>
+<li>A forced signal can hide the original cause of a machine fault.</li>
+<li>An output force can create physical motion or energize equipment.</li>
+<li>A force may remain active beyond the immediate troubleshooting action, depending on the platform and how it is removed.</li>
+</ul>
+<h2 id="4-understanding-modify-write-value">4. Understanding Modify / Write Value</h2>
+<p>A value modification changes the value of a supported tag, device or variable through the engineering software.</p>
+<p>Suppose a program uses:</p>
+<pre><code>Requested_Speed := 1200
+</code></pre>
+<p>The engineer may be able to write a different value to a supported variable, depending on its data type, scope, controller permissions and software.</p>
+<p>However, the result depends on how the program uses that variable.</p>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>Possible result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Variable is not overwritten by the program</td>
+<td>The written value may remain until another operation changes it.</td>
+</tr>
+<tr>
+<td>Program recalculates the variable every scan</td>
+<td>The written value may be overwritten almost immediately.</td>
+</tr>
+<tr>
+<td>Variable is a command or setpoint</td>
+<td>The change may affect machine behavior.</td>
+</tr>
+<tr>
+<td>Variable is an input image or mapped I/O value</td>
+<td>The platform may restrict writes or the value may be refreshed from the actual input.</td>
+</tr>
+<tr>
+<td>Variable is part of a structured data type</td>
+<td>The specific member may be writable, subject to platform rules and access restrictions.</td>
+</tr>
+<tr>
+<td>Variable is safety-related or protected</td>
+<td>The operation may be restricted or subject to additional controls.</td>
+</tr>
+</tbody>
+</table>
+<p>A successful write does not mean the value will persist, and it certainly does not mean the resulting action is safe.</p>
+<h2 id="5-why-engineers-use-forces-and-value-modifications">5. Why Engineers Use Forces and Value Modifications</h2>
+<p>Common legitimate uses include:</p>
+<ul>
+<li>Testing a sequence in a simulator or controlled test environment.</li>
+<li>Checking downstream logic when a signal source is unavailable.</li>
+<li>Validating an HMI indication or diagnostic response.</li>
+<li>Testing a specific branch of logic during commissioning.</li>
+<li>Diagnosing whether a problem is upstream or downstream of a particular signal.</li>
+<li>Verifying how a program handles an abnormal condition.</li>
+<li>Testing supported software behavior without relying on the physical sensor.</li>
+</ul>
+<p>For production equipment, any test that overrides an input, changes a command or energizes an output requires an approved method, risk assessment and appropriate machine conditions.</p>
+<p>A force should be used only when the test is understood, authorized, controlled and reversible.</p>
+<h2 id="6-the-difference-between-a-force-and-a-physical-test">6. The Difference Between a Force and a Physical Test</h2>
+<p>Consider a cylinder that extends when <code>Extend_Request</code> is TRUE.</p>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>What it proves</th>
+<th>What it does not prove</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Monitor <code>Extend_Request</code></td>
+<td>Whether the program requests extension.</td>
+<td>Whether the valve or cylinder actually moves.</td>
+</tr>
+<tr>
+<td>Observe the PLC output command</td>
+<td>Whether the control logic requests an output.</td>
+<td>Whether the output module and wiring are healthy.</td>
+</tr>
+<tr>
+<td>Check the electrical output using an approved procedure</td>
+<td>Whether the relevant electrical signal is present.</td>
+<td>Whether the pneumatic or mechanical system is functioning correctly.</td>
+</tr>
+<tr>
+<td>Force a supported test signal in a controlled test setup</td>
+<td>How the program responds to that artificial signal.</td>
+<td>Whether the original sensor, wiring or actual process condition is healthy.</td>
+</tr>
+<tr>
+<td>Observe cylinder feedback during an approved functional test</td>
+<td>Whether the feedback indicates the expected response.</td>
+<td>Whether all safety functions have been validated.</td>
+</tr>
+</tbody>
+</table>
+<p>The distinction matters because software simulation and physical validation answer different questions.</p>
+<h2 id="7-risks-of-forcing-inputs">7. Risks of Forcing Inputs</h2>
+<p>Forcing an input may cause the PLC to proceed as though a physical condition has been satisfied.</p>
+<p>Examples include:</p>
+<ul>
+<li>A part-present input is forced TRUE while the fixture is empty.</li>
+<li>A clamp-closed input is forced TRUE while the clamp is open.</li>
+<li>A drive-ready input is forced TRUE while the drive is faulted.</li>
+<li>A robot-position input is forced TRUE while the robot is elsewhere.</li>
+<li>A process-complete input is forced TRUE before the operation has finished.</li>
+</ul>
+<p>These conditions can cause incorrect sequencing, collisions, damaged tooling, rejected products or unexpected motion.</p>
+<p>Never force a safety input or bypass a safety function to enable production or movement. Safety-related testing must follow the validated safety design, approved test procedures and applicable site requirements.</p>
+<h2 id="8-risks-of-forcing-outputs">8. Risks of Forcing Outputs</h2>
+<p>Output forcing can be especially hazardous because it may cause direct physical action.</p>
+<p>Examples include:</p>
+<ul>
+<li>Energizing a motor contactor.</li>
+<li>Opening or closing a pneumatic valve.</li>
+<li>Moving a hydraulic actuator.</li>
+<li>Starting a conveyor.</li>
+<li>Issuing a drive command.</li>
+<li>Triggering a robot-related output.</li>
+</ul>
+<p>A forced output can bypass the intended command logic, depending on the controller platform and the point where the force is applied.</p>
+<p>Before any approved output test, determine what the output controls, isolate or control hazardous energy as required, verify the machine state and use the prescribed test procedure. Do not assume that an interlock elsewhere in the program will protect against a forced output.</p>
+<h2 id="9-why-modifying-internal-tags-can-be-dangerous">9. Why Modifying Internal Tags Can Be Dangerous</h2>
+<p>Internal variables can appear harmless because they are not physical I/O points. In practice, they may control important decisions.</p>
+<p>For example:</p>
+<pre><code>Auto_Mode = TRUE
+Drive_Ready = TRUE
+Interlocks_OK = TRUE
+Fault_Active = FALSE
+        |
+        v
+Motor_Run_Request = TRUE
+</code></pre>
+<p>Changing one internal variable may affect many rungs, routines, function blocks or sequence transitions.</p>
+<p>A variable such as <code>Interlocks_OK</code> may aggregate several conditions. Writing it TRUE could make the program behave as if those conditions were satisfied, even when one of the underlying conditions remains false.</p>
+<p>Before writing a value, use cross-reference and program analysis to understand:</p>
+<ul>
+<li>Where the variable is read.</li>
+<li>Where it is written.</li>
+<li>Whether the program overwrites it.</li>
+<li>Whether it is an alias or mapped variable.</li>
+<li>Whether it belongs to a UDT or another structured data type.</li>
+<li>Which physical actions can result from changing it.</li>
+</ul>
+<p>Never assume an internal tag is safe to modify simply because its name does not contain the word <code>Output</code>.</p>
+<h2 id="10-force-status-and-force-management">10. Force Status and Force Management</h2>
+<p>Forces must be managed as explicit temporary test conditions, not forgotten engineering-software settings.</p>
+<p>Depending on the platform, the software may provide a force table, force indicators, status messages, or commands to enable, disable or remove forces.</p>
+<p>These operations may have different meanings:</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>General meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Apply a force</td>
+<td>Establish a forced state for a supported signal.</td>
+</tr>
+<tr>
+<td>Enable forces</td>
+<td>Activate forces that have been configured or are pending, where the platform supports this distinction.</td>
+</tr>
+<tr>
+<td>Disable forces</td>
+<td>Temporarily stop applying forces while possibly retaining their configuration.</td>
+</tr>
+<tr>
+<td>Remove / clear a force</td>
+<td>Remove the force configuration from the relevant signal or force table.</td>
+</tr>
+<tr>
+<td>Verify force status</td>
+<td>Confirm whether any forces remain configured or active.</td>
+</tr>
+</tbody>
+</table>
+<p>Disabling forces is not necessarily the same as removing them. A disabled force may remain configured and could be reactivated later.</p>
+<p>The exact terms and behavior vary by vendor. Verify the final state using the controller's supported force-status tools rather than assuming that a single command has cleared everything.</p>
+<h2 id="11-safe-workflow-before-applying-a-force-or-writing-a-value">11. Safe Workflow Before Applying a Force or Writing a Value</h2>
+<h3 id="step-1-identify-the-exact-signal">Step 1: Identify the exact signal</h3>
+<p>Confirm the tag or device address, data type, controller, scope and associated machine function.</p>
+<p>Do not rely on a similar tag name or a remembered address.</p>
+<h3 id="step-2-trace-its-use">Step 2: Trace its use</h3>
+<p>Use search and cross-reference to determine which instructions read or write the signal and what conditions depend on it.</p>
+<h3 id="step-3-understand-the-physical-consequence">Step 3: Understand the physical consequence</h3>
+<p>Determine whether the signal affects a motor, drive, valve, clamp, robot, conveyor, process sequence or safety-related function.</p>
+<p>If the consequence is unclear, do not proceed.</p>
+<h3 id="step-4-establish-authorization-and-safe-machine-conditions">Step 4: Establish authorization and safe machine conditions</h3>
+<p>Follow the approved test method, risk assessment, machine-specific safety requirements and change-control procedure.</p>
+<p>Use a simulator or isolated test setup whenever practical.</p>
+<h3 id="step-5-define-the-test">Step 5: Define the test</h3>
+<p>Document:</p>
+<ul>
+<li>The fault or behavior being investigated.</li>
+<li>The specific signal to be tested.</li>
+<li>The expected program response.</li>
+<li>The physical hazards and safeguards.</li>
+<li>The conditions for stopping the test.</li>
+<li>The rollback and restoration steps.</li>
+</ul>
+<h3 id="step-6-apply-only-the-approved-operation">Step 6: Apply only the approved operation</h3>
+<p>Use the appropriate force or write operation supported by the PLC platform. Do not substitute one operation for another without understanding the difference.</p>
+<h3 id="step-7-observe-the-result">Step 7: Observe the result</h3>
+<p>Monitor the relevant logic, tags, diagnostics and feedback. Stop the test if the behavior differs from the approved expectation.</p>
+<h3 id="step-8-restore-and-verify">Step 8: Restore and verify</h3>
+<p>Remove test forces or restore modified values as required by the test procedure. Verify force status, expected values, controller mode and machine condition.</p>
+<p>Do not assume that a variable has returned to normal merely because the software command completed.</p>
+<h3 id="step-9-document-the-outcome">Step 9: Document the outcome</h3>
+<p>Record what was changed, the observed result, the restoration status and any remaining fault.</p>
+<h2 id="12-safe-vs-unsafe-examples">12. Safe vs Unsafe Examples</h2>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>Assessment</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Forcing a simulated sensor in a training project</td>
+<td>Generally suitable when the exercise is controlled.</td>
+<td>It allows logic testing without real machine motion.</td>
+</tr>
+<tr>
+<td>Writing a test variable in an isolated commissioning environment</td>
+<td>Potentially appropriate under an approved test plan.</td>
+<td>The consequences and restoration procedure can be controlled.</td>
+</tr>
+<tr>
+<td>Forcing a part-present input on a live robotic line</td>
+<td>Unsafe without a specifically approved and safeguarded procedure.</td>
+<td>The robot or fixture may act on a false assumption.</td>
+</tr>
+<tr>
+<td>Forcing a drive-ready signal to clear a blocked sequence</td>
+<td>Unsafe.</td>
+<td>It can conceal a drive fault or unmet condition.</td>
+</tr>
+<tr>
+<td>Writing an internal interlock aggregate TRUE</td>
+<td>Unsafe as a routine troubleshooting shortcut.</td>
+<td>It can bypass the program's intended permissive logic.</td>
+</tr>
+<tr>
+<td>Forcing a safety input to enable machine motion</td>
+<td>Prohibited as a troubleshooting shortcut.</td>
+<td>It defeats or undermines a safety-related function.</td>
+</tr>
+<tr>
+<td>Clearing a force without checking other force points</td>
+<td>Incomplete.</td>
+<td>Other forces may remain active.</td>
+</tr>
+<tr>
+<td>Writing an output value and assuming the actuator moved</td>
+<td>Incorrect diagnostic conclusion.</td>
+<td>The output path and physical response still require verification.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="13-vendor-specific-considerations">13. Vendor-Specific Considerations</h2>
+<h3 id="rockwell-automation-studio-5000-logix-designer">Rockwell Automation: Studio 5000 Logix Designer</h3>
+<p>Depending on the controller and software version, the engineering environment may support I/O forcing, tag-value changes, force-status displays and force-related commands.</p>
+<p>Before an operation:</p>
+<ul>
+<li>Verify the selected controller and online path.</li>
+<li>Check controller mode and the relevant force indicators.</li>
+<li>Confirm the exact tag and its scope.</li>
+<li>Understand the distinction between a tag write and an I/O force.</li>
+<li>Review all applicable forces before and after the test.</li>
+<li>Follow additional requirements for GuardLogix and safety-related systems.</li>
+</ul>
+<p>Do not assume that an ordinary tag write and a force on a mapped I/O point have equivalent behavior.</p>
+<h3 id="siemens-tia-portal">Siemens: TIA Portal</h3>
+<p>Available force and modify operations depend on the CPU family, firmware, data type, access level and engineering-software version.</p>
+<p>Before testing:</p>
+<ul>
+<li>Confirm the correct online device and PG/PC interface.</li>
+<li>Identify the exact operand or tag.</li>
+<li>Review the supported monitoring and forcing functions.</li>
+<li>Check the force or modify status shown by the software.</li>
+<li>Follow the applicable CPU and safety-system documentation.</li>
+</ul>
+<p>The precise behavior of process-image values, peripheral access and force operations depends on the configured hardware and operation used.</p>
+<h3 id="mitsubishi-gx-works2-gx-works3">Mitsubishi: GX Works2 / GX Works3</h3>
+<p>Supported device testing, forcing, monitoring and value-change operations depend on the PLC family, programming environment and device type.</p>
+<p>Before testing:</p>
+<ul>
+<li>Verify the connection destination and PLC identity.</li>
+<li>Confirm the device address and its role in the program.</li>
+<li>Review the supported monitor, test and force-related operations.</li>
+<li>Confirm the resulting device state and restore the approved condition.</li>
+<li>Follow the model-specific programming manual.</li>
+</ul>
+<p>The names and behavior of particular commands should be confirmed against the applicable software version rather than assumed to be identical across Mitsubishi platforms.</p>
+<h2 id="14-troubleshooting-problems-related-to-forces-and-writes">14. Troubleshooting Problems Related to Forces and Writes</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Investigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Input appears TRUE although the sensor is inactive</td>
+<td>Active force, mapping issue, wiring or input fault.</td>
+<td>Inspect force status, module diagnostics and the physical signal path.</td>
+</tr>
+<tr>
+<td>Value changes back immediately</td>
+<td>Program overwrites the tag, input refresh occurs, or another writer updates it.</td>
+<td>Use cross-reference and observe the value over time.</td>
+</tr>
+<tr>
+<td>Output remains active unexpectedly</td>
+<td>Active force, logic command, retained state or another output-control mechanism.</td>
+<td>Check force status, program logic and the output path.</td>
+</tr>
+<tr>
+<td>Sequence advances despite a missing physical condition</td>
+<td>A relevant input or internal tag may be forced or modified, or the logic may be incorrect.</td>
+<td>Inspect force status, tag history where available and the underlying program conditions.</td>
+</tr>
+<tr>
+<td>Test has finished but machine behavior is still abnormal</td>
+<td>Force remains active, modified values were not restored, or another fault exists.</td>
+<td>Check all relevant force points, values, controller state and diagnostics.</td>
+</tr>
+<tr>
+<td>Software reports a force but the signal behavior seems unchanged</td>
+<td>Force may be disabled, unsupported at that point, or applied differently than expected.</td>
+<td>Check the platform's force state, applicable documentation and actual signal path.</td>
+</tr>
+<tr>
+<td>Written value does not produce the expected physical action</td>
+<td>Downstream conditions, output logic, hardware or process state prevents the action.</td>
+<td>Trace the complete command and feedback path.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="15-practical-example-sensor-fault-on-an-automated-fixture">15. Practical Example: Sensor Fault on an Automated Fixture</h2>
+<h3 id="reported-problem">Reported problem</h3>
+<p>A fixture sequence is waiting for <code>Clamp_Closed_FB</code>, but the clamp appears physically closed.</p>
+<p>The sequence logic is:</p>
+<pre><code>Part_Present
+      AND
+Clamp_Close_Command
+      AND
+Clamp_Closed_FB
+          |
+          v
+Process_Start_Permitted
+</code></pre>
+<h3 id="correct-diagnostic-approach">Correct diagnostic approach</h3>
+<ol>
+<li>Go online and monitor <code>Clamp_Closed_FB</code>.</li>
+<li>Verify the actual clamp position using the approved machine procedure.</li>
+<li>Check the sensor indicator, mounting, wiring and relevant input-module status.</li>
+<li>Confirm whether the PLC input tag is mapped to the correct channel.</li>
+<li>Inspect the relevant force status and determine whether any force is active.</li>
+<li>If the signal is false, continue tracing the sensor-to-tag path rather than assuming the PLC program is faulty.</li>
+<li>Record the actual cause and apply the approved correction.</li>
+<li>Verify the physical feedback and sequence behavior after restoration.</li>
+</ol>
+<p>Do not force <code>Clamp_Closed_FB</code> TRUE simply because the clamp appears closed. The feedback signal may be used to confirm a specific position or condition that visual inspection alone cannot establish.</p>
+<h2 id="16-force-and-modify-record">16. Force and Modify Record</h2>
+<p>For controlled commissioning or authorized troubleshooting, record the operation explicitly.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine / line</td>
+<td>FR1010</td>
+</tr>
+<tr>
+<td>Controller</td>
+<td>Verified controller identity</td>
+</tr>
+<tr>
+<td>Tag / device</td>
+<td><code>Clamp_Closed_FB</code></td>
+</tr>
+<tr>
+<td>Operation</td>
+<td>Force or value modification</td>
+</tr>
+<tr>
+<td>Reason</td>
+<td>Investigate missing clamp feedback</td>
+</tr>
+<tr>
+<td>Authorization</td>
+<td>Approved reference or responsible role</td>
+</tr>
+<tr>
+<td>Preconditions</td>
+<td>Test environment and required safeguards verified</td>
+</tr>
+<tr>
+<td>Expected result</td>
+<td>Defined program response</td>
+</tr>
+<tr>
+<td>Actual result</td>
+<td>Observed logic and feedback</td>
+</tr>
+<tr>
+<td>Restoration</td>
+<td>Force removed or value restored as applicable</td>
+</tr>
+<tr>
+<td>Final verification</td>
+<td>Controller, signal and machine state checked</td>
+</tr>
+<tr>
+<td>Remaining issue</td>
+<td>Root cause or unresolved condition</td>
+</tr>
+</tbody>
+</table>
+<p>The record should distinguish the artificial test condition from the actual physical condition.</p>
+<h2 id="17-interview-questions-and-answers">17. Interview Questions and Answers</h2>
+<p>Q1. What is a PLC force?</p>
+<p>A force overrides or substitutes a supported signal or I/O state through a controller's forcing mechanism.</p>
+<p>Q2. What is the difference between forcing and modifying a value?</p>
+<p>Forcing uses the PLC's force mechanism to override a supported signal. Modifying writes a value to a supported variable. Their persistence and effects depend on the platform and program.</p>
+<p>Q3. Why can a forced input be dangerous?</p>
+<p>The program may interpret the forced signal as a real physical condition even when the sensor or process condition is not satisfied.</p>
+<p>Q4. Why might a modified tag immediately return to its previous value?</p>
+<p>The program may overwrite it during execution, the hardware may refresh the value, or another part of the program may be writing to the same variable.</p>
+<p>Q5. Does disabling a force always remove it?</p>
+<p>No. Depending on the PLC platform, disabling a force may leave the force configured. Verify whether it is disabled, removed or still pending.</p>
+<p>Q6. Can a force prove that a sensor is healthy?</p>
+<p>No. A force tests how the control logic responds to an artificial signal. It does not validate the sensor, wiring or physical condition.</p>
+<p>Q7. Why should cross-reference be used before modifying a tag?</p>
+<p>It helps identify where the tag is read or written and what other logic or physical actions may depend on it.</p>
+<p>Q8. Why are output forces particularly hazardous?</p>
+<p>They may cause physical equipment to energize or move independently of the normal command logic.</p>
+<p>Q9. What should be checked after an approved force test?</p>
+<p>Verify force status, restore required values, confirm the controller and machine state, and check that the system behaves as intended.</p>
+<p>Q10. Should safety inputs be forced to troubleshoot a production fault?</p>
+<p>Not as a troubleshooting shortcut. Safety-related testing must use the validated safety design and approved procedures. Safety functions must not be bypassed to enable operation.</p>
+<h2 id="18-practical-exercises">18. Practical Exercises</h2>
+<p>Use a simulator or a suitable training setup. Do not experiment with production I/O or hazardous equipment.</p>
+<ol>
+<li>Create a test Boolean input and monitor its effect on a simple rung.</li>
+<li>Compare normal program behavior with a supported simulated force.</li>
+<li>Write a test variable and observe whether the program overwrites it.</li>
+<li>Use cross-reference to identify all readers and writers of a variable.</li>
+<li>Inspect force indicators or the force table provided by the training platform.</li>
+<li>Practise disabling and removing a test force, then verify the final status.</li>
+<li>Compare a forced input's program behavior with the physical-input state in the simulation.</li>
+<li>Document the test, observed response and restoration result.</li>
+</ol>
+<p>The objective is to understand the behavior and consequences of each operation, not to make a real machine move by overriding its logic.</p>
+<h2 id="19-final-mental-model">19. Final Mental Model</h2>
+<pre><code>Identify the Signal
+        |
+        v
+Understand Its Program and Physical Role
+        |
+        v
+Trace Readers, Writers and Dependencies
+        |
+        v
+Assess Hazards and Obtain Authorization
+        |
+        v
+Define a Controlled Test
+        |
+        v
+Apply the Supported Force or Write Operation
+        |
+        v
+Monitor the Actual Response
+        |
+        v
+Restore Values and Remove Test Forces
+        |
+        v
+Verify Final State and Document Results
+</code></pre>
+<p>Remember: A force changes how a supported signal is treated. A value modification changes a variable. Neither operation repairs the underlying hardware or proves that a physical condition is satisfied.</p>
+<p>Safe troubleshooting means identifying the actual fault, controlling the test conditions and restoring the system to its approved state.</p>
+<p>Next topic in sequence: <code>03_Upload_Download | Upload &amp; download: Transfer and compare projects</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

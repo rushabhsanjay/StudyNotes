@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Allen-Bradley MicroLogix to CompactLogix Migration: Controller and I/O Hardware Differences</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Allen-Bradley MicroLogix to CompactLogix Migration: Controller and I/O Hardware Differences</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and Scope</a></li>
+<li><a href="#2-understanding-the-two-controller-families">2. Understanding the Two Controller Families</a><ul>
+<li><a href="#21-micrologix-architecture">2.1 MicroLogix architecture</a></li>
+<li><a href="#22-compactlogix-architecture">2.2 CompactLogix architecture</a></li>
+</ul>
+</li>
+<li><a href="#3-high-level-hardware-comparison">3. High-Level Hardware Comparison</a></li>
+<li><a href="#4-controller-selection-and-model-differences">4. Controller Selection and Model Differences</a><ul>
+<li><a href="#41-identify-the-exact-micrologix-model">4.1 Identify the exact MicroLogix model</a></li>
+<li><a href="#42-select-the-target-compactlogix-controller">4.2 Select the target CompactLogix controller</a></li>
+<li><a href="#43-compactlogix-generations">4.3 CompactLogix generations</a></li>
+</ul>
+</li>
+<li><a href="#5-built-in-io-versus-separate-io">5. Built-In I/O Versus Separate I/O</a><ul>
+<li><a href="#51-micrologix-built-in-io">5.1 MicroLogix built-in I/O</a></li>
+<li><a href="#52-compactlogix-io-arrangement">5.2 CompactLogix I/O arrangement</a></li>
+<li><a href="#53-example-of-io-expansion">5.3 Example of I/O expansion</a></li>
+</ul>
+</li>
+<li><a href="#6-io-module-compatibility">6. I/O Module Compatibility</a><ul>
+<li><a href="#61-micrologix-expansion-modules">6.1 MicroLogix expansion modules</a></li>
+<li><a href="#62-compactlogix-io-families">6.2 CompactLogix I/O families</a></li>
+<li><a href="#63-digital-input-compatibility">6.3 Digital input compatibility</a></li>
+<li><a href="#64-digital-output-compatibility">6.4 Digital output compatibility</a></li>
+<li><a href="#65-analog-io-compatibility">6.5 Analog I/O compatibility</a></li>
+</ul>
+</li>
+<li><a href="#7-power-supply-and-field-power">7. Power Supply and Field Power</a><ul>
+<li><a href="#71-power-architecture">7.1 Power architecture</a></li>
+<li><a href="#72-power-migration-checklist">7.2 Power migration checklist</a></li>
+<li><a href="#73-example-load-calculation">7.3 Example load calculation</a></li>
+</ul>
+</li>
+<li><a href="#8-communication-interfaces-and-networks">8. Communication Interfaces and Networks</a><ul>
+<li><a href="#81-micrologix-communication-capabilities">8.1 MicroLogix communication capabilities</a></li>
+<li><a href="#82-compactlogix-and-ethernetip">8.2 CompactLogix and EtherNet/IP</a></li>
+<li><a href="#83-serial-devices">8.3 Serial devices</a></li>
+</ul>
+</li>
+<li><a href="#9-local-io-and-distributed-io">9. Local I/O and Distributed I/O</a><ul>
+<li><a href="#91-local-io">9.1 Local I/O</a></li>
+<li><a href="#92-distributed-io">9.2 Distributed I/O</a></li>
+</ul>
+</li>
+<li><a href="#10-specialty-modules-and-high-speed-functions">10. Specialty Modules and High-Speed Functions</a><ul>
+<li><a href="#101-high-speed-counters-and-encoders">10.1 High-speed counters and encoders</a></li>
+<li><a href="#102-pulse-train-and-motion-related-functions">10.2 Pulse-train and motion-related functions</a></li>
+<li><a href="#103-other-specialty-functions">10.3 Other specialty functions</a></li>
+</ul>
+</li>
+<li><a href="#11-terminal-wiring-and-panel-layout">11. Terminal Wiring and Panel Layout</a><ul>
+<li><a href="#111-wiring-changes">11.1 Wiring changes</a></li>
+<li><a href="#112-panel-layout">11.2 Panel layout</a></li>
+</ul>
+</li>
+<li><a href="#12-safety-considerations">12. Safety Considerations</a></li>
+<li><a href="#13-practical-example-micrologix-test-bench">13. Practical Example: MicroLogix Test Bench</a><ul>
+<li><a href="#131-migration-inventory-example">13.1 Migration inventory example</a></li>
+</ul>
+</li>
+<li><a href="#14-common-hardware-migration-mistakes">14. Common Hardware Migration Mistakes</a></li>
+<li><a href="#15-hardware-migration-checklist">15. Hardware Migration Checklist</a><ul>
+<li><a href="#existing-system-assessment">Existing-system assessment</a></li>
+<li><a href="#target-system-design">Target-system design</a></li>
+<li><a href="#installation-and-verification">Installation and verification</a></li>
+</ul>
+</li>
+<li><a href="#16-interview-and-practical-competency-questions">16. Interview and Practical Competency Questions</a></li>
+<li><a href="#17-final-engineering-principle">17. Final Engineering Principle</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\24_Obsolescence\07_Examples\02_MicroLogix_to_Compact\01_Hardware</code></p>
+<h2 id="1-purpose-and-scope">1. Purpose and Scope</h2>
+<p>Migrating an Allen-Bradley MicroLogix PLC system to CompactLogix is a hardware and control-system redesign, not a direct processor replacement. The two product families differ in controller architecture, I/O arrangement, communication interfaces, memory organisation, power requirements, and supported automation features.</p>
+<p>MicroLogix controllers are compact, generally fixed-I/O or expansion-I/O controllers designed for smaller automation applications. CompactLogix controllers use a Logix control architecture with a controller and compatible local or distributed I/O, depending on the selected family and configuration.</p>
+<p>The objective of this topic is to determine which parts of an existing MicroLogix installation can be retained, which must be replaced, and what must be redesigned before the machine can be recommissioned.</p>
+<p>This topic focuses on hardware. Conversion from RSLogix 500 to Studio 5000, including program structure and instruction differences, is covered separately in the next topic.</p>
+<h2 id="2-understanding-the-two-controller-families">2. Understanding the Two Controller Families</h2>
+<h3 id="21-micrologix-architecture">2.1 MicroLogix architecture</h3>
+<p>MicroLogix is a legacy Allen-Bradley controller family commonly found in standalone machines, small production stations, conveyors, fixtures, and older test equipment.</p>
+<p>Examples include:</p>
+<ul>
+<li>MicroLogix 1000.</li>
+<li>MicroLogix 1100.</li>
+<li>MicroLogix 1200.</li>
+<li>MicroLogix 1400.</li>
+<li>MicroLogix 1500.</li>
+</ul>
+<p>Availability and capabilities vary by model. These controllers do not all have the same communication interfaces, memory capacity, expansion options, or I/O features.</p>
+<p>A typical installation may contain:</p>
+<ul>
+<li>A MicroLogix controller with built-in I/O.</li>
+<li>Compatible expansion I/O modules, where supported.</li>
+<li>A 24 VDC or other specified power arrangement.</li>
+<li>Serial or Ethernet communication, depending on the model.</li>
+<li>An HMI, drive, remote device, or PC connection.</li>
+<li>Field sensors, relays, solenoid valves, and other actuators.</li>
+</ul>
+<pre><code>Machine power and field supplies
+    ↓
+MicroLogix controller
+    ↓
+Built-in I/O and supported expansion I/O
+    ↓
+Field sensors and actuators
+    ↓
+HMI / drive / other communication devices
+</code></pre>
+<p>A key characteristic is that many MicroLogix installations combine the CPU and some I/O in one compact unit. Consequently, replacing the controller can also mean replacing the physical terminals and field-wiring arrangement.</p>
+<h3 id="22-compactlogix-architecture">2.2 CompactLogix architecture</h3>
+<p>CompactLogix is part of the Allen-Bradley Logix controller family. It uses controller hardware with compatible local I/O arrangements and can communicate with supported distributed I/O and other network devices.</p>
+<p>Depending on the CompactLogix generation, the installation may include:</p>
+<ul>
+<li>A CompactLogix controller.</li>
+<li>Compatible local I/O modules or a supported local expansion arrangement.</li>
+<li>A chassis, backplane, or other platform-specific mounting arrangement where required by the selected family.</li>
+<li>EtherNet/IP communication.</li>
+<li>Additional communication or specialty modules, where supported.</li>
+<li>Remote I/O, drives, HMIs, robots, and other networked equipment.</li>
+</ul>
+<pre><code>Industrial power
+    ↓
+CompactLogix controller and supported I/O arrangement
+    ↓
+EtherNet/IP or other supported interfaces
+    ↓
+Distributed I/O / HMI / drives / other controllers
+    ↓
+Sensors, actuators and machine processes
+</code></pre>
+<p>CompactLogix configurations are model-dependent. Not every controller supports every I/O family, communication option, module arrangement, or engineering-software version.</p>
+<h2 id="3-high-level-hardware-comparison">3. High-Level Hardware Comparison</h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>MicroLogix</th>
+<th>CompactLogix</th>
+<th>Migration implication</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Controller architecture</td>
+<td>Compact controller, often with built-in I/O</td>
+<td>Logix controller with compatible local or distributed I/O</td>
+<td>Redesign the control hardware around the selected controller</td>
+</tr>
+<tr>
+<td>Built-in I/O</td>
+<td>Available on many models</td>
+<td>Depends on controller family; many installations use separate I/O modules</td>
+<td>Identify all existing built-in signals</td>
+</tr>
+<tr>
+<td>Expansion I/O</td>
+<td>Model-specific expansion modules</td>
+<td>Compatible CompactLogix I/O or supported distributed I/O</td>
+<td>Existing modules are not directly interchangeable</td>
+</tr>
+<tr>
+<td>Controller memory</td>
+<td>Model-dependent capacity and data organisation</td>
+<td>Model-dependent Logix memory and tag organisation</td>
+<td>Assess program, data, and communication requirements</td>
+</tr>
+<tr>
+<td>Programming platform</td>
+<td>RSLogix 500 for supported MicroLogix families</td>
+<td>Studio 5000 Logix Designer for supported CompactLogix families</td>
+<td>Software conversion and application restructuring are required</td>
+</tr>
+<tr>
+<td>Data addressing</td>
+<td>Commonly uses file-based addressing</td>
+<td>Uses controller tags and Logix data structures</td>
+<td>Existing address references need mapping</td>
+</tr>
+<tr>
+<td>Communications</td>
+<td>Serial and/or Ethernet depending on model</td>
+<td>EtherNet/IP is common; options depend on model</td>
+<td>Audit all network and serial connections</td>
+</tr>
+<tr>
+<td>I/O wiring</td>
+<td>Frequently integrated into controller terminals or model-specific expansion modules</td>
+<td>Depends on the selected I/O platform and terminal arrangement</td>
+<td>Prepare new wiring and terminal drawings</td>
+</tr>
+<tr>
+<td>Remote I/O</td>
+<td>Depends on model and communication capabilities</td>
+<td>Supports compatible distributed I/O architectures</td>
+<td>Verify network and module compatibility</td>
+</tr>
+<tr>
+<td>Motion and specialty functions</td>
+<td>Model and system dependent</td>
+<td>Available features depend on controller, modules, firmware, and software</td>
+<td>Confirm actual application requirements</td>
+</tr>
+<tr>
+<td>Safety</td>
+<td>Standard MicroLogix controllers are not substitutes for modern safety controllers</td>
+<td>Safety functionality requires an appropriate safety-rated controller and architecture</td>
+<td>Perform a separate safety migration where applicable</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-controller-selection-and-model-differences">4. Controller Selection and Model Differences</h2>
+<h3 id="41-identify-the-exact-micrologix-model">4.1 Identify the exact MicroLogix model</h3>
+<p>The first step is to record the complete catalog number of the installed controller.</p>
+<p>For example, a MicroLogix 1100 and a MicroLogix 1400 may differ in built-in I/O, Ethernet functionality, serial interfaces, expansion options, and memory. The family name alone is not sufficient for a migration assessment.</p>
+<p>Record:</p>
+<ul>
+<li>Complete catalog number.</li>
+<li>Series and hardware revision, where applicable.</li>
+<li>Firmware revision.</li>
+<li>Built-in digital and analog I/O.</li>
+<li>Expansion modules.</li>
+<li>Available communication ports.</li>
+<li>Connected devices and protocols.</li>
+<li>Program size and data requirements.</li>
+<li>Special instructions or hardware-dependent functions.</li>
+</ul>
+<h3 id="42-select-the-target-compactlogix-controller">4.2 Select the target CompactLogix controller</h3>
+<p>Do not select a CompactLogix controller merely because it is newer or has more memory. Selection must be based on the complete application.</p>
+<table>
+<thead>
+<tr>
+<th>Selection factor</th>
+<th>What to verify</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Application size</td>
+<td>Program size, tag count, data structures, and future growth</td>
+</tr>
+<tr>
+<td>Execution requirements</td>
+<td>Task rates, periodic logic, event processing, and response times</td>
+</tr>
+<tr>
+<td>I/O capacity</td>
+<td>Number and types of required I/O points</td>
+</tr>
+<tr>
+<td>Network requirements</td>
+<td>EtherNet/IP devices, connection capacity, topology, and required protocols</td>
+</tr>
+<tr>
+<td>Specialty functions</td>
+<td>High-speed counting, motion, serial communication, and other required features</td>
+</tr>
+<tr>
+<td>Memory and data</td>
+<td>Required controller memory, retained values, and communication buffers</td>
+</tr>
+<tr>
+<td>Firmware</td>
+<td>Supported controller firmware and engineering software</td>
+</tr>
+<tr>
+<td>Lifecycle</td>
+<td>Product availability, support status, and planned long-term serviceability</td>
+</tr>
+<tr>
+<td>Panel constraints</td>
+<td>Mounting, dimensions, ventilation, and wiring space</td>
+</tr>
+<tr>
+<td>Safety requirements</td>
+<td>Whether a separate safety-rated architecture is required</td>
+</tr>
+</tbody>
+</table>
+<h3 id="43-compactlogix-generations">4.3 CompactLogix generations</h3>
+<p>CompactLogix is not one single hardware architecture. Different generations use different controller families, I/O platforms, firmware capabilities, and engineering-software requirements.</p>
+<p>For example, older CompactLogix families may use 1769 Compact I/O in a local arrangement, while newer families may use different local I/O platforms and support different module and network configurations.</p>
+<p>Before selecting the target hardware, verify the controller catalog number, supported I/O family, firmware revision, and applicable product documentation.</p>
+<p>Engineering rule: Choose the exact controller and I/O platform first, then design the hardware configuration around that documented combination.</p>
+<h2 id="5-built-in-io-versus-separate-io">5. Built-In I/O Versus Separate I/O</h2>
+<h3 id="51-micrologix-built-in-io">5.1 MicroLogix built-in I/O</h3>
+<p>Many MicroLogix controllers have built-in digital inputs, digital outputs, and, on selected models, analog I/O. These signals terminate directly at the controller's terminals.</p>
+<p>This arrangement can reduce panel size and component count, but it couples the field wiring to the controller model.</p>
+<p>When the controller is replaced, each built-in signal must be reassigned to a supported input or output on the new system.</p>
+<h3 id="52-compactlogix-io-arrangement">5.2 CompactLogix I/O arrangement</h3>
+<p>CompactLogix systems commonly use separate I/O modules. Depending on the controller family, the modules may be installed locally or connected as distributed I/O over a supported network.</p>
+<p>The new arrangement can provide greater modularity, but it introduces additional design tasks:</p>
+<ul>
+<li>Select the compatible I/O platform.</li>
+<li>Determine the required module count.</li>
+<li>Choose suitable digital and analog modules.</li>
+<li>Design module mounting and power distribution.</li>
+<li>Map every original field signal to the new module and channel.</li>
+<li>Confirm terminal blocks and wiring accessories.</li>
+<li>Configure the modules in the engineering project.</li>
+</ul>
+<h3 id="53-example-of-io-expansion">5.3 Example of I/O expansion</h3>
+<p>Suppose a MicroLogix machine has 20 digital inputs, 12 digital outputs, and 4 analog inputs.</p>
+<p>The target system must support at least those required signal functions, with appropriate electrical characteristics and sufficient capacity for any future expansion.</p>
+<p>Do not simply choose modules whose channel counts add up to the required totals. Channel grouping, electrical ratings, isolation, field power, diagnostics, and spare capacity also matter.</p>
+<table>
+<thead>
+<tr>
+<th>Signal group</th>
+<th>Existing requirement</th>
+<th>Target design consideration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Digital inputs</td>
+<td>20 points</td>
+<td>Select sufficient supported channels and verify sensor compatibility</td>
+</tr>
+<tr>
+<td>Digital outputs</td>
+<td>12 points</td>
+<td>Verify output type, load current, and protection</td>
+</tr>
+<tr>
+<td>Analog inputs</td>
+<td>4 points</td>
+<td>Verify signal ranges, resolution, accuracy, and isolation</td>
+</tr>
+<tr>
+<td>Spare capacity</td>
+<td>Based on plant requirements</td>
+<td>Reserve suitable channels and physical expansion capacity</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6-io-module-compatibility">6. I/O Module Compatibility</h2>
+<h3 id="61-micrologix-expansion-modules">6.1 MicroLogix expansion modules</h3>
+<p>MicroLogix expansion modules are specific to supported controller families and models. Their mechanical connections, electrical characteristics, and communication with the controller are not automatically compatible with CompactLogix.</p>
+<p>A module from a MicroLogix installation must not be assumed to function as a local CompactLogix I/O module.</p>
+<h3 id="62-compactlogix-io-families">6.2 CompactLogix I/O families</h3>
+<p>CompactLogix configurations can use supported I/O platforms such as 1769 Compact I/O in applicable systems. Other CompactLogix generations support different I/O architectures.</p>
+<p>The target module selection must be checked against the exact controller and firmware.</p>
+<p>Review:</p>
+<ul>
+<li>Digital input and output characteristics.</li>
+<li>Analog input and output ranges.</li>
+<li>Channel-to-channel isolation.</li>
+<li>Module power requirements.</li>
+<li>Terminal block and wiring accessory requirements.</li>
+<li>Supported module placement and expansion limits.</li>
+<li>Firmware and configuration support.</li>
+<li>Diagnostic and fault-reporting capabilities.</li>
+</ul>
+<h3 id="63-digital-input-compatibility">6.3 Digital input compatibility</h3>
+<p>For every digital input, document:</p>
+<ul>
+<li>Input voltage range.</li>
+<li>Input current and switching thresholds.</li>
+<li>Sensor type and output arrangement.</li>
+<li>Common-terminal grouping.</li>
+<li>Input filtering and response time.</li>
+<li>Isolation and diagnostic capabilities.</li>
+<li>Wiring and polarity.</li>
+</ul>
+<p>For example, a three-wire PNP proximity sensor typically switches a positive voltage to the input when active. The target input must support the sensor's electrical arrangement, and the common wiring must be correct.</p>
+<p>Do not assume a sensor can be connected to a new module simply because both systems use 24 VDC.</p>
+<h3 id="64-digital-output-compatibility">6.4 Digital output compatibility</h3>
+<p>For every digital output, check:</p>
+<ul>
+<li>Output type, such as relay or transistor.</li>
+<li>Rated voltage and current.</li>
+<li>Maximum channel and group loading.</li>
+<li>Inductive-load protection.</li>
+<li>Short-circuit and overload behavior.</li>
+<li>Switching delay.</li>
+<li>Field power and common-terminal arrangement.</li>
+</ul>
+<p>A MicroLogix relay output and a CompactLogix transistor output are not automatically equivalent. If the original output drives a contactor, solenoid, or other load, the replacement must be selected to suit that load.</p>
+<h3 id="65-analog-io-compatibility">6.5 Analog I/O compatibility</h3>
+<p>Analog signals require special attention because a wiring or scaling mismatch can produce plausible but incorrect values.</p>
+<p>Check:</p>
+<ul>
+<li>Voltage or current signal type.</li>
+<li>Measurement range, such as 0–10 V or 4–20 mA.</li>
+<li>Resolution and accuracy.</li>
+<li>Channel isolation.</li>
+<li>Wire-break and out-of-range diagnostics.</li>
+<li>Loop power and reference connections.</li>
+<li>Scaling and engineering units.</li>
+<li>Input filtering and conversion time.</li>
+</ul>
+<p>For a linear 4–20 mA transmitter representing 0–10 bar:</p>
+<div class="math-display">\[ P=\frac{I-4}{20-4}\times10 \]</div>
+<p>At 12 mA, the expected pressure is 5 bar. The actual transmitter range and module configuration must be verified before using this conversion.</p>
+<h2 id="7-power-supply-and-field-power">7. Power Supply and Field Power</h2>
+<h3 id="71-power-architecture">7.1 Power architecture</h3>
+<p>A MicroLogix installation may combine the controller and I/O in a compact assembly, while a CompactLogix design may require a separate controller power supply and additional I/O or field-power arrangements.</p>
+<p>The exact requirements depend on the selected controller, I/O platform, and modules.</p>
+<p>Distinguish between:</p>
+<ul>
+<li>Controller power.</li>
+<li>I/O module power.</li>
+<li>Field power for sensors and actuators.</li>
+<li>Auxiliary power for communication devices and external equipment.</li>
+</ul>
+<h3 id="72-power-migration-checklist">7.2 Power migration checklist</h3>
+<ul>
+<li>Record the existing supply voltage and current rating.</li>
+<li>Identify all loads supplied by the original controller or I/O arrangement.</li>
+<li>Determine the target controller's specified power requirements.</li>
+<li>Calculate I/O and field-device loads.</li>
+<li>Verify protection, grounding, and circuit segmentation.</li>
+<li>Check startup and inrush current where relevant.</li>
+<li>Confirm that the new installation meets the applicable electrical design requirements.</li>
+</ul>
+<p>Do not assume the original MicroLogix power arrangement can supply the new CompactLogix system.</p>
+<h3 id="73-example-load-calculation">7.3 Example load calculation</h3>
+<p>If 16 sensors each draw 35 mA and 8 interface relays each draw 50 mA, the combined steady-state current is:</p>
+<div class="math-display">\[ I\_{\text{total}}=(16\times0.035)+(8\times0.05)=0.96\text{ A} \]</div>
+<p>This is the calculated load for those devices only. Other loads, startup current, and the required design margin must also be considered before selecting the supply.</p>
+<h2 id="8-communication-interfaces-and-networks">8. Communication Interfaces and Networks</h2>
+<h3 id="81-micrologix-communication-capabilities">8.1 MicroLogix communication capabilities</h3>
+<p>MicroLogix communication capabilities vary by model. Depending on the controller, an installation may use serial communication, Ethernet, or other supported interfaces and protocols.</p>
+<p>Typical connected devices include:</p>
+<ul>
+<li>HMI panels.</li>
+<li>Drives.</li>
+<li>Barcode scanners and printers.</li>
+<li>Measurement instruments.</li>
+<li>Remote devices.</li>
+<li>PCs and SCADA systems.</li>
+<li>Other controllers.</li>
+</ul>
+<p>Record every connection before deciding which interfaces the target controller must provide.</p>
+<h3 id="82-compactlogix-and-ethernetip">8.2 CompactLogix and EtherNet/IP</h3>
+<p>EtherNet/IP is widely used with CompactLogix systems. However, the supported interfaces, connection capacity, topology, and network capabilities depend on the exact controller family.</p>
+<p>The migration may require changes to:</p>
+<ul>
+<li>IP addresses and subnet configuration.</li>
+<li>Device names and network settings.</li>
+<li>Network switches and cabling.</li>
+<li>HMI and drive connections.</li>
+<li>Remote I/O architecture.</li>
+<li>Communication instructions and data structures.</li>
+<li>Device configuration and fault handling.</li>
+</ul>
+<p>A controller with an Ethernet port does not necessarily support every protocol or legacy communication method used by the old system.</p>
+<h3 id="83-serial-devices">8.3 Serial devices</h3>
+<p>If the MicroLogix installation communicates with a printer, scanner, instrument, or other device over serial communication, verify the complete interface requirements.</p>
+<p>Check:</p>
+<ul>
+<li>RS-232, RS-422, or RS-485 interface.</li>
+<li>Connector and pin assignment.</li>
+<li>Baud rate and framing.</li>
+<li>Parity and stop bits.</li>
+<li>Message format and termination.</li>
+<li>Handshaking and timeout behavior.</li>
+<li>Electrical isolation and grounding.</li>
+</ul>
+<p>A serial device may require a supported communication module, a suitable gateway, or replacement. Any gateway must support the required protocol, timing, diagnostics, and failure behavior.</p>
+<h2 id="9-local-io-and-distributed-io">9. Local I/O and Distributed I/O</h2>
+<h3 id="91-local-io">9.1 Local I/O</h3>
+<p>Local I/O is physically installed in the controller's supported local arrangement. Its compatibility depends on the controller family, I/O platform, and module specifications.</p>
+<p>The migration engineer must confirm the supported module family and permitted arrangement for the chosen CompactLogix controller.</p>
+<h3 id="92-distributed-io">9.2 Distributed I/O</h3>
+<p>Distributed I/O is located away from the main controller and communicates over a supported industrial network.</p>
+<p>This arrangement can reduce long field-wire runs and allow modular machine sections. However, it requires the correct network interface, device configuration, and compatible I/O hardware.</p>
+<p>For each remote station, record:</p>
+<ul>
+<li>Station identity.</li>
+<li>Interface module and catalog number.</li>
+<li>Network address and protocol.</li>
+<li>Installed I/O modules.</li>
+<li>Field wiring and power.</li>
+<li>Required update time.</li>
+<li>Communication-loss behavior.</li>
+</ul>
+<p>Do not assume an existing remote I/O station can be retained simply because it uses EtherNet/IP. The exact device and controller combination must be supported.</p>
+<h2 id="10-specialty-modules-and-high-speed-functions">10. Specialty Modules and High-Speed Functions</h2>
+<p>Legacy MicroLogix systems may use high-speed counters, pulse-train outputs, serial interfaces, analog modules, or other model-specific features.</p>
+<p>The target design must preserve the required function, even if the implementation changes.</p>
+<h3 id="101-high-speed-counters-and-encoders">10.1 High-speed counters and encoders</h3>
+<p>Check:</p>
+<ul>
+<li>Maximum input frequency.</li>
+<li>Encoder type and signal format.</li>
+<li>Count modes and direction detection.</li>
+<li>Index or reference inputs.</li>
+<li>Input filtering.</li>
+<li>Required response time.</li>
+<li>Hardware support in the target platform.</li>
+</ul>
+<p>Do not assume a standard digital input can replace a dedicated high-speed counter input.</p>
+<h3 id="102-pulse-train-and-motion-related-functions">10.2 Pulse-train and motion-related functions</h3>
+<p>If the original controller produces pulse trains or controls a motion-related device, identify the exact output method and timing requirements.</p>
+<p>Determine whether the target controller and compatible modules support the required function. The replacement may require a different motion architecture, drive interface, or controller configuration.</p>
+<h3 id="103-other-specialty-functions">10.3 Other specialty functions</h3>
+<p>Also review:</p>
+<ul>
+<li>Thermocouple and RTD measurement.</li>
+<li>Weighing and load-cell interfaces.</li>
+<li>Serial instrument communication.</li>
+<li>Device-specific communication modules.</li>
+<li>Fast event capture.</li>
+<li>Interrupt-driven processing.</li>
+</ul>
+<p>A function that was previously built into the MicroLogix controller may require separate hardware or a different implementation in the target system.</p>
+<h2 id="11-terminal-wiring-and-panel-layout">11. Terminal Wiring and Panel Layout</h2>
+<h3 id="111-wiring-changes">11.1 Wiring changes</h3>
+<p>Because many MicroLogix controllers have built-in I/O terminals, replacing the controller often changes the physical termination of field wiring.</p>
+<p>Prepare an updated drawing that identifies:</p>
+<ul>
+<li>Original controller terminals.</li>
+<li>Original signal names.</li>
+<li>New I/O module and channel.</li>
+<li>New terminal block and pin assignment.</li>
+<li>Field-device connection.</li>
+<li>Field power and common wiring.</li>
+<li>Shield and protective-earth connections.</li>
+</ul>
+<h3 id="112-panel-layout">11.2 Panel layout</h3>
+<p>Review the cabinet for:</p>
+<ul>
+<li>Controller and I/O mounting.</li>
+<li>Space for new modules and power supplies.</li>
+<li>Cable duct capacity.</li>
+<li>Terminal block requirements.</li>
+<li>Ventilation and heat dissipation.</li>
+<li>Network switch placement.</li>
+<li>Access for diagnostics and replacement.</li>
+<li>Separation of power, signal, and communication wiring where required.</li>
+</ul>
+<p>A CompactLogix system may be physically larger than the original compact controller arrangement. The cabinet must accommodate the complete engineered system, not just the CPU.</p>
+<h2 id="12-safety-considerations">12. Safety Considerations</h2>
+<p>Standard MicroLogix controllers are not substitutes for safety-rated control systems. If the original machine relies on safety relays, safety controllers, or other safety-related hardware, that architecture must be identified before migration.</p>
+<p>The target design must preserve the required safety functions through an appropriate and validated arrangement.</p>
+<p>Check:</p>
+<ul>
+<li>Emergency-stop circuits.</li>
+<li>Guard-door interlocks.</li>
+<li>Enabling devices.</li>
+<li>Safe drive or motion functions.</li>
+<li>Safety relay and safety controller interfaces.</li>
+<li>Restart and reset behavior.</li>
+<li>Required safety performance and validation.</li>
+<li>Applicable machinery and site requirements.</li>
+</ul>
+<p>Do not assume that a standard CompactLogix controller automatically provides safety functionality. A safety-related migration requires the appropriate safety-rated hardware and a separate validation process.</p>
+<h2 id="13-practical-example-micrologix-test-bench">13. Practical Example: MicroLogix Test Bench</h2>
+<p>Consider a test bench controlled by a MicroLogix controller. It reads fixture sensors, operates pneumatic valves, monitors a pressure transmitter, communicates with an HMI, and sends results to a PC.</p>
+<p>The hardware migration assessment should include the following:</p>
+<table>
+<thead>
+<tr>
+<th>Subsystem</th>
+<th>Existing arrangement</th>
+<th>Target design action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Controller</td>
+<td>MicroLogix CPU</td>
+<td>Select a CompactLogix controller based on required functions and performance</td>
+</tr>
+<tr>
+<td>Digital inputs</td>
+<td>Built-in or expansion inputs</td>
+<td>Select compatible input modules and verify electrical characteristics</td>
+</tr>
+<tr>
+<td>Digital outputs</td>
+<td>Built-in or expansion outputs</td>
+<td>Verify load ratings and choose suitable output hardware</td>
+</tr>
+<tr>
+<td>Analog input</td>
+<td>Pressure transmitter input</td>
+<td>Match signal type, range, accuracy, and scaling requirements</td>
+</tr>
+<tr>
+<td>HMI</td>
+<td>Existing controller connection</td>
+<td>Verify supported protocol and network configuration</td>
+</tr>
+<tr>
+<td>PC interface</td>
+<td>Existing communication connection</td>
+<td>Confirm protocol and data exchange requirements</td>
+</tr>
+<tr>
+<td>Field power</td>
+<td>Existing controller and external supplies</td>
+<td>Recalculate power requirements and distribution</td>
+</tr>
+<tr>
+<td>Panel wiring</td>
+<td>Original controller terminal layout</td>
+<td>Redesign terminal allocation and update drawings</td>
+</tr>
+<tr>
+<td>Safety circuit</td>
+<td>Existing machine safety devices</td>
+<td>Preserve and validate the approved safety architecture</td>
+</tr>
+</tbody>
+</table>
+<h3 id="131-migration-inventory-example">13.1 Migration inventory example</h3>
+<table>
+<thead>
+<tr>
+<th>Original signal</th>
+<th>Original location</th>
+<th>Target mapping requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Clamp closed feedback</td>
+<td>MicroLogix input</td>
+<td>Map to the verified CompactLogix input channel</td>
+</tr>
+<tr>
+<td>Clamp valve command</td>
+<td>MicroLogix output</td>
+<td>Map to the verified output channel and load circuit</td>
+</tr>
+<tr>
+<td>Pressure measurement</td>
+<td>Analog input</td>
+<td>Verify range, module configuration, and engineering-unit scaling</td>
+</tr>
+<tr>
+<td>Cycle start request</td>
+<td>Local or HMI input</td>
+<td>Verify source, tag mapping, and interlocks</td>
+</tr>
+<tr>
+<td>Test result</td>
+<td>PLC data exchanged with PC</td>
+<td>Define the target data structure and communication interface</td>
+</tr>
+</tbody>
+</table>
+<p>These are illustrative signal names. The actual migration must use the machine's approved I/O list and drawings.</p>
+<h2 id="14-common-hardware-migration-mistakes">14. Common Hardware Migration Mistakes</h2>
+<table>
+<thead>
+<tr>
+<th>Mistake</th>
+<th>Consequence</th>
+<th>Correct practice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Selecting hardware by family name alone</td>
+<td>Unsupported controller or module combination</td>
+<td>Verify exact catalog numbers and compatibility</td>
+</tr>
+<tr>
+<td>Assuming MicroLogix I/O modules fit CompactLogix</td>
+<td>Mechanical or electrical incompatibility</td>
+<td>Select modules supported by the target platform</td>
+</tr>
+<tr>
+<td>Ignoring built-in I/O</td>
+<td>Missing field signals after controller replacement</td>
+<td>Inventory every built-in channel</td>
+</tr>
+<tr>
+<td>Reusing the old power arrangement without review</td>
+<td>Insufficient or unsuitable power</td>
+<td>Recalculate controller, module, and field loads</td>
+</tr>
+<tr>
+<td>Assuming equal channel counts mean equivalence</td>
+<td>Incorrect signal behavior or electrical damage</td>
+<td>Compare complete electrical specifications</td>
+</tr>
+<tr>
+<td>Ignoring serial devices</td>
+<td>Lost instrument or peripheral communication</td>
+<td>Verify the interface and protocol</td>
+</tr>
+<tr>
+<td>Assuming all CompactLogix models support the same I/O</td>
+<td>Incorrect hardware configuration</td>
+<td>Check the exact controller generation and I/O family</td>
+</tr>
+<tr>
+<td>Forgetting cabinet modifications</td>
+<td>Installation delays and poor service access</td>
+<td>Check dimensions, mounting, and wiring space</td>
+</tr>
+<tr>
+<td>Ignoring high-speed functions</td>
+<td>Missed pulses or timing failures</td>
+<td>Verify hardware capabilities and response requirements</td>
+</tr>
+<tr>
+<td>Treating standard control as safety-rated</td>
+<td>Unsafe machine behavior</td>
+<td>Complete a separate safety assessment and validation</td>
+</tr>
+</tbody>
+</table>
+<h2 id="15-hardware-migration-checklist">15. Hardware Migration Checklist</h2>
+<h3 id="existing-system-assessment">Existing-system assessment</h3>
+<ul>
+<li>Record the exact MicroLogix catalog number and firmware.</li>
+<li>Record all built-in I/O and expansion modules.</li>
+<li>Identify all field signals and terminal assignments.</li>
+<li>Document power supplies and connected loads.</li>
+<li>Inventory HMI, drives, serial devices, and network connections.</li>
+<li>Identify specialty modules and high-speed functions.</li>
+<li>Document safety-related hardware and functions.</li>
+<li>Record cabinet dimensions and existing wiring routes.</li>
+</ul>
+<h3 id="target-system-design">Target-system design</h3>
+<ul>
+<li>Select a compatible CompactLogix controller.</li>
+<li>Confirm the target I/O family and module compatibility.</li>
+<li>Verify digital and analog electrical characteristics.</li>
+<li>Design the new power and field-power arrangement.</li>
+<li>Verify communication interfaces and network topology.</li>
+<li>Confirm support for specialty functions.</li>
+<li>Design the new terminal layout and wiring drawings.</li>
+<li>Verify panel space, ventilation, and service access.</li>
+<li>Complete the applicable safety review.</li>
+</ul>
+<h3 id="installation-and-verification">Installation and verification</h3>
+<ul>
+<li>Verify hardware against the approved design.</li>
+<li>Inspect wiring, terminals, earthing, and power distribution.</li>
+<li>Confirm network configuration and device compatibility.</li>
+<li>Test every input and output.</li>
+<li>Validate analog values and scaling.</li>
+<li>Verify communication and fault recovery.</li>
+<li>Test critical machine sequences and response timing.</li>
+<li>Update the installed-base and spare-parts records.</li>
+</ul>
+<h2 id="16-interview-and-practical-competency-questions">16. Interview and Practical Competency Questions</h2>
+<p>1. Can a MicroLogix controller be directly replaced by a CompactLogix CPU?</p>
+<p>No. The controller architecture, I/O arrangement, wiring, communication interfaces, and supported functions differ. The replacement requires an engineered hardware configuration.</p>
+<p>2. Can existing MicroLogix expansion I/O be used directly with CompactLogix?</p>
+<p>Do not assume so. The exact module and controller combination must be supported. Incompatible modules must be replaced or their functions redesigned.</p>
+<p>3. Why is built-in I/O important during migration?</p>
+<p>Field wiring terminates directly at the original controller. Replacing the controller may therefore require new I/O modules, terminal blocks, and wiring arrangements.</p>
+<p>4. Why must the exact CompactLogix generation be identified?</p>
+<p>Different generations support different controller capabilities, I/O platforms, module arrangements, firmware, and engineering-software versions.</p>
+<p>5. Can a MicroLogix serial connection simply be replaced by Ethernet?</p>
+<p>Not automatically. The connected device and protocol must support the new interface, or a suitable and validated communication solution must be engineered.</p>
+<p>6. What is the most important first step?</p>
+<p>Inventory the exact controller, all I/O, communication connections, power arrangements, specialty functions, and safety-related hardware before selecting the replacement.</p>
+<h2 id="17-final-engineering-principle">17. Final Engineering Principle</h2>
+<p>A successful MicroLogix-to-CompactLogix migration preserves the required machine functions while replacing incompatible hardware with a documented and supported design.</p>
+<p>Classify each existing component as:</p>
+<ul>
+<li>Retain: Its use in the target architecture is documented as supported.</li>
+<li>Replace: A compatible successor or alternative is selected.</li>
+<li>Redesign: The function requires a different hardware or communication arrangement.</li>
+<li>Validate: Compatibility or behavior must be confirmed through documented testing.</li>
+</ul>
+<p>The final design must be verified against the exact Allen-Bradley controller and module catalog numbers, applicable installation manuals, firmware requirements, and engineering-software support. Product-family names alone are not enough to establish compatibility.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\24_Obsolescence\07_Examples\02_MicroLogix_to_Compact\02_Software - Software: RSLogix 500 to Studio 5000</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

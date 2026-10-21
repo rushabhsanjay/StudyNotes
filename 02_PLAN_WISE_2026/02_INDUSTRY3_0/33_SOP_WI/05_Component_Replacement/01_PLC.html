@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLC Component Replacement</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">PLC Component Replacement</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and Scope</a></li>
+<li><a href="#2-plc-components-and-their-replacement-risks">2. PLC Components and Their Replacement Risks</a></li>
+<li><a href="#3-types-of-plc-replacement">3. Types of PLC Replacement</a><ul>
+<li><a href="#31-like-for-like-replacement">3.1 Like-for-like replacement</a></li>
+<li><a href="#32-approved-equivalent-replacement">3.2 Approved equivalent replacement</a></li>
+<li><a href="#33-obsolete-component-replacement">3.3 Obsolete-component replacement</a></li>
+<li><a href="#34-cpu-replacement">3.4 CPU replacement</a></li>
+<li><a href="#35-module-only-replacement">3.5 Module-only replacement</a></li>
+</ul>
+</li>
+<li><a href="#4-fault-diagnosis-before-replacement">4. Fault Diagnosis Before Replacement</a><ul>
+<li><a href="#41-common-symptoms">4.1 Common symptoms</a></li>
+<li><a href="#42-evidence-to-collect">4.2 Evidence to collect</a></li>
+</ul>
+</li>
+<li><a href="#5-safety-and-authorization">5. Safety and Authorization</a><ul>
+<li><a href="#51-essential-safety-controls">5.1 Essential safety controls</a></li>
+<li><a href="#52-live-work-and-hot-swapping">5.2 Live work and hot swapping</a></li>
+</ul>
+</li>
+<li><a href="#6-pre-replacement-planning">6. Pre-Replacement Planning</a><ul>
+<li><a href="#61-identification-checklist">6.1 Identification checklist</a></li>
+<li><a href="#62-spare-part-compatibility">6.2 Spare-part compatibility</a></li>
+</ul>
+</li>
+<li><a href="#7-backup-and-configuration-preservation">7. Backup and Configuration Preservation</a><ul>
+<li><a href="#71-what-to-preserve">7.1 What to preserve</a></li>
+<li><a href="#72-important-limitations">7.2 Important limitations</a></li>
+</ul>
+</li>
+<li><a href="#8-plc-component-replacement-procedure">8. PLC Component Replacement Procedure</a><ul>
+<li><a href="#81-phase-a-prepare-the-machine">8.1 Phase A: Prepare the machine</a></li>
+<li><a href="#82-phase-b-record-the-existing-installation">8.2 Phase B: Record the existing installation</a></li>
+<li><a href="#83-phase-c-remove-the-faulty-component">8.3 Phase C: Remove the faulty component</a></li>
+<li><a href="#84-phase-d-install-the-replacement">8.4 Phase D: Install the replacement</a></li>
+<li><a href="#85-phase-e-restore-and-configure">8.5 Phase E: Restore and configure</a></li>
+<li><a href="#86-phase-f-validate-and-close">8.6 Phase F: Validate and close</a></li>
+</ul>
+</li>
+<li><a href="#9-special-case-cpu-replacement">9. Special Case: CPU Replacement</a><ul>
+<li><a href="#91-additional-checks">9.1 Additional checks</a></li>
+<li><a href="#92-retentive-data-and-process-state">9.2 Retentive data and process state</a></li>
+<li><a href="#93-cpu-replacement-recovery-sequence">9.3 CPU replacement recovery sequence</a></li>
+</ul>
+</li>
+<li><a href="#10-special-case-digital-and-analog-io-module-replacement">10. Special Case: Digital and Analog I/O Module Replacement</a><ul>
+<li><a href="#101-digital-input-module">10.1 Digital input module</a></li>
+<li><a href="#102-digital-output-module">10.2 Digital output module</a></li>
+<li><a href="#103-analog-input-module">10.3 Analog input module</a></li>
+<li><a href="#104-analog-output-module">10.4 Analog output module</a></li>
+</ul>
+</li>
+<li><a href="#11-special-case-communication-module-or-remote-io-adapter">11. Special Case: Communication Module or Remote I/O Adapter</a><ul>
+<li><a href="#checks-before-replacement">Checks before replacement</a></li>
+<li><a href="#checks-after-replacement">Checks after replacement</a></li>
+</ul>
+</li>
+<li><a href="#12-manufacturer-specific-considerations">12. Manufacturer-Specific Considerations</a><ul>
+<li><a href="#121-siemens-considerations">12.1 Siemens considerations</a></li>
+<li><a href="#122-allen-bradley-considerations">12.2 Allen-Bradley considerations</a></li>
+<li><a href="#123-mitsubishi-considerations">12.3 Mitsubishi considerations</a></li>
+</ul>
+</li>
+<li><a href="#13-troubleshooting-after-replacement">13. Troubleshooting After Replacement</a><ul>
+<li><a href="#troubleshooting-discipline">Troubleshooting discipline</a></li>
+</ul>
+</li>
+<li><a href="#14-return-to-service-and-functional-validation">14. Return-to-Service and Functional Validation</a><ul>
+<li><a href="#141-hardware-and-configuration-checks">14.1 Hardware and configuration checks</a></li>
+<li><a href="#142-functional-checks">14.2 Functional checks</a></li>
+</ul>
+</li>
+<li><a href="#15-documentation-and-change-control">15. Documentation and Change Control</a><ul>
+<li><a href="#151-minimum-replacement-record">15.1 Minimum replacement record</a></li>
+<li><a href="#152-configuration-changes">15.2 Configuration changes</a></li>
+</ul>
+</li>
+<li><a href="#16-common-mistakes-to-avoid">16. Common Mistakes to Avoid</a></li>
+<li><a href="#17-practical-example-replacing-a-faulty-plc-digital-input-module">17. Practical Example: Replacing a Faulty PLC Digital Input Module</a><ul>
+<li><a href="#step-1-diagnose">Step 1: Diagnose</a></li>
+<li><a href="#step-2-prepare">Step 2: Prepare</a></li>
+<li><a href="#step-3-replace">Step 3: Replace</a></li>
+<li><a href="#step-4-verify">Step 4: Verify</a></li>
+<li><a href="#step-5-document">Step 5: Document</a></li>
+</ul>
+</li>
+<li><a href="#18-key-performance-indicators">18. Key Performance Indicators</a></li>
+<li><a href="#19-interview-questions-and-answers">19. Interview Questions and Answers</a></li>
+<li><a href="#20-final-checklist-for-the-maintenance-technician">20. Final Checklist for the Maintenance Technician</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\33_SOP_WI\05_Component_Replacement\01_PLC - PLC</code></p>
+<h2 id="1-purpose-and-scope">1. Purpose and Scope</h2>
+<p>PLC component replacement is the controlled removal of a faulty, damaged, obsolete, or unsuitable programmable logic controller component and installation of a compatible replacement while preserving machine safety, control functionality, configuration integrity, and production quality.</p>
+<p>In industrial maintenance, PLC replacement may mean replacing the CPU, an I/O module, a communication module, a power supply, a backplane component, or an entire PLC system. These activities have different risks and must not be treated as interchangeable.</p>
+<p>A component replacement procedure should establish:</p>
+<ul>
+<li>The correct fault diagnosis and reason for replacement.</li>
+<li>The exact identity and compatibility of the replacement part.</li>
+<li>The required machine state and energy-isolation method.</li>
+<li>The protection of programs, parameters, and configuration.</li>
+<li>The physical removal and installation method.</li>
+<li>The required hardware and software configuration.</li>
+<li>The checks required before returning the machine to service.</li>
+<li>The records, approvals, and follow-up actions.</li>
+</ul>
+<p>Core principle: Replacing a PLC component is not complete when the new hardware powers up. It is complete when the correct configuration has been restored, the required functions have been validated, and authorized personnel have approved the return to service.</p>
+<h2 id="2-plc-components-and-their-replacement-risks">2. PLC Components and Their Replacement Risks</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+<th>Main replacement concerns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CPU</td>
+<td>Executes the control program and manages controller operation</td>
+<td>Program compatibility, firmware, retained data, controller identity</td>
+</tr>
+<tr>
+<td>Digital input module</td>
+<td>Reads discrete signals</td>
+<td>Voltage type, channel count, wiring, sink/source compatibility</td>
+</tr>
+<tr>
+<td>Digital output module</td>
+<td>Controls discrete field devices</td>
+<td>Output type, current rating, protection, load compatibility</td>
+</tr>
+<tr>
+<td>Analog input module</td>
+<td>Measures analog signals</td>
+<td>Signal type, range, resolution, channel configuration</td>
+</tr>
+<tr>
+<td>Analog output module</td>
+<td>Produces analog command signals</td>
+<td>Output range, load, scaling, channel configuration</td>
+</tr>
+<tr>
+<td>Communication module</td>
+<td>Connects the PLC to networks or devices</td>
+<td>Protocol, firmware, IP address, connection configuration</td>
+</tr>
+<tr>
+<td>Power supply</td>
+<td>Provides required system power</td>
+<td>Voltage, current capacity, grounding, system compatibility</td>
+</tr>
+<tr>
+<td>Backplane or rack</td>
+<td>Connects modules and distributes required power/data</td>
+<td>Rack family, slot compatibility, bus and power requirements</td>
+</tr>
+<tr>
+<td>Memory card</td>
+<td>Stores supported programs or data</td>
+<td>Correct type, contents, compatibility, security</td>
+</tr>
+<tr>
+<td>Terminal base or connector</td>
+<td>Provides electrical connections</td>
+<td>Pinout, wiring arrangement, terminal type, mechanical compatibility</td>
+</tr>
+<tr>
+<td>Remote I/O adapter</td>
+<td>Connects distributed I/O to the controller network</td>
+<td>Network configuration, node identity, firmware, I/O assembly</td>
+</tr>
+<tr>
+<td>Industrial Ethernet interface</td>
+<td>Provides network connectivity</td>
+<td>Port type, addressing, topology, firmware, managed-switch configuration</td>
+</tr>
+</tbody>
+</table>
+<p>The precise roles and replacement constraints depend on the PLC family. A module that fits mechanically may still be electrically or functionally incompatible.</p>
+<h2 id="3-types-of-plc-replacement">3. Types of PLC Replacement</h2>
+<h3 id="31-like-for-like-replacement">3.1 Like-for-like replacement</h3>
+<p>The failed component is replaced with the same approved model and a compatible hardware revision.</p>
+<p>This is generally the simplest replacement path, but still requires checks for firmware, configuration, wiring, addressing, and manufacturer-specific restrictions.</p>
+<h3 id="32-approved-equivalent-replacement">3.2 Approved equivalent replacement</h3>
+<p>The original part is replaced by a manufacturer-approved equivalent or successor.</p>
+<p>Engineering must verify compatibility rather than relying on a similar product name. Differences may include electrical ratings, firmware requirements, diagnostics, communication behavior, terminal arrangement, or supported configuration.</p>
+<h3 id="33-obsolete-component-replacement">3.3 Obsolete-component replacement</h3>
+<p>The original component is no longer available or supported.</p>
+<p>The replacement may require a planned migration involving hardware changes, engineering software updates, program conversion, wiring modifications, and additional validation.</p>
+<h3 id="34-cpu-replacement">3.4 CPU replacement</h3>
+<p>CPU replacement may involve restoring the control project, configuring hardware, addressing communication settings, recovering retentive data where applicable, and validating the complete machine sequence.</p>
+<p>A CPU replacement is more complex than swapping an ordinary I/O module because the CPU may be responsible for program execution, communications, timing, motion coordination, and safety-related functions.</p>
+<h3 id="35-module-only-replacement">3.5 Module-only replacement</h3>
+<p>An I/O or communication module is replaced while the CPU remains installed.</p>
+<p>The procedure must determine whether the system supports replacement while powered, whether the machine must stop, and whether the module configuration and network topology permit the operation.</p>
+<p>Never assume that a PLC family supports hot swapping. Verify the exact module, rack, system architecture, and OEM instructions.</p>
+<h2 id="4-fault-diagnosis-before-replacement">4. Fault Diagnosis Before Replacement</h2>
+<p>Unnecessary replacement wastes spares and can introduce new faults. Diagnose the actual failure before removing hardware.</p>
+<h3 id="41-common-symptoms">4.1 Common symptoms</h3>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible causes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CPU will not start</td>
+<td>Power supply fault, CPU failure, memory or firmware issue, hardware configuration fault</td>
+</tr>
+<tr>
+<td>CPU in fault or STOP state</td>
+<td>Program error, configuration mismatch, hardware fault, watchdog or execution fault</td>
+</tr>
+<tr>
+<td>Input status does not change</td>
+<td>Sensor fault, wiring fault, incorrect supply, failed channel, incorrect common connection</td>
+</tr>
+<tr>
+<td>Output does not energize</td>
+<td>Logic conditions unmet, output inhibit, field supply missing, overload, wiring fault, failed output</td>
+</tr>
+<tr>
+<td>Module diagnostic LED active</td>
+<td>Configuration mismatch, module fault, channel fault, bus or power issue</td>
+</tr>
+<tr>
+<td>Communication lost</td>
+<td>Cable or switch fault, addressing error, network configuration, incompatible device, failed interface</td>
+</tr>
+<tr>
+<td>Intermittent PLC resets</td>
+<td>Unstable supply, loose connection, electrical noise, grounding issue, hardware defect</td>
+</tr>
+<tr>
+<td>Analog value incorrect</td>
+<td>Wiring or polarity error, wrong range, scaling error, sensor fault, channel configuration</td>
+</tr>
+<tr>
+<td>Remote I/O unavailable</td>
+<td>Network fault, adapter failure, node addressing issue, supply or topology problem</td>
+</tr>
+</tbody>
+</table>
+<h3 id="42-evidence-to-collect">4.2 Evidence to collect</h3>
+<ul>
+<li>Exact CPU or module diagnostic indication.</li>
+<li>PLC diagnostic buffer or fault log.</li>
+<li>Module status and channel diagnostics.</li>
+<li>Power supply measurements using an approved safe method.</li>
+<li>Relevant input/output status.</li>
+<li>Network diagnostics and communication error counters.</li>
+<li>Recent maintenance, wiring, program, or configuration changes.</li>
+<li>Evidence of overheating, contamination, corrosion, loose terminals, or mechanical damage.</li>
+<li>Comparison with known-good components or documented normal behavior, where appropriate.</li>
+</ul>
+<p>Do not replace a module merely because an associated alarm is present. A field short circuit, missing supply, incorrect configuration, or damaged cable can produce symptoms that resemble hardware failure.</p>
+<h2 id="5-safety-and-authorization">5. Safety and Authorization</h2>
+<p>PLC replacement may involve hazardous electrical energy, unexpected machine motion, stored pneumatic or hydraulic energy, and loss of control or interlocking functions.</p>
+<p>The replacement procedure must follow the site's applicable electrical safety rules, lockout/tagout or equivalent energy-isolation process, permit requirements, and OEM instructions.</p>
+<h3 id="51-essential-safety-controls">5.1 Essential safety controls</h3>
+<ul>
+<li>Obtain authorization and confirm the equipment identity.</li>
+<li>Inform affected production and maintenance personnel.</li>
+<li>Establish the required safe machine state.</li>
+<li>Isolate relevant energy sources and prevent unexpected startup as required by the task.</li>
+<li>Address stored electrical, pneumatic, hydraulic, gravitational, and mechanical energy.</li>
+<li>Verify the effectiveness of isolation using the approved method.</li>
+<li>Use suitable tools and electrical PPE based on the risk assessment.</li>
+<li>Apply ESD precautions where required for electronic assemblies.</li>
+<li>Protect exposed terminals and connectors against accidental contact or contamination.</li>
+<li>Prevent unauthorized changes to safety logic and safety-related parameters.</li>
+<li>Keep personnel clear during controlled restart and functional testing.</li>
+</ul>
+<p>A normal PLC STOP command is not equivalent to energy isolation. It does not guarantee that hazardous energy has been removed or that actuators cannot move.</p>
+<h3 id="52-live-work-and-hot-swapping">5.2 Live work and hot swapping</h3>
+<p>Live replacement or hot swapping is permissible only when the exact equipment supports it and the documented procedure explicitly authorizes it under the applicable risk controls.</p>
+<p>Even when a module is designed for hot swapping, the operation may disrupt process control, communication, redundancy, or I/O operation. The machine-specific consequences must be understood before proceeding.</p>
+<p>Never infer hot-swap capability from the fact that a module can be physically removed without tools.</p>
+<h2 id="6-pre-replacement-planning">6. Pre-Replacement Planning</h2>
+<p>Before starting work, establish a complete picture of the existing system.</p>
+<h3 id="61-identification-checklist">6.1 Identification checklist</h3>
+<ul>
+<li>Plant, area, machine, and asset ID confirmed.</li>
+<li>PLC manufacturer and family confirmed.</li>
+<li>CPU and module catalog numbers recorded.</li>
+<li>Hardware revisions and firmware versions recorded where relevant.</li>
+<li>Rack, slot, and terminal-base positions recorded.</li>
+<li>Module diagnostic status documented.</li>
+<li>Wiring diagrams and I/O lists available.</li>
+<li>Existing approved PLC project located.</li>
+<li>Current configuration and relevant parameter backups checked.</li>
+<li>Replacement part's compatibility confirmed.</li>
+<li>Required engineering software, cables, and licenses available.</li>
+<li>Recovery and rollback plan established.</li>
+<li>Required production, engineering, and safety approvals obtained.</li>
+</ul>
+<h3 id="62-spare-part-compatibility">6.2 Spare-part compatibility</h3>
+<p>Compare the replacement against the original using the manufacturer documentation.</p>
+<table>
+<thead>
+<tr>
+<th>Compatibility factor</th>
+<th>What to verify</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Product family</td>
+<td>The replacement belongs to the correct controller or rack family</td>
+</tr>
+<tr>
+<td>Catalog number</td>
+<td>Exact part or approved successor is identified</td>
+</tr>
+<tr>
+<td>Hardware revision</td>
+<td>Revision is supported by the intended system</td>
+</tr>
+<tr>
+<td>Firmware</td>
+<td>Controller and module firmware are compatible</td>
+</tr>
+<tr>
+<td>Electrical ratings</td>
+<td>Voltage, current, signal range, and load requirements match</td>
+</tr>
+<tr>
+<td>I/O characteristics</td>
+<td>Channel type, isolation, common terminals, and behavior match</td>
+</tr>
+<tr>
+<td>Mechanical fit</td>
+<td>Rack, terminal base, connectors, and mounting are compatible</td>
+</tr>
+<tr>
+<td>Software support</td>
+<td>Engineering tool and project version support the component</td>
+</tr>
+<tr>
+<td>Network capability</td>
+<td>Protocols, connection limits, and addressing requirements match</td>
+</tr>
+<tr>
+<td>Safety certification</td>
+<td>Required safety ratings and approved configuration are maintained</td>
+</tr>
+<tr>
+<td>Environmental rating</td>
+<td>Temperature, vibration, ingress protection, and other conditions are suitable</td>
+</tr>
+</tbody>
+</table>
+<p>For safety-related hardware, equivalent appearance or electrical characteristics do not establish equivalence. The replacement must satisfy the required safety certification and system approval requirements.</p>
+<h2 id="7-backup-and-configuration-preservation">7. Backup and Configuration Preservation</h2>
+<p>Before removing a PLC component, preserve the information needed to recover the existing system. The exact backup scope depends on the component being replaced.</p>
+<h3 id="71-what-to-preserve">7.1 What to preserve</h3>
+<table>
+<thead>
+<tr>
+<th>Data or record</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Approved PLC project</td>
+<td>Preserves the control logic and engineering configuration</td>
+</tr>
+<tr>
+<td>Current controller identity and revision</td>
+<td>Helps identify the correct target and compatible project</td>
+</tr>
+<tr>
+<td>Hardware configuration</td>
+<td>Defines the CPU, modules, slots, and supported configuration</td>
+</tr>
+<tr>
+<td>I/O mapping</td>
+<td>Connects program addresses or tags to physical signals</td>
+</tr>
+<tr>
+<td>Communication settings</td>
+<td>Preserves addressing and communication relationships</td>
+</tr>
+<tr>
+<td>Module parameters</td>
+<td>Preserves supported channel and device configuration</td>
+</tr>
+<tr>
+<td>Retentive values</td>
+<td>May preserve required counters, state, or process values where applicable</td>
+</tr>
+<tr>
+<td>Safety-related configuration</td>
+<td>Supports controlled recovery of safety functions</td>
+</tr>
+<tr>
+<td>Diagnostics and fault history</td>
+<td>Helps distinguish the original fault from a new fault</td>
+</tr>
+<tr>
+<td>Wiring photographs and terminal records</td>
+<td>Help restore wiring accurately</td>
+</tr>
+<tr>
+<td>Firmware and software versions</td>
+<td>Support compatibility and future troubleshooting</td>
+</tr>
+<tr>
+<td>Existing parameter exports</td>
+<td>Preserve settings that may not be stored in the main project</td>
+</tr>
+</tbody>
+</table>
+<h3 id="72-important-limitations">7.2 Important limitations</h3>
+<p>A project saved on the engineering computer may differ from the project running in the controller. An upload from the controller may also omit original comments, symbols, libraries, source files, or external configuration.</p>
+<p>Before selecting a recovery source:</p>
+<ol>
+<li>Identify the approved project version.</li>
+<li>Determine whether the online controller matches the saved project.</li>
+<li>Use supported comparison tools where available.</li>
+<li>Record any differences.</li>
+<li>Establish the authorized recovery source.</li>
+</ol>
+<p>Do not assume that the newest file is the correct file. A recent unapproved modification is not automatically a better recovery point than a validated earlier version.</p>
+<h2 id="8-plc-component-replacement-procedure">8. PLC Component Replacement Procedure</h2>
+<p>The following is a general framework for a controlled replacement. The applicable manufacturer manual and site-specific SOP take precedence over this generic sequence.</p>
+<h3 id="81-phase-a-prepare-the-machine">8.1 Phase A: Prepare the machine</h3>
+<ol>
+<li>Confirm the maintenance request and reported fault.</li>
+<li>Verify the machine, PLC rack, CPU, and affected component.</li>
+<li>Review the diagnostic evidence and confirm that replacement is justified.</li>
+<li>Check the spare component's compatibility.</li>
+<li>Preserve the required project, configuration, parameter, and diagnostic records.</li>
+<li>Inform the affected personnel and arrange the required production interruption.</li>
+<li>Identify the machine-specific safe state and isolation points.</li>
+<li>Apply the approved isolation procedure and verify the required safe conditions.</li>
+<li>Prepare the tools, ESD controls, labels, replacement hardware, and installation instructions.</li>
+</ol>
+<h3 id="82-phase-b-record-the-existing-installation">8.2 Phase B: Record the existing installation</h3>
+<p>Before disconnection, document the physical and logical arrangement.</p>
+<ul>
+<li>Record the rack and slot number.</li>
+<li>Record the component catalog number and revision.</li>
+<li>Photograph the installation where permitted.</li>
+<li>Identify the connectors and wiring that will be disturbed.</li>
+<li>Label cables and terminal connections.</li>
+<li>Record network addresses and device identifiers where applicable.</li>
+<li>Record LED states and relevant diagnostic messages.</li>
+<li>Note the module's orientation and terminal-base arrangement.</li>
+</ul>
+<p>Photographs are useful supporting evidence, but they do not replace approved wiring diagrams or terminal identification.</p>
+<h3 id="83-phase-c-remove-the-faulty-component">8.3 Phase C: Remove the faulty component</h3>
+<ol>
+<li>Confirm that the required isolation and safe-state conditions remain in effect.</li>
+<li>Recheck the exact component to be removed.</li>
+<li>Follow the manufacturer's instructions for releasing connectors, retaining clips, terminal blocks, or module locks.</li>
+<li>Disconnect and secure the affected connections according to the approved procedure.</li>
+<li>Prevent loose conductors from contacting adjacent terminals.</li>
+<li>Remove the component without damaging the rack, backplane, terminal base, or neighboring modules.</li>
+<li>Inspect the removed component and surrounding hardware for visible damage.</li>
+<li>Record the removed component's identity and condition.</li>
+</ol>
+<p>Do not force a module out of a rack. Resistance may indicate an engaged lock, an incorrect removal method, or a mechanical problem.</p>
+<h3 id="84-phase-d-install-the-replacement">8.4 Phase D: Install the replacement</h3>
+<ol>
+<li>Confirm the replacement catalog number and revision against the approved specification.</li>
+<li>Inspect the replacement for transport damage and contamination.</li>
+<li>Verify the rack, slot, terminal base, and connector compatibility.</li>
+<li>Follow the specified insertion, retention, and connection procedure.</li>
+<li>Reconnect the correct terminals and connectors using the approved wiring information.</li>
+<li>Verify terminal seating, polarity, common connections, and required grounding.</li>
+<li>Check that neighboring modules and connectors remain correctly seated.</li>
+<li>Confirm that the installation matches the approved hardware arrangement.</li>
+<li>Complete the required inspection before restoring power.</li>
+</ol>
+<p>Never change terminal wiring based only on connector appearance. Similar connectors can have different pin assignments or electrical functions.</p>
+<h3 id="85-phase-e-restore-and-configure">8.5 Phase E: Restore and configure</h3>
+<p>The configuration step depends on the component replaced.</p>
+<p>For a simple module replacement, the existing CPU project may remain appropriate if the replacement is fully compatible and the configuration supports it. For CPU replacement, the approved project and required controller configuration may need to be restored.</p>
+<ol>
+<li>Verify the target CPU or module identity.</li>
+<li>Confirm the supported firmware and engineering software versions.</li>
+<li>Apply the approved configuration using the manufacturer's procedure.</li>
+<li>Restore the approved program or parameters when required.</li>
+<li>Verify communication settings and device identity.</li>
+<li>Review diagnostics and resolve configuration errors.</li>
+<li>Confirm that the restored project matches the intended approved version.</li>
+<li>Record any conversion, firmware, or configuration changes.</li>
+</ol>
+<p>Do not perform a program download simply because a component has been replaced. Determine whether it is required, obtain authorization, and assess the impact on the running machine.</p>
+<h3 id="86-phase-f-validate-and-close">8.6 Phase F: Validate and close</h3>
+<ol>
+<li>Confirm that the PLC and affected modules report acceptable status.</li>
+<li>Verify the required communications and I/O configuration.</li>
+<li>Check the relevant input and output signals under controlled conditions.</li>
+<li>Test affected logic, interlocks, and machine sequences.</li>
+<li>Validate safety functions according to the approved procedure.</li>
+<li>Confirm process and product quality requirements.</li>
+<li>Obtain authorization before returning the machine to production.</li>
+<li>Record the work, replacement part, configuration changes, test results, and outstanding issues.</li>
+<li>Update the asset history and spare-part records.</li>
+<li>Create or update the approved post-replacement backup when required.</li>
+</ol>
+<h2 id="9-special-case-cpu-replacement">9. Special Case: CPU Replacement</h2>
+<p>CPU replacement deserves its own recovery plan because the CPU executes the control application and may store or manage important system data.</p>
+<h3 id="91-additional-checks">9.1 Additional checks</h3>
+<ul>
+<li>Confirm the replacement CPU is an approved model and revision.</li>
+<li>Verify the firmware compatibility requirements.</li>
+<li>Check the engineering software version and project conversion requirements.</li>
+<li>Confirm the rack and module configuration.</li>
+<li>Verify network settings and controller identity.</li>
+<li>Determine how retentive data and any required process state will be handled.</li>
+<li>Identify any communication connections or devices that depend on the CPU's identity.</li>
+<li>Confirm licensing, access protection, and security configuration requirements.</li>
+<li>Identify the approved method for restoring safety-related configuration, if applicable.</li>
+</ul>
+<h3 id="92-retentive-data-and-process-state">9.2 Retentive data and process state</h3>
+<p>Some PLC systems retain selected values through power loss or controller replacement, while others depend on particular memory, battery, storage, or configuration arrangements.</p>
+<p>Do not assume that all counters, recipes, setpoints, sequence states, calibration values, or production records will automatically transfer to the replacement CPU.</p>
+<p>Before replacement, determine which values must be preserved, whether the manufacturer supports their transfer, and whether copying them is safe and authorized. Restoring an old process state can be inappropriate if the machine's physical state has changed.</p>
+<h3 id="93-cpu-replacement-recovery-sequence">9.3 CPU replacement recovery sequence</h3>
+<pre><code>Identify the failed CPU
+        ↓
+Confirm replacement compatibility
+        ↓
+Preserve approved project and required data
+        ↓
+Replace hardware under the approved procedure
+        ↓
+Verify rack, modules, power, and connections
+        ↓
+Restore approved configuration if required
+        ↓
+Check controller and network diagnostics
+        ↓
+Validate I/O, interlocks, and machine functions
+        ↓
+Complete safety and quality checks
+        ↓
+Obtain return-to-service approval
+</code></pre>
+<h2 id="10-special-case-digital-and-analog-io-module-replacement">10. Special Case: Digital and Analog I/O Module Replacement</h2>
+<h3 id="101-digital-input-module">10.1 Digital input module</h3>
+<p>Check:</p>
+<ul>
+<li>Input voltage and input type.</li>
+<li>Sink/source arrangements where relevant.</li>
+<li>Common-terminal configuration.</li>
+<li>Channel count and addressing.</li>
+<li>Input filter or delay settings.</li>
+<li>Isolation requirements.</li>
+<li>Wiring and terminal identification.</li>
+<li>Sensor supply and signal polarity.</li>
+</ul>
+<p>A module may appear faulty when the real issue is a missing sensor supply, damaged cable, failed sensor, or incorrect common connection.</p>
+<h3 id="102-digital-output-module">10.2 Digital output module</h3>
+<p>Check:</p>
+<ul>
+<li>Output type, such as relay, transistor, or other supported design.</li>
+<li>Rated voltage and current.</li>
+<li>Load type and inrush current.</li>
+<li>Channel protection and common-terminal arrangement.</li>
+<li>External supply and fuse status.</li>
+<li>Output addressing and logic conditions.</li>
+<li>Required interposing relays or interface devices.</li>
+</ul>
+<p>A PLC output command does not prove that the field device has received the correct electrical signal. Validate both the controller-side status and the field-side circuit using approved safe methods.</p>
+<h3 id="103-analog-input-module">10.3 Analog input module</h3>
+<p>Check:</p>
+<ul>
+<li>Current or voltage input type.</li>
+<li>Supported range, such as <code>4–20 mA</code> or <code>0–10 V</code>.</li>
+<li>Two-wire, three-wire, or four-wire sensor arrangement where applicable.</li>
+<li>Channel configuration and scaling.</li>
+<li>Polarity, shielding, and grounding.</li>
+<li>Channel isolation and common-terminal requirements.</li>
+<li>Sensor supply and loop continuity.</li>
+</ul>
+<p>After replacement, verify both the raw value and the engineering-unit value. A sensor signal may be electrically correct while the displayed process value is incorrect because of scaling or configuration differences.</p>
+<p>For a linear scaling example:</p>
+<div class="math-display">\[ EU = EU\_{\min} + \frac{PV-PV\_{\min}}{PV\_{\max}-PV\_{\min}}(EU\_{\max}-EU\_{\min}) \]</div>
+<p>Here, <span class="math-inline">\(PV\)</span> is the raw or measured input value and <span class="math-inline">\(EU\)</span> is the scaled engineering-unit value. The exact PLC scaling method depends on the configured module range and programming implementation.</p>
+<h3 id="104-analog-output-module">10.4 Analog output module</h3>
+<p>Check:</p>
+<ul>
+<li>Output type and range.</li>
+<li>Load impedance and electrical compatibility.</li>
+<li>Channel configuration.</li>
+<li>Scaling and command limits.</li>
+<li>Output common and polarity.</li>
+<li>Control-loop behavior and process consequences.</li>
+<li>Required safe response during startup or fault conditions.</li>
+</ul>
+<p>A replacement analog output can produce an incorrect actuator command if the output range or scaling differs from the original configuration.</p>
+<h2 id="11-special-case-communication-module-or-remote-io-adapter">11. Special Case: Communication Module or Remote I/O Adapter</h2>
+<p>Communication-related replacement can affect more than the physical module. It may interrupt multiple devices or machine stations.</p>
+<h3 id="checks-before-replacement">Checks before replacement</h3>
+<ul>
+<li>Protocol and module family.</li>
+<li>Firmware and configuration compatibility.</li>
+<li>IP address or network node identity.</li>
+<li>Subnet, gateway, VLAN, and switch-port requirements.</li>
+<li>Device names and network addressing rules.</li>
+<li>Controller connection configuration.</li>
+<li>I/O assembly or connection parameters where applicable.</li>
+<li>Network topology and redundancy configuration.</li>
+<li>Communication watchdogs and fault-response behavior.</li>
+</ul>
+<h3 id="checks-after-replacement">Checks after replacement</h3>
+<ul>
+<li>Verify module diagnostics.</li>
+<li>Confirm the correct network identity.</li>
+<li>Verify link status and communication with the expected devices.</li>
+<li>Confirm that the controller recognizes the module.</li>
+<li>Check remote I/O data validity and connection status.</li>
+<li>Confirm that communication loss has not left actuators or process logic in an unsafe or unintended state.</li>
+<li>Test affected sequences before production release.</li>
+</ul>
+<p>Do not copy an IP address or device name onto a replacement until confirming that the original device is no longer active on the network. Duplicate addresses can cause intermittent and confusing failures.</p>
+<h2 id="12-manufacturer-specific-considerations">12. Manufacturer-Specific Considerations</h2>
+<table>
+<thead>
+<tr>
+<th>PLC platform</th>
+<th>Engineering environment</th>
+<th>Important replacement considerations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Siemens S7-1200/S7-1500</td>
+<td>TIA Portal</td>
+<td>CPU order number, firmware, device configuration, project compatibility, protection settings</td>
+</tr>
+<tr>
+<td>Allen-Bradley ControlLogix/CompactLogix</td>
+<td>Studio 5000 Logix Designer</td>
+<td>Controller revision, ACD project, module profiles, electronic keying, communication configuration</td>
+</tr>
+<tr>
+<td>Mitsubishi FX/Q/L/iQ-R</td>
+<td>GX Works family, depending on series</td>
+<td>CPU family, project compatibility, parameters, module configuration, addressing</td>
+</tr>
+<tr>
+<td>Legacy PLC families</td>
+<td>Manufacturer-specific tools</td>
+<td>Availability of programming software, interface cables, legacy operating systems, and supported recovery methods</td>
+</tr>
+</tbody>
+</table>
+<p>These are planning considerations, not universal instructions for every model. Always verify the exact product documentation.</p>
+<h3 id="121-siemens-considerations">12.1 Siemens considerations</h3>
+<ul>
+<li>Match the CPU order number and supported firmware.</li>
+<li>Verify the TIA Portal version and project compatibility.</li>
+<li>Confirm the device configuration and supported modules.</li>
+<li>Check device names and IP addresses where applicable.</li>
+<li>Verify any technology objects and communication dependencies.</li>
+<li>Use the approved method for transferring the project and required configuration.</li>
+<li>Review protection settings and safety-related requirements where applicable.</li>
+</ul>
+<h3 id="122-allen-bradley-considerations">12.2 Allen-Bradley considerations</h3>
+<ul>
+<li>Verify the exact ControlLogix or CompactLogix catalog number.</li>
+<li>Confirm the controller revision supported by the project.</li>
+<li>Check module profiles and electronic keying configuration.</li>
+<li>Verify chassis, slot arrangement, and communication paths.</li>
+<li>Confirm that required add-on instructions and other dependencies are available.</li>
+<li>Review controller mode and download implications before any project transfer.</li>
+<li>Follow the approved recovery procedure for safety controllers and safety signatures.</li>
+</ul>
+<h3 id="123-mitsubishi-considerations">12.3 Mitsubishi considerations</h3>
+<ul>
+<li>Confirm the CPU series and compatible replacement model.</li>
+<li>Verify the appropriate GX Works environment and project version.</li>
+<li>Check parameters, I/O configuration, and module compatibility.</li>
+<li>Verify network settings and communication modules.</li>
+<li>Confirm whether any data or configuration resides in separate memory or storage.</li>
+<li>Validate the program and relevant device operation after replacement.</li>
+</ul>
+<h2 id="13-troubleshooting-after-replacement">13. Troubleshooting After Replacement</h2>
+<p>If the new component does not work, do not immediately conclude that the replacement is defective.</p>
+<table>
+<thead>
+<tr>
+<th>Symptom after replacement</th>
+<th>Possible cause</th>
+<th>Diagnostic direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CPU does not start</td>
+<td>Supply issue, incompatible CPU, memory or firmware problem</td>
+<td>Verify supply, hardware identity, and documented diagnostics</td>
+</tr>
+<tr>
+<td>CPU reports configuration fault</td>
+<td>Project or hardware configuration mismatch</td>
+<td>Compare installed hardware against the approved configuration</td>
+</tr>
+<tr>
+<td>I/O module is not recognized</td>
+<td>Incorrect module, slot, base, or configuration</td>
+<td>Verify catalog number, slot, and supported configuration</td>
+</tr>
+<tr>
+<td>Input remains OFF</td>
+<td>Wiring, sensor supply, signal type, or channel issue</td>
+<td>Check the field circuit and channel configuration</td>
+</tr>
+<tr>
+<td>Output fails to operate</td>
+<td>Missing load supply, incorrect wiring, logic condition, protection trip</td>
+<td>Verify the command, field circuit, and load requirements</td>
+</tr>
+<tr>
+<td>Analog reading is incorrect</td>
+<td>Wrong range, wiring, scaling, or sensor fault</td>
+<td>Compare raw input, configured range, and engineering-unit scaling</td>
+</tr>
+<tr>
+<td>Network devices disappear</td>
+<td>Address conflict, wrong device identity, or configuration mismatch</td>
+<td>Verify addressing, topology, and controller connection configuration</td>
+</tr>
+<tr>
+<td>PLC enters STOP or fault</td>
+<td>Application, hardware, or startup fault</td>
+<td>Review the diagnostic buffer and follow the documented recovery procedure</td>
+</tr>
+<tr>
+<td>Machine behaves differently</td>
+<td>Different firmware, configuration, retentive values, or incorrect restoration</td>
+<td>Compare the approved baseline and validate affected functions</td>
+</tr>
+<tr>
+<td>Fault returns repeatedly</td>
+<td>Root cause not corrected</td>
+<td>Investigate supply, wiring, environment, load, and system-level causes</td>
+</tr>
+</tbody>
+</table>
+<h3 id="troubleshooting-discipline">Troubleshooting discipline</h3>
+<ol>
+<li>Record the exact symptom and diagnostic information.</li>
+<li>Compare the new installation with the approved configuration.</li>
+<li>Check the power supply and physical connections using safe methods.</li>
+<li>Verify the correct component and firmware.</li>
+<li>Review controller and module diagnostics.</li>
+<li>Compare the restored project and relevant parameters with the approved baseline.</li>
+<li>Investigate external causes before replacing another component.</li>
+<li>Document the root cause and corrective action.</li>
+</ol>
+<h2 id="14-return-to-service-and-functional-validation">14. Return-to-Service and Functional Validation</h2>
+<p>The replacement must pass the checks applicable to its role in the machine.</p>
+<h3 id="141-hardware-and-configuration-checks">14.1 Hardware and configuration checks</h3>
+<ul>
+<li>Correct component installed in the correct location.</li>
+<li>Connections, terminals, and retaining mechanisms checked.</li>
+<li>No visible damage or foreign material.</li>
+<li>Correct module recognition and diagnostics.</li>
+<li>Required firmware and configuration verified.</li>
+<li>Communication and I/O status checked.</li>
+<li>Required project or parameter version confirmed.</li>
+</ul>
+<h3 id="142-functional-checks">14.2 Functional checks</h3>
+<ul>
+<li>Inputs respond correctly to their field signals.</li>
+<li>Outputs respond correctly under controlled test conditions.</li>
+<li>Interlocks and permissives operate as intended.</li>
+<li>Automatic and manual functions are validated where applicable.</li>
+<li>Communication with affected devices is stable.</li>
+<li>Analog signals and scaling are correct where applicable.</li>
+<li>Fault handling and required recovery behavior are checked.</li>
+<li>Safety functions are validated using the approved procedure.</li>
+<li>Process quality and traceability requirements are met.</li>
+<li>Required production authorization is obtained.</li>
+</ul>
+<p>Testing must be designed around the affected machine functions. A simple I/O check may be sufficient for some replacements but inadequate for a CPU, communication module, or safety-related component.</p>
+<h2 id="15-documentation-and-change-control">15. Documentation and Change Control</h2>
+<p>Component replacement must be recorded so future technicians can identify what changed, why it changed, and what was verified.</p>
+<h3 id="151-minimum-replacement-record">15.1 Minimum replacement record</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Work order</td>
+<td>Maintenance request or work-order reference</td>
+</tr>
+<tr>
+<td>Asset ID</td>
+<td>Machine and PLC system identification</td>
+</tr>
+<tr>
+<td>Fault description</td>
+<td>Observed symptom and diagnostic evidence</td>
+</tr>
+<tr>
+<td>Removed component</td>
+<td>Manufacturer, model, revision, and serial number where available</td>
+</tr>
+<tr>
+<td>Replacement component</td>
+<td>Manufacturer, model, revision, and serial number where available</td>
+</tr>
+<tr>
+<td>Root cause</td>
+<td>Confirmed cause or clearly identified unresolved cause</td>
+</tr>
+<tr>
+<td>Configuration action</td>
+<td>No change, configuration restored, program downloaded, or other approved action</td>
+</tr>
+<tr>
+<td>Backup reference</td>
+<td>Approved project or parameter backup identity</td>
+</tr>
+<tr>
+<td>Testing performed</td>
+<td>Hardware, communication, I/O, safety, and functional tests as applicable</td>
+</tr>
+<tr>
+<td>Test result</td>
+<td>Pass, fail, or outstanding issue</td>
+</tr>
+<tr>
+<td>Approvals</td>
+<td>Required maintenance, engineering, production, or safety approval</td>
+</tr>
+<tr>
+<td>Final status</td>
+<td>Returned to service, restricted operation, or awaiting further action</td>
+</tr>
+<tr>
+<td>Follow-up</td>
+<td>Corrective action, spare-stock update, or additional investigation</td>
+</tr>
+</tbody>
+</table>
+<h3 id="152-configuration-changes">15.2 Configuration changes</h3>
+<p>If the replacement requires a change to the project, firmware, hardware configuration, network settings, or safety-related data, use the site's change-management process.</p>
+<p>The record should identify the change, approval, reason, version before and after the change, test results, and rollback method.</p>
+<p>Do not treat an engineering change as an ordinary component swap merely because it occurred during the same maintenance work order.</p>
+<h2 id="16-common-mistakes-to-avoid">16. Common Mistakes to Avoid</h2>
+<ul>
+<li>Replacing the PLC without confirming the actual fault.</li>
+<li>Installing a component based only on physical appearance.</li>
+<li>Failing to capture the original rack, slot, or terminal arrangement.</li>
+<li>Assuming the saved project matches the running controller.</li>
+<li>Downloading a project without assessing its effect on machine operation.</li>
+<li>Ignoring firmware and engineering software compatibility.</li>
+<li>Losing required retentive data or machine-specific configuration.</li>
+<li>Restoring safety-related settings without the required approval and validation.</li>
+<li>Failing to verify analog scaling and field wiring.</li>
+<li>Ignoring network identity and duplicate-address risks.</li>
+<li>Returning the machine to production after checking only the power LED.</li>
+<li>Failing to update the asset record, backup register, or spare-part inventory.</li>
+<li>Replacing another component without investigating why the original failed.</li>
+</ul>
+<h2 id="17-practical-example-replacing-a-faulty-plc-digital-input-module">17. Practical Example: Replacing a Faulty PLC Digital Input Module</h2>
+<p>Scenario: A sensor signal is absent from the PLC, and the input module shows a diagnostic indication.</p>
+<h3 id="step-1-diagnose">Step 1: Diagnose</h3>
+<ul>
+<li>Verify that the sensor is operating.</li>
+<li>Check the field supply and wiring using the approved safe method.</li>
+<li>Verify the correct input channel and common-terminal arrangement.</li>
+<li>Review the PLC module diagnostics.</li>
+<li>Compare the symptom with the electrical drawing and I/O list.</li>
+<li>Confirm whether the fault is in the sensor, wiring, supply, configuration, or module.</li>
+</ul>
+<h3 id="step-2-prepare">Step 2: Prepare</h3>
+<ul>
+<li>Confirm the exact module model and approved spare.</li>
+<li>Record the rack, slot, channel, and wiring arrangement.</li>
+<li>Review the manufacturer's replacement instructions.</li>
+<li>Establish the required safe state and isolation.</li>
+<li>Obtain the required authorization.</li>
+</ul>
+<h3 id="step-3-replace">Step 3: Replace</h3>
+<ul>
+<li>Isolate the equipment as required.</li>
+<li>Remove the faulty module using the approved method.</li>
+<li>Inspect the terminal base and connections.</li>
+<li>Install the compatible replacement.</li>
+<li>Reconnect and verify the wiring.</li>
+</ul>
+<h3 id="step-4-verify">Step 4: Verify</h3>
+<ul>
+<li>Restore the required operating conditions under the approved procedure.</li>
+<li>Check module recognition and diagnostic status.</li>
+<li>Confirm that the input changes state when the sensor changes state.</li>
+<li>Verify that the PLC program receives the expected signal.</li>
+<li>Test the affected sequence and interlocks.</li>
+<li>Confirm that the machine meets the required acceptance criteria.</li>
+</ul>
+<h3 id="step-5-document">Step 5: Document</h3>
+<ul>
+<li>Record the removed and installed component.</li>
+<li>Record the confirmed cause, or state that it remains under investigation.</li>
+<li>Document the test results and authorization.</li>
+<li>Update the maintenance history and spare-part records.</li>
+</ul>
+<p>Important: If the sensor supply or wiring was the actual cause, replacing the module alone would not correct the fault. Confirm the root cause rather than treating the disappearance of an alarm as proof that the repair is complete.</p>
+<h2 id="18-key-performance-indicators">18. Key Performance Indicators</h2>
+<p>Maintenance teams can monitor component replacement quality using defined, consistently measured indicators.</p>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>What it measures</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mean Time to Repair (MTTR)</td>
+<td>Average time required to restore the asset after a failure, using the site's defined start and end points</td>
+</tr>
+<tr>
+<td>Repeat failure rate</td>
+<td>Frequency of recurrence after replacement</td>
+</tr>
+<tr>
+<td>First-time fix rate</td>
+<td>Proportion of repairs completed successfully without a repeat intervention</td>
+</tr>
+<tr>
+<td>Replacement-related downtime</td>
+<td>Production interruption attributable to replacement and recovery activities</td>
+</tr>
+<tr>
+<td>Backup availability</td>
+<td>Proportion of required assets with accessible, current, approved backups</td>
+</tr>
+<tr>
+<td>Restore-test success rate</td>
+<td>Proportion of tested backups that meet defined recovery criteria</td>
+</tr>
+<tr>
+<td>Spare-part availability</td>
+<td>Readiness of approved replacement components</td>
+</tr>
+<tr>
+<td>Documentation compliance</td>
+<td>Proportion of replacements with complete required records</td>
+</tr>
+</tbody>
+</table>
+<p>KPI definitions must remain consistent. For example, MTTR may include diagnosis, waiting for spares, restoration, and validation, or it may measure only active repair time. State the definition before comparing teams or periods.</p>
+<h2 id="19-interview-questions-and-answers">19. Interview Questions and Answers</h2>
+<p>Q1. What checks should be completed before replacing a PLC module?</p>
+<p>Confirm the fault, component identity, spare compatibility, wiring and slot arrangement, required isolation, backup requirements, and OEM instructions.</p>
+<p>Q2. Can a PLC module be replaced while the system is powered?</p>
+<p>Only when the exact system and module support the operation and the approved procedure permits it. Hot-swap capability must never be assumed.</p>
+<p>Q3. Why is CPU replacement more complex than replacing an I/O module?</p>
+<p>The CPU may contain or manage the control application, controller identity, communication configuration, retentive data, and other essential system settings. Recovery and validation requirements are therefore broader.</p>
+<p>Q4. What is the difference between a PLC fault and an I/O field fault?</p>
+<p>A PLC hardware fault originates in the controller or module. A field fault may originate in the sensor, actuator, wiring, supply, or connected circuit. The symptoms can overlap, so diagnostics must establish the cause.</p>
+<p>Q5. Why should the module catalog number be verified?</p>
+<p>Modules that appear similar may differ in voltage, output type, channel arrangement, electrical ratings, firmware support, or configuration. An incorrect part can create a new fault or damage connected equipment.</p>
+<p>Q6. What should be checked after replacing a digital output module?</p>
+<p>Verify module status, output configuration, field supply, wiring, load compatibility, commanded output behavior, interlocks, and the affected machine function.</p>
+<p>Q7. Why is a post-replacement backup useful?</p>
+<p>It preserves the validated configuration after the repair and provides a recovery point reflecting the approved system state.</p>
+<p>Q8. What should happen if the replacement works initially but fails again?</p>
+<p>Review the evidence, investigate recurring electrical, environmental, wiring, load, configuration, and supply problems, and perform root-cause analysis before replacing further components.</p>
+<p>Q9. What is the biggest risk when restoring a PLC project?</p>
+<p>Loading the wrong or incompatible project can alter machine behavior. Confirm the target identity, approved version, compatibility, authorization, and required post-download validation.</p>
+<p>Q10. When is a PLC replacement considered complete?</p>
+<p>When the approved component is installed, the required configuration is correct, relevant functional and safety requirements have been validated, records are complete, and authorized personnel have approved return to service.</p>
+<h2 id="20-final-checklist-for-the-maintenance-technician">20. Final Checklist for the Maintenance Technician</h2>
+<ul>
+<li>Fault diagnosed before replacement.</li>
+<li>Correct component and approved spare confirmed.</li>
+<li>Machine identity and existing configuration recorded.</li>
+<li>Required backups and diagnostic evidence preserved.</li>
+<li>Energy isolation and safe-state requirements satisfied.</li>
+<li>Wiring, rack, slot, and connector arrangement documented.</li>
+<li>Component removed and installed according to the OEM procedure.</li>
+<li>Configuration restored or updated only as required and authorized.</li>
+<li>Hardware, communication, I/O, and relevant functional checks completed.</li>
+<li>Safety functions validated where applicable.</li>
+<li>Process and quality acceptance requirements met.</li>
+<li>Return-to-service approval obtained.</li>
+<li>Maintenance records and backup register updated.</li>
+<li>Root cause and follow-up actions documented.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\33_SOP_WI\05_Component_Replacement\02_HMI - HMI</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

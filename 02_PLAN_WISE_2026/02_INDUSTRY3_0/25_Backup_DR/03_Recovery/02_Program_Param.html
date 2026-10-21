@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recovery: Program and Parameter Restoration</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Recovery: Program and Parameter Restoration</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and Scope</a></li>
+<li><a href="#2-program-vs-parameter-vs-configuration-vs-runtime-data">2. Program vs. Parameter vs. Configuration vs. Runtime Data</a></li>
+<li><a href="#3-why-program-and-parameter-restoration-matter">3. Why Program and Parameter Restoration Matter</a></li>
+<li><a href="#4-restoration-vs-download-vs-upload">4. Restoration vs. Download vs. Upload</a></li>
+<li><a href="#5-the-restoration-principle-recover-the-complete-required-state">5. The Restoration Principle: Recover the Complete Required State</a></li>
+<li><a href="#6-backup-selection-before-restoration">6. Backup Selection Before Restoration</a><ul>
+<li><a href="#backup-priority">Backup Priority</a></li>
+</ul>
+</li>
+<li><a href="#7-pre-restoration-assessment">7. Pre-Restoration Assessment</a><ul>
+<li><a href="#71-identify-the-failure">7.1 Identify the Failure</a></li>
+<li><a href="#72-identify-the-target">7.2 Identify the Target</a></li>
+<li><a href="#73-define-the-recovery-scope">7.3 Define the Recovery Scope</a></li>
+<li><a href="#74-preserve-current-evidence">7.4 Preserve Current Evidence</a></li>
+</ul>
+</li>
+<li><a href="#8-program-restoration-procedure">8. Program Restoration Procedure</a></li>
+<li><a href="#9-parameter-restoration-procedure">9. Parameter Restoration Procedure</a></li>
+<li><a href="#10-plc-program-and-data-restoration">10. PLC Program and Data Restoration</a><ul>
+<li><a href="#101-what-to-restore">10.1 What to Restore</a></li>
+<li><a href="#102-critical-considerations">10.2 Critical Considerations</a></li>
+<li><a href="#103-retentive-data">10.3 Retentive Data</a></li>
+</ul>
+</li>
+<li><a href="#11-vfd-and-servo-parameter-restoration">11. VFD and Servo Parameter Restoration</a><ul>
+<li><a href="#111-vfd-parameters">11.1 VFD Parameters</a></li>
+<li><a href="#112-servo-parameters">11.2 Servo Parameters</a></li>
+<li><a href="#113-restoration-risks">11.3 Restoration Risks</a></li>
+</ul>
+</li>
+<li><a href="#12-hmi-and-scada-restoration">12. HMI and SCADA Restoration</a></li>
+<li><a href="#13-cnc-program-and-configuration-restoration">13. CNC Program and Configuration Restoration</a></li>
+<li><a href="#14-robot-program-and-configuration-restoration">14. Robot Program and Configuration Restoration</a></li>
+<li><a href="#15-vision-and-test-bench-restoration">15. Vision and Test-Bench Restoration</a><ul>
+<li><a href="#151-vision-systems">15.1 Vision Systems</a></li>
+<li><a href="#152-test-benches">15.2 Test Benches</a></li>
+</ul>
+</li>
+<li><a href="#16-compatibility-and-conversion-issues">16. Compatibility and Conversion Issues</a></li>
+<li><a href="#17-restoration-order-and-dependencies">17. Restoration Order and Dependencies</a></li>
+<li><a href="#18-recovery-validation-and-acceptance">18. Recovery Validation and Acceptance</a><ul>
+<li><a href="#181-technical-validation">18.1 Technical Validation</a></li>
+<li><a href="#182-process-and-quality-validation">18.2 Process and Quality Validation</a></li>
+<li><a href="#183-safety-validation">18.3 Safety Validation</a></li>
+<li><a href="#184-release-criteria">18.4 Release Criteria</a></li>
+</ul>
+</li>
+<li><a href="#19-rollback-and-failed-restoration">19. Rollback and Failed Restoration</a></li>
+<li><a href="#20-restoration-documentation">20. Restoration Documentation</a></li>
+<li><a href="#21-common-restoration-mistakes">21. Common Restoration Mistakes</a></li>
+<li><a href="#22-practical-program-and-parameter-restoration-checklist">22. Practical Program and Parameter Restoration Checklist</a><ul>
+<li><a href="#before-restoration">Before Restoration</a></li>
+<li><a href="#during-restoration">During Restoration</a></li>
+<li><a href="#after-restoration">After Restoration</a></li>
+</ul>
+</li>
+<li><a href="#23-interview-questions-and-answers">23. Interview Questions and Answers</a></li>
+<li><a href="#24-final-principles">24. Final Principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-and-scope">1. Purpose and Scope</h2>
+<p>Program and parameter restoration is the controlled process of recovering the application software and device configuration required to return an industrial machine to its approved operating state after a failure, hardware replacement, accidental modification, data loss, or system migration.</p>
+<p>In industrial automation, programs define behavior, while parameters configure how devices behave within that application. Both may be necessary for successful recovery.</p>
+<p>For example, replacing a failed VFD and loading the PLC program may restore the machine sequence, but the motor may still run incorrectly if the drive parameters, motor ratings, control mode, feedback settings, or communication configuration have not been restored correctly.</p>
+<p>Similarly, restoring a robot program without the appropriate tool frames, mastering data, payload configuration, or safety settings can make the restored application unsuitable for operation.</p>
+<p>The objective is to restore the correct program and configuration, verify compatibility, validate machine behavior, and document the resulting state.</p>
+<p>This topic covers:</p>
+<ul>
+<li>Program restoration versus parameter restoration.</li>
+<li>Backup selection and compatibility checks.</li>
+<li>PLC, HMI, SCADA, CNC, robot, vision, VFD, and servo recovery.</li>
+<li>Device-specific and retentive data.</li>
+<li>Restoration procedures and validation.</li>
+<li>Rollback and recovery failures.</li>
+<li>Version control, change logs, and recovery documentation.</li>
+<li>Practical industrial examples and checklists.</li>
+</ul>
+<h2 id="2-program-vs-parameter-vs-configuration-vs-runtime-data">2. Program vs. Parameter vs. Configuration vs. Runtime Data</h2>
+<p>These categories are related but should not be treated as interchangeable.</p>
+<table>
+<thead>
+<tr>
+<th>Data category</th>
+<th>Meaning</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Program</td>
+<td>Logic or instructions defining application behavior</td>
+<td>PLC sequence logic</td>
+</tr>
+<tr>
+<td>Parameters</td>
+<td>Configurable values controlling device operation</td>
+<td>VFD maximum frequency</td>
+</tr>
+<tr>
+<td>Hardware configuration</td>
+<td>Definition of installed modules and device structure</td>
+<td>PLC rack and I/O arrangement</td>
+</tr>
+<tr>
+<td>Communication configuration</td>
+<td>Network and protocol settings</td>
+<td>IP address and device name</td>
+</tr>
+<tr>
+<td>Firmware</td>
+<td>Embedded software running on the device</td>
+<td>PLC CPU firmware</td>
+</tr>
+<tr>
+<td>Retentive data</td>
+<td>Values preserved across defined restart or power-loss conditions</td>
+<td>PLC retained counter</td>
+</tr>
+<tr>
+<td>Recipe</td>
+<td>Product-specific process settings</td>
+<td>Test recipe for a product variant</td>
+</tr>
+<tr>
+<td>Calibration data</td>
+<td>Values used to relate measurements or positions to physical references</td>
+<td>Vision calibration</td>
+</tr>
+<tr>
+<td>User and security configuration</td>
+<td>Access rights and authentication-related settings</td>
+<td>HMI operator roles</td>
+</tr>
+<tr>
+<td>Runtime data</td>
+<td>Current operational state and changing values</td>
+<td>Active cycle status</td>
+</tr>
+</tbody>
+</table>
+<p>The precise boundaries depend on the device. Some engineering projects store several of these categories in one file, while others require separate exports or backup procedures.</p>
+<p>A complete recovery plan must identify every required data category, not just the main program file.</p>
+<h2 id="3-why-program-and-parameter-restoration-matter">3. Why Program and Parameter Restoration Matter</h2>
+<p>Restoration is required in situations such as:</p>
+<ul>
+<li>PLC CPU failure or replacement.</li>
+<li>Accidental program overwrite.</li>
+<li>Corrupted engineering project.</li>
+<li>Drive replacement.</li>
+<li>Loss of servo configuration.</li>
+<li>CNC control failure.</li>
+<li>Robot controller replacement.</li>
+<li>HMI replacement or storage failure.</li>
+<li>Industrial PC operating-system failure.</li>
+<li>Incorrect parameter changes during troubleshooting.</li>
+<li>Firmware migration or hardware obsolescence.</li>
+<li>Recovery after a cybersecurity incident.</li>
+<li>Restoration after an unsuccessful engineering modification.</li>
+</ul>
+<p>Without controlled restoration, the machine may power up but behave differently from its approved baseline.</p>
+<p>Examples include an incorrect motor speed, altered acceleration, missing interlocks, incorrect sensor scaling, lost recipes, wrong CNC compensation values, or changed robot coordinate frames.</p>
+<h2 id="4-restoration-vs-download-vs-upload">4. Restoration vs. Download vs. Upload</h2>
+<p>These terms describe different operations.</p>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backup</td>
+<td>Preserving a recoverable copy of data</td>
+<td>Save an approved PLC project</td>
+</tr>
+<tr>
+<td>Upload</td>
+<td>Reading data from a physical device into an engineering environment</td>
+<td>Upload supported PLC program data</td>
+</tr>
+<tr>
+<td>Download</td>
+<td>Transferring a project or configuration from an engineering environment to a device</td>
+<td>Download a PLC application</td>
+</tr>
+<tr>
+<td>Restore</td>
+<td>Returning data or configuration to a desired state</td>
+<td>Restore a drive parameter set</td>
+</tr>
+<tr>
+<td>Compare</td>
+<td>Identifying differences between two states</td>
+<td>Compare the offline project with the controller</td>
+</tr>
+<tr>
+<td>Validate</td>
+<td>Establishing that the restored state meets specified requirements</td>
+<td>Perform sequence and interlock tests</td>
+</tr>
+<tr>
+<td>Commission</td>
+<td>Preparing and verifying equipment for intended operation</td>
+<td>Complete approved startup checks</td>
+</tr>
+<tr>
+<td>Rollback</td>
+<td>Returning to a suitable previous state</td>
+<td>Restore a previously approved program</td>
+</tr>
+</tbody>
+</table>
+<p>The exact meaning of upload and download varies between engineering platforms. Always follow the terminology and procedure used by the manufacturer.</p>
+<p>Uploading from a device does not guarantee that every original source file, comment, library, or configuration item will be recovered.</p>
+<h2 id="5-the-restoration-principle-recover-the-complete-required-state">5. The Restoration Principle: Recover the Complete Required State</h2>
+<p>A machine should be restored to a known, approved configuration rather than assembled from whichever files happen to be available.</p>
+<p>A recovery package may contain:</p>
+<ul>
+<li>Application program.</li>
+<li>Hardware configuration.</li>
+<li>Device parameters.</li>
+<li>Firmware compatibility information.</li>
+<li>Communication settings.</li>
+<li>Required libraries and dependencies.</li>
+<li>Retentive data and recipes, where appropriate.</li>
+<li>Calibration and mastering information.</li>
+<li>Safety-related configuration and validation records.</li>
+<li>Engineering software and licensing requirements.</li>
+<li>Test and commissioning procedures.</li>
+<li>Previous approved recovery version.</li>
+</ul>
+<p>Not every device requires every item. The package should be based on the equipment architecture and the manufacturer's supported recovery method.</p>
+<p>A useful way to think about recovery is:</p>
+<pre><code>Physical Hardware
+    +
+Compatible Firmware
+    +
+Application Program
+    +
+Required Parameters
+    +
+Hardware and Communication Configuration
+    +
+Required Device-Specific Data
+    +
+Validation and Commissioning
+    =
+Verified Recovery State
+</code></pre>
+<p>This is a conceptual model. Actual dependencies and restoration order must follow the specific device and application requirements.</p>
+<h2 id="6-backup-selection-before-restoration">6. Backup Selection Before Restoration</h2>
+<p>Selecting the wrong backup can be more dangerous than having no backup because an incorrect file may appear valid while introducing hidden incompatibilities.</p>
+<p>Before restoration, confirm:</p>
+<ol>
+<li>The backup belongs to the correct machine and device.</li>
+<li>The backup is the required revision.</li>
+<li>The source and capture date are known.</li>
+<li>The version's approval and validation status are established.</li>
+<li>The target hardware and firmware are compatible.</li>
+<li>Required dependencies and libraries are available.</li>
+<li>Parameters correspond to the correct device and application.</li>
+<li>The backup is intact and readable.</li>
+<li>The backup has not been altered unexpectedly.</li>
+<li>The recovery procedure is authorized and available.</li>
+</ol>
+<h3 id="backup-priority">Backup Priority</h3>
+<p>A practical selection hierarchy is:</p>
+<ol>
+<li>The last suitable approved and verified configuration for the target equipment.</li>
+<li>A more recent approved release that is known to be compatible.</li>
+<li>A verified actual-state capture, after investigating any differences from the approved baseline.</li>
+<li>A historical version approved for the recovery purpose.</li>
+<li>A vendor-provided recovery package that has been checked against the installed configuration.</li>
+</ol>
+<p>This is not an unconditional ranking. If the approved master is known to differ from the machine's current legitimate state, the discrepancy must be investigated before selecting a recovery source.</p>
+<p>Never choose a backup solely because its timestamp is newest.</p>
+<h2 id="7-pre-restoration-assessment">7. Pre-Restoration Assessment</h2>
+<p>Before writing data to a controller or device, establish what failed and what needs restoration.</p>
+<h3 id="71-identify-the-failure">7.1 Identify the Failure</h3>
+<p>Determine whether the problem involves:</p>
+<ul>
+<li>Physical hardware.</li>
+<li>Program corruption.</li>
+<li>Incorrect parameters.</li>
+<li>Firmware incompatibility.</li>
+<li>Communication failure.</li>
+<li>Lost calibration or retained data.</li>
+<li>Incorrect engineering software.</li>
+<li>Network configuration.</li>
+<li>A combination of several causes.</li>
+</ul>
+<h3 id="72-identify-the-target">7.2 Identify the Target</h3>
+<p>Record:</p>
+<ul>
+<li>Machine and device IDs.</li>
+<li>Manufacturer and exact model.</li>
+<li>Hardware revision.</li>
+<li>Serial number.</li>
+<li>Firmware version.</li>
+<li>Installed modules.</li>
+<li>Network identity.</li>
+<li>Current fault codes.</li>
+<li>Relevant program and parameter versions.</li>
+</ul>
+<h3 id="73-define-the-recovery-scope">7.3 Define the Recovery Scope</h3>
+<p>Determine which components must be restored and which should remain unchanged.</p>
+<p>For example, replacing one drive should not automatically trigger restoration of the entire PLC and HMI system. Restore the required components while preserving unrelated, verified configurations.</p>
+<h3 id="74-preserve-current-evidence">7.4 Preserve Current Evidence</h3>
+<p>Where safely and technically possible, preserve the current program, parameters, diagnostics, and configuration before changing the device.</p>
+<p>If the current state is corrupt or potentially unsafe, do not blindly upload or overwrite it. Follow the manufacturer's supported diagnostic and recovery procedure.</p>
+<h2 id="8-program-restoration-procedure">8. Program Restoration Procedure</h2>
+<p>A generic controlled procedure is:</p>
+<ol>
+<li>Confirm the target device and fault.</li>
+<li>Identify the correct approved program revision.</li>
+<li>Verify hardware and firmware compatibility.</li>
+<li>Confirm engineering software and library requirements.</li>
+<li>Preserve the current state where appropriate.</li>
+<li>Place the equipment in the required safe state.</li>
+<li>Obtain the necessary authorization.</li>
+<li>Follow the manufacturer's restoration or download procedure.</li>
+<li>Verify the transfer result and device diagnostics.</li>
+<li>Compare the resulting state with the intended release where supported.</li>
+<li>Test relevant functions, sequences, interlocks, and alarms.</li>
+<li>Verify the actual deployed state.</li>
+<li>Update the backup register and change log.</li>
+<li>Release the machine only after the required validation and authorization.</li>
+</ol>
+<p>Some platforms require a device reset, memory initialization, configuration transfer, or specific startup sequence. These steps must be determined from the device documentation rather than assumed.</p>
+<h2 id="9-parameter-restoration-procedure">9. Parameter Restoration Procedure</h2>
+<p>Parameter restoration requires particular care because parameter sets may be device-specific and may directly affect physical behavior.</p>
+<p>A controlled procedure is:</p>
+<ol>
+<li>Identify the exact device model and configuration.</li>
+<li>Capture the existing parameter set if appropriate and supported.</li>
+<li>Select the approved parameter backup for that device.</li>
+<li>Check model, firmware, motor, feedback, and application compatibility.</li>
+<li>Identify parameters that must be adapted for the replacement hardware.</li>
+<li>Determine whether restoration overwrites other required settings.</li>
+<li>Obtain the necessary authorization.</li>
+<li>Restore the approved parameter set using the manufacturer's method.</li>
+<li>Read back and verify critical values where supported.</li>
+<li>Check diagnostics and communication.</li>
+<li>Perform the required commissioning and functional tests.</li>
+<li>Record the resulting parameter revision and deviations.</li>
+</ol>
+<p>Do not assume that a successful parameter download means that every parameter was accepted. Some devices may reject, convert, ignore, or reset particular values.</p>
+<h2 id="10-plc-program-and-data-restoration">10. PLC Program and Data Restoration</h2>
+<p>PLC recovery can involve application logic, hardware configuration, retentive data, and communication settings.</p>
+<h3 id="101-what-to-restore">10.1 What to Restore</h3>
+<p>Depending on the PLC platform:</p>
+<ul>
+<li>CPU application program.</li>
+<li>Function blocks and functions.</li>
+<li>Data types and symbols.</li>
+<li>Hardware and I/O configuration.</li>
+<li>Communication configuration.</li>
+<li>Required libraries.</li>
+<li>Retentive data, where supported and appropriate.</li>
+<li>Safety-related application and configuration.</li>
+<li>Device-specific startup settings.</li>
+</ul>
+<h3 id="102-critical-considerations">10.2 Critical Considerations</h3>
+<ul>
+<li>Verify the CPU model and firmware.</li>
+<li>Check whether the program requires a conversion or rebuild.</li>
+<li>Confirm that the I/O configuration matches the physical hardware.</li>
+<li>Verify addresses, tags, and communication relationships.</li>
+<li>Determine how retained values are handled after replacement.</li>
+<li>Confirm whether a full download changes existing data or operating behavior.</li>
+<li>Follow the approved startup and operating-mode procedure.</li>
+</ul>
+<h3 id="103-retentive-data">10.3 Retentive Data</h3>
+<p>Retentive data can include counters, recipe selections, production totals, calibration values, and other retained state.</p>
+<p>Not all retained values should automatically be restored. Some may be obsolete, inconsistent, or unsafe to reuse after a hardware replacement.</p>
+<p>For example, a retained sequence-state variable could represent a step that is no longer physically valid after an interrupted cycle. Restoring that state without evaluating the machine's actual condition could cause unexpected operation.</p>
+<p>Restore retained data only when the application design and recovery procedure establish that doing so is appropriate.</p>
+<h2 id="11-vfd-and-servo-parameter-restoration">11. VFD and Servo Parameter Restoration</h2>
+<p>Drives often contain settings that affect motor behavior, process control, and machine safety.</p>
+<h3 id="111-vfd-parameters">11.1 VFD Parameters</h3>
+<p>Relevant settings may include:</p>
+<ul>
+<li>Motor nameplate data.</li>
+<li>Control mode.</li>
+<li>Minimum and maximum frequency.</li>
+<li>Acceleration and deceleration.</li>
+<li>Current and torque limits.</li>
+<li>Digital and analog input assignments.</li>
+<li>Communication settings.</li>
+<li>Fault response and restart behavior.</li>
+<li>Braking configuration.</li>
+<li>Motor identification or tuning data.</li>
+</ul>
+<h3 id="112-servo-parameters">11.2 Servo Parameters</h3>
+<p>Relevant settings may include:</p>
+<ul>
+<li>Motor and amplifier combination.</li>
+<li>Encoder type and feedback configuration.</li>
+<li>Electronic gearing.</li>
+<li>Motion limits.</li>
+<li>Homing behavior.</li>
+<li>Tuning and gain settings.</li>
+<li>Brake configuration.</li>
+<li>Communication mappings.</li>
+<li>Safety-related settings.</li>
+</ul>
+<h3 id="113-restoration-risks">11.3 Restoration Risks</h3>
+<p>A parameter backup from a different drive or motor can cause incorrect speed, torque, direction, or feedback behavior.</p>
+<p>A replacement drive may also have different parameter definitions or default values. Use manufacturer-supported conversion or migration tools where applicable and verify the resulting settings.</p>
+<p>Motion testing must follow the approved commissioning procedure with appropriate safeguards.</p>
+<h2 id="12-hmi-and-scada-restoration">12. HMI and SCADA Restoration</h2>
+<p>HMI and SCADA recovery may involve both application files and runtime dependencies.</p>
+<p>Check:</p>
+<ul>
+<li>Project revision.</li>
+<li>HMI or SCADA software version.</li>
+<li>Runtime version.</li>
+<li>PLC tag mappings.</li>
+<li>Alarm definitions.</li>
+<li>Scripts and expressions.</li>
+<li>Communication drivers.</li>
+<li>Recipes and local data.</li>
+<li>User accounts and permissions.</li>
+<li>Database connectivity.</li>
+<li>Licensing and activation.</li>
+<li>Required operating-system dependencies.</li>
+</ul>
+<p>After restoration, verify that operator commands reach the intended devices, alarms display correctly, communication failures are handled appropriately, and critical screens behave as designed.</p>
+<p>If local data or recipe storage is separate from the application project, preserve and restore it through the appropriate supported procedure.</p>
+<h2 id="13-cnc-program-and-configuration-restoration">13. CNC Program and Configuration Restoration</h2>
+<p>CNC recovery may require more than restoring part programs.</p>
+<p>Depending on the machine and control, relevant items include:</p>
+<ul>
+<li>Part programs and subprograms.</li>
+<li>Macros.</li>
+<li>Machine-builder configuration.</li>
+<li>CNC and PLC/PMC logic.</li>
+<li>Tool data and offsets.</li>
+<li>Axis and spindle configuration.</li>
+<li>Compensation data.</li>
+<li>Servo and feedback settings.</li>
+<li>Network configuration.</li>
+<li>Licensing and software options.</li>
+<li>Required machine-specific data.</li>
+</ul>
+<p>A backup containing only part programs may be inadequate after a control failure.</p>
+<p>Restoration must follow the CNC control and machine-builder procedures. Incorrect machine data or compensation can affect motion, machining accuracy, and collision risk.</p>
+<p>After recovery, verify the required references, machine functions, and process acceptance using the approved commissioning procedure.</p>
+<h2 id="14-robot-program-and-configuration-restoration">14. Robot Program and Configuration Restoration</h2>
+<p>Robot recovery must preserve the application and the device-specific data needed to execute it correctly.</p>
+<p>Relevant data may include:</p>
+<ul>
+<li>Robot application program.</li>
+<li>Controller configuration.</li>
+<li>Robot model and axis configuration.</li>
+<li>Tool and work frames.</li>
+<li>Payload data.</li>
+<li>External-axis configuration.</li>
+<li>Mastering and calibration data.</li>
+<li>Fieldbus configuration.</li>
+<li>Technology packages and licenses.</li>
+<li>Safety-related configuration.</li>
+</ul>
+<p>Restoring the program without correct mastering or frame data may produce unexpected positions or paths.</p>
+<p>After restoration, perform the required manufacturer-defined checks, mastering or calibration procedures where applicable, safety validation, and controlled motion verification before unrestricted operation.</p>
+<h2 id="15-vision-and-test-bench-restoration">15. Vision and Test-Bench Restoration</h2>
+<h3 id="151-vision-systems">15.1 Vision Systems</h3>
+<p>Restore the required inspection application and its associated data, such as:</p>
+<ul>
+<li>Job or inspection program.</li>
+<li>Camera configuration.</li>
+<li>Calibration.</li>
+<li>Regions of interest.</li>
+<li>Thresholds and measurement settings.</li>
+<li>Lighting configuration where stored.</li>
+<li>Communication mappings.</li>
+<li>Product-specific recipes.</li>
+</ul>
+<p>Validate the restored application with suitable reference samples and the plant's acceptance criteria.</p>
+<h3 id="152-test-benches">15.2 Test Benches</h3>
+<p>Restore relevant:</p>
+<ul>
+<li>Test sequence.</li>
+<li>Measurement calculations.</li>
+<li>Test limits.</li>
+<li>I/O mappings.</li>
+<li>Communication settings.</li>
+<li>Report configuration.</li>
+<li>Product-specific recipes.</li>
+<li>Calibration and instrument data.</li>
+</ul>
+<p>A test application may run without errors yet produce incorrect acceptance decisions if a limit, scaling factor, or calibration value is wrong.</p>
+<p>Where the change or restoration affects measurement performance, determine the necessary calibration and revalidation requirements before using results for product acceptance.</p>
+<h2 id="16-compatibility-and-conversion-issues">16. Compatibility and Conversion Issues</h2>
+<p>A backup may be correct for its original device but incompatible with the replacement.</p>
+<p>Potential causes include:</p>
+<ul>
+<li>Different hardware model.</li>
+<li>Different firmware.</li>
+<li>Different engineering software.</li>
+<li>Missing libraries.</li>
+<li>Changed parameter definitions.</li>
+<li>Unsupported functions.</li>
+<li>Different I/O modules.</li>
+<li>Different communication interfaces.</li>
+<li>Obsolete software options.</li>
+<li>Different memory or resource requirements.</li>
+</ul>
+<p>When conversion is required, preserve the original backup unchanged and create a separate converted working copy.</p>
+<p>Record:</p>
+<ul>
+<li>Original source revision.</li>
+<li>Conversion tool and version.</li>
+<li>Target hardware and firmware.</li>
+<li>Conversion warnings and errors.</li>
+<li>Manual changes.</li>
+<li>Comparison results.</li>
+<li>Validation results.</li>
+<li>Approved release identity.</li>
+</ul>
+<p>A conversion that completes without errors does not prove functional equivalence. The resulting application must be reviewed and tested according to the change's risk and scope.</p>
+<h2 id="17-restoration-order-and-dependencies">17. Restoration Order and Dependencies</h2>
+<p>Some devices depend on other systems being available before they can be restored correctly.</p>
+<p>Examples include:</p>
+<ul>
+<li>PLC hardware configuration before application-dependent I/O testing.</li>
+<li>Communication configuration before network-dependent functions can be verified.</li>
+<li>Drive parameters before controlled motion testing.</li>
+<li>Robot mastering and frames before position verification.</li>
+<li>Database services before SCADA data logging can be confirmed.</li>
+<li>Required libraries before a project can be rebuilt.</li>
+<li>Device firmware before a supported application can be loaded.</li>
+</ul>
+<p>The correct sequence depends on the equipment. Document the actual dependency order in the machine's recovery procedure.</p>
+<p>A useful recovery plan separates prerequisites, restoration actions, and validation actions rather than treating recovery as one large download operation.</p>
+<h2 id="18-recovery-validation-and-acceptance">18. Recovery Validation and Acceptance</h2>
+<p>Validation establishes whether the restored system satisfies its specified requirements.</p>
+<h3 id="181-technical-validation">18.1 Technical Validation</h3>
+<p>Verify:</p>
+<ul>
+<li>Correct program and parameter versions.</li>
+<li>Compatible hardware and firmware.</li>
+<li>Expected hardware configuration.</li>
+<li>Correct communication and I/O behavior.</li>
+<li>No unexplained diagnostic faults.</li>
+<li>Correct startup and restart behavior.</li>
+<li>Required interlocks and permissives.</li>
+<li>Expected alarms and fault responses.</li>
+<li>Correct machine sequence and operating modes.</li>
+</ul>
+<h3 id="182-process-and-quality-validation">18.2 Process and Quality Validation</h3>
+<p>Where applicable, verify:</p>
+<ul>
+<li>Cycle time and process sequence.</li>
+<li>Product-specific recipes.</li>
+<li>Measurement scaling.</li>
+<li>Test limits and acceptance criteria.</li>
+<li>Vision inspection performance.</li>
+<li>CNC machining accuracy.</li>
+<li>Robot path and process behavior.</li>
+</ul>
+<h3 id="183-safety-validation">18.3 Safety Validation</h3>
+<p>When safety-related functions are involved, perform the required validation according to the machine's safety design and applicable procedures.</p>
+<p>Do not treat a normal production cycle as sufficient evidence that safety functions are correct.</p>
+<h3 id="184-release-criteria">18.4 Release Criteria</h3>
+<p>Define the acceptance criteria before restoration wherever practical. Document the results, outstanding deviations, approval, and final operating status.</p>
+<h2 id="19-rollback-and-failed-restoration">19. Rollback and Failed Restoration</h2>
+<p>A restoration can fail because of incompatibility, corrupted data, incorrect device selection, incomplete backups, or unexpected application behavior.</p>
+<p>A controlled recovery plan should define:</p>
+<ul>
+<li>The last suitable approved state.</li>
+<li>The recovery package and its location.</li>
+<li>Compatibility requirements.</li>
+<li>The method for preserving diagnostic evidence.</li>
+<li>The authorized rollback procedure.</li>
+<li>The expected recovery time.</li>
+<li>The required post-rollback checks.</li>
+</ul>
+<p>If restoration fails, do not repeatedly download different backups without a structured diagnosis. Each attempt can change the device state and make the original failure harder to investigate.</p>
+<p>Preserve error messages, diagnostic records, attempted versions, and observed results. Escalate to the appropriate engineering or vendor support when required.</p>
+<h2 id="20-restoration-documentation">20. Restoration Documentation</h2>
+<p>After recovery, update the relevant records.</p>
+<table>
+<thead>
+<tr>
+<th>Record</th>
+<th>Required information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Work order</td>
+<td>Failure, work performed, time, and result</td>
+</tr>
+<tr>
+<td>Backup register</td>
+<td>Restored source and final backup location</td>
+</tr>
+<tr>
+<td>Program version register</td>
+<td>Program revision and deployment status</td>
+</tr>
+<tr>
+<td>Parameter register</td>
+<td>Parameter version and relevant deviations</td>
+</tr>
+<tr>
+<td>Firmware register</td>
+<td>Actual firmware version</td>
+</tr>
+<tr>
+<td>Hardware inventory</td>
+<td>Device identity and replacement details</td>
+</tr>
+<tr>
+<td>Change log</td>
+<td>Restoration activity and changes made</td>
+</tr>
+<tr>
+<td>Test report</td>
+<td>Verification and validation evidence</td>
+</tr>
+<tr>
+<td>Asset record</td>
+<td>Updated installed configuration</td>
+</tr>
+<tr>
+<td>Recovery procedure</td>
+<td>Lessons learned and procedure corrections</td>
+</tr>
+</tbody>
+</table>
+<p>If the restored state differs from the previous approved baseline, record the discrepancy and obtain the required authorization rather than silently treating the difference as acceptable.</p>
+<h2 id="21-common-restoration-mistakes">21. Common Restoration Mistakes</h2>
+<ol>
+<li>Selecting the newest backup without verifying compatibility.</li>
+<li>Restoring the program but ignoring parameters.</li>
+<li>Restoring parameters from a different device or motor.</li>
+<li>Ignoring firmware and engineering software requirements.</li>
+<li>Assuming a backup contains calibration or retentive data.</li>
+<li>Overwriting the current state before preserving necessary evidence.</li>
+<li>Restoring stale retained values that no longer reflect the physical machine.</li>
+<li>Using a converted project without reviewing warnings and differences.</li>
+<li>Failing to check I/O configuration after replacing a PLC.</li>
+<li>Restoring a robot program without checking mastering and frame data.</li>
+<li>Returning a CNC to production without the required machine-data verification.</li>
+<li>Assuming a successful download proves correct operation.</li>
+<li>Failing to test safety-related functions.</li>
+<li>Ignoring licensing and library dependencies.</li>
+<li>Failing to preserve the restored configuration as a verified recovery point.</li>
+<li>Closing the work order without updating the backup and change registers.</li>
+</ol>
+<h2 id="22-practical-program-and-parameter-restoration-checklist">22. Practical Program and Parameter Restoration Checklist</h2>
+<h3 id="before-restoration">Before Restoration</h3>
+<ul>
+<li>Identify the failed device and actual recovery requirement.</li>
+<li>Record the target hardware and firmware.</li>
+<li>Select the correct approved backup.</li>
+<li>Verify backup integrity and provenance.</li>
+<li>Check required engineering software and libraries.</li>
+<li>Identify parameters, recipes, calibration data, and retained values.</li>
+<li>Assess compatibility and conversion requirements.</li>
+<li>Preserve the current state and diagnostics where appropriate.</li>
+<li>Obtain the required authorization.</li>
+<li>Define recovery and rollback procedures.</li>
+</ul>
+<h3 id="during-restoration">During Restoration</h3>
+<ul>
+<li>Follow the manufacturer's supported restoration procedure.</li>
+<li>Verify the target device before transferring data.</li>
+<li>Restore the required application and configuration components.</li>
+<li>Handle device-specific data separately where required.</li>
+<li>Record transfer errors, warnings, and deviations.</li>
+<li>Avoid uncontrolled changes to unrelated devices.</li>
+<li>Maintain the required safe state.</li>
+</ul>
+<h3 id="after-restoration">After Restoration</h3>
+<ul>
+<li>Verify program and parameter versions.</li>
+<li>Confirm hardware and firmware compatibility.</li>
+<li>Check device diagnostics and communication.</li>
+<li>Verify I/O, interlocks, and operating modes.</li>
+<li>Test relevant machine functions.</li>
+<li>Perform required safety and quality validation.</li>
+<li>Confirm actual deployed state.</li>
+<li>Save the verified recovery state.</li>
+<li>Update change logs, version registers, and work orders.</li>
+<li>Obtain release authorization before returning to normal operation.</li>
+</ul>
+<h2 id="23-interview-questions-and-answers">23. Interview Questions and Answers</h2>
+<p>Q1. What is program and parameter restoration?</p>
+<p>It is the controlled recovery of application software and device settings required to return equipment to a known, approved operating state.</p>
+<p>Q2. What is the difference between a program and a parameter set?</p>
+<p>The program defines application logic or instructions. Parameters configure how the device or application operates, such as motor ratings, speed limits, or timing values.</p>
+<p>Q3. Why is a program backup alone sometimes insufficient?</p>
+<p>The system may also depend on hardware configuration, parameters, firmware, calibration, retained data, communication settings, libraries, or licenses.</p>
+<p>Q4. Why should compatibility be checked before restoration?</p>
+<p>A backup from a different hardware or firmware version may be incompatible or may produce different behavior on the target device.</p>
+<p>Q5. Should all retained PLC values be restored after CPU replacement?</p>
+<p>No. Restore only values that are required and valid for the recovery scenario. Some retained states may no longer match the physical machine.</p>
+<p>Q6. Why must a drive parameter set be matched to the motor and drive?</p>
+<p>Motor and control parameters affect speed, torque, feedback, and protection. Incorrect settings can cause abnormal operation or equipment damage.</p>
+<p>Q7. What is the difference between restoration and validation?</p>
+<p>Restoration transfers the required data or configuration. Validation establishes that the resulting system meets its defined requirements.</p>
+<p>Q8. Why preserve the original project during conversion?</p>
+<p>It provides an unchanged reference for comparison, traceability, and recovery if the conversion introduces problems.</p>
+<p>Q9. What should happen if the restored program differs from the approved baseline?</p>
+<p>Preserve the evidence, identify and assess the differences, determine the cause, and follow the authorized correction and approval process.</p>
+<p>Q10. When can a restored machine return to production?</p>
+<p>When the required technical checks, functional tests, applicable safety and quality validation, documentation, and release authorization have been completed.</p>
+<h2 id="24-final-principles">24. Final Principles</h2>
+<ul>
+<li>Restore a known, suitable configuration rather than simply the newest available files.</li>
+<li>Treat programs, parameters, firmware, hardware configuration, and device-specific data as distinct but related recovery elements.</li>
+<li>Verify compatibility before writing data to a device.</li>
+<li>Preserve necessary evidence before modifying the current state.</li>
+<li>Restore only data that is appropriate for the target hardware and recovery scenario.</li>
+<li>Follow manufacturer procedures and required safety controls.</li>
+<li>Validate the actual restored system, not merely the transfer operation.</li>
+<li>Maintain a tested recovery point and document all deviations.</li>
+<li>Update the program, parameter, backup, change, and asset records.</li>
+<li>Release equipment only after the required verification and authorization.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\25_Backup_DR\03_Recovery\03_Firmware_Matching - Firmware matching</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

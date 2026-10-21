@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Network Fault: Application-Level PLC/SCADA Data and Logic</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Network Fault: Application-Level PLC/SCADA Data and Logic</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and Scope</a><ul>
+<li><a href="#learning-objectives">Learning objectives</a></li>
+</ul>
+</li>
+<li><a href="#2-the-application-communication-stack">2. The Application Communication Stack</a></li>
+<li><a href="#3-four-levels-of-application-health">3. Four Levels of Application Health</a></li>
+<li><a href="#4-understand-the-difference-between-plc-logic-and-scada-data">4. Understand the Difference Between PLC Logic and SCADA Data</a></li>
+<li><a href="#5-application-data-path-and-fault-localization">5. Application Data Path and Fault Localization</a></li>
+<li><a href="#6-plc-application-diagnostics">6. PLC Application Diagnostics</a><ul>
+<li><a href="#61-confirm-controller-state">6.1 Confirm controller state</a></li>
+<li><a href="#62-inspect-the-actual-tag-or-variable">6.2 Inspect the actual tag or variable</a></li>
+<li><a href="#63-check-execution-and-data-update-conditions">6.3 Check execution and data-update conditions</a></li>
+<li><a href="#64-inspect-plc-communication-resources">6.4 Inspect PLC communication resources</a></li>
+</ul>
+</li>
+<li><a href="#7-scada-and-hmi-tag-mapping">7. SCADA and HMI Tag Mapping</a><ul>
+<li><a href="#71-common-tag-types">7.1 Common tag types</a></li>
+<li><a href="#72-verify-tag-configuration">7.2 Verify tag configuration</a></li>
+<li><a href="#73-symbolic-versus-absolute-addressing">7.3 Symbolic versus absolute addressing</a></li>
+</ul>
+</li>
+<li><a href="#8-data-types-scaling-and-incorrect-values">8. Data Types, Scaling, and Incorrect Values</a><ul>
+<li><a href="#81-common-data-types">8.1 Common data types</a></li>
+<li><a href="#82-scaling-example">8.2 Scaling example</a></li>
+<li><a href="#83-byte-order-and-word-order">8.3 Byte order and word order</a></li>
+</ul>
+</li>
+<li><a href="#9-data-quality-stale-values-and-timestamps">9. Data Quality, Stale Values, and Timestamps</a><ul>
+<li><a href="#91-why-stale-data-is-dangerous">9.1 Why stale data is dangerous</a></li>
+<li><a href="#92-deadband-and-update-behavior">9.2 Deadband and update behavior</a></li>
+</ul>
+</li>
+<li><a href="#10-opc-gateways-and-middleware">10. OPC, Gateways, and Middleware</a><ul>
+<li><a href="#101-opc-and-gateway-checks">10.1 OPC and gateway checks</a></li>
+<li><a href="#102-restarting-a-service">10.2 Restarting a service</a></li>
+</ul>
+</li>
+<li><a href="#11-communication-and-application-diagnostics">11. Communication and Application Diagnostics</a></li>
+<li><a href="#12-common-application-level-faults">12. Common Application-Level Faults</a></li>
+<li><a href="#13-fault-isolation-by-scope">13. Fault Isolation by Scope</a></li>
+<li><a href="#14-read-and-write-communication-faults">14. Read and Write Communication Faults</a><ul>
+<li><a href="#141-read-failures">14.1 Read failures</a></li>
+<li><a href="#142-write-failures">14.2 Write failures</a></li>
+</ul>
+</li>
+<li><a href="#15-structured-troubleshooting-procedure">15. Structured Troubleshooting Procedure</a><ul>
+<li><a href="#step-1-define-the-symptom">Step 1: Define the symptom</a></li>
+<li><a href="#step-2-check-operational-impact">Step 2: Check operational impact</a></li>
+<li><a href="#step-3-verify-the-physical-and-network-layers">Step 3: Verify the physical and network layers</a></li>
+<li><a href="#step-4-verify-protocol-communication">Step 4: Verify protocol communication</a></li>
+<li><a href="#step-5-verify-the-source-value">Step 5: Verify the source value</a></li>
+<li><a href="#step-6-verify-tag-mapping-and-data-interpretation">Step 6: Verify tag mapping and data interpretation</a></li>
+<li><a href="#step-7-verify-quality-and-timing">Step 7: Verify quality and timing</a></li>
+<li><a href="#step-8-inspect-application-processing">Step 8: Inspect application processing</a></li>
+<li><a href="#step-9-correct-the-confirmed-cause">Step 9: Correct the confirmed cause</a></li>
+<li><a href="#step-10-verify-end-to-end-recovery">Step 10: Verify end-to-end recovery</a></li>
+<li><a href="#step-11-close-the-breakdown">Step 11: Close the breakdown</a></li>
+</ul>
+</li>
+<li><a href="#16-practical-breakdown-scenarios">16. Practical Breakdown Scenarios</a><ul>
+<li><a href="#scenario-1-plc-ping-is-successful-but-all-scada-tags-are-bad">Scenario 1: PLC ping is successful, but all SCADA tags are bad</a></li>
+<li><a href="#scenario-2-plc-value-is-correct-but-scada-displays-the-wrong-number">Scenario 2: PLC value is correct, but SCADA displays the wrong number</a></li>
+<li><a href="#scenario-3-one-hmi-bit-indicates-that-a-motor-is-running-when-it-is-stopped">Scenario 3: One HMI bit indicates that a motor is running when it is stopped</a></li>
+<li><a href="#scenario-4-plc-logic-was-modified-and-scada-tags-failed-afterward">Scenario 4: PLC logic was modified, and SCADA tags failed afterward</a></li>
+<li><a href="#scenario-5-scada-values-freeze-intermittently-but-the-plc-continues-operating">Scenario 5: SCADA values freeze intermittently, but the PLC continues operating</a></li>
+<li><a href="#scenario-6-live-scada-value-is-correct-but-the-historian-trend-is-wrong">Scenario 6: Live SCADA value is correct, but the historian trend is wrong</a></li>
+<li><a href="#scenario-7-scada-can-read-a-tag-but-cannot-write-a-command">Scenario 7: SCADA can read a tag but cannot write a command</a></li>
+</ul>
+</li>
+<li><a href="#17-preventive-maintenance-checklist">17. Preventive Maintenance Checklist</a><ul>
+<li><a href="#plc-and-controller">PLC and controller</a></li>
+<li><a href="#hmi-scada-and-gateways">HMI, SCADA, and gateways</a></li>
+<li><a href="#network-and-dependencies">Network and dependencies</a></li>
+<li><a href="#documentation-and-control">Documentation and control</a></li>
+</ul>
+</li>
+<li><a href="#18-breakdown-report-template">18. Breakdown Report Template</a></li>
+<li><a href="#19-key-terms-and-terminology">19. Key Terms and Terminology</a></li>
+<li><a href="#20-interview-questions-and-answers">20. Interview Questions and Answers</a><ul>
+<li><a href="#q1-the-plc-responds-to-ping-why-can-scada-still-show-bad-quality">Q1. The PLC responds to ping. Why can SCADA still show bad quality?</a></li>
+<li><a href="#q2-how-do-you-distinguish-a-plc-logic-fault-from-a-scada-mapping-fault">Q2. How do you distinguish a PLC logic fault from a SCADA mapping fault?</a></li>
+<li><a href="#q3-what-is-the-difference-between-a-bad-value-and-stale-data">Q3. What is the difference between a bad value and stale data?</a></li>
+<li><a href="#q4-why-is-a-correct-raw-value-displayed-incorrectly-in-scada">Q4. Why is a correct raw value displayed incorrectly in SCADA?</a></li>
+<li><a href="#q5-what-is-the-difference-between-polling-and-subscription">Q5. What is the difference between polling and subscription?</a></li>
+<li><a href="#q6-why-might-only-one-tag-fail-while-all-other-tags-remain-healthy">Q6. Why might only one tag fail while all other tags remain healthy?</a></li>
+<li><a href="#q7-why-can-a-scada-alarm-fail-even-when-the-displayed-value-is-correct">Q7. Why can a SCADA alarm fail even when the displayed value is correct?</a></li>
+<li><a href="#q8-what-should-be-checked-after-a-plc-program-download">Q8. What should be checked after a PLC program download?</a></li>
+<li><a href="#q9-how-do-you-investigate-intermittent-scada-freezes">Q9. How do you investigate intermittent SCADA freezes?</a></li>
+<li><a href="#q10-what-is-the-difference-between-a-successful-write-and-successful-machine-operation">Q10. What is the difference between a successful write and successful machine operation?</a></li>
+<li><a href="#q11-why-is-repeatedly-restarting-the-scada-service-a-poor-permanent-solution">Q11. Why is repeatedly restarting the SCADA service a poor permanent solution?</a></li>
+<li><a href="#q12-what-is-the-most-reliable-application-level-troubleshooting-principle">Q12. What is the most reliable application-level troubleshooting principle?</a></li>
+</ul>
+</li>
+<li><a href="#21-final-completion-checklist">21. Final Completion Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\19_Breakdown\06_Network_Fault\07_App</code></p>
+<h2 id="1-purpose-and-scope">1. Purpose and Scope</h2>
+<p>Application-level network troubleshooting begins when the physical network appears operational, but PLC, HMI, SCADA, or supervisory applications do not exchange the expected data or display the correct machine condition.</p>
+<p>A device can have power, a healthy Ethernet link, a valid IP address, and a successful ping while its industrial application is still completely unusable. Humans tend to stop investigating as soon as one indicator turns green. Industrial automation is not impressed by green lights.</p>
+<p>The objective is to determine whether the fault exists in the application configuration, communication relationship, data mapping, PLC logic, SCADA tag processing, data quality, or the interaction between these layers.</p>
+<h3 id="learning-objectives">Learning objectives</h3>
+<ul>
+<li>Distinguish network connectivity from application communication and correct process data.</li>
+<li>Diagnose PLC, HMI, SCADA, OPC, and gateway data problems.</li>
+<li>Verify tag names, addresses, data types, scaling, update rates, and communication status.</li>
+<li>Identify stale, incorrect, frozen, substituted, or misleading values.</li>
+<li>Separate application faults from network, controller, field-device, and process faults.</li>
+<li>Restore communication safely and verify the actual machine behavior.</li>
+<li>Document evidence and prevent recurring application-level breakdowns.</li>
+</ul>
+<h2 id="2-the-application-communication-stack">2. The Application Communication Stack</h2>
+<p>An industrial value typically passes through several layers before an operator sees it on a screen.</p>
+<pre><code>Physical sensor or machine condition
+        ↓
+Field input / drive / robot / remote I/O
+        ↓
+PLC input image and control logic
+        ↓
+PLC communication interface and data structure
+        ↓
+Industrial protocol or gateway
+        ↓
+OPC server / SCADA communication driver
+        ↓
+SCADA tag database and processing
+        ↓
+HMI screen / alarm / trend / historian
+        ↓
+Operator interpretation and action
+</code></pre>
+<p>A fault at any stage can produce a similar symptom: the displayed value is wrong or unavailable. The troubleshooting objective is to identify the first point where the expected value differs from the actual value.</p>
+<p>For example, if a temperature display remains at 65 °C while the actual temperature rises to 80 °C, the fault could be a frozen sensor signal, PLC logic, communication update, SCADA tag mapping, or screen refresh. Replacing the Ethernet cable without evidence is not a diagnostic strategy.</p>
+<h2 id="3-four-levels-of-application-health">3. Four Levels of Application Health</h2>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>What must be healthy</th>
+<th>Example failure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Physical connectivity</td>
+<td>Power, cable, port, link</td>
+<td>Disconnected cable</td>
+</tr>
+<tr>
+<td>Network connectivity</td>
+<td>IP reachability, routing, VLAN</td>
+<td>Wrong subnet or blocked path</td>
+</tr>
+<tr>
+<td>Protocol communication</td>
+<td>Session, connection, device identity, valid exchanges</td>
+<td>PLC connection timeout</td>
+</tr>
+<tr>
+<td>Application and data</td>
+<td>Correct tag, data type, logic, quality, update</td>
+<td>Wrong register or frozen value</td>
+</tr>
+</tbody>
+</table>
+<p>A successful test at one level does not prove that the next level is healthy.</p>
+<ul>
+<li><code>Ping successful</code> proves that an ICMP response was received from an IP endpoint. It does not prove that PLC data is being updated.</li>
+<li><code>TCP port open</code> suggests that a service is reachable. It does not prove that the service has a valid session or correct tag mapping.</li>
+<li><code>PLC connected</code> does not prove that the selected tag exists or represents the intended machine signal.</li>
+<li><code>SCADA value visible</code> does not prove that the value is current, correctly scaled, or safe to use for decisions.</li>
+</ul>
+<h2 id="4-understand-the-difference-between-plc-logic-and-scada-data">4. Understand the Difference Between PLC Logic and SCADA Data</h2>
+<p>PLC logic determines machine behavior. SCADA usually supervises, visualizes, alarms, trends, and sometimes sends authorized commands.</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>PLC</th>
+<th>HMI/SCADA</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Read local input signals</td>
+<td>Usually direct</td>
+<td>Usually indirect through PLC or gateway</td>
+</tr>
+<tr>
+<td>Execute machine interlocks</td>
+<td>Primary responsibility</td>
+<td>Should not replace safety-rated interlocks</td>
+</tr>
+<tr>
+<td>Control sequence</td>
+<td>Executes control logic</td>
+<td>May issue operator requests</td>
+</tr>
+<tr>
+<td>Display status</td>
+<td>Provides status data</td>
+<td>Presents the status</td>
+</tr>
+<tr>
+<td>Generate process alarms</td>
+<td>May generate alarm bits or conditions</td>
+<td>Often evaluates, displays, and logs alarms</td>
+</tr>
+<tr>
+<td>Store historical trends</td>
+<td>May provide values</td>
+<td>Historian usually stores time-series data</td>
+</tr>
+<tr>
+<td>Validate operator commands</td>
+<td>Must enforce machine permissives</td>
+<td>Provides interface and preliminary checks</td>
+</tr>
+</tbody>
+</table>
+<p>Important: A SCADA communication failure must not be treated as proof that the machine is safe or stopped. The actual controller state, machine feedback, and approved safety procedures remain authoritative.</p>
+<h2 id="5-application-data-path-and-fault-localization">5. Application Data Path and Fault Localization</h2>
+<p>For any failed tag, trace the value through each stage.</p>
+<ol>
+<li>Physical source: Is the sensor, drive, robot, or field device producing a valid signal?</li>
+<li>PLC input or internal variable: Does the controller show the expected raw value?</li>
+<li>PLC logic: Is the variable updated, overwritten, latched, forced, or conditionally blocked?</li>
+<li>Published data: Is the intended variable exposed through the correct communication interface?</li>
+<li>Protocol client: Is the HMI, SCADA driver, OPC client, or gateway reading the correct endpoint and variable?</li>
+<li>SCADA tag: Does the tag reference the correct PLC symbol, address, register, or item path?</li>
+<li>Data conversion: Are the data type, signedness, byte order, scaling, and units correct?</li>
+<li>Screen object: Does the display object reference the intended SCADA tag and refresh correctly?</li>
+<li>History and alarms: Are timestamps, quality, deadbands, alarm conditions, and logging configured correctly?</li>
+</ol>
+<p>The first stage where the value becomes incorrect is the primary investigation point. Later stages may contain secondary faults, but fixing those first will not correct the original problem.</p>
+<h2 id="6-plc-application-diagnostics">6. PLC Application Diagnostics</h2>
+<h3 id="61-confirm-controller-state">6.1 Confirm controller state</h3>
+<p>Check the PLC mode, controller health, major/minor faults, diagnostic buffer, task or scan status, communication module status, and relevant program execution conditions.</p>
+<p>Typical states include:</p>
+<ul>
+<li>RUN: The controller is executing its program, but this does not prove every routine or communication task is healthy.</li>
+<li>STOP: The controller is not executing normal control logic.</li>
+<li>FAULT: The controller has detected a condition requiring investigation.</li>
+<li>PROGRAM or REMOTE PROGRAM: The controller may be prevented from executing normal logic, depending on the platform and configuration.</li>
+<li>Communication module fault: The controller may run while external data access is interrupted.</li>
+</ul>
+<p>The meaning of status indicators differs by manufacturer and controller family. Confirm the state using the correct engineering software and documentation.</p>
+<h3 id="62-inspect-the-actual-tag-or-variable">6.2 Inspect the actual tag or variable</h3>
+<p>Check the variable in the PLC online monitoring interface.</p>
+<p>Verify:</p>
+<ul>
+<li>The live value matches the expected machine condition.</li>
+<li>The variable's data type and dimensions are correct.</li>
+<li>The variable is being updated cyclically or under the intended event condition.</li>
+<li>No unexpected overwrite occurs in another routine.</li>
+<li>No force, test mode, simulation, or initialization routine is affecting the value.</li>
+<li>The variable is not retained from an earlier cycle or previous operating state.</li>
+<li>The PLC program and online controller have the expected revision.</li>
+</ul>
+<p>A variable that appears correct in an offline project is not proof that the online controller contains the same logic or configuration.</p>
+<h3 id="63-check-execution-and-data-update-conditions">6.3 Check execution and data-update conditions</h3>
+<p>A tag may exist but not update because its logic is conditional.</p>
+<p>Example:</p>
+<pre><code>IF Machine_Auto_Mode AND Sensor_Valid THEN
+    Part_Count := Part_Count + 1;
+END_IF;
+</code></pre>
+<p>If <code>Sensor_Valid</code> remains false, <code>Part_Count</code> may not increment even though the network is healthy. Investigate the permissive conditions and source signal before blaming SCADA.</p>
+<p>Also check whether the value is updated only on a rising edge, at the end of a sequence, on a timer, or when a specific machine state is active.</p>
+<h3 id="64-inspect-plc-communication-resources">6.4 Inspect PLC communication resources</h3>
+<p>Depending on the platform, check:</p>
+<ul>
+<li>Communication module status and diagnostic buffers.</li>
+<li>Active connections and configured connection limits.</li>
+<li>Produced/consumed tags or cyclic I/O connections.</li>
+<li>OPC or HMI access permissions.</li>
+<li>Controller resource usage and communication load.</li>
+<li>Connection timeouts, session failures, and reconnection behavior.</li>
+<li>Firmware compatibility and configuration consistency.</li>
+</ul>
+<p>Do not download a program, change controller mode, clear faults, or modify communication settings during production without the required authorization and risk assessment.</p>
+<h2 id="7-scada-and-hmi-tag-mapping">7. SCADA and HMI Tag Mapping</h2>
+<p>A tag is a software reference to a process value. It is not the physical signal itself.</p>
+<h3 id="71-common-tag-types">7.1 Common tag types</h3>
+<table>
+<thead>
+<tr>
+<th>Tag type</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Direct PLC tag</td>
+<td>Reads a PLC variable or symbol</td>
+<td><code>Line01.PartCount</code></td>
+</tr>
+<tr>
+<td>Address-based tag</td>
+<td>Reads a controller address</td>
+<td><code>DB10.DBW4</code></td>
+</tr>
+<tr>
+<td>Modbus register tag</td>
+<td>Reads a holding or input register</td>
+<td>Register 40001, subject to driver addressing conventions</td>
+</tr>
+<tr>
+<td>Calculated tag</td>
+<td>Derived from other values</td>
+<td><code>Rate = Count / Time</code></td>
+</tr>
+<tr>
+<td>Internal tag</td>
+<td>Stored within the HMI/SCADA system</td>
+<td>Operator-selected display mode</td>
+</tr>
+<tr>
+<td>Historical tag</td>
+<td>Used for time-series storage</td>
+<td><code>MotorCurrent_History</code></td>
+</tr>
+<tr>
+<td>Alarm tag or condition</td>
+<td>Represents a monitored abnormal state</td>
+<td><code>Motor_Overload</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="72-verify-tag-configuration">7.2 Verify tag configuration</h3>
+<p>For each failed tag, verify the following:</p>
+<ul>
+<li>Correct PLC, controller, gateway, or server connection.</li>
+<li>Correct controller program, data block, symbol, or register address.</li>
+<li>Correct tag name and case sensitivity where relevant.</li>
+<li>Correct data type and memory size.</li>
+<li>Correct array index or structure member.</li>
+<li>Correct read/write permissions.</li>
+<li>Correct scan class, subscription, or polling configuration.</li>
+<li>Correct engineering units, scaling, and display formatting.</li>
+<li>Correct deadband and update behavior.</li>
+<li>Correct quality and timestamp interpretation.</li>
+</ul>
+<p>A copied tag configuration can look convincing while pointing to the wrong address. Software is perfectly capable of being consistently wrong.</p>
+<h3 id="73-symbolic-versus-absolute-addressing">7.3 Symbolic versus absolute addressing</h3>
+<p>Symbolic addressing uses meaningful variable names, while absolute addressing uses a physical or logical memory location.</p>
+<p>Examples:</p>
+<pre><code>Symbolic:
+Line01.MotorRunning
+
+Absolute:
+DB10.DBX0.0
+</code></pre>
+<p>Symbolic addressing can improve readability and maintainability, but the symbol must exist and be accessible. Absolute addressing depends on the exact memory layout and may break when the PLC program structure changes.</p>
+<p>For Modbus, register numbering conventions differ among engineering tools and drivers. A register labelled <code>40001</code> in documentation might be entered as offset <code>0</code> in a driver. Always verify the driver's convention rather than applying an assumed offset.</p>
+<h2 id="8-data-types-scaling-and-incorrect-values">8. Data Types, Scaling, and Incorrect Values</h2>
+<p>Communication may succeed while the received value is still incorrect.</p>
+<h3 id="81-common-data-types">8.1 Common data types</h3>
+<table>
+<thead>
+<tr>
+<th>Data type</th>
+<th>Typical meaning</th>
+<th>Common problem</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BOOL</td>
+<td>Single logical state</td>
+<td>Bit address or polarity incorrect</td>
+</tr>
+<tr>
+<td>SINT / INT</td>
+<td>Signed integer</td>
+<td>Wrong width or signedness</td>
+</tr>
+<tr>
+<td>UINT / WORD</td>
+<td>Unsigned integer or bit field</td>
+<td>Interpreted as signed or as a numeric value incorrectly</td>
+</tr>
+<tr>
+<td>DINT / DWORD</td>
+<td>32-bit integer or bit field</td>
+<td>Word order or type mismatch</td>
+</tr>
+<tr>
+<td>REAL / FLOAT</td>
+<td>Floating-point number</td>
+<td>Incorrect type or byte/word ordering</td>
+</tr>
+<tr>
+<td>STRING</td>
+<td>Character data</td>
+<td>Length, encoding, or structure mismatch</td>
+</tr>
+<tr>
+<td>TIME / timestamp</td>
+<td>Duration or time value</td>
+<td>Different epoch, unit, or representation</td>
+</tr>
+</tbody>
+</table>
+<p>The exact data types and sizes depend on the platform. A 16-bit signed integer, for example, cannot represent the same range as a 32-bit unsigned integer.</p>
+<h3 id="82-scaling-example">8.2 Scaling example</h3>
+<p>Suppose a PLC sends a raw analog value from 0 to 27648 to represent a temperature range of 0 to 100 °C.</p>
+<p>The linear conversion is:</p>
+<div class="math-display">\[ T = \frac{\text{Raw}}{27648}\times100 \]</div>
+<p>If the raw value is 13824:</p>
+<div class="math-display">\[ T = \frac{13824}{27648}\times100 = 50\\,^\circ\mathrm{C} \]</div>
+<p>If SCADA interprets the raw value as the engineering value directly, it may display <code>13824</code> instead of <code>50 °C</code>.</p>
+<p>Confirm the configured input range, normalization, engineering range, and scaling location. Scaling might occur in the PLC, SCADA driver, tag expression, or display object. Applying the same conversion twice produces another incorrect value.</p>
+<h3 id="83-byte-order-and-word-order">8.3 Byte order and word order</h3>
+<p>Multi-byte values may be interpreted differently when systems use different byte or word arrangements.</p>
+<p>Example: A 32-bit value contains four bytes:</p>
+<pre><code>12 34 56 78
+</code></pre>
+<p>A receiver may expect a different byte or 16-bit word order than the sender. The resulting value can be incorrect despite successful communication.</p>
+<p>Troubleshooting steps:</p>
+<ol>
+<li>Confirm the source data type and memory layout.</li>
+<li>Check the protocol driver's byte-order and word-order settings.</li>
+<li>Compare raw bytes or registers where the diagnostic tools permit it.</li>
+<li>Validate using a known test value under approved conditions.</li>
+<li>Confirm the corrected value across the PLC, driver, SCADA tag, and display.</li>
+</ol>
+<p>Never change byte order merely because the displayed value looks strange. First establish the source representation and receiver expectation.</p>
+<h2 id="9-data-quality-stale-values-and-timestamps">9. Data Quality, Stale Values, and Timestamps</h2>
+<p>A displayed value has at least two important properties: its value and its validity.</p>
+<p>SCADA systems commonly expose quality states such as:</p>
+<ul>
+<li>Good: The source considers the value valid under the system's quality rules.</li>
+<li>Bad: The value cannot be trusted because of communication or source errors.</li>
+<li>Uncertain: The value exists but its validity or reliability is limited.</li>
+<li>Stale: The last value remains visible even though a new update has not arrived within the expected period.</li>
+</ul>
+<p>Exact quality labels and semantics vary by platform and protocol. Stale data may be represented by a separate status, a timestamp check, or a quality transition.</p>
+<h3 id="91-why-stale-data-is-dangerous">9.1 Why stale data is dangerous</h3>
+<p>A frozen motor-running bit may continue to show <code>TRUE</code> after communication is lost. A temperature trend may look stable because the historian keeps receiving the last value. An operator could interpret an old value as a current machine condition.</p>
+<p>Check:</p>
+<ul>
+<li>Source timestamp, server timestamp, and client timestamp.</li>
+<li>Time since the last successful update.</li>
+<li>Tag quality and communication diagnostics.</li>
+<li>Whether the driver retains the last valid value after disconnection.</li>
+<li>Whether a screen displays stale data without a visible quality indication.</li>
+<li>Whether the historian logs actual updates or repeated unchanged values.</li>
+<li>Whether system clocks are synchronized sufficiently for the application.</li>
+</ul>
+<p>A value changing is not the only proof of freshness. A legitimate value can remain constant. Use timestamps, quality, source update counters, or other reliable indicators.</p>
+<h3 id="92-deadband-and-update-behavior">9.2 Deadband and update behavior</h3>
+<p>A deadband suppresses small changes to reduce traffic or storage. A polling interval determines how frequently a client requests data, while a subscription or cyclic update can deliver changes according to protocol behavior.</p>
+<p>Potential problems include:</p>
+<ul>
+<li>Deadband too large, hiding meaningful small changes.</li>
+<li>Polling interval too slow for the required display response.</li>
+<li>Excessive polling, increasing load without improving useful information.</li>
+<li>Event-driven tags that update only when a condition changes.</li>
+<li>Historian compression that omits unchanged or insignificant values.</li>
+<li>Client-side screen refresh slower than the underlying tag update.</li>
+</ul>
+<p>Do not set every tag to the fastest possible update rate. High-frequency updates should be justified by process requirements and system capacity.</p>
+<h2 id="10-opc-gateways-and-middleware">10. OPC, Gateways, and Middleware</h2>
+<p>OPC servers and protocol gateways bridge systems that use different communication interfaces or data models.</p>
+<p>Example:</p>
+<pre><code>PLC using EtherNet/IP
+        ↓
+OPC server or gateway
+        ↓
+SCADA OPC client
+        ↓
+SCADA tag
+</code></pre>
+<p>A fault can occur at either side of the bridge, within the bridge, or in the mapping between the two.</p>
+<h3 id="101-opc-and-gateway-checks">10.1 OPC and gateway checks</h3>
+<ul>
+<li>Verify that the server service is running.</li>
+<li>Confirm the correct PLC driver, device endpoint, and controller identity.</li>
+<li>Check connection status and diagnostic logs.</li>
+<li>Verify item paths, namespaces, and tag browse results.</li>
+<li>Confirm that the client is connected to the intended server.</li>
+<li>Inspect authentication, certificates, permissions, and trust configuration where applicable.</li>
+<li>Check data quality and source timestamps.</li>
+<li>Review subscription, polling, and session limits.</li>
+<li>Check service-account permissions and dependencies after a restart.</li>
+<li>Verify that the gateway is not connected to a test PLC or an obsolete endpoint.</li>
+</ul>
+<p>For OPC UA, secure-channel and session health are distinct from the validity of each monitored item. A client can connect successfully while individual nodes return bad quality or are unavailable.</p>
+<p>For OPC Classic, DCOM permissions and Windows security configuration may affect communication. Do not weaken system security broadly to solve a single client connection fault.</p>
+<h3 id="102-restarting-a-service">10.2 Restarting a service</h3>
+<p>Restarting a communication service may temporarily restore data, but it does not establish the root cause.</p>
+<p>Before restarting:</p>
+<ol>
+<li>Record the current error, timestamp, quality, and affected tags.</li>
+<li>Check whether the service also supports other machines or critical applications.</li>
+<li>Confirm operational authorization and the expected interruption.</li>
+<li>Preserve logs where practical.</li>
+<li>Restart only the relevant service using the approved procedure.</li>
+<li>Verify data freshness, quality, alarms, and dependent applications afterward.</li>
+</ol>
+<p>If the same fault returns, investigate connection limits, resource leaks, network interruptions, configuration errors, or device behavior rather than scheduling endless restarts.</p>
+<h2 id="11-communication-and-application-diagnostics">11. Communication and Application Diagnostics</h2>
+<p>Use the least disruptive diagnostic method first.</p>
+<table>
+<thead>
+<tr>
+<th>Tool or method</th>
+<th>What it can establish</th>
+<th>What it cannot prove alone</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC online monitoring</td>
+<td>Live controller variables and program state</td>
+<td>Correct SCADA mapping</td>
+</tr>
+<tr>
+<td>HMI/SCADA tag monitor</td>
+<td>Value, quality, timestamp, driver status</td>
+<td>Physical sensor accuracy</td>
+</tr>
+<tr>
+<td>PLC diagnostic buffer</td>
+<td>Controller and module faults</td>
+<td>Complete network history</td>
+</tr>
+<tr>
+<td>OPC diagnostics</td>
+<td>Server, item, session, and quality status</td>
+<td>Correct machine process logic</td>
+</tr>
+<tr>
+<td>Switch MAC table</td>
+<td>Learned device MAC on a port or VLAN</td>
+<td>Application-level data validity</td>
+</tr>
+<tr>
+<td><code>ping</code></td>
+<td>IP endpoint responds to ICMP</td>
+<td>PLC protocol and tag health</td>
+</tr>
+<tr>
+<td><code>arp -a</code></td>
+<td>Local ARP neighbour mappings</td>
+<td>Whether a device's application is healthy</td>
+</tr>
+<tr>
+<td><code>Get-NetIPConfiguration</code></td>
+<td>Windows interface IP configuration</td>
+<td>Remote controller application state</td>
+</tr>
+<tr>
+<td><code>Get-NetAdapter</code></td>
+<td>Windows network adapter state</td>
+<td>End-to-end application communication</td>
+</tr>
+<tr>
+<td>Packet capture</td>
+<td>Observed packets, timing, resets, and retransmissions</td>
+<td>Meaning of encrypted or proprietary payloads without further analysis</td>
+</tr>
+<tr>
+<td>Vendor engineering software</td>
+<td>Manufacturer-specific connection and diagnostic state</td>
+<td>All faults in upstream or downstream systems</td>
+</tr>
+</tbody>
+</table>
+<p>Useful Windows commands:</p>
+<pre><code>ipconfig /all
+arp -a
+Get-NetAdapter
+Get-NetIPConfiguration
+Get-NetNeighbor
+</code></pre>
+<p>Run these on the relevant engineering or SCADA computer. A healthy engineering laptop does not automatically establish that the production SCADA server has the same network path or permissions.</p>
+<p>For industrial networks, packet capture should be performed with approved tools and methods. Avoid unapproved active scans, port sweeps, or intrusive diagnostic traffic on a production control network.</p>
+<h2 id="12-common-application-level-faults">12. Common Application-Level Faults</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Likely causes</th>
+<th>First diagnostic action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC is reachable but SCADA is disconnected</td>
+<td>Wrong driver endpoint, session failure, permissions, server issue</td>
+<td>Check driver and server diagnostics</td>
+</tr>
+<tr>
+<td>All tags from one PLC are bad</td>
+<td>Controller communication loss, wrong endpoint, driver failure</td>
+<td>Check PLC connection state and affected device configuration</td>
+</tr>
+<tr>
+<td>Only one tag is bad</td>
+<td>Wrong address, deleted symbol, incorrect item path, access restriction</td>
+<td>Monitor the source variable and inspect tag configuration</td>
+</tr>
+<tr>
+<td>Value is frozen</td>
+<td>Stale cache, communication interruption, logic not updating</td>
+<td>Compare source value, quality, and timestamp</td>
+</tr>
+<tr>
+<td>Value is incorrect but stable</td>
+<td>Wrong mapping, scaling, data type, or source variable</td>
+<td>Compare raw source and displayed value</td>
+</tr>
+<tr>
+<td>Digital state is inverted</td>
+<td>Incorrect polarity, bit mapping, or logic interpretation</td>
+<td>Verify the source bit and intended state definition</td>
+</tr>
+<tr>
+<td>Values update slowly</td>
+<td>Excessive polling interval, system load, network delay, driver limits</td>
+<td>Compare source update, driver update, and screen refresh times</td>
+</tr>
+<tr>
+<td>Alarm does not appear</td>
+<td>Incorrect trigger, deadband, delay, enable condition, alarm configuration</td>
+<td>Compare the source condition with the alarm expression</td>
+</tr>
+<tr>
+<td>Trend has gaps</td>
+<td>Communication loss, historian failure, bad quality filtering, storage issue</td>
+<td>Check tag history, historian status, and timestamps</td>
+</tr>
+<tr>
+<td>Writes fail but reads work</td>
+<td>Read-only permissions, wrong data type, PLC access restriction, interlock</td>
+<td>Inspect write diagnostics and authorized command conditions</td>
+</tr>
+<tr>
+<td>Wrong machine is displayed</td>
+<td>Incorrect endpoint, reused IP, copied configuration, wrong tag mapping</td>
+<td>Verify controller identity and machine-specific mapping</td>
+</tr>
+<tr>
+<td>Communication fails after replacement</td>
+<td>Changed identity, firmware, configuration, or endpoint</td>
+<td>Compare the replacement against the approved device record</td>
+</tr>
+<tr>
+<td>Fault returns after restart</td>
+<td>Underlying configuration, resource, or connection problem</td>
+<td>Capture recurring diagnostics before another restart</td>
+</tr>
+<tr>
+<td>PLC values are correct but HMI is wrong</td>
+<td>HMI tag mapping, display expression, conversion, cache</td>
+<td>Compare the HMI object against its source tag</td>
+</tr>
+<tr>
+<td>HMI is correct but historian is wrong</td>
+<td>Historian mapping, sampling, compression, timestamp, or storage issue</td>
+<td>Compare live tag values with historian records</td>
+</tr>
+</tbody>
+</table>
+<p>These are starting hypotheses, not automatic diagnoses. One symptom can have several causes, so confirm each hypothesis using evidence.</p>
+<h2 id="13-fault-isolation-by-scope">13. Fault Isolation by Scope</h2>
+<p>The number and pattern of affected tags often narrow the search faster than inspecting individual variables at random.</p>
+<table>
+<thead>
+<tr>
+<th>Observed pattern</th>
+<th>More likely investigation area</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>One tag on one screen</td>
+<td>Screen object, tag reference, expression</td>
+</tr>
+<tr>
+<td>Several tags from one data block</td>
+<td>Address mapping, data structure, access configuration</td>
+</tr>
+<tr>
+<td>All tags from one controller</td>
+<td>PLC endpoint, communication driver, controller interface</td>
+</tr>
+<tr>
+<td>All controllers through one gateway</td>
+<td>Gateway service, upstream interface, shared configuration</td>
+</tr>
+<tr>
+<td>One SCADA client affected</td>
+<td>Client configuration, permissions, local cache, local network path</td>
+</tr>
+<tr>
+<td>All SCADA clients affected</td>
+<td>Shared server, PLC communication, gateway, common network path</td>
+</tr>
+<tr>
+<td>Only alarms affected</td>
+<td>Alarm expressions, enable conditions, deadbands, alarm service</td>
+</tr>
+<tr>
+<td>Only historical data affected</td>
+<td>Historian, storage, sampling, logging configuration</td>
+</tr>
+<tr>
+<td>Intermittent failures across several devices</td>
+<td>Shared switch, network congestion, power instability, resource limits</td>
+</tr>
+<tr>
+<td>Failure only after a program download</td>
+<td>Symbol changes, changed data layout, configuration mismatch, controller restart</td>
+</tr>
+</tbody>
+</table>
+<p>A common dependency is a shared communication service. If twenty unrelated tags fail at the same instant, investigating twenty individual tag definitions first is usually inefficient. Find the common point of failure.</p>
+<h2 id="14-read-and-write-communication-faults">14. Read and Write Communication Faults</h2>
+<p>Reading a value and writing a command are separate operations with different permissions and operational risks.</p>
+<h3 id="141-read-failures">14.1 Read failures</h3>
+<p>Typical causes include:</p>
+<ul>
+<li>Source device unavailable.</li>
+<li>Incorrect address or symbolic path.</li>
+<li>Invalid data type.</li>
+<li>Unsupported item or register.</li>
+<li>Read permission denied.</li>
+<li>Session or subscription failure.</li>
+<li>Timeout or communication quality degradation.</li>
+</ul>
+<p>Start by verifying whether the value is available at the source and whether the client can access that exact item.</p>
+<h3 id="142-write-failures">14.2 Write failures</h3>
+<p>Typical causes include:</p>
+<ul>
+<li>Client or driver has read-only access.</li>
+<li>PLC variable is not writable through the selected interface.</li>
+<li>Wrong destination address or data type.</li>
+<li>Controller mode or application state blocks the operation.</li>
+<li>PLC logic overwrites the requested value.</li>
+<li>Machine permissives are not satisfied.</li>
+<li>Command is rejected by the destination device.</li>
+<li>The client lacks required authentication or authorization.</li>
+</ul>
+<p>A successful write request does not necessarily mean that the machine executed the requested action. Verify the command acknowledgement, resulting PLC state, field feedback, and machine response.</p>
+<p>Production safety rule: Never test an output, bypass an interlock, or issue a write command merely to determine whether communication works. Use an approved test method, a safe machine state, and the correct authorization. Safety-related functions must remain independent of ordinary SCADA communication assumptions.</p>
+<h2 id="15-structured-troubleshooting-procedure">15. Structured Troubleshooting Procedure</h2>
+<p>Use this procedure for PLC/SCADA data and logic faults.</p>
+<h3 id="step-1-define-the-symptom">Step 1: Define the symptom</h3>
+<p>Record:</p>
+<ul>
+<li>Exact tag, device, screen, or alarm affected.</li>
+<li>Expected value or behavior.</li>
+<li>Actual value or behavior.</li>
+<li>Time of failure and whether it is continuous or intermittent.</li>
+<li>Number of affected devices and applications.</li>
+<li>Recent changes, including program downloads, software restarts, device replacement, or network work.</li>
+</ul>
+<p>Avoid vague statements such as "PLC communication problem." Identify what failed and how the failure was observed.</p>
+<h3 id="step-2-check-operational-impact">Step 2: Check operational impact</h3>
+<p>Determine whether the fault affects only visualization or also affects control, alarms, traceability, quality records, or operator commands.</p>
+<p>If a critical machine condition cannot be verified reliably, follow the applicable operating procedure. Do not assume that an invisible or stale signal means the machine is stopped.</p>
+<h3 id="step-3-verify-the-physical-and-network-layers">Step 3: Verify the physical and network layers</h3>
+<p>Check device power, link status, switch-port state, correct VLAN and IP configuration, and basic reachability where appropriate.</p>
+<p>If these are healthy, continue upward rather than repeatedly testing the same cable.</p>
+<h3 id="step-4-verify-protocol-communication">Step 4: Verify protocol communication</h3>
+<p>Inspect the PLC connection, driver state, session diagnostics, timeouts, protocol-specific device status, and communication logs.</p>
+<p>Establish whether the client is exchanging valid data with the intended controller.</p>
+<h3 id="step-5-verify-the-source-value">Step 5: Verify the source value</h3>
+<p>Open the correct PLC online monitor or manufacturer diagnostic tool.</p>
+<ul>
+<li>If the source is wrong, investigate field signals, PLC logic, controller state, and process conditions.</li>
+<li>If the source is correct, continue tracing the data path toward the application.</li>
+</ul>
+<h3 id="step-6-verify-tag-mapping-and-data-interpretation">Step 6: Verify tag mapping and data interpretation</h3>
+<p>Compare the source variable with the application tag. Confirm address, type, structure, scaling, units, and conversion settings.</p>
+<p>Check that the tag points to the intended controller and that no copied configuration references a different machine.</p>
+<h3 id="step-7-verify-quality-and-timing">Step 7: Verify quality and timing</h3>
+<p>Inspect tag quality, source timestamps, update intervals, polling or subscription settings, deadbands, and display refresh behavior.</p>
+<p>Determine whether the value is wrong, stale, delayed, or merely unchanged because the process itself is stable.</p>
+<h3 id="step-8-inspect-application-processing">Step 8: Inspect application processing</h3>
+<p>Review calculations, expressions, scripts, alarm logic, enable conditions, historian mapping, and screen-object references.</p>
+<p>Use the narrowest relevant diagnostic view first. Changing several application settings simultaneously destroys the ability to identify which change mattered.</p>
+<h3 id="step-9-correct-the-confirmed-cause">Step 9: Correct the confirmed cause</h3>
+<p>Before changing production configuration:</p>
+<ol>
+<li>Record the existing settings and diagnostic evidence.</li>
+<li>Confirm authorization and the correct maintenance window or safe state.</li>
+<li>Back up the relevant project or configuration.</li>
+<li>Make the smallest justified change.</li>
+<li>Document the modification and preserve the previous configuration where possible.</li>
+</ol>
+<h3 id="step-10-verify-end-to-end-recovery">Step 10: Verify end-to-end recovery</h3>
+<p>Confirm all relevant layers:</p>
+<ul>
+<li>Source value is correct.</li>
+<li>PLC logic is behaving as expected.</li>
+<li>Communication state is healthy.</li>
+<li>Application quality is good.</li>
+<li>Values update within the required time.</li>
+<li>Display units and scaling are correct.</li>
+<li>Alarms and historical records behave correctly.</li>
+<li>Authorized commands and feedback work as designed.</li>
+<li>No new faults or unexpected machine behavior appeared.</li>
+</ul>
+<h3 id="step-11-close-the-breakdown">Step 11: Close the breakdown</h3>
+<p>Record the confirmed root cause, evidence, corrective action, verification results, and preventive action. A temporary recovery and a verified root-cause correction are not the same achievement.</p>
+<h2 id="16-practical-breakdown-scenarios">16. Practical Breakdown Scenarios</h2>
+<h3 id="scenario-1-plc-ping-is-successful-but-all-scada-tags-are-bad">Scenario 1: PLC ping is successful, but all SCADA tags are bad</h3>
+<p>Observed condition: The PLC responds to ping, but the SCADA application shows bad quality for all tags from that controller.</p>
+<p>Investigation:</p>
+<ol>
+<li>Confirm the PLC's actual IP address and identity.</li>
+<li>Check the SCADA driver or OPC server connection status.</li>
+<li>Inspect connection and authentication errors.</li>
+<li>Confirm the configured endpoint, protocol, and driver compatibility.</li>
+<li>Check whether other clients can read the same controller.</li>
+<li>Compare the last successful update timestamp with the reported failure time.</li>
+</ol>
+<p>Possible root causes: Incorrect driver configuration, expired or changed credentials, a failed communication service, an unavailable session, or an unsupported configuration.</p>
+<p>Verification: Confirm live values, good quality, fresh timestamps, and stable communication across the affected tags.</p>
+<h3 id="scenario-2-plc-value-is-correct-but-scada-displays-the-wrong-number">Scenario 2: PLC value is correct, but SCADA displays the wrong number</h3>
+<p>Observed condition: PLC online monitoring shows a raw analog value of <code>13824</code>, while the SCADA display shows <code>13824 °C</code> instead of <code>50 °C</code>.</p>
+<p>Investigation:</p>
+<ol>
+<li>Confirm the raw value and the intended engineering range.</li>
+<li>Inspect the PLC's scaling logic.</li>
+<li>Inspect the SCADA tag's scaling and conversion settings.</li>
+<li>Check whether scaling is applied twice or not at all.</li>
+<li>Verify the displayed engineering units.</li>
+</ol>
+<p>Possible root cause: SCADA is displaying the raw value without the required conversion.</p>
+<p>Verification: A raw value of <code>13824</code> produces <code>50 °C</code> under the stated 0 to 27648 and 0 to 100 °C scaling assumptions. Test other known points to confirm the range and direction are correct.</p>
+<h3 id="scenario-3-one-hmi-bit-indicates-that-a-motor-is-running-when-it-is-stopped">Scenario 3: One HMI bit indicates that a motor is running when it is stopped</h3>
+<p>Observed condition: The HMI displays <code>Motor Running = TRUE</code>, but the motor is not running.</p>
+<p>Investigation:</p>
+<ol>
+<li>Confirm the actual motor state using the approved field feedback and machine diagnostics.</li>
+<li>Monitor the source PLC bit online.</li>
+<li>Check whether the HMI references the correct bit.</li>
+<li>Verify whether the bit represents a run command, a drive-running status, or an auxiliary contact.</li>
+<li>Check signal polarity and any inversion in the PLC or HMI.</li>
+<li>Confirm that the displayed value is current rather than stale.</li>
+</ol>
+<p>Possible root causes: Incorrect tag mapping, use of a command bit instead of actual feedback, inverted logic, stale data, or faulty field feedback.</p>
+<p>Verification: The HMI definition must correspond to the intended physical state, and the displayed state must follow the verified source feedback.</p>
+<h3 id="scenario-4-plc-logic-was-modified-and-scada-tags-failed-afterward">Scenario 4: PLC logic was modified, and SCADA tags failed afterward</h3>
+<p>Observed condition: Several SCADA tags become unavailable immediately after a PLC program change.</p>
+<p>Investigation:</p>
+<ol>
+<li>Compare the current PLC project with the approved previous version.</li>
+<li>Identify renamed variables, changed data-block layouts, and modified addresses.</li>
+<li>Check whether the driver relies on symbolic browsing or absolute addresses.</li>
+<li>Inspect communication and tag-quality diagnostics.</li>
+<li>Review changes to controller configuration and access permissions.</li>
+</ol>
+<p>Possible root causes: Deleted or renamed symbols, changed memory offsets, altered structures, or stale SCADA mappings.</p>
+<p>Corrective action: Restore the intended mappings or update the SCADA configuration through change control.</p>
+<p>Verification: Check all dependent tags, alarms, trends, and calculations, not only the first tag that exposed the problem.</p>
+<h3 id="scenario-5-scada-values-freeze-intermittently-but-the-plc-continues-operating">Scenario 5: SCADA values freeze intermittently, but the PLC continues operating</h3>
+<p>Observed condition: The PLC continues controlling the machine, but SCADA values stop updating for several seconds and then recover.</p>
+<p>Investigation:</p>
+<ol>
+<li>Compare PLC values with SCADA values during the event.</li>
+<li>Check quality transitions and source timestamps.</li>
+<li>Review driver logs, connection timeouts, and reconnection events.</li>
+<li>Inspect switch-port counters and relevant network diagnostics.</li>
+<li>Check gateway or server resource utilization and active connection limits.</li>
+<li>Correlate the failures with other devices and scheduled application tasks.</li>
+</ol>
+<p>Possible root causes: Intermittent network faults, session instability, resource saturation, driver limitations, or communication-service interruptions.</p>
+<p>Verification: Observe the system through a representative operating period, confirm that timestamps remain fresh, and ensure the intermittent fault does not recur under normal load.</p>
+<h3 id="scenario-6-live-scada-value-is-correct-but-the-historian-trend-is-wrong">Scenario 6: Live SCADA value is correct, but the historian trend is wrong</h3>
+<p>Observed condition: The live temperature display changes correctly, but the trend shows missing samples or unexpected values.</p>
+<p>Investigation:</p>
+<ol>
+<li>Compare the live tag with its historical tag mapping.</li>
+<li>Check the historian's service state and write errors.</li>
+<li>Verify sampling interval and deadband.</li>
+<li>Inspect bad-quality filtering and compression settings.</li>
+<li>Compare timestamps, time zones, and clock synchronization.</li>
+<li>Confirm database availability and storage capacity.</li>
+</ol>
+<p>Possible root causes: Historian mapping errors, skipped samples, excessive compression, bad-quality filtering, time configuration errors, or storage problems.</p>
+<p>Verification: Confirm that known test changes are recorded with the expected timestamps and that missing or invalid samples are handled according to the application's requirements.</p>
+<h3 id="scenario-7-scada-can-read-a-tag-but-cannot-write-a-command">Scenario 7: SCADA can read a tag but cannot write a command</h3>
+<p>Observed condition: A status bit is readable, but an authorized operator command is rejected or has no effect.</p>
+<p>Investigation:</p>
+<ol>
+<li>Confirm the intended command destination and data type.</li>
+<li>Check client permissions and driver write diagnostics.</li>
+<li>Confirm PLC mode and applicable command permissives.</li>
+<li>Monitor the command variable and any acknowledgement.</li>
+<li>Check whether the PLC logic overwrites the value or rejects the request.</li>
+<li>Verify the resulting field-device feedback under an approved test condition.</li>
+</ol>
+<p>Possible root causes: Read-only access, wrong destination, a command interlock, an invalid value, or logic that rejects the request.</p>
+<p>Verification: Confirm command acknowledgement and the intended machine response. A write success message alone is insufficient.</p>
+<h2 id="17-preventive-maintenance-checklist">17. Preventive Maintenance Checklist</h2>
+<p>Perform these checks at a frequency appropriate to the criticality of the application, plant procedures, and equipment requirements.</p>
+<h3 id="plc-and-controller">PLC and controller</h3>
+<ul>
+<li>Confirm controller mode and general health.</li>
+<li>Review diagnostic buffers and recurring communication faults.</li>
+<li>Check relevant communication modules and connection status.</li>
+<li>Verify approved program and configuration backups.</li>
+<li>Review recent program changes and controller revisions.</li>
+<li>Confirm critical source variables update as intended.</li>
+<li>Review communication resource utilization where available.</li>
+</ul>
+<h3 id="hmi-scada-and-gateways">HMI, SCADA, and gateways</h3>
+<ul>
+<li>Confirm driver, OPC server, and gateway services are healthy.</li>
+<li>Review recurring bad-quality tags and communication timeouts.</li>
+<li>Check critical tag mappings, data types, scaling, and engineering units.</li>
+<li>Verify stale-data detection and timestamp behavior.</li>
+<li>Check alarm configuration and alarm acknowledgement behavior.</li>
+<li>Confirm historian collection, storage capacity, and trend continuity.</li>
+<li>Review access permissions and configuration changes.</li>
+<li>Verify backups and recovery procedures.</li>
+</ul>
+<h3 id="network-and-dependencies">Network and dependencies</h3>
+<ul>
+<li>Inspect relevant switch-port diagnostics and error counters.</li>
+<li>Confirm the intended IP address, device identity, and endpoint.</li>
+<li>Check for duplicate addressing or unexpected device replacement.</li>
+<li>Review recurring communication interruptions and network changes.</li>
+<li>Check time synchronization where timestamps affect diagnostics or records.</li>
+<li>Confirm shared infrastructure dependencies are documented.</li>
+</ul>
+<h3 id="documentation-and-control">Documentation and control</h3>
+<ul>
+<li>Maintain an approved PLC, HMI, SCADA, and gateway configuration inventory.</li>
+<li>Record software, firmware, and driver versions.</li>
+<li>Maintain a tag list with source, data type, scaling, units, and purpose.</li>
+<li>Document critical alarms, communication dependencies, and recovery procedures.</li>
+<li>Record all approved modifications and test results.</li>
+<li>Ensure recovery procedures do not depend on unapproved bypasses or undocumented settings.</li>
+</ul>
+<h2 id="18-breakdown-report-template">18. Breakdown Report Template</h2>
+<p>Use this structure for a real industrial application fault.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Information to record</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Breakdown ID</td>
+<td>Unique maintenance reference</td>
+</tr>
+<tr>
+<td>Date and time</td>
+<td>Failure start, detection, and recovery</td>
+</tr>
+<tr>
+<td>Machine or line</td>
+<td>Equipment name and location</td>
+</tr>
+<tr>
+<td>Affected application</td>
+<td>PLC, HMI, SCADA, OPC server, gateway, or historian</td>
+</tr>
+<tr>
+<td>Affected device</td>
+<td>Device name, IP, model, and controller identity</td>
+</tr>
+<tr>
+<td>Symptom</td>
+<td>Exact incorrect or missing behavior</td>
+</tr>
+<tr>
+<td>Expected condition</td>
+<td>Correct value, state, or response</td>
+</tr>
+<tr>
+<td>Actual condition</td>
+<td>Observed value, quality, timestamp, or error</td>
+</tr>
+<tr>
+<td>Scope</td>
+<td>Single tag, device, client, or entire system</td>
+</tr>
+<tr>
+<td>Network status</td>
+<td>Link, addressing, reachability, and relevant port diagnostics</td>
+</tr>
+<tr>
+<td>Protocol status</td>
+<td>Session, driver, timeout, and connection diagnostics</td>
+</tr>
+<tr>
+<td>Source status</td>
+<td>PLC online value and controller diagnostics</td>
+</tr>
+<tr>
+<td>Application checks</td>
+<td>Tag mapping, data type, scaling, logic, and quality</td>
+</tr>
+<tr>
+<td>Confirmed root cause</td>
+<td>Evidence-supported cause</td>
+</tr>
+<tr>
+<td>Corrective action</td>
+<td>Specific change or repair performed</td>
+</tr>
+<tr>
+<td>Verification</td>
+<td>End-to-end tests and observed results</td>
+</tr>
+<tr>
+<td>Preventive action</td>
+<td>Change intended to prevent recurrence</td>
+</tr>
+<tr>
+<td>Configuration backup</td>
+<td>Backup reference and revision</td>
+</tr>
+<tr>
+<td>Closure</td>
+<td>Responsible person and approval, as required</td>
+</tr>
+</tbody>
+</table>
+<p>Do not write "communication problem" as the final root cause when the evidence only shows a communication symptom. Record the actual failed component, configuration, or mechanism.</p>
+<h2 id="19-key-terms-and-terminology">19. Key Terms and Terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tag</td>
+<td>Software reference to a process variable</td>
+</tr>
+<tr>
+<td>Data mapping</td>
+<td>Association between a source variable and its application representation</td>
+</tr>
+<tr>
+<td>Data quality</td>
+<td>Indicator of whether a value is valid or reliable</td>
+</tr>
+<tr>
+<td>Stale data</td>
+<td>Previously received value that has not been refreshed as expected</td>
+</tr>
+<tr>
+<td>Polling</td>
+<td>Client periodically requests data</td>
+</tr>
+<tr>
+<td>Subscription</td>
+<td>Client receives updates according to the server's subscription mechanism</td>
+</tr>
+<tr>
+<td>Deadband</td>
+<td>Threshold used to suppress insignificant value changes</td>
+</tr>
+<tr>
+<td>OPC server</td>
+<td>Software exposing data from supported industrial sources</td>
+</tr>
+<tr>
+<td>Gateway</td>
+<td>Component connecting systems or protocols</td>
+</tr>
+<tr>
+<td>Historian</td>
+<td>System that stores time-series process data</td>
+</tr>
+<tr>
+<td>Watchdog</td>
+<td>Mechanism used to detect missing expected activity or updates</td>
+</tr>
+<tr>
+<td>Timeout</td>
+<td>Maximum permitted waiting period before an operation is treated as unsuccessful</td>
+</tr>
+<tr>
+<td>Acknowledgement</td>
+<td>Response indicating that a request was received or accepted, depending on the protocol</td>
+</tr>
+<tr>
+<td>Interlock</td>
+<td>Condition that permits or prevents an operation</td>
+</tr>
+<tr>
+<td>Source timestamp</td>
+<td>Time associated with the source value</td>
+</tr>
+<tr>
+<td>Client timestamp</td>
+<td>Time recorded when the client receives or processes a value</td>
+</tr>
+<tr>
+<td>Root cause</td>
+<td>Underlying mechanism responsible for the failure</td>
+</tr>
+<tr>
+<td>Recovery</td>
+<td>Restoration of service, which may or may not eliminate the root cause</td>
+</tr>
+</tbody>
+</table>
+<h2 id="20-interview-questions-and-answers">20. Interview Questions and Answers</h2>
+<h3 id="q1-the-plc-responds-to-ping-why-can-scada-still-show-bad-quality">Q1. The PLC responds to ping. Why can SCADA still show bad quality?</h3>
+<p>Ping tests IP-level reachability using ICMP. SCADA also requires a working application driver or protocol connection, valid item mapping, and access to the intended data. Any of these can fail independently.</p>
+<h3 id="q2-how-do-you-distinguish-a-plc-logic-fault-from-a-scada-mapping-fault">Q2. How do you distinguish a PLC logic fault from a SCADA mapping fault?</h3>
+<p>Monitor the intended variable directly in the PLC using the appropriate engineering software. If the source value is incorrect, investigate field inputs, PLC logic, and process conditions. If the source is correct, trace the communication driver, tag mapping, conversion, and display.</p>
+<h3 id="q3-what-is-the-difference-between-a-bad-value-and-stale-data">Q3. What is the difference between a bad value and stale data?</h3>
+<p>A bad value is identified as invalid or unreliable by the relevant quality mechanism. Stale data is an old value that has not been refreshed within the expected period. A stale value may remain displayed even when the communication path has failed.</p>
+<h3 id="q4-why-is-a-correct-raw-value-displayed-incorrectly-in-scada">Q4. Why is a correct raw value displayed incorrectly in SCADA?</h3>
+<p>Possible causes include incorrect scaling, engineering units, signedness, data type, byte order, word order, register offset, or an incorrect source tag.</p>
+<h3 id="q5-what-is-the-difference-between-polling-and-subscription">Q5. What is the difference between polling and subscription?</h3>
+<p>Polling involves a client requesting data at intervals. Subscription-based communication allows a client to receive updates according to a configured subscription mechanism. Both approaches have timing, resource, and configuration considerations.</p>
+<h3 id="q6-why-might-only-one-tag-fail-while-all-other-tags-remain-healthy">Q6. Why might only one tag fail while all other tags remain healthy?</h3>
+<p>The tag may reference a deleted symbol, incorrect register, invalid array index, unsupported data type, restricted variable, or incorrect item path. A single-tag fault usually justifies checking the individual mapping before investigating the entire network.</p>
+<h3 id="q7-why-can-a-scada-alarm-fail-even-when-the-displayed-value-is-correct">Q7. Why can a SCADA alarm fail even when the displayed value is correct?</h3>
+<p>The alarm may reference a different tag, use an incorrect threshold, have an unintended deadband or delay, depend on a disabled condition, or be affected by alarm-server configuration.</p>
+<h3 id="q8-what-should-be-checked-after-a-plc-program-download">Q8. What should be checked after a PLC program download?</h3>
+<p>Check controller diagnostics, communication status, symbol and memory-layout changes, affected SCADA tags, data types, scaling, alarms, trends, and dependent applications. Confirm that the online controller and approved project revisions are consistent.</p>
+<h3 id="q9-how-do-you-investigate-intermittent-scada-freezes">Q9. How do you investigate intermittent SCADA freezes?</h3>
+<p>Correlate the failure timestamps with PLC values, tag quality, driver logs, network diagnostics, gateway health, server load, and connection events. Determine whether the fault affects one tag, one controller, one client, or a shared service.</p>
+<h3 id="q10-what-is-the-difference-between-a-successful-write-and-successful-machine-operation">Q10. What is the difference between a successful write and successful machine operation?</h3>
+<p>A successful write means the communication operation may have accepted the requested value. Successful machine operation requires the controller to accept the command, satisfy permissives, execute the logic, and receive the expected feedback.</p>
+<h3 id="q11-why-is-repeatedly-restarting-the-scada-service-a-poor-permanent-solution">Q11. Why is repeatedly restarting the SCADA service a poor permanent solution?</h3>
+<p>Restarting may restore service temporarily without removing the underlying cause. Recurring failures may arise from resource exhaustion, incorrect configuration, session instability, or network problems. Capture diagnostic evidence before restarting and investigate the recurring mechanism.</p>
+<h3 id="q12-what-is-the-most-reliable-application-level-troubleshooting-principle">Q12. What is the most reliable application-level troubleshooting principle?</h3>
+<p>Trace the expected value from its source through every relevant processing and communication stage. Find the first point where the observed value differs from the expected value, correct the confirmed cause, and verify the complete data path.</p>
+<h2 id="21-final-completion-checklist">21. Final Completion Checklist</h2>
+<ul>
+<li>Distinguish physical, network, protocol, and application health.</li>
+<li>Verify PLC mode, live variables, logic conditions, and communication diagnostics.</li>
+<li>Diagnose HMI/SCADA tag mapping and data-type mismatches.</li>
+<li>Understand scaling, byte order, word order, and register offsets.</li>
+<li>Detect bad quality, stale values, and timestamp problems.</li>
+<li>Troubleshoot OPC servers, gateways, and historian dependencies.</li>
+<li>Separate read failures from write failures.</li>
+<li>Isolate faults using the scope and pattern of affected tags.</li>
+<li>Follow an evidence-based troubleshooting sequence.</li>
+<li>Verify end-to-end recovery and document the confirmed root cause.</li>
+</ul>
+<p>The essential distinction is that communication being available does not guarantee that application data is correct, current, or operationally trustworthy. Industrial troubleshooting is complete only when the source, processing, communication, display, and required feedback have been verified.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\20_RCA\01_Symptom_Cause - Symptom vs cause</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

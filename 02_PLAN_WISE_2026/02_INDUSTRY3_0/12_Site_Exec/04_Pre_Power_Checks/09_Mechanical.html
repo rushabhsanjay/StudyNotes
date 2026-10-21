@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mechanical Verification Before Power-On</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Mechanical Verification Before Power-On</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-scope-of-mechanical-verification">2. Scope of Mechanical Verification</a></li>
+<li><a href="#3-foundation-base-and-machine-frame">3. Foundation, Base, and Machine Frame</a><ul>
+<li><a href="#31-foundation-verification">3.1 Foundation verification</a></li>
+<li><a href="#32-machine-level-and-alignment">3.2 Machine level and alignment</a></li>
+<li><a href="#33-base-distortion">3.3 Base distortion</a></li>
+</ul>
+</li>
+<li><a href="#4-fasteners-bolts-nuts-and-retention">4. Fasteners, Bolts, Nuts, and Retention</a><ul>
+<li><a href="#41-fastener-verification">4.1 Fastener verification</a></li>
+<li><a href="#42-torque-requirements">4.2 Torque requirements</a></li>
+<li><a href="#43-common-fastener-defects">4.3 Common fastener defects</a></li>
+</ul>
+</li>
+<li><a href="#5-shaft-coupling-and-drive-alignment">5. Shaft, Coupling, and Drive Alignment</a><ul>
+<li><a href="#51-coupling-verification">5.1 Coupling verification</a></li>
+<li><a href="#52-types-of-shaft-misalignment">5.2 Types of shaft misalignment</a></li>
+<li><a href="#53-alignment-methods">5.3 Alignment methods</a></li>
+<li><a href="#54-typical-symptoms-of-misalignment">5.4 Typical symptoms of misalignment</a></li>
+</ul>
+</li>
+<li><a href="#6-bearings-gearboxes-and-rotating-components">6. Bearings, Gearboxes, and Rotating Components</a><ul>
+<li><a href="#61-bearing-checks">6.1 Bearing checks</a></li>
+<li><a href="#62-gearbox-checks">6.2 Gearbox checks</a></li>
+<li><a href="#63-manual-rotation">6.3 Manual rotation</a></li>
+</ul>
+</li>
+<li><a href="#7-belts-chains-gears-and-conveyors">7. Belts, Chains, Gears, and Conveyors</a><ul>
+<li><a href="#71-belt-drives">7.1 Belt drives</a></li>
+<li><a href="#72-chain-drives">7.2 Chain drives</a></li>
+<li><a href="#73-conveyor-systems">7.3 Conveyor systems</a></li>
+</ul>
+</li>
+<li><a href="#8-linear-guides-slides-and-positioning-mechanisms">8. Linear Guides, Slides, and Positioning Mechanisms</a><ul>
+<li><a href="#81-verification-points">8.1 Verification points</a></li>
+<li><a href="#82-backlash-and-mechanical-play">8.2 Backlash and mechanical play</a></li>
+</ul>
+</li>
+<li><a href="#9-pneumatic-actuators-and-mechanical-interfaces">9. Pneumatic Actuators and Mechanical Interfaces</a><ul>
+<li><a href="#91-cylinder-verification">9.1 Cylinder verification</a></li>
+<li><a href="#92-end-position-verification">9.2 End-position verification</a></li>
+<li><a href="#93-pneumatic-energy-hazards">9.3 Pneumatic energy hazards</a></li>
+</ul>
+</li>
+<li><a href="#10-hydraulic-components-and-mechanical-interfaces">10. Hydraulic Components and Mechanical Interfaces</a></li>
+<li><a href="#11-fixtures-tooling-and-workholding">11. Fixtures, Tooling, and Workholding</a><ul>
+<li><a href="#111-fixture-verification">11.1 Fixture verification</a></li>
+<li><a href="#112-tooling-and-locator-checks">11.2 Tooling and locator checks</a></li>
+<li><a href="#113-clamping-verification">11.3 Clamping verification</a></li>
+</ul>
+</li>
+<li><a href="#12-robot-base-dress-pack-and-mechanical-clearance">12. Robot Base, Dress Pack, and Mechanical Clearance</a><ul>
+<li><a href="#121-robot-mounting">12.1 Robot mounting</a></li>
+<li><a href="#122-dress-pack-and-cable-routing">12.2 Dress-pack and cable routing</a></li>
+<li><a href="#123-reach-and-interference">12.3 Reach and interference</a></li>
+</ul>
+</li>
+<li><a href="#13-mechanical-guards-and-protective-covers">13. Mechanical Guards and Protective Covers</a></li>
+<li><a href="#14-lubrication-cooling-and-mechanical-services">14. Lubrication, Cooling, and Mechanical Services</a><ul>
+<li><a href="#141-lubrication-verification">14.1 Lubrication verification</a></li>
+<li><a href="#142-cooling-systems">14.2 Cooling systems</a></li>
+</ul>
+</li>
+<li><a href="#15-mechanical-tolerances-and-measurement">15. Mechanical Tolerances and Measurement</a><ul>
+<li><a href="#151-measurement-principles">15.1 Measurement principles</a></li>
+<li><a href="#152-tolerance-interpretation">15.2 Tolerance interpretation</a></li>
+<li><a href="#153-measurement-uncertainty">15.3 Measurement uncertainty</a></li>
+</ul>
+</li>
+<li><a href="#16-mechanical-verification-procedure">16. Mechanical Verification Procedure</a></li>
+<li><a href="#17-defects-root-causes-and-corrective-actions">17. Defects, Root Causes, and Corrective Actions</a></li>
+<li><a href="#18-relationship-between-mechanical-and-other-pre-power-checks">18. Relationship Between Mechanical and Other Pre-Power Checks</a></li>
+<li><a href="#19-records-and-handover-requirements">19. Records and Handover Requirements</a></li>
+<li><a href="#20-common-mistakes-to-avoid">20. Common Mistakes to Avoid</a></li>
+<li><a href="#21-interview-questions-and-answers">21. Interview Questions and Answers</a></li>
+<li><a href="#22-final-mechanical-readiness-checklist">22. Final Mechanical Readiness Checklist</a></li>
+<li><a href="#23-key-takeaways">23. Key Takeaways</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\12_Site_Exec\04_Pre_Power_Checks\09_Mechanical - Mechanical</code></p>
+<h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>Mechanical verification before power-on is the systematic inspection of installed machinery, mechanical assemblies, fixtures, tooling, actuators, guards, fasteners, lubrication systems, and moving components to confirm that the equipment is correctly assembled, securely mounted, mechanically free where required, and ready for controlled commissioning.</p>
+<p>Electrical installation can be correct while the machine remains mechanically unsafe. A loose coupling, misaligned gearbox, unsecured fixture, obstructed robot path, or incorrectly installed guard can cause equipment damage, inaccurate operation, or serious injury when energy is applied.</p>
+<p>Mechanical verification establishes that:</p>
+<ul>
+<li>Equipment is installed according to approved drawings and manufacturer requirements.</li>
+<li>Foundations, frames, mounting arrangements, and fasteners are secure.</li>
+<li>Moving components have appropriate clearances and freedom of movement.</li>
+<li>Shafts, couplings, belts, chains, gears, and bearings are installed correctly.</li>
+<li>Pneumatic and hydraulic actuators are mechanically connected and properly supported.</li>
+<li>Fixtures, tooling, robot bases, and workholding devices are secure.</li>
+<li>Lubrication, cooling, and other mechanical service requirements are satisfied.</li>
+<li>Guards and mechanical protective devices are installed.</li>
+<li>The equipment is ready for the next approved commissioning stage.</li>
+</ul>
+<p>Important distinction: Mechanical readiness does not automatically authorize electrical energization, pneumatic or hydraulic pressurization, robot movement, or production operation. Those activities require their own safety checks and authorization.</p>
+<h2 id="2-scope-of-mechanical-verification">2. Scope of Mechanical Verification</h2>
+<p>The inspection scope depends on the machine type, installation design, risk assessment, and commissioning plan.</p>
+<table>
+<thead>
+<tr>
+<th>Equipment or assembly</th>
+<th>Main verification points</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine frame and base</td>
+<td>Foundation, level, alignment, anchoring, distortion</td>
+</tr>
+<tr>
+<td>Fasteners</td>
+<td>Correct grade, size, tightening method, retention</td>
+</tr>
+<tr>
+<td>Shafts and couplings</td>
+<td>Alignment, fit, retention, guarding</td>
+</tr>
+<tr>
+<td>Bearings and gearboxes</td>
+<td>Mounting, lubrication, alignment, condition</td>
+</tr>
+<tr>
+<td>Belts and chains</td>
+<td>Tension, tracking, sprocket or pulley alignment</td>
+</tr>
+<tr>
+<td>Linear guides and slides</td>
+<td>Cleanliness, lubrication, alignment, travel</td>
+</tr>
+<tr>
+<td>Pneumatic cylinders</td>
+<td>Mounting, rod alignment, end-position clearance</td>
+</tr>
+<tr>
+<td>Hydraulic cylinders</td>
+<td>Mounting, load support, hose routing, mechanical stops</td>
+</tr>
+<tr>
+<td>Fixtures and tooling</td>
+<td>Location, clamping, datum alignment, retention</td>
+</tr>
+<tr>
+<td>Robots and manipulators</td>
+<td>Base anchoring, reach clearance, dress-pack routing</td>
+</tr>
+<tr>
+<td>Conveyors</td>
+<td>Tracking, rollers, tension, transfer points</td>
+</tr>
+<tr>
+<td>Guards and covers</td>
+<td>Secure installation, access prevention, interlocks</td>
+</tr>
+<tr>
+<td>Lubrication systems</td>
+<td>Correct lubricant, level, lines, distribution</td>
+</tr>
+<tr>
+<td>Cooling systems</td>
+<td>Mechanical connections, flow path, leak condition</td>
+</tr>
+<tr>
+<td>Workholding systems</td>
+<td>Jaw, chuck, fixture, and retention integrity</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-foundation-base-and-machine-frame">3. Foundation, Base, and Machine Frame</h2>
+<p>The foundation transfers machine loads into the supporting structure. Poor foundation conditions can cause vibration, alignment changes, fatigue, and loss of machining or assembly accuracy.</p>
+<h3 id="31-foundation-verification">3.1 Foundation verification</h3>
+<p>Check:</p>
+<ul>
+<li>Foundation dimensions and location against the approved layout.</li>
+<li>Concrete condition and required curing status where applicable.</li>
+<li>Anchor-bolt positions, sizes, grades, and projection.</li>
+<li>Baseplate contact and specified grouting arrangements.</li>
+<li>Machine level and alignment requirements.</li>
+<li>Floor condition and load-bearing suitability.</li>
+<li>Clearance for maintenance access and removal of major assemblies.</li>
+<li>Absence of visible cracks, damaged anchors, or unacceptable settlement.</li>
+<li>Compliance with manufacturer installation instructions.</li>
+</ul>
+<p>Do not assume that tightening anchor bolts will correct a poor foundation. Incorrect tightening can distort the machine base.</p>
+<h3 id="32-machine-level-and-alignment">3.2 Machine level and alignment</h3>
+<p>A machine may require leveling in longitudinal and transverse directions. Precision equipment may also require specified geometric alignment measurements.</p>
+<p>Verification methods may include:</p>
+<ul>
+<li>Precision spirit level.</li>
+<li>Dial indicator.</li>
+<li>Laser alignment equipment.</li>
+<li>Straightedge and feeler gauges.</li>
+<li>Manufacturer-specific alignment tools.</li>
+<li>Coordinate measurement or geometric inspection equipment where required.</li>
+</ul>
+<p>The applicable tolerance must come from the equipment specification, drawing, or manufacturer procedure. There is no single acceptable leveling tolerance for all industrial machines.</p>
+<h3 id="33-base-distortion">3.3 Base distortion</h3>
+<p>Excessive or uneven mounting forces can distort the machine frame or base.</p>
+<p>Potential symptoms include:</p>
+<ul>
+<li>Increased bearing load.</li>
+<li>Binding linear movement.</li>
+<li>Misalignment between coupled shafts.</li>
+<li>Reduced machining accuracy.</li>
+<li>Increased vibration.</li>
+<li>Repeatability problems.</li>
+</ul>
+<p>If alignment changes as mounting fasteners are tightened, investigate the base, mounting surfaces, shims, and installation method rather than compensating blindly elsewhere.</p>
+<h2 id="4-fasteners-bolts-nuts-and-retention">4. Fasteners, Bolts, Nuts, and Retention</h2>
+<p>Fasteners secure mechanical assemblies against movement under static and dynamic loads.</p>
+<h3 id="41-fastener-verification">4.1 Fastener verification</h3>
+<p>Confirm:</p>
+<ul>
+<li>Correct fastener size and thread.</li>
+<li>Correct property class or material specification.</li>
+<li>Correct washers and locking arrangements.</li>
+<li>Required engagement length.</li>
+<li>Correct tightening sequence.</li>
+<li>Specified tightening torque or tensioning method.</li>
+<li>Required locking devices.</li>
+<li>No damaged threads, missing fasteners, or visibly damaged components.</li>
+<li>Traceability of critical fastener checks where required.</li>
+</ul>
+<h3 id="42-torque-requirements">4.2 Torque requirements</h3>
+<p>The tightening torque must follow the approved engineering specification or manufacturer instructions.</p>
+<p>Torque depends on factors including:</p>
+<ul>
+<li>Fastener diameter and thread pitch.</li>
+<li>Material and property class.</li>
+<li>Lubrication and coating.</li>
+<li>Thread condition.</li>
+<li>Joint materials and geometry.</li>
+<li>Required preload.</li>
+<li>Tightening method and tool accuracy.</li>
+</ul>
+<p>The same torque value must not be assumed valid for all fasteners of the same diameter. Lubrication and surface conditions can substantially change the relationship between applied torque and bolt preload.</p>
+<p>For critical joints, use calibrated tools and the specified tightening procedure. Marking a fastener with paint is useful for visual identification but does not independently prove that the required preload was achieved.</p>
+<h3 id="43-common-fastener-defects">4.3 Common fastener defects</h3>
+<table>
+<thead>
+<tr>
+<th>Defect</th>
+<th>Potential consequence</th>
+<th>Verification or corrective action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Loose fastener</td>
+<td>Movement, vibration, loss of alignment</td>
+<td>Inspect and tighten according to specification</td>
+</tr>
+<tr>
+<td>Missing fastener</td>
+<td>Reduced joint capacity</td>
+<td>Install the specified fastener</td>
+</tr>
+<tr>
+<td>Wrong grade</td>
+<td>Inadequate strength or unsuitable behavior</td>
+<td>Verify marking and approved bill of materials</td>
+</tr>
+<tr>
+<td>Damaged thread</td>
+<td>Incorrect preload or joint failure</td>
+<td>Replace or repair using an approved method</td>
+</tr>
+<tr>
+<td>Incorrect locking method</td>
+<td>Fastener loosening</td>
+<td>Restore the specified retention method</td>
+</tr>
+<tr>
+<td>Uneven tightening</td>
+<td>Distortion or uneven loading</td>
+<td>Follow the specified sequence</td>
+</tr>
+<tr>
+<td>Unapproved substitute</td>
+<td>Unknown mechanical performance</td>
+<td>Confirm engineering approval before use</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-shaft-coupling-and-drive-alignment">5. Shaft, Coupling, and Drive Alignment</h2>
+<p>Shaft alignment is particularly important for motors, gearboxes, pumps, spindles, and other rotating equipment.</p>
+<h3 id="51-coupling-verification">5.1 Coupling verification</h3>
+<p>Check:</p>
+<ul>
+<li>Correct coupling type and size.</li>
+<li>Correct shaft fit and key arrangement.</li>
+<li>Correct hub positioning.</li>
+<li>Correct retention method.</li>
+<li>Axial gap or separation according to specification.</li>
+<li>Angular and parallel alignment.</li>
+<li>Coupling-element condition.</li>
+<li>Correct lubrication where applicable.</li>
+<li>Presence of the required coupling guard.</li>
+</ul>
+<h3 id="52-types-of-shaft-misalignment">5.2 Types of shaft misalignment</h3>
+<ul>
+<li>Parallel or offset misalignment: Shaft centerlines are parallel but displaced.</li>
+<li>Angular misalignment: Shaft centerlines meet at an angle.</li>
+<li>Combined misalignment: Both offset and angular errors are present.</li>
+<li>Axial positioning error: Shaft or coupling position along the axis differs from the required arrangement.</li>
+</ul>
+<h3 id="53-alignment-methods">5.3 Alignment methods</h3>
+<p>Common methods include:</p>
+<ul>
+<li>Straightedge and feeler gauges for suitable low-precision applications.</li>
+<li>Dial indicators.</li>
+<li>Laser shaft-alignment systems.</li>
+<li>Manufacturer-specific alignment tools.</li>
+</ul>
+<p>Alignment must be checked against the applicable tolerance and at the specified operating or installation conditions.</p>
+<p>For some equipment, thermal growth, pipe strain, foundation movement, and coupling characteristics affect final alignment. Follow the manufacturer's procedure rather than assuming a cold static alignment is always sufficient.</p>
+<h3 id="54-typical-symptoms-of-misalignment">5.4 Typical symptoms of misalignment</h3>
+<ul>
+<li>Excessive vibration.</li>
+<li>Bearing overheating.</li>
+<li>Coupling wear.</li>
+<li>Seal leakage.</li>
+<li>Increased motor current due to mechanical load.</li>
+<li>Repeated coupling failures.</li>
+<li>Noise during rotation.</li>
+</ul>
+<p>These symptoms are not unique to misalignment. Confirm the actual cause before adjusting the assembly.</p>
+<h2 id="6-bearings-gearboxes-and-rotating-components">6. Bearings, Gearboxes, and Rotating Components</h2>
+<h3 id="61-bearing-checks">6.1 Bearing checks</h3>
+<p>Inspect:</p>
+<ul>
+<li>Correct bearing type and specification.</li>
+<li>Seating and mounting arrangement.</li>
+<li>Shaft and housing condition.</li>
+<li>Retention and locking arrangements.</li>
+<li>Lubrication type and quantity.</li>
+<li>Seal and contamination protection.</li>
+<li>Manufacturer-specified internal clearance or preload.</li>
+<li>Free rotation where permitted.</li>
+<li>Evidence of damage, corrosion, or contamination.</li>
+</ul>
+<p>Do not rotate equipment manually if the machine design, connected load, stored energy, or installation state makes this unsafe.</p>
+<h3 id="62-gearbox-checks">6.2 Gearbox checks</h3>
+<p>Verify:</p>
+<ul>
+<li>Correct gearbox model and ratio.</li>
+<li>Correct mounting orientation.</li>
+<li>Correct lubricant grade and level.</li>
+<li>Correct input and output connections.</li>
+<li>Shaft and coupling alignment.</li>
+<li>Breather, seal, and drain arrangements.</li>
+<li>Mounting integrity.</li>
+<li>Absence of visible leakage or damage.</li>
+<li>Required backlash or adjustment settings where applicable.</li>
+</ul>
+<p>Some gearboxes require specific lubricant levels or orientations. A level check performed in the wrong position can produce a misleading result.</p>
+<h3 id="63-manual-rotation">6.3 Manual rotation</h3>
+<p>Manual rotation may be used to identify binding, interference, or abnormal resistance, but only when explicitly permitted by the equipment procedure.</p>
+<p>Before doing so:</p>
+<ul>
+<li>Isolate all relevant energy sources.</li>
+<li>Apply lockout/tagout where required.</li>
+<li>Verify that stored energy cannot cause movement.</li>
+<li>Account for gravity-loaded mechanisms, springs, counterweights, and connected machinery.</li>
+<li>Use the designated turning tool or procedure.</li>
+<li>Never place fingers in pinch points or between moving parts.</li>
+</ul>
+<p>Smooth rotation alone does not prove correct alignment, lubrication, bearing condition, or operational readiness.</p>
+<h2 id="7-belts-chains-gears-and-conveyors">7. Belts, Chains, Gears, and Conveyors</h2>
+<h3 id="71-belt-drives">7.1 Belt drives</h3>
+<p>Check:</p>
+<ul>
+<li>Correct belt type and length.</li>
+<li>Pulley alignment.</li>
+<li>Specified tension.</li>
+<li>Pulley and hub retention.</li>
+<li>Belt condition and seating.</li>
+<li>Guards and access protection.</li>
+<li>Clearance from adjacent equipment.</li>
+</ul>
+<p>Excessive belt tension can overload bearings, while insufficient tension can cause slip, poor motion transmission, and tracking problems.</p>
+<h3 id="72-chain-drives">7.2 Chain drives</h3>
+<p>Verify:</p>
+<ul>
+<li>Correct chain and sprocket specification.</li>
+<li>Chain alignment.</li>
+<li>Required slack or tension.</li>
+<li>Chain links and connecting links.</li>
+<li>Lubrication requirements.</li>
+<li>Sprocket retention.</li>
+<li>Guards and pinch-point protection.</li>
+</ul>
+<p>Chain tension must follow the manufacturer's specification. A chain that appears tight by eye may still be incorrectly adjusted.</p>
+<h3 id="73-conveyor-systems">7.3 Conveyor systems</h3>
+<p>Inspect:</p>
+<ul>
+<li>Conveyor frame alignment.</li>
+<li>Roller and pulley mounting.</li>
+<li>Belt or chain tracking.</li>
+<li>Tensioning arrangements.</li>
+<li>Transfer points and product guides.</li>
+<li>Stops and end restraints.</li>
+<li>Scrapers and cleaning devices.</li>
+<li>Guarding and accessible pinch points.</li>
+<li>Mechanical freedom of rollers where safe to inspect.</li>
+<li>Workpiece clearance and transfer geometry.</li>
+</ul>
+<p>A conveyor may run mechanically but still damage products if transfer heights, guide positions, or stop locations are incorrect.</p>
+<h2 id="8-linear-guides-slides-and-positioning-mechanisms">8. Linear Guides, Slides, and Positioning Mechanisms</h2>
+<p>Linear guides and slides are common in CNC machines, automation equipment, assembly stations, and inspection systems.</p>
+<h3 id="81-verification-points">8.1 Verification points</h3>
+<p>Check:</p>
+<ul>
+<li>Correct guide and carriage model.</li>
+<li>Mounting-surface cleanliness.</li>
+<li>Rail straightness and parallelism.</li>
+<li>Fastener sequence and torque.</li>
+<li>Lubrication arrangements.</li>
+<li>Wipers, seals, and contamination protection.</li>
+<li>Mechanical end stops.</li>
+<li>Travel limits and clearances.</li>
+<li>Cable-chain and hose routing.</li>
+<li>Absence of binding or unexpected resistance where safe to test.</li>
+</ul>
+<h3 id="82-backlash-and-mechanical-play">8.2 Backlash and mechanical play</h3>
+<p>Backlash is lost motion associated with clearance or reversal in a transmission mechanism. Mechanical play can also occur in bearings, joints, guides, couplings, and mounting interfaces.</p>
+<p>Excessive play can affect:</p>
+<ul>
+<li>Positioning accuracy.</li>
+<li>Repeatability.</li>
+<li>CNC dimensional accuracy.</li>
+<li>Robot or servo positioning.</li>
+<li>Fixture location.</li>
+<li>Process consistency.</li>
+</ul>
+<p>Acceptance limits depend on the mechanism and application. Do not adjust backlash without understanding the manufacturer's procedure and the effects on preload, wear, and thermal behavior.</p>
+<h2 id="9-pneumatic-actuators-and-mechanical-interfaces">9. Pneumatic Actuators and Mechanical Interfaces</h2>
+<p>Pneumatic cylinders and valves convert compressed-air energy into mechanical motion.</p>
+<h3 id="91-cylinder-verification">9.1 Cylinder verification</h3>
+<p>Inspect:</p>
+<ul>
+<li>Correct cylinder type and stroke.</li>
+<li>Mounting brackets and fasteners.</li>
+<li>Rod alignment.</li>
+<li>Clevises, pivots, and joints.</li>
+<li>End-position clearance.</li>
+<li>Mechanical stops.</li>
+<li>Sensor mounting and target alignment.</li>
+<li>Hose routing and bend clearance.</li>
+<li>Protection against side loading.</li>
+<li>Risk of trapping or crushing.</li>
+</ul>
+<p>A cylinder rod is generally designed for a defined load direction and mounting arrangement. Incorrect side loading can damage seals, rods, bearings, or the cylinder body.</p>
+<h3 id="92-end-position-verification">9.2 End-position verification</h3>
+<p>Check that the mechanism can reach its intended positions without mechanical interference.</p>
+<p>Verify:</p>
+<ul>
+<li>Retracted position.</li>
+<li>Extended position.</li>
+<li>Intermediate clearances.</li>
+<li>Workpiece and fixture interaction.</li>
+<li>Sensor target positions.</li>
+<li>Mechanical stop arrangements.</li>
+<li>Required cushioning or deceleration arrangements.</li>
+</ul>
+<p>Do not assume that a cylinder's rated stroke matches the required machine movement exactly. Mounting geometry, clevis positions, stops, and linkage dimensions can affect actual travel.</p>
+<h3 id="93-pneumatic-energy-hazards">9.3 Pneumatic energy hazards</h3>
+<p>Compressed air can cause unexpected movement and may leave energy stored in cylinders, accumulators, or connected mechanisms.</p>
+<p>Before mechanical adjustment:</p>
+<ul>
+<li>Isolate and depressurize the relevant circuit according to the approved procedure.</li>
+<li>Verify that trapped pressure has been released.</li>
+<li>Secure gravity-loaded or spring-loaded components.</li>
+<li>Prevent unexpected movement.</li>
+<li>Follow the equipment-specific lockout procedure.</li>
+</ul>
+<p>Never loosen a pneumatic fitting merely to determine whether pressure remains in the system.</p>
+<h2 id="10-hydraulic-components-and-mechanical-interfaces">10. Hydraulic Components and Mechanical Interfaces</h2>
+<p>Hydraulic systems can generate substantial forces and may retain dangerous pressure after the pump is stopped.</p>
+<p>Check:</p>
+<ul>
+<li>Cylinder and actuator mounting.</li>
+<li>Hose and pipe support.</li>
+<li>Fitting security.</li>
+<li>Mechanical travel and clearances.</li>
+<li>Load-holding arrangements.</li>
+<li>Mechanical stops.</li>
+<li>Leakage or visible damage.</li>
+<li>Guarding of moving components.</li>
+<li>Required pressure-release and isolation provisions.</li>
+</ul>
+<p>Hydraulic pressure can remain trapped behind check valves or within accumulators. A stopped pump does not prove that the system is depressurized.</p>
+<p>Never search for a hydraulic leak with bare hands. High-pressure fluid injection injuries can occur through very small skin openings and require urgent medical treatment.</p>
+<p>Mechanical work on hydraulic systems must follow the approved isolation, pressure-release, load-support, and verification procedures.</p>
+<h2 id="11-fixtures-tooling-and-workholding">11. Fixtures, Tooling, and Workholding</h2>
+<p>Fixtures and tooling position and secure the workpiece during assembly, machining, welding, inspection, or testing.</p>
+<h3 id="111-fixture-verification">11.1 Fixture verification</h3>
+<p>Check:</p>
+<ul>
+<li>Fixture identification and revision.</li>
+<li>Mounting points and fasteners.</li>
+<li>Datum surfaces and locating pins.</li>
+<li>Clamping arrangements.</li>
+<li>Workpiece seating.</li>
+<li>Part-presence and clamp-position sensor mounting.</li>
+<li>Clearance with tools and moving assemblies.</li>
+<li>Repeatable location.</li>
+<li>Wear, damage, or contamination.</li>
+<li>Required guarding and access arrangements.</li>
+</ul>
+<h3 id="112-tooling-and-locator-checks">11.2 Tooling and locator checks</h3>
+<p>Inspect:</p>
+<ul>
+<li>Locator dimensions and position.</li>
+<li>Tool holder or end-effector retention.</li>
+<li>Tool-change interfaces.</li>
+<li>Clamp travel.</li>
+<li>Tool and workpiece clearance.</li>
+<li>Interference across the complete required movement envelope.</li>
+<li>Pneumatic or hydraulic connections.</li>
+<li>Electrical, sensor, and cable routing.</li>
+<li>Tool identification and configuration.</li>
+</ul>
+<p>Incorrect tooling can cause repeated process defects even when the control sequence is correct.</p>
+<h3 id="113-clamping-verification">11.3 Clamping verification</h3>
+<p>Verify that the clamp mechanism provides the specified holding function without damaging the workpiece.</p>
+<p>Consider:</p>
+<ul>
+<li>Clamp force requirements.</li>
+<li>Contact location.</li>
+<li>Workpiece deformation.</li>
+<li>Clamp travel.</li>
+<li>Mechanical retention.</li>
+<li>Position feedback.</li>
+<li>Safe release behavior.</li>
+<li>Risk of trapping during setup or adjustment.</li>
+</ul>
+<p>Do not use sensor status alone as proof that sufficient clamping force exists unless the design specifically validates that relationship.</p>
+<h2 id="12-robot-base-dress-pack-and-mechanical-clearance">12. Robot Base, Dress Pack, and Mechanical Clearance</h2>
+<p>Robot installation requires mechanical verification before controlled movement.</p>
+<h3 id="121-robot-mounting">12.1 Robot mounting</h3>
+<p>Check:</p>
+<ul>
+<li>Correct robot and mounting orientation.</li>
+<li>Baseplate design and anchoring.</li>
+<li>Mounting-bolt specification and tightening.</li>
+<li>Foundation condition.</li>
+<li>Mechanical alignment with the cell.</li>
+<li>Payload and tool configuration.</li>
+<li>External axes and their mounting.</li>
+<li>Cable and hose routing.</li>
+<li>Required clearance from adjacent equipment.</li>
+</ul>
+<h3 id="122-dress-pack-and-cable-routing">12.2 Dress-pack and cable routing</h3>
+<p>Verify that robot cables, pneumatic hoses, and process lines:</p>
+<ul>
+<li>Have the required slack and bend radius.</li>
+<li>Do not become stretched at the travel extremes.</li>
+<li>Do not snag on fixtures or guards.</li>
+<li>Are secured using the specified supports.</li>
+<li>Do not rub against sharp edges.</li>
+<li>Remain clear of hot, abrasive, or moving surfaces.</li>
+<li>Follow the robot manufacturer's routing requirements.</li>
+</ul>
+<h3 id="123-reach-and-interference">12.3 Reach and interference</h3>
+<p>Check the designed robot motion envelope against:</p>
+<ul>
+<li>Fixtures.</li>
+<li>Workpieces.</li>
+<li>Tooling.</li>
+<li>Guards.</li>
+<li>Conveyors.</li>
+<li>Adjacent robots.</li>
+<li>External axes.</li>
+<li>Cable carriers.</li>
+<li>Maintenance access zones.</li>
+</ul>
+<p>A software-defined path does not compensate for an incorrectly installed fixture or an unexpected physical obstruction.</p>
+<p>Initial movement and path validation must follow the robot manufacturer's and site's approved commissioning procedures, with required safeguarding and controlled operating modes in place.</p>
+<h2 id="13-mechanical-guards-and-protective-covers">13. Mechanical Guards and Protective Covers</h2>
+<p>Mechanical guarding prevents people from accessing hazardous moving components.</p>
+<p>Examples include:</p>
+<ul>
+<li>Coupling guards.</li>
+<li>Belt and chain guards.</li>
+<li>Gear covers.</li>
+<li>Fan guards.</li>
+<li>Robot-cell fencing.</li>
+<li>Machine enclosures.</li>
+<li>Access doors and protective covers.</li>
+</ul>
+<p>Verify that guards:</p>
+<ul>
+<li>Are the correct type and dimensions.</li>
+<li>Are securely fastened.</li>
+<li>Prevent access to the intended hazard.</li>
+<li>Do not create additional sharp-edge or trapping hazards.</li>
+<li>Do not obstruct required ventilation or cooling.</li>
+<li>Can be removed only as intended for maintenance.</li>
+<li>Are compatible with any associated safety interlocks.</li>
+</ul>
+<p>A cover that merely hides a mechanism is not necessarily an effective guard. Guard adequacy depends on the hazard, access routes, openings, distances, and applicable safety requirements.</p>
+<p>Do not remove or defeat a guard to perform a routine mechanical check unless an approved procedure specifically controls the resulting risk.</p>
+<h2 id="14-lubrication-cooling-and-mechanical-services">14. Lubrication, Cooling, and Mechanical Services</h2>
+<p>Lubrication and cooling systems support the intended operation of bearings, gearboxes, guides, spindles, and other components.</p>
+<h3 id="141-lubrication-verification">14.1 Lubrication verification</h3>
+<p>Check:</p>
+<ul>
+<li>Correct lubricant specification.</li>
+<li>Correct fill level.</li>
+<li>Lubrication-point identification.</li>
+<li>Grease and oil delivery lines.</li>
+<li>Line routing and support.</li>
+<li>Distribution units and metering devices.</li>
+<li>Leakage and blockage.</li>
+<li>Automatic lubrication settings.</li>
+<li>Required pre-lubrication procedure.</li>
+</ul>
+<p>Different lubricants are not automatically interchangeable. Mixing incompatible lubricants can cause performance problems or component damage.</p>
+<h3 id="142-cooling-systems">14.2 Cooling systems</h3>
+<p>Verify:</p>
+<ul>
+<li>Correct hose and pipe connections.</li>
+<li>Mechanical support.</li>
+<li>Flow direction where specified.</li>
+<li>Leak-free joints.</li>
+<li>Correct coolant or service fluid.</li>
+<li>Clear flow paths.</li>
+<li>Required flow and pressure monitoring.</li>
+<li>No interference with moving parts.</li>
+</ul>
+<p>A mechanical inspection can confirm the installation condition, but actual flow, pressure, and cooling performance may require a separate approved functional test.</p>
+<h2 id="15-mechanical-tolerances-and-measurement">15. Mechanical Tolerances and Measurement</h2>
+<p>Mechanical verification depends on comparing measured conditions with specified acceptance criteria.</p>
+<p>Common measurements include:</p>
+<ul>
+<li>Linear dimensions.</li>
+<li>Level and flatness.</li>
+<li>Parallelism and perpendicularity.</li>
+<li>Shaft runout.</li>
+<li>Coupling alignment.</li>
+<li>Clearances and gaps.</li>
+<li>Backlash.</li>
+<li>Belt or chain tension.</li>
+<li>Positioning repeatability.</li>
+<li>Fastener torque.</li>
+<li>Surface condition.</li>
+</ul>
+<h3 id="151-measurement-principles">15.1 Measurement principles</h3>
+<ol>
+<li>Identify the drawing or specification requirement.</li>
+<li>Select an instrument with suitable range and accuracy.</li>
+<li>Check the instrument's calibration status.</li>
+<li>Confirm the correct datum and measurement method.</li>
+<li>Measure under the specified conditions.</li>
+<li>Record the measured value and acceptance limit.</li>
+<li>Repeat measurements when required.</li>
+<li>Investigate out-of-tolerance results before adjustment.</li>
+<li>Recheck affected dimensions after correction.</li>
+</ol>
+<h3 id="152-tolerance-interpretation">15.2 Tolerance interpretation</h3>
+<p>Suppose a drawing specifies a shaft diameter of <span class="math-inline">\(25.00 \pm 0.02\text{ mm}\)</span>.</p>
+<p>The acceptable range is:</p>
+<div class="math-display">\[ 24.98\text{ mm} \leq D \leq 25.02\text{ mm} \]</div>
+<p>A measured diameter of 25.03 mm is outside that specified range.</p>
+<p>This example illustrates tolerance interpretation only. Actual acceptance must follow the approved drawing and applicable measurement procedure.</p>
+<h3 id="153-measurement-uncertainty">15.3 Measurement uncertainty</h3>
+<p>A result close to a tolerance boundary may require consideration of instrument uncertainty and the prescribed decision rule.</p>
+<p>Do not treat a displayed reading as perfectly exact. Use an instrument and method suitable for the required tolerance.</p>
+<h2 id="16-mechanical-verification-procedure">16. Mechanical Verification Procedure</h2>
+<p>A practical sequence for a newly installed automation machine is:</p>
+<ol>
+<li>Review the approved mechanical drawings, equipment manuals, installation plan, and risk assessment.</li>
+<li>Confirm the machine identity, configuration, and revision.</li>
+<li>Inspect the foundation, mounting structure, and base.</li>
+<li>Verify critical fasteners and anchoring.</li>
+<li>Check alignment of shafts, couplings, guides, and positioning mechanisms.</li>
+<li>Inspect bearings, gearboxes, belts, chains, and transmission components.</li>
+<li>Check fixtures, tooling, workholding, and locating arrangements.</li>
+<li>Inspect pneumatic and hydraulic mechanical interfaces.</li>
+<li>Verify robot mounting, external axes, and dress-pack routing where applicable.</li>
+<li>Inspect mechanical guards, covers, and access arrangements.</li>
+<li>Verify lubrication and mechanical service installation.</li>
+<li>Check clearances, interference risks, and accessible pinch points.</li>
+<li>Perform permitted manual checks only after appropriate isolation and stored-energy control.</li>
+<li>Record measurements, observations, and deviations.</li>
+<li>Correct defects using approved methods.</li>
+<li>Repeat affected inspections and document the results.</li>
+<li>Confirm closure of required mechanical punch-list items.</li>
+<li>Hand over the mechanical status for the next commissioning stage.</li>
+</ol>
+<p>This sequence is a general framework. Equipment-specific instructions, risk controls, and hold points take precedence.</p>
+<h2 id="17-defects-root-causes-and-corrective-actions">17. Defects, Root Causes, and Corrective Actions</h2>
+<table>
+<thead>
+<tr>
+<th>Observed problem</th>
+<th>Possible cause</th>
+<th>Corrective direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Excessive vibration</td>
+<td>Misalignment, imbalance, looseness, bearing defect</td>
+<td>Diagnose the source and verify alignment and mounting</td>
+</tr>
+<tr>
+<td>High bearing temperature</td>
+<td>Lubrication issue, preload, misalignment, overload</td>
+<td>Check manufacturer limits and investigate contributing causes</td>
+</tr>
+<tr>
+<td>Linear slide binds</td>
+<td>Misalignment, contamination, damaged guide, incorrect preload</td>
+<td>Inspect mounting, cleanliness, and guide condition</td>
+</tr>
+<tr>
+<td>Belt slips</td>
+<td>Incorrect tension, contamination, wear, overload</td>
+<td>Verify tension and investigate drive loading</td>
+</tr>
+<tr>
+<td>Chain runs unevenly</td>
+<td>Misalignment, wear, incorrect tension, damaged sprocket</td>
+<td>Inspect chain, sprockets, and alignment</td>
+</tr>
+<tr>
+<td>Fixture position is inaccurate</td>
+<td>Loose mounting, damaged locators, incorrect datum</td>
+<td>Verify mounting and locator geometry</td>
+</tr>
+<tr>
+<td>Cylinder rod wears unevenly</td>
+<td>Side loading, poor alignment, damaged support</td>
+<td>Correct mounting geometry and loading</td>
+</tr>
+<tr>
+<td>Robot cable snags</td>
+<td>Poor routing, insufficient slack, incorrect support</td>
+<td>Restore the specified dress-pack arrangement</td>
+</tr>
+<tr>
+<td>Gearbox leaks</td>
+<td>Seal damage, incorrect level, breather issue, mounting problem</td>
+<td>Inspect the source and correct according to the manual</td>
+</tr>
+<tr>
+<td>Fasteners repeatedly loosen</td>
+<td>Vibration, wrong retention method, joint design issue</td>
+<td>Investigate the cause and apply an approved correction</td>
+</tr>
+<tr>
+<td>Mechanical travel is obstructed</td>
+<td>Interference, incorrect stop position, installation error</td>
+<td>Verify the motion envelope and approved dimensions</td>
+</tr>
+<tr>
+<td>Guard cannot close correctly</td>
+<td>Misalignment, incorrect installation, mechanical interference</td>
+<td>Correct installation without defeating the protective function</td>
+</tr>
+</tbody>
+</table>
+<p>Avoid replacing components based only on symptoms. Use measurements, inspection findings, and the manufacturer's diagnostic procedure to identify the actual cause.</p>
+<h2 id="18-relationship-between-mechanical-and-other-pre-power-checks">18. Relationship Between Mechanical and Other Pre-Power Checks</h2>
+<p>Mechanical verification is one part of the overall readiness assessment.</p>
+<pre><code>Mechanical Verification
+        ↓
+Wiring and Cable Verification
+        ↓
+Earthing and Insulation Checks
+        ↓
+I/O and Control-System Verification
+        ↓
+Safety Checks
+        ↓
+Authorized Energization and Commissioning
+</code></pre>
+<p>This is an illustrative relationship, not a universal mandatory sequence. Actual order depends on the machine design, electrical procedures, safety requirements, and commissioning plan.</p>
+<p>Some checks must be repeated or completed in parallel. For example, safety-related mechanical guards must be inspected before associated safety functions can be fully validated.</p>
+<p>Mechanical readiness cannot replace electrical inspection, protective-device checks, safety validation, or authorization to energize.</p>
+<h2 id="19-records-and-handover-requirements">19. Records and Handover Requirements</h2>
+<p>The mechanical verification record should provide traceable evidence of the installed condition.</p>
+<p>Include:</p>
+<ul>
+<li>Equipment and station identification.</li>
+<li>Assembly or component identification.</li>
+<li>Drawing and revision references.</li>
+<li>Inspection item and acceptance criteria.</li>
+<li>Measurement values where applicable.</li>
+<li>Instrument identification and calibration status where required.</li>
+<li>Fastener or alignment records for critical joints.</li>
+<li>Lubrication and service checks.</li>
+<li>Guarding inspection results.</li>
+<li>Defect and punch-list references.</li>
+<li>Corrective actions.</li>
+<li>Retest results.</li>
+<li>Inspector and date.</li>
+<li>Required approval or release status.</li>
+</ul>
+<p>Photographs can help document defects, alignment references, missing parts, or completed corrections, but they do not replace measurements or functional checks where those are required.</p>
+<h2 id="20-common-mistakes-to-avoid">20. Common Mistakes to Avoid</h2>
+<ul>
+<li>Treating visual inspection as proof of dimensional accuracy.</li>
+<li>Tightening all fasteners without checking the specified torque or sequence.</li>
+<li>Assuming the machine is aligned because its base looks level.</li>
+<li>Manually rotating equipment without controlling stored energy.</li>
+<li>Ignoring shaft, coupling, or guide alignment.</li>
+<li>Assuming a new gearbox or bearing is correctly lubricated.</li>
+<li>Checking a pneumatic mechanism without accounting for trapped pressure.</li>
+<li>Adjusting a hydraulic assembly without supporting the load and releasing stored energy.</li>
+<li>Ignoring robot cable movement across the full travel envelope.</li>
+<li>Accepting fixture position without checking datums and locating features.</li>
+<li>Removing guards to simplify routine inspection.</li>
+<li>Assuming a sensor confirms sufficient clamping force.</li>
+<li>Correcting an out-of-tolerance result without identifying the cause.</li>
+<li>Failing to record defects, measurements, and retest results.</li>
+<li>Treating mechanical completion as automatic permission to energize.</li>
+</ul>
+<h2 id="21-interview-questions-and-answers">21. Interview Questions and Answers</h2>
+<p>Q1. What is mechanical verification before power-on?</p>
+<p>It is the inspection and measurement of mechanical installation, alignment, fastening, clearances, guarding, and supporting services before progressing to controlled commissioning.</p>
+<p>Q2. Why is shaft alignment important?</p>
+<p>Misalignment can increase vibration and bearing loads, damage couplings and seals, and reduce equipment reliability.</p>
+<p>Q3. What is the difference between level and alignment?</p>
+<p>Level describes orientation relative to a reference, while alignment describes the geometric relationship between components. A machine can be level while its shafts or guides remain misaligned.</p>
+<p>Q4. Why is the specified bolt-tightening torque important?</p>
+<p>Correct tightening helps achieve the required joint preload. Incorrect tightening can cause loosening, thread damage, joint failure, or component distortion.</p>
+<p>Q5. Why should mechanical freedom be checked before powered movement?</p>
+<p>Where permitted by the equipment procedure, checking for binding and interference can reveal installation defects before motors or actuators apply force. The check must account for stored energy and moving-part hazards.</p>
+<p>Q6. What is backlash?</p>
+<p>Backlash is lost motion associated with clearance in a transmission mechanism, particularly when the direction of movement reverses. Excessive backlash can affect positioning accuracy.</p>
+<p>Q7. Why can excessive belt tension be harmful?</p>
+<p>It can increase bearing and shaft loads, shorten component life, and create additional mechanical stress.</p>
+<p>Q8. Why is robot dress-pack routing important?</p>
+<p>Incorrect routing can cause cables or hoses to stretch, snag, rub, or interfere with robot motion, potentially damaging services or disrupting operation.</p>
+<p>Q9. Does a completed mechanical checklist mean the machine is safe to start?</p>
+<p>No. Electrical checks, safety validation, commissioning controls, and the required authorization must also be completed.</p>
+<p>Q10. What evidence demonstrates successful mechanical verification?</p>
+<p>Documented inspection results, measurements against approved criteria, resolved defects, completed retests, and the required sign-off provide traceable evidence.</p>
+<h2 id="22-final-mechanical-readiness-checklist">22. Final Mechanical Readiness Checklist</h2>
+<ul>
+<li>Foundation, base, anchoring, and mounting condition verified.</li>
+<li>Machine level and required alignment measurements accepted.</li>
+<li>Critical fasteners verified against the approved specification.</li>
+<li>Shafts, couplings, bearings, and gearboxes inspected.</li>
+<li>Belts, chains, gears, and conveyors checked.</li>
+<li>Linear guides, slides, stops, and positioning mechanisms inspected.</li>
+<li>Pneumatic and hydraulic mechanical interfaces checked.</li>
+<li>Fixtures, tooling, locators, and workholding arrangements verified.</li>
+<li>Robot mounting, external axes, and cable routing checked where applicable.</li>
+<li>Mechanical guards and protective covers installed correctly.</li>
+<li>Lubrication and cooling arrangements inspected.</li>
+<li>Mechanical clearances and interference risks evaluated.</li>
+<li>Stored-energy hazards controlled before any permitted manual inspection.</li>
+<li>Required measurements meet the approved acceptance criteria.</li>
+<li>Defects corrected and affected inspections repeated.</li>
+<li>Mechanical verification records completed.</li>
+<li>Required handover and release approvals obtained.</li>
+</ul>
+<h2 id="23-key-takeaways">23. Key Takeaways</h2>
+<p>Mechanical verification confirms that the machine is installed correctly, mechanically secure, aligned within specification, free from unacceptable interference, and equipped with the required guards and supporting services.</p>
+<p>The critical distinction is between visual condition, measured compliance, and functional readiness. Each requires the appropriate evidence. A component that looks correct may still be misaligned, incorrectly tightened, improperly lubricated, or outside its dimensional tolerance.</p>
+<p>Complete mechanical verification reduces the risk of damage during initial energization and creates a reliable foundation for safety validation and controlled commissioning.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\12_Site_Exec\04_Pre_Power_Checks\10_Safety_Checks - Safety checks</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

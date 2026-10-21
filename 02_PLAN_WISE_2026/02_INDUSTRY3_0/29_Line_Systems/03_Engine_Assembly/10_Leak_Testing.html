@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leak Testing in Engine Assembly</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Leak Testing in Engine Assembly</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-of-leak-testing">1. Purpose of Leak Testing</a></li>
+<li><a href="#2-basic-leak-testing-principle">2. Basic Leak-Testing Principle</a></li>
+<li><a href="#3-leak-testing-system-architecture">3. Leak-Testing System Architecture</a></li>
+<li><a href="#4-main-components-of-a-leak-testing-station">4. Main Components of a Leak-Testing Station</a></li>
+<li><a href="#5-common-leak-testing-methods">5. Common Leak-Testing Methods</a><ul>
+<li><a href="#51-pressure-decay-testing">5.1 Pressure-decay testing</a></li>
+<li><a href="#52-differential-pressure-testing">5.2 Differential-pressure testing</a></li>
+<li><a href="#53-mass-flow-testing">5.3 Mass-flow testing</a></li>
+<li><a href="#54-vacuum-testing">5.4 Vacuum testing</a></li>
+<li><a href="#55-tracer-gas-testing">5.5 Tracer-gas testing</a></li>
+<li><a href="#56-liquid-leak-testing">5.6 Liquid leak testing</a></li>
+<li><a href="#57-method-comparison">5.7 Method comparison</a></li>
+</ul>
+</li>
+<li><a href="#6-pressure-temperature-and-stabilization">6. Pressure, Temperature, and Stabilization</a><ul>
+<li><a href="#61-typical-test-phases">6.1 Typical test phases</a></li>
+</ul>
+</li>
+<li><a href="#7-leakage-units-and-interpretation">7. Leakage Units and Interpretation</a><ul>
+<li><a href="#71-pressure-decay-calculation">7.1 Pressure-decay calculation</a></li>
+<li><a href="#72-gauge-pressure-and-absolute-pressure">7.2 Gauge pressure and absolute pressure</a></li>
+<li><a href="#73-acceptance-limits">7.3 Acceptance limits</a></li>
+</ul>
+</li>
+<li><a href="#8-test-fixtures-seals-and-clamping">8. Test Fixtures, Seals, and Clamping</a><ul>
+<li><a href="#81-fixture-related-false-rejects">8.1 Fixture-related false rejects</a></li>
+<li><a href="#82-fixture-related-false-accepts">8.2 Fixture-related false accepts</a></li>
+<li><a href="#83-fixture-maintenance">8.3 Fixture maintenance</a></li>
+</ul>
+</li>
+<li><a href="#9-plc-sequence-and-interlocks">9. PLC Sequence and Interlocks</a><ul>
+<li><a href="#91-result-handling">9.1 Result handling</a></li>
+<li><a href="#92-handshake-and-stale-result-prevention">9.2 Handshake and stale-result prevention</a></li>
+<li><a href="#93-fault-recovery">9.3 Fault recovery</a></li>
+</ul>
+</li>
+<li><a href="#10-leak-tester-parameters-and-recipe-management">10. Leak Tester Parameters and Recipe Management</a><ul>
+<li><a href="#101-recipe-control-practices">10.1 Recipe-control practices</a></li>
+</ul>
+</li>
+<li><a href="#11-common-faults-and-troubleshooting">11. Common Faults and Troubleshooting</a></li>
+<li><a href="#12-systematic-troubleshooting-procedure">12. Systematic Troubleshooting Procedure</a></li>
+<li><a href="#13-calibration-and-verification-of-the-leak-tester">13. Calibration and Verification of the Leak Tester</a><ul>
+<li><a href="#131-verification-activities">13.1 Verification activities</a></li>
+</ul>
+</li>
+<li><a href="#14-preventive-maintenance-plan">14. Preventive Maintenance Plan</a></li>
+<li><a href="#15-safety-and-hazardous-energy">15. Safety and Hazardous Energy</a></li>
+<li><a href="#16-rcacapa-example-intermittent-leak-test-failure">16. RCA/CAPA Example: Intermittent Leak-Test Failure</a><ul>
+<li><a href="#problem-statement">Problem statement</a></li>
+<li><a href="#possible-causes">Possible causes</a></li>
+<li><a href="#investigation-procedure">Investigation procedure</a></li>
+<li><a href="#corrective-and-preventive-actions">Corrective and preventive actions</a></li>
+</ul>
+</li>
+<li><a href="#17-leak-testing-kpis">17. Leak-Testing KPIs</a></li>
+<li><a href="#18-practical-learning-exercises">18. Practical Learning Exercises</a></li>
+<li><a href="#19-final-technical-summary">19. Final Technical Summary</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-of-leak-testing">1. Purpose of Leak Testing</h2>
+<p>Leak testing is a quality-control process used to determine whether a component or assembled system allows fluid or gas to escape through unintended paths, or allows unwanted ingress across a sealing boundary.</p>
+<p>In engine assembly, leak testing helps verify the integrity of components and joints that must contain oil, coolant, air, fuel, or other specified fluids. The test method depends on the component, the leakage risk, the required sensitivity, the production cycle time, and the manufacturer's acceptance criteria.</p>
+<p>Typical applications include:</p>
+<ul>
+<li>Engine block and cylinder head passages.</li>
+<li>Oil galleries and lubrication passages.</li>
+<li>Coolant jackets and cooling passages.</li>
+<li>Sealed covers, plugs, and threaded closures.</li>
+<li>Gaskets, O-rings, and sealing interfaces.</li>
+<li>Oil filters and associated housings where specified.</li>
+<li>Intake or exhaust-related components when covered by the production test plan.</li>
+<li>Fuel-system components using an approved method suitable for the specific fuel system.</li>
+<li>Water jackets and castings for porosity-related leakage.</li>
+<li>Assemblies containing multiple internal passages that must remain isolated from each other.</li>
+</ul>
+<p>Leak testing is not the same as checking whether a component is visibly wet. Some leaks are too small to produce visible liquid, while some pressure changes arise from temperature variation, fixture leakage, or material expansion rather than a defect in the component.</p>
+<p>The acceptance limit and test method must come from the approved product specification, control plan, or validated engineering procedure. There is no single leakage limit suitable for every engine component.</p>
+<h2 id="2-basic-leak-testing-principle">2. Basic Leak-Testing Principle</h2>
+<p>A leak test creates a defined test condition and measures a response that indicates whether leakage exceeds an allowed limit.</p>
+<p>Common approaches include:</p>
+<ul>
+<li>Pressurizing a component with air or another approved test gas.</li>
+<li>Measuring pressure loss over a defined period.</li>
+<li>Measuring the gas flow required to maintain a defined pressure.</li>
+<li>Measuring pressure differential across a test arrangement.</li>
+<li>Using a tracer gas and a suitable detector for high-sensitivity applications.</li>
+<li>Filling a component with liquid and checking for leakage using an approved method.</li>
+<li>Monitoring whether pressure or vacuum changes within a specified time.</li>
+</ul>
+<p>The correct interpretation depends on the test method. A pressure-decay test measures pressure change, whereas a mass-flow test measures gas flow under defined conditions. These methods are related, but their readings are not interchangeable without a validated relationship.</p>
+<h2 id="3-leak-testing-system-architecture">3. Leak-Testing System Architecture</h2>
+<p>A typical automated leak-testing station includes the following elements.</p>
+<pre><code>Engine / Component Arrives
+             ↓
+Part Identification and Variant Check
+             ↓
+Fixture Closes and Seals Test Ports
+             ↓
+Fixture and Safety Interlocks Verified
+             ↓
+Test Medium Applied
+             ↓
+Fill / Stabilization / Measurement
+             ↓
+Leakage Result Compared with Limits
+             ↓
+PLC Validates Test Completion and Result
+             ↓
+PASS / FAIL / INVALID / ABORTED
+             ↓
+Part Release or Controlled Hold
+             ↓
+Test Record and Traceability
+</code></pre>
+<p>A typical equipment architecture is:</p>
+<pre><code>Compressed Air / Approved Test Gas
+                 ↓
+         Regulator and Filter
+                 ↓
+        Valves and Flow Controls
+                 ↓
+       Test Circuit and Fixtures
+                 ↓
+       Pressure / Flow Sensors
+                 ↓
+     Leak Tester or Test Controller
+                 ↕
+               PLC
+          ↙      ↓       ↘
+        HMI    Fixture    MES / Database
+               Control
+</code></pre>
+<p>Actual installations may integrate the leak tester, pneumatic valves, pressure sensors, and test logic into a single unit. Others use separate controllers, manifolds, and measurement devices.</p>
+<h2 id="4-main-components-of-a-leak-testing-station">4. Main Components of a Leak-Testing Station</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+<th>Common failure modes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Leak tester</td>
+<td>Executes the test cycle and evaluates leakage</td>
+<td>Incorrect configuration, internal fault, failed measurement</td>
+</tr>
+<tr>
+<td>Pressure regulator</td>
+<td>Maintains the required test pressure</td>
+<td>Drift, sticking, unstable output</td>
+</tr>
+<tr>
+<td>Filter and air preparation unit</td>
+<td>Removes specified contaminants from the test supply</td>
+<td>Blockage, contamination, excessive pressure drop</td>
+</tr>
+<tr>
+<td>Pneumatic valves</td>
+<td>Control filling, isolation, venting, and routing</td>
+<td>Sticking, internal leakage, incorrect actuation</td>
+</tr>
+<tr>
+<td>Pressure sensor or transducer</td>
+<td>Measures pressure in the test circuit</td>
+<td>Drift, damaged sensing element, incorrect range</td>
+</tr>
+<tr>
+<td>Flow sensor</td>
+<td>Measures gas flow in applicable methods</td>
+<td>Contamination, drift, unsuitable measurement range</td>
+</tr>
+<tr>
+<td>Test fixture</td>
+<td>Locates and seals the component</td>
+<td>Wear, damage, misalignment</td>
+</tr>
+<tr>
+<td>Seals and O-rings</td>
+<td>Establish the test boundary</td>
+<td>Cuts, compression set, swelling, incorrect material</td>
+</tr>
+<tr>
+<td>Clamping mechanism</td>
+<td>Applies the specified fixture force</td>
+<td>Insufficient force, misalignment, mechanical wear</td>
+</tr>
+<tr>
+<td>PLC</td>
+<td>Coordinates the station sequence and interlocks</td>
+<td>Incorrect logic, I/O fault, stale result handling</td>
+</tr>
+<tr>
+<td>HMI</td>
+<td>Displays recipes, measurements, alarms, and results</td>
+<td>Incorrect settings, unavailable diagnostics</td>
+</tr>
+<tr>
+<td>Safety devices</td>
+<td>Protect personnel and prevent unsafe operation</td>
+<td>Misalignment, fault, unauthorized bypass</td>
+</tr>
+<tr>
+<td>Exhaust or vent path</td>
+<td>Releases test medium through the designed path</td>
+<td>Blockage, incorrect routing, uncontrolled release</td>
+</tr>
+</tbody>
+</table>
+<p>The test fixture is part of the measurement system. A defective fixture seal can cause a good component to fail, while an incorrect fixture arrangement can unintentionally isolate the area containing the actual defect.</p>
+<h2 id="5-common-leak-testing-methods">5. Common Leak-Testing Methods</h2>
+<h3 id="51-pressure-decay-testing">5.1 Pressure-decay testing</h3>
+<p>The component or test circuit is pressurized to a specified condition, isolated from the supply, and monitored for pressure change over a defined measurement period.</p>
+<p>A simplified sequence is:</p>
+<ol>
+<li>Connect and seal the component.</li>
+<li>Fill the test circuit.</li>
+<li>Allow pressure and temperature to stabilize.</li>
+<li>Isolate the circuit as specified.</li>
+<li>Measure pressure over the defined interval.</li>
+<li>Evaluate the pressure change against the validated acceptance criteria.</li>
+<li>Vent the circuit safely and release the component when permitted.</li>
+</ol>
+<p>A pressure drop may indicate leakage, but it can also arise from temperature changes, fixture movement, volume changes, sensor drift, or leakage in the test equipment itself.</p>
+<h3 id="52-differential-pressure-testing">5.2 Differential-pressure testing</h3>
+<p>A differential-pressure system measures the pressure difference between a test circuit and a reference circuit or reference volume.</p>
+<p>The method can help reduce the effect of some common environmental changes, provided the test and reference arrangements behave as intended.</p>
+<p>Its reliability depends on reference-circuit integrity, sensor performance, matching of test conditions, and correct interpretation of the measured differential.</p>
+<h3 id="53-mass-flow-testing">5.3 Mass-flow testing</h3>
+<p>A mass-flow method measures gas flow under defined test conditions. Depending on the system design, the instrument may determine the flow needed to maintain the specified pressure or measure flow through a calibrated arrangement.</p>
+<p>It is useful when the process specification defines allowable leakage in flow units.</p>
+<p>The reported value depends on the test pressure, gas properties, instrument configuration, reference conditions, and measurement method. Results must be interpreted using the leak tester's specified units and configuration.</p>
+<h3 id="54-vacuum-testing">5.4 Vacuum testing</h3>
+<p>A component or test circuit is evacuated to a specified vacuum condition and monitored for pressure change or another defined response.</p>
+<p>Applications depend on component design and test requirements. Vacuum testing is not automatically equivalent to positive-pressure testing because seals and components may behave differently under different pressure directions.</p>
+<h3 id="55-tracer-gas-testing">5.5 Tracer-gas testing</h3>
+<p>A tracer gas, commonly helium in suitable applications, is introduced or used as specified by the method, and a detector measures its presence or leakage.</p>
+<p>Tracer-gas methods can offer high sensitivity but may require specialized equipment, controlled test arrangements, gas-handling provisions, and higher operating costs.</p>
+<p>The selected tracer gas, detector arrangement, test pressure, and acceptance criteria must be appropriate for the product and validated method.</p>
+<h3 id="56-liquid-leak-testing">5.6 Liquid leak testing</h3>
+<p>A component may be filled with a specified liquid or exposed to a defined liquid test arrangement, then inspected for leakage or another approved response.</p>
+<p>This method can be appropriate when the product specification requires liquid-based testing. It may be unsuitable where residual liquid could contaminate the product, cause corrosion, or interfere with subsequent assembly.</p>
+<h3 id="57-method-comparison">5.7 Method comparison</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Measured response</th>
+<th>Main consideration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pressure decay</td>
+<td>Pressure change over time</td>
+<td>Sensitive to temperature, volume, and circuit stability</td>
+</tr>
+<tr>
+<td>Differential pressure</td>
+<td>Difference between test and reference pressure</td>
+<td>Requires a suitable, stable reference arrangement</td>
+</tr>
+<tr>
+<td>Mass flow</td>
+<td>Gas flow under defined conditions</td>
+<td>Requires correct pressure, units, and instrument configuration</td>
+</tr>
+<tr>
+<td>Vacuum decay</td>
+<td>Pressure change under vacuum conditions</td>
+<td>Depends on component behavior and vacuum-system integrity</td>
+</tr>
+<tr>
+<td>Tracer gas</td>
+<td>Tracer concentration or leakage response</td>
+<td>Requires suitable detector, gas control, and test setup</td>
+</tr>
+<tr>
+<td>Liquid testing</td>
+<td>Visible leakage or a specified liquid-based response</td>
+<td>Consider contamination, drying, and corrosion risks</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6-pressure-temperature-and-stabilization">6. Pressure, Temperature, and Stabilization</h2>
+<p>Pressure and temperature strongly influence leak-test measurements. Gas temperature can change during filling, compression, expansion, and stabilization. A temperature change can cause pressure to change even when the component has no leak.</p>
+<p>For an ideal gas in a fixed volume, the relationship is:</p>
+<div class="math-display">\[ PV = nRT \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(P\)</span> is absolute pressure.</li>
+<li><span class="math-inline">\(V\)</span> is gas volume.</li>
+<li><span class="math-inline">\(n\)</span> is the amount of gas.</li>
+<li><span class="math-inline">\(R\)</span> is the gas constant.</li>
+<li><span class="math-inline">\(T\)</span> is absolute temperature.</li>
+</ul>
+<p>For a fixed amount of gas in a fixed volume:</p>
+<div class="math-display">\[ \frac{P_1}{T_1} = \frac{P_2}{T_2} \]</div>
+<p>This relationship illustrates why pressure changes caused by temperature must be considered. It is a simplified physical model, not a replacement for the leak tester's validated measurement and compensation method.</p>
+<h3 id="61-typical-test-phases">6.1 Typical test phases</h3>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Purpose</th>
+<th>What can go wrong</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Filling</td>
+<td>Brings the circuit to the required pressure or vacuum</td>
+<td>Slow filling, unstable supply, major leak</td>
+</tr>
+<tr>
+<td>Stabilization</td>
+<td>Allows transient pressure and temperature effects to settle</td>
+<td>Insufficient time, thermal variation</td>
+</tr>
+<tr>
+<td>Measurement</td>
+<td>Records pressure or flow under defined conditions</td>
+<td>Sensor drift, fixture movement, leakage</td>
+</tr>
+<tr>
+<td>Evaluation</td>
+<td>Compares results with approved limits</td>
+<td>Wrong recipe, incorrect units, stale values</td>
+</tr>
+<tr>
+<td>Venting</td>
+<td>Returns the circuit to the designed safe condition</td>
+<td>Blocked exhaust, trapped pressure</td>
+</tr>
+<tr>
+<td>Release</td>
+<td>Permits unloading when the sequence is complete</td>
+<td>Premature clamp release or unsafe pressure remaining</td>
+</tr>
+</tbody>
+</table>
+<p>Not all systems use these phases in the same order or with identical controls. Follow the actual machine sequence and approved procedure.</p>
+<h2 id="7-leakage-units-and-interpretation">7. Leakage Units and Interpretation</h2>
+<p>Leakage may be expressed using pressure change, volumetric flow, mass flow, or a method-specific unit. The unit must be understood before comparing results or diagnosing faults.</p>
+<p>Common units include:</p>
+<ul>
+<li>Pa/s: pressure change per second.</li>
+<li>kPa or bar: pressure, not leakage rate by itself.</li>
+<li>mbar·L/s: a gas-leak throughput unit used in suitable applications.</li>
+<li>cm³/min or L/min: volumetric flow under specified conditions.</li>
+<li>sccm: standard cubic centimetres per minute, referenced to defined standard conditions.</li>
+<li>g/s: mass flow rate.</li>
+</ul>
+<p>A pressure loss of 5 kPa over a test interval is not directly equivalent to a flow of 5 cm³/min. The conversion depends on the test volume, absolute pressure, temperature, gas behavior, and test arrangement.</p>
+<h3 id="71-pressure-decay-calculation">7.1 Pressure-decay calculation</h3>
+<p>A basic pressure change is:</p>
+<div class="math-display">\[ \Delta P = P\_{\text{start}} - P\_{\text{end}} \]</div>
+<p>The average pressure-decay rate over a measurement interval is:</p>
+<div class="math-display">\[ r_P = \frac{P\_{\text{start}} - P\_{\text{end}}}{\Delta t} \]</div>
+<p>Where <span class="math-inline">\(\Delta t\)</span> is the measurement duration.</p>
+<p>For example, if pressure decreases from 200 kPa to 198 kPa over 10 seconds, the measured pressure-decay rate is:</p>
+<div class="math-display">\[ r_P = \frac{200 - 198}{10} = 0.2\text{ kPa/s} \]</div>
+<p>This is a pressure-decay rate, not a universal leakage flow value. The values in this example are illustrative only, not engine-assembly acceptance limits.</p>
+<h3 id="72-gauge-pressure-and-absolute-pressure">7.2 Gauge pressure and absolute pressure</h3>
+<ul>
+<li>Gauge pressure is measured relative to the surrounding atmospheric pressure.</li>
+<li>Absolute pressure is measured relative to a perfect vacuum.</li>
+</ul>
+<p>For gas-law calculations, absolute pressure is generally required. Do not substitute gauge pressure into an absolute-pressure equation without converting it correctly.</p>
+<h3 id="73-acceptance-limits">7.3 Acceptance limits</h3>
+<p>A production leak test should use the approved limit for the specific part, test medium, pressure, measurement method, and operating conditions.</p>
+<p>The limit may be expressed as a maximum pressure decay, maximum leakage flow, or another validated metric.</p>
+<p>Do not copy limits from another component or another machine simply because both tests use compressed air.</p>
+<h2 id="8-test-fixtures-seals-and-clamping">8. Test Fixtures, Seals, and Clamping</h2>
+<p>The fixture establishes the boundary of the test volume and connects the component to the test equipment. Fixture condition can directly affect the result.</p>
+<p>Important elements include:</p>
+<ul>
+<li>Locating pins and mechanical datums.</li>
+<li>Sealing pads and O-rings.</li>
+<li>Clamping cylinders or mechanical clamps.</li>
+<li>Pneumatic connectors and hoses.</li>
+<li>Internal passages and adapters.</li>
+<li>Support surfaces.</li>
+<li>Part-presence and clamp-position sensors.</li>
+<li>Pressure-rated fixture components.</li>
+<li>Safe venting and pressure-release arrangements.</li>
+</ul>
+<h3 id="81-fixture-related-false-rejects">8.1 Fixture-related false rejects</h3>
+<p>A good component may fail because of:</p>
+<ul>
+<li>Damaged or contaminated seals.</li>
+<li>Incorrect part seating.</li>
+<li>Worn sealing surfaces.</li>
+<li>Misaligned locating features.</li>
+<li>Insufficient or uneven clamping force.</li>
+<li>Damaged hoses or connectors.</li>
+<li>Leakage within the fixture circuit.</li>
+<li>Incorrect adapters for the selected component variant.</li>
+</ul>
+<h3 id="82-fixture-related-false-accepts">8.2 Fixture-related false accepts</h3>
+<p>An incorrect fixture can also create a false sense of acceptance if it fails to expose the required leakage path to the test.</p>
+<p>Examples include:</p>
+<ul>
+<li>An unintended blocked passage.</li>
+<li>Incorrect sealing that isolates the defect area.</li>
+<li>A wrong adapter connecting to an unintended port.</li>
+<li>Incorrect test routing.</li>
+<li>An unsuitable test recipe for the part variant.</li>
+</ul>
+<p>A passing test is meaningful only when the test arrangement actually challenges the intended sealing boundary.</p>
+<h3 id="83-fixture-maintenance">8.3 Fixture maintenance</h3>
+<ul>
+<li>Inspect seals for cuts, wear, deformation, and contamination.</li>
+<li>Verify correct seal material and part number.</li>
+<li>Check clamping motion and position feedback.</li>
+<li>Inspect pneumatic hoses and connectors.</li>
+<li>Confirm fixture alignment and part seating.</li>
+<li>Check for internal fixture leakage using the approved method.</li>
+<li>Replace damaged parts using approved specifications.</li>
+<li>Validate the test after fixture repair or replacement.</li>
+</ul>
+<h2 id="9-plc-sequence-and-interlocks">9. PLC Sequence and Interlocks</h2>
+<p>The PLC coordinates part loading, fixture closure, test execution, result handling, and unloading. It must distinguish between a valid pass, a valid fail, and a test that did not complete correctly.</p>
+<p>Typical permissives include:</p>
+<ul>
+<li>Correct part or recipe selected.</li>
+<li>Part present and correctly located.</li>
+<li>Fixture closed and clamped.</li>
+<li>Required safety conditions satisfied.</li>
+<li>Test equipment ready.</li>
+<li>Required pressure supply available.</li>
+<li>Correct test circuit selected.</li>
+<li>No active fault that prevents testing.</li>
+</ul>
+<h3 id="91-result-handling">9.1 Result handling</h3>
+<p>The PLC should recognize distinct result states such as:</p>
+<ul>
+<li><code>PASS</code>: A completed, valid test met the acceptance criteria.</li>
+<li><code>FAIL</code>: A completed, valid test did not meet the acceptance criteria.</li>
+<li><code>INVALID</code>: The test result cannot be trusted or interpreted as a valid pass/fail result.</li>
+<li><code>ABORTED</code>: The test sequence was interrupted before normal completion.</li>
+<li><code>TIMEOUT</code>: A required operation or response did not occur within the defined time.</li>
+</ul>
+<p>These names are examples. Actual states and bit assignments depend on the installed tester and PLC program.</p>
+<h3 id="92-handshake-and-stale-result-prevention">9.2 Handshake and stale-result prevention</h3>
+<p>A robust interface should define:</p>
+<ul>
+<li>When a test request is accepted.</li>
+<li>How the tester indicates busy status.</li>
+<li>When a result becomes valid.</li>
+<li>How the PLC acknowledges the result.</li>
+<li>When the result is cleared or replaced.</li>
+<li>What happens when the tester does not respond.</li>
+<li>How the result is associated with the current part.</li>
+</ul>
+<p>The PLC must not reuse a previous pass result after a timeout, abort, communication loss, or new-part arrival. A missing result is not a pass.</p>
+<h3 id="93-fault-recovery">9.3 Fault recovery</h3>
+<p>Before resetting a fault:</p>
+<ol>
+<li>Identify the cause and current physical condition.</li>
+<li>Confirm whether pressure remains trapped.</li>
+<li>Ensure the fixture and component are in a safe state.</li>
+<li>Follow the approved venting and unloading sequence.</li>
+<li>Verify whether the interrupted test is invalid.</li>
+<li>Apply the approved re-test or disposition procedure.</li>
+<li>Confirm the new test result is associated with the correct part.</li>
+</ol>
+<p>An interrupted test should not be automatically recorded as a pass merely because the station subsequently returns to ready status.</p>
+<h2 id="10-leak-tester-parameters-and-recipe-management">10. Leak Tester Parameters and Recipe Management</h2>
+<p>A recipe contains the settings required to test a specific component or product variant.</p>
+<p>Typical parameters include:</p>
+<ul>
+<li>Part or recipe identifier.</li>
+<li>Test method.</li>
+<li>Test pressure or vacuum target.</li>
+<li>Filling duration or control criteria.</li>
+<li>Stabilization duration.</li>
+<li>Measurement interval.</li>
+<li>Permitted leakage limit.</li>
+<li>Sensor range and configuration.</li>
+<li>Test-circuit selection.</li>
+<li>Valve sequence.</li>
+<li>Temperature compensation settings where applicable.</li>
+<li>Units and reference conditions.</li>
+<li>Result-handshake settings.</li>
+<li>Re-test rules and fault handling.</li>
+</ul>
+<p>The actual parameters depend on the approved machine configuration and product specification.</p>
+<h3 id="101-recipe-control-practices">10.1 Recipe-control practices</h3>
+<ul>
+<li>Use controlled recipe names and revisions.</li>
+<li>Restrict editing to authorized personnel.</li>
+<li>Back up approved settings.</li>
+<li>Record changes and their approval.</li>
+<li>Confirm the correct recipe for each product variant.</li>
+<li>Validate changes before production release.</li>
+<li>Verify that the displayed units match the configured measurement units.</li>
+<li>Protect critical limits against unauthorized changes.</li>
+</ul>
+<p>Changing a leak limit to eliminate repeated rejects without investigating the cause is not corrective maintenance. It is a quality-risk change disguised as troubleshooting.</p>
+<h2 id="11-common-faults-and-troubleshooting">11. Common Faults and Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Potential causes</th>
+<th>Checks and actions</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Component fails repeatedly</td>
+<td>Actual component leak, fixture leakage, incorrect recipe</td>
+<td>Inspect the component and fixture; verify the approved recipe</td>
+</tr>
+<tr>
+<td>Intermittent failures</td>
+<td>Unstable seals, variable clamping, temperature changes</td>
+<td>Check fixture repeatability, clamping, and stabilization</td>
+</tr>
+<tr>
+<td>Test pressure does not reach target</td>
+<td>Low supply pressure, valve fault, major leak, blockage</td>
+<td>Check supply, valve operation, pressure path, and component seating</td>
+</tr>
+<tr>
+<td>Pressure rises too slowly</td>
+<td>Restricted supply, undersized connection, regulator problem</td>
+<td>Inspect filters, hoses, valves, and regulator performance</td>
+</tr>
+<tr>
+<td>Pressure drops during measurement</td>
+<td>Component leakage, fixture leakage, thermal effects</td>
+<td>Verify temperature stability and test-circuit integrity</td>
+</tr>
+<tr>
+<td>Pressure is unstable</td>
+<td>Supply fluctuation, valve leakage, vibration, sensor problem</td>
+<td>Check supply stability, valves, sensor signals, and mounting</td>
+</tr>
+<tr>
+<td>Flow reading is unexpectedly high</td>
+<td>Real leak, incorrect connection, sensor issue</td>
+<td>Check fixture sealing, test routing, units, and sensor diagnostics</td>
+</tr>
+<tr>
+<td>All parts fail suddenly</td>
+<td>Wrong recipe, pressure setting change, common fixture fault</td>
+<td>Check recent changes, recipe selection, and common test hardware</td>
+</tr>
+<tr>
+<td>Good reference part fails</td>
+<td>Reference-part deterioration, fixture problem, instrument drift</td>
+<td>Verify reference condition and test-system performance</td>
+</tr>
+<tr>
+<td>Known defective sample passes</td>
+<td>Wrong test boundary, blocked passage, wrong recipe, excessive limit</td>
+<td>Verify the intended leakage path and validate the method</td>
+</tr>
+<tr>
+<td>Test does not start</td>
+<td>Missing permissive, tester not ready, PLC sequence issue</td>
+<td>Review part-present, clamp, safety, and ready signals</td>
+</tr>
+<tr>
+<td>Test times out</td>
+<td>Missing response, slow filling, incorrect timer, communication fault</td>
+<td>Review phase timing and tester/PLC diagnostics</td>
+</tr>
+<tr>
+<td>Venting does not complete</td>
+<td>Valve failure, blocked exhaust, pressure sensor issue</td>
+<td>Follow safe shutdown procedure and inspect the vent path</td>
+</tr>
+<tr>
+<td>Clamp releases unexpectedly</td>
+<td>Sequence error, feedback fault, control or pneumatic problem</td>
+<td>Secure the station and investigate the clamp and interlock logic</td>
+</tr>
+<tr>
+<td>Results are not recorded</td>
+<td>Communication fault, identifier mismatch, database issue</td>
+<td>Verify result transmission and part-identity association</td>
+</tr>
+</tbody>
+</table>
+<h2 id="12-systematic-troubleshooting-procedure">12. Systematic Troubleshooting Procedure</h2>
+<p>A consistent diagnostic method prevents unnecessary changes and helps distinguish product defects from test-equipment faults.</p>
+<ol>
+<li>Confirm the symptom. Record the part ID, station, recipe, measured result, alarm, and time.</li>
+<li>Check the test setup. Verify part identity, fixture selection, seating, clamping, and correct test connections.</li>
+<li>Check the supply. Verify that the test medium and supply pressure meet the equipment requirements.</li>
+<li>Review the test phases. Identify whether the fault occurred during filling, stabilization, measurement, evaluation, or venting.</li>
+<li>Check instrument status. Review pressure or flow signals, calibration status, diagnostics, and applicable sensor ranges.</li>
+<li>Check fixture integrity. Inspect seals, connectors, hoses, adapters, and the fixture's own leakage performance.</li>
+<li>Check the component. If the setup is verified, inspect the intended sealing boundary using the approved method.</li>
+<li>Check the PLC interface. Verify recipe selection, request and busy signals, completion status, result validity, timeout, and acknowledgment.</li>
+<li>Compare with a known reference. Use an approved reference part or test-system verification procedure where applicable.</li>
+<li>Validate the corrective action. Repeat the required tests and confirm the result using the approved acceptance criteria.</li>
+<li>Document the findings. Record the verified cause, action, validation evidence, and any configuration changes.</li>
+</ol>
+<p>Do not repeatedly re-test a failing component without determining whether the test equipment itself is behaving correctly. Repetition alone does not identify the cause.</p>
+<h2 id="13-calibration-and-verification-of-the-leak-tester">13. Calibration and Verification of the Leak Tester</h2>
+<p>Calibration establishes the relationship between an instrument's indicated value and a recognized reference. Verification checks whether the instrument or complete test system meets specified requirements.</p>
+<p>These activities are related but not identical.</p>
+<ul>
+<li>Calibration: Determines the relationship between measured values and reference values under defined conditions.</li>
+<li>Verification: Confirms that specified performance requirements are met.</li>
+<li>Adjustment: Changes instrument settings to correct an identified error.</li>
+<li>Validation: Establishes that the complete test process is suitable for its intended application.</li>
+</ul>
+<p>A calibrated pressure sensor does not automatically prove that the entire leak-testing station is reliable. Valves, fixture seals, test volumes, timing, temperature effects, software settings, and result handling also affect the outcome.</p>
+<h3 id="131-verification-activities">13.1 Verification activities</h3>
+<ul>
+<li>Confirm calibration status and due date for applicable instruments.</li>
+<li>Check pressure or flow readings against approved references.</li>
+<li>Inspect the test circuit for unwanted leakage.</li>
+<li>Verify that valves isolate and vent as intended.</li>
+<li>Confirm correct operation of the test sequence.</li>
+<li>Test the station using approved reference components or test standards.</li>
+<li>Check that known test conditions produce the expected system response.</li>
+<li>Retain verification results and any required calibration certificates.</li>
+</ul>
+<p>A reference leak or calibrated leak standard may be used where appropriate to verify system sensitivity. Its use and interpretation must follow the tester manufacturer's procedure and the approved quality system.</p>
+<h2 id="14-preventive-maintenance-plan">14. Preventive Maintenance Plan</h2>
+<p>The maintenance schedule should be based on manufacturer recommendations, process risk, operating conditions, and observed fault history.</p>
+<table>
+<thead>
+<tr>
+<th>Frequency</th>
+<th>Typical maintenance activity</th>
+<th>Expected evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Each shift</td>
+<td>Check alarms, supply condition, fixture cleanliness, and abnormal test results</td>
+<td>Shift checklist and reported abnormalities</td>
+</tr>
+<tr>
+<td>Daily</td>
+<td>Inspect accessible seals, connectors, and pneumatic connections</td>
+<td>Inspection record</td>
+</tr>
+<tr>
+<td>Weekly</td>
+<td>Review intermittent failures, test trends, and fixture condition</td>
+<td>Trend review and maintenance findings</td>
+</tr>
+<tr>
+<td>Monthly</td>
+<td>Inspect valves, clamping operation, hoses, and relevant sensor diagnostics</td>
+<td>PM record</td>
+</tr>
+<tr>
+<td>Scheduled interval</td>
+<td>Verify instrument performance and calibration status</td>
+<td>Verification records and certificates where applicable</td>
+</tr>
+<tr>
+<td>After repair</td>
+<td>Check repaired hardware and repeat required functional tests</td>
+<td>Repair and validation record</td>
+</tr>
+<tr>
+<td>After recipe change</td>
+<td>Verify settings, test results, and part-variant selection</td>
+<td>Approved change and validation evidence</td>
+</tr>
+<tr>
+<td>After fixture replacement</td>
+<td>Check sealing, alignment, sequence, and reference-part results</td>
+<td>Fixture acceptance record</td>
+</tr>
+<tr>
+<td>After major system changes</td>
+<td>Validate the complete test system and associated controls</td>
+<td>Approved commissioning or requalification record</td>
+</tr>
+</tbody>
+</table>
+<p>Do not use the same maintenance interval for every component without considering risk and operating conditions.</p>
+<h2 id="15-safety-and-hazardous-energy">15. Safety and Hazardous Energy</h2>
+<p>Leak-testing stations can contain significant stored energy, even when the machine appears stationary.</p>
+<p>Potential hazards include:</p>
+<ul>
+<li>Pressurized air or gas.</li>
+<li>Trapped pressure in the component or test fixture.</li>
+<li>Sudden release of a hose, connector, or fixture component.</li>
+<li>Unexpected clamp or actuator movement.</li>
+<li>Flying fragments if a component or fixture fails under pressure.</li>
+<li>Electrical hazards from the leak tester, PLC, and associated equipment.</li>
+<li>Hazardous test media, depending on the application.</li>
+<li>Noise from venting or an equipment failure.</li>
+</ul>
+<p>Essential controls include:</p>
+<ul>
+<li>Follow the approved risk assessment and operating procedure.</li>
+<li>Use only fixtures, hoses, connectors, and components rated for the specified conditions.</li>
+<li>Never exceed approved test pressure or vacuum limits.</li>
+<li>Confirm the intended venting path and safe pressure-release sequence.</li>
+<li>Apply the site's lockout/tagout or equivalent energy-isolation procedure before servicing hazardous equipment.</li>
+<li>Verify isolation and absence of hazardous stored energy before opening a test circuit.</li>
+<li>Do not disconnect pressurized fittings.</li>
+<li>Never defeat safety interlocks to force the cycle to run.</li>
+<li>Ensure guarding and protective devices are in place before automatic operation resumes.</li>
+</ul>
+<p>A pressure gauge reading alone may not prove that every isolated volume is depressurized. Follow the machine's designed isolation and verification procedure.</p>
+<h2 id="16-rcacapa-example-intermittent-leak-test-failure">16. RCA/CAPA Example: Intermittent Leak-Test Failure</h2>
+<h3 id="problem-statement">Problem statement</h3>
+<p>A production station begins rejecting an increased number of engine components, although the components appear acceptable during initial inspection.</p>
+<h3 id="possible-causes">Possible causes</h3>
+<ul>
+<li>Damaged or contaminated fixture seals.</li>
+<li>Incorrect component seating.</li>
+<li>Leakage in a pneumatic valve or connector.</li>
+<li>Unstable test pressure.</li>
+<li>Insufficient stabilization time.</li>
+<li>Pressure-sensor drift.</li>
+<li>Incorrect recipe or leakage limit.</li>
+<li>Temperature variation.</li>
+<li>Actual leakage in the component.</li>
+<li>Incorrect PLC result association.</li>
+</ul>
+<h3 id="investigation-procedure">Investigation procedure</h3>
+<ol>
+<li>Review the failing part IDs and recorded measurements.</li>
+<li>Identify whether the failures occur during filling, stabilization, or measurement.</li>
+<li>Verify the active recipe and approved test limits.</li>
+<li>Inspect fixture seals, connectors, and clamping.</li>
+<li>Check the test supply and valve operation.</li>
+<li>Verify instrument status and applicable calibration records.</li>
+<li>Run the approved reference test to determine whether the test system behaves correctly.</li>
+<li>If the test system is verified, investigate the component's sealing boundary.</li>
+<li>Compare the results before and after the identified correction.</li>
+<li>Record the root cause and validate the corrective action.</li>
+</ol>
+<h3 id="corrective-and-preventive-actions">Corrective and preventive actions</h3>
+<p>Depending on the verified cause, actions may include replacing damaged seals, repairing a valve, correcting fixture alignment, restoring an approved recipe, or correcting the test sequence.</p>
+<p>The CAPA record should identify the failure mode, evidence, root cause, immediate containment, permanent corrective action, validation results, and measures to prevent recurrence.</p>
+<p>Avoid treating a repeated failure as proof of a defective component until the fixture and measurement system have been checked.</p>
+<h2 id="17-leak-testing-kpis">17. Leak-Testing KPIs</h2>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Purpose</th>
+<th>Interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>First-pass yield</td>
+<td>Measures the percentage of parts passing the initial valid test</td>
+<td>Review alongside confirmed defect levels</td>
+</tr>
+<tr>
+<td>Leak-test failure rate</td>
+<td>Tracks the frequency of failed tests</td>
+<td>Separate real product defects from test-system problems</td>
+</tr>
+<tr>
+<td>False-reject rate</td>
+<td>Measures acceptable parts incorrectly rejected</td>
+<td>May indicate fixture, instrument, or process instability</td>
+</tr>
+<tr>
+<td>False-accept rate</td>
+<td>Measures defective parts incorrectly accepted</td>
+<td>Requires suitable defect samples or independent evidence</td>
+</tr>
+<tr>
+<td>Test cycle time</td>
+<td>Measures the duration of the defined test cycle</td>
+<td>Helps assess production throughput</td>
+</tr>
+<tr>
+<td>Tester availability</td>
+<td>Measures availability using a defined method</td>
+<td>Identifies equipment-related downtime</td>
+</tr>
+<tr>
+<td>Fixture-related failure rate</td>
+<td>Tracks failures attributed to fixtures</td>
+<td>Helps prioritize seal and fixture maintenance</td>
+</tr>
+<tr>
+<td>Repeat-test rate</td>
+<td>Measures how often tests must be repeated</td>
+<td>Investigate invalid tests and unstable conditions</td>
+</tr>
+<tr>
+<td>Calibration compliance</td>
+<td>Tracks required calibration activities completed on schedule</td>
+<td>Supports measurement-system control</td>
+</tr>
+<tr>
+<td>Traceability completeness</td>
+<td>Measures the presence of required test records</td>
+<td>Also verify correct part identity and valid result association</td>
+</tr>
+</tbody>
+</table>
+<p>KPI definitions must specify their numerator, denominator, and time period. For example, a repeat-test rate should distinguish a legitimate re-test following an invalid cycle from repeated testing intended to obtain a pass.</p>
+<h2 id="18-practical-learning-exercises">18. Practical Learning Exercises</h2>
+<ul>
+<li>Identify the leak tester, pressure or flow sensors, pneumatic valves, fixture, PLC, and HMI on an installed station.</li>
+<li>Document the actual test phases and the signals that control each phase.</li>
+<li>Identify the specified test medium, pressure or vacuum conditions, measurement interval, and approved leakage limit.</li>
+<li>Review a completed test record and interpret its units correctly.</li>
+<li>Compare a known-good component result with a known-defective sample under an approved test procedure.</li>
+<li>Investigate a fixture-related failure without changing the product acceptance limit.</li>
+<li>Trace how a valid pass, valid fail, timeout, and interrupted test are handled by the PLC.</li>
+<li>Identify the approved isolation and venting procedure for maintenance.</li>
+<li>Review calibration and verification records for the installed measurement system.</li>
+<li>Create an RCA record for a simulated intermittent leak-test fault.</li>
+<li>Confirm that each result is associated with the correct component identity.</li>
+<li>Document the approved recipe, fixture configuration, and required post-maintenance validation.</li>
+</ul>
+<h2 id="19-final-technical-summary">19. Final Technical Summary</h2>
+<p>Leak testing verifies the integrity of a component or assembly by applying a defined test condition and measuring the response using an approved method. The main methods include pressure decay, differential pressure, mass flow, vacuum testing, tracer-gas testing, and liquid-based testing.</p>
+<p>Reliable results depend on the complete test system: the test medium, fixture, seals, pressure or flow measurement, stabilization, measurement timing, recipe, PLC sequence, and result handling.</p>
+<p>For industrial maintenance, the key principles are:</p>
+<ul>
+<li>Use the approved test method and acceptance criteria for the specific component.</li>
+<li>Distinguish pressure decay from actual leakage flow.</li>
+<li>Consider temperature, test volume, fixture leakage, and instrument performance.</li>
+<li>Check fixture integrity before concluding that a component is defective.</li>
+<li>Protect the distinction between pass, fail, invalid, aborted, and timeout results.</li>
+<li>Maintain calibration, verification, and controlled recipe revisions.</li>
+<li>Follow approved procedures for pressure release and hazardous-energy isolation.</li>
+<li>Validate the complete test process after repairs, fixture changes, or configuration changes.</li>
+<li>Preserve traceability between the physical component and its test result.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\29_Line_Systems\03_Engine_Assembly\11_Traceability - Traceability</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

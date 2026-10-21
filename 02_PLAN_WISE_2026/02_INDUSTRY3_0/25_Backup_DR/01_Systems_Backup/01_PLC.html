@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLC Backup and Disaster Recovery</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">PLC Backup and Disaster Recovery</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and scope</a></li>
+<li><a href="#2-essential-terminology">2. Essential terminology</a></li>
+<li><a href="#3-plc-backup-architecture">3. PLC backup architecture</a></li>
+<li><a href="#4-what-must-be-backed-up">4. What must be backed up?</a><ul>
+<li><a href="#41-plc-program-and-engineering-project">4.1 PLC program and engineering project</a></li>
+<li><a href="#42-backup-scope-by-controller-family">4.2 Backup scope by controller family</a></li>
+</ul>
+</li>
+<li><a href="#5-backup-methods">5. Backup methods</a><ul>
+<li><a href="#51-original-engineering-project-backup">5.1 Original engineering-project backup</a></li>
+<li><a href="#52-upload-from-the-running-plc">5.2 Upload from the running PLC</a></li>
+<li><a href="#53-memory-card-and-removable-media-backup">5.3 Memory card and removable media backup</a></li>
+<li><a href="#54-online-data-and-retained-values">5.4 Online data and retained values</a></li>
+</ul>
+</li>
+<li><a href="#6-backup-frequency-and-recovery-objectives">6. Backup frequency and recovery objectives</a><ul>
+<li><a href="#61-recommended-backup-triggers">6.1 Recommended backup triggers</a></li>
+<li><a href="#62-rpo-and-rto">6.2 RPO and RTO</a></li>
+</ul>
+</li>
+<li><a href="#7-backup-validation-and-integrity">7. Backup validation and integrity</a><ul>
+<li><a href="#71-what-does-a-valid-backup-mean">7.1 What does a valid backup mean?</a></li>
+<li><a href="#72-backup-manifest">7.2 Backup manifest</a></li>
+</ul>
+</li>
+<li><a href="#8-storage-strategy-and-the-3-2-1-principle">8. Storage strategy and the 3-2-1 principle</a><ul>
+<li><a href="#81-recommended-storage-locations">8.1 Recommended storage locations</a></li>
+</ul>
+</li>
+<li><a href="#9-restore-procedure">9. Restore procedure</a><ul>
+<li><a href="#91-before-restoration">9.1 Before restoration</a></li>
+<li><a href="#92-restoration-sequence">9.2 Restoration sequence</a></li>
+<li><a href="#93-verification-after-restoration">9.3 Verification after restoration</a></li>
+</ul>
+</li>
+<li><a href="#10-plc-backup-and-change-management">10. PLC backup and change management</a><ul>
+<li><a href="#101-recommended-change-control-workflow">10.1 Recommended change-control workflow</a></li>
+<li><a href="#102-revision-naming">10.2 Revision naming</a></li>
+<li><a href="#103-change-record-requirements">10.3 Change record requirements</a></li>
+</ul>
+</li>
+<li><a href="#11-disaster-recovery-scenarios">11. Disaster-recovery scenarios</a><ul>
+<li><a href="#111-plc-cpu-failure">11.1 PLC CPU failure</a></li>
+<li><a href="#112-accidental-plc-modification">11.2 Accidental PLC modification</a></li>
+<li><a href="#113-engineering-pc-failure">11.3 Engineering PC failure</a></li>
+<li><a href="#114-cybersecurity-incident">11.4 Cybersecurity incident</a></li>
+<li><a href="#115-firmware-or-plc-migration">11.5 Firmware or PLC migration</a></li>
+</ul>
+</li>
+<li><a href="#12-backup-and-recovery-troubleshooting">12. Backup and recovery troubleshooting</a></li>
+<li><a href="#13-practical-maintenance-implementation">13. Practical maintenance implementation</a><ul>
+<li><a href="#131-plc-backup-register">13.1 PLC backup register</a></li>
+<li><a href="#132-maintenance-workflow-integration">13.2 Maintenance workflow integration</a></li>
+<li><a href="#133-example-folder-structure">13.3 Example folder structure</a></li>
+</ul>
+</li>
+<li><a href="#14-recovery-drill-and-periodic-audit">14. Recovery drill and periodic audit</a><ul>
+<li><a href="#141-recovery-drill-procedure">14.1 Recovery drill procedure</a></li>
+<li><a href="#142-audit-checklist">14.2 Audit checklist</a></li>
+</ul>
+</li>
+<li><a href="#15-key-performance-indicators-for-backup-management">15. Key performance indicators for backup management</a></li>
+<li><a href="#16-interview-questions-and-technical-answers">16. Interview questions and technical answers</a></li>
+<li><a href="#17-final-engineering-principles">17. Final engineering principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-and-scope">1. Purpose and scope</h2>
+<p>A PLC backup is a controlled, verified copy of the controller's program, configuration, and other required recovery information. Disaster recovery (DR) is the complete process of restoring a PLC-controlled machine or system after a failure, corruption, accidental modification, hardware replacement, cyber incident, or other disruptive event.</p>
+<p>The objective is not merely to possess a backup file. The objective is to restore the correct controller configuration safely, within an acceptable time, with the required functionality and traceability.</p>
+<p>In industrial maintenance, a PLC backup must support recovery from situations such as:</p>
+<ul>
+<li>PLC CPU failure requiring replacement.</li>
+<li>Accidental online program modification.</li>
+<li>Program corruption or loss.</li>
+<li>Replacement of a discontinued PLC with a compatible or upgraded model.</li>
+<li>Memory-card or battery failure affecting retained information.</li>
+<li>Communication configuration changes that prevent access.</li>
+<li>Engineering-PC failure or loss of the original project.</li>
+<li>Cybersecurity incidents affecting controllers or engineering systems.</li>
+<li>Recovery following an approved software upgrade or migration.</li>
+</ul>
+<p>A PLC backup is not automatically a complete machine backup. The PLC program may depend on HMI projects, drive parameters, remote I/O configuration, robot programs, CNC parameters, network settings, safety-controller projects, recipes, and other assets.</p>
+<h2 id="2-essential-terminology">2. Essential terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+<th>Industrial example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Source project</td>
+<td>Editable engineering project maintained in the programming software</td>
+<td>Siemens TIA Portal project</td>
+</tr>
+<tr>
+<td>Controller upload</td>
+<td>Retrieving available controller data into an engineering environment</td>
+<td>Uploading supported PLC blocks from a CPU</td>
+</tr>
+<tr>
+<td>Offline backup</td>
+<td>Project files stored outside the running controller</td>
+<td>Approved project stored on a secured server</td>
+</tr>
+<tr>
+<td>Online backup</td>
+<td>Data captured from a controller while connected to it</td>
+<td>Reading supported program or diagnostic data</td>
+</tr>
+<tr>
+<td>Memory image</td>
+<td>A representation of controller memory or storage, where supported</td>
+<td>Vendor-specific memory-card or system image</td>
+</tr>
+<tr>
+<td>Archive</td>
+<td>A packaged and organized collection of project and recovery files</td>
+<td>Dated, revision-controlled PLC backup package</td>
+</tr>
+<tr>
+<td>Checksum</td>
+<td>A calculated value used to detect file changes or corruption</td>
+<td>SHA-256 hash of an archived project</td>
+</tr>
+<tr>
+<td>Restore</td>
+<td>Reinstating the required program or configuration from a backup</td>
+<td>Downloading the approved project to a replacement CPU</td>
+</tr>
+<tr>
+<td>Recovery validation</td>
+<td>Verifying that restored data and system behavior are correct</td>
+<td>Checking program identity and testing machine functions</td>
+</tr>
+<tr>
+<td>RPO</td>
+<td>Recovery Point Objective, the maximum acceptable loss of data or changes measured in time</td>
+<td>Restore to a point no more than one shift old</td>
+</tr>
+<tr>
+<td>RTO</td>
+<td>Recovery Time Objective, the target time to restore service</td>
+<td>Restore a critical machine within four hours</td>
+</tr>
+<tr>
+<td>Version control</td>
+<td>Managing revisions and traceability of engineering files</td>
+<td>Comparing approved PLC program revisions</td>
+</tr>
+<tr>
+<td>Golden backup</td>
+<td>The formally approved reference backup for a defined system state</td>
+<td>Released PLC project after successful commissioning</td>
+</tr>
+</tbody>
+</table>
+<p>Important distinction: An upload from a PLC is not necessarily equivalent to recovering the original engineering project. Depending on the platform, an upload may omit comments, symbols, source files, libraries, project structure, or other engineering metadata. Preserve the original editable project whenever available.</p>
+<h2 id="3-plc-backup-architecture">3. PLC backup architecture</h2>
+<pre><code>PLC CPU and installed hardware
+        ↓
+Acquire approved engineering project and controller data
+        ↓
+Verify CPU model, firmware and configuration
+        ↓
+Create backup package
+        ↓
+Validate completeness and file integrity
+        ↓
+Store in controlled primary repository
+        ↓
+Replicate to independent recovery storage
+        ↓
+Maintain revision history and access controls
+        ↓
+Perform periodic restore tests
+        ↓
+Retain verified recovery package for emergencies
+</code></pre>
+<p>The backup process must be repeatable and documented. A folder full of files named <code>final</code>, <code>final_new</code>, and <code>final_latest</code> is not a recovery strategy.</p>
+<h2 id="4-what-must-be-backed-up">4. What must be backed up?</h2>
+<h3 id="41-plc-program-and-engineering-project">4.1 PLC program and engineering project</h3>
+<p>The backup scope depends on the PLC platform and the machine's architecture.</p>
+<table>
+<thead>
+<tr>
+<th>Asset</th>
+<th>Typical contents</th>
+<th>Recovery purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC application</td>
+<td>Logic blocks, routines, functions, and program organization</td>
+<td>Restore machine control logic</td>
+</tr>
+<tr>
+<td>Symbols and comments</td>
+<td>Tag names, descriptions, and engineering annotations</td>
+<td>Support troubleshooting and maintainability</td>
+</tr>
+<tr>
+<td>Hardware configuration</td>
+<td>CPU, racks, modules, I/O assignments, and hardware properties</td>
+<td>Reconstruct the intended controller configuration</td>
+</tr>
+<tr>
+<td>Network configuration</td>
+<td>Addresses, communication parameters, and network assignments</td>
+<td>Restore connectivity</td>
+</tr>
+<tr>
+<td>Device configuration</td>
+<td>Remote I/O, fieldbus, and supported device settings</td>
+<td>Re-establish field device communication</td>
+</tr>
+<tr>
+<td>Controller data</td>
+<td>Retained values or supported data blocks, where required</td>
+<td>Recover approved operating data</td>
+</tr>
+<tr>
+<td>Firmware information</td>
+<td>CPU and module firmware versions</td>
+<td>Confirm compatibility during restoration</td>
+</tr>
+<tr>
+<td>Safety project</td>
+<td>Safety logic and safety configuration, where applicable</td>
+<td>Support controlled safety-system recovery</td>
+</tr>
+<tr>
+<td>Motion configuration</td>
+<td>Motion objects, axes, drive interfaces, and related settings</td>
+<td>Restore supported motion functionality</td>
+</tr>
+<tr>
+<td>Project dependencies</td>
+<td>Libraries, custom blocks, hardware descriptions, and required software packages</td>
+<td>Reopen and maintain the project</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Electrical drawings, I/O lists, network diagrams, and functional descriptions</td>
+<td>Support recovery and verification</td>
+</tr>
+<tr>
+<td>Recovery records</td>
+<td>Upload/download history, revision, checksum, and approvals</td>
+<td>Establish traceability</td>
+</tr>
+</tbody>
+</table>
+<p>Do not assume that all these items are contained in one project file. Some platforms store them separately, and certain configuration or runtime data may require dedicated export or backup procedures.</p>
+<h3 id="42-backup-scope-by-controller-family">4.2 Backup scope by controller family</h3>
+<table>
+<thead>
+<tr>
+<th>Controller family</th>
+<th>Engineering environment</th>
+<th>Important considerations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Siemens S7-300/S7-400</td>
+<td>STEP 7 Classic or applicable supported tools</td>
+<td>Hardware configuration, blocks, symbols, communication settings, and firmware compatibility</td>
+</tr>
+<tr>
+<td>Siemens S7-1200/S7-1500</td>
+<td>TIA Portal</td>
+<td>Project archive, hardware configuration, device versions, and protection settings</td>
+</tr>
+<tr>
+<td>Allen-Bradley MicroLogix</td>
+<td>RSLogix 500</td>
+<td>Processor-specific project, communication configuration, and supported data handling</td>
+</tr>
+<tr>
+<td>Allen-Bradley CompactLogix/ControlLogix</td>
+<td>Studio 5000 Logix Designer</td>
+<td>Controller revision, project files, I/O tree, module profiles, and safety or motion dependencies</td>
+</tr>
+<tr>
+<td>Mitsubishi FX/Q/L/iQ-F/iQ-R</td>
+<td>Applicable GX Developer, GX Works2, or GX Works3 version</td>
+<td>CPU family, project compatibility, parameters, device data, and supported memory operations</td>
+</tr>
+<tr>
+<td>Omron PLCs</td>
+<td>Applicable CX-Programmer or Sysmac Studio version</td>
+<td>Controller family, project format, network and device configuration</td>
+</tr>
+<tr>
+<td>Schneider Electric PLCs</td>
+<td>Applicable EcoStruxure Control Expert or Machine Expert version</td>
+<td>Controller model, application format, and device configuration</td>
+</tr>
+</tbody>
+</table>
+<p>Software names are not interchangeable. The correct engineering environment depends on the actual CPU family and project generation. Before opening, converting, or restoring a project, confirm compatibility with the installed controller.</p>
+<h2 id="5-backup-methods">5. Backup methods</h2>
+<h3 id="51-original-engineering-project-backup">5.1 Original engineering-project backup</h3>
+<p>This is generally the preferred starting point because it preserves the editable project and engineering information.</p>
+<p>Procedure:</p>
+<ol>
+<li>Locate the approved project on the engineering PC or controlled repository.</li>
+<li>Confirm the project belongs to the intended machine and PLC.</li>
+<li>Open it in the appropriate engineering software.</li>
+<li>Verify the CPU model, firmware, hardware configuration, and project revision.</li>
+<li>Compare its identity and content with the installed controller using approved methods.</li>
+<li>Save or archive a new backup revision without overwriting the approved original.</li>
+<li>Record the backup date, engineer, software version, and reason for capture.</li>
+<li>Store the resulting package in controlled storage.</li>
+</ol>
+<p>An engineering project that was last modified several months ago must not automatically be treated as the current production backup.</p>
+<h3 id="52-upload-from-the-running-plc">5.2 Upload from the running PLC</h3>
+<p>An upload can help recover controller information when the engineering project is missing or uncertain.</p>
+<p>However, the available upload data depends on the controller, programming software, access protection, and project state.</p>
+<p>Before uploading:</p>
+<ul>
+<li>Confirm the correct PLC and machine.</li>
+<li>Establish whether an upload operation is supported.</li>
+<li>Record the controller identity and current operating state.</li>
+<li>Check whether online changes or unsaved edits exist.</li>
+<li>Follow plant authorization procedures.</li>
+<li>Avoid operations that could change controller mode or disrupt production.</li>
+<li>Preserve the original project separately if it is available.</li>
+</ul>
+<p>After uploading, verify the resulting project. An uploaded project may not contain all comments, symbolic information, libraries, source code, or configuration records necessary for long-term maintenance.</p>
+<h3 id="53-memory-card-and-removable-media-backup">5.3 Memory card and removable media backup</h3>
+<p>Some PLC families support memory cards or removable storage for program transfer, restoration, or system recovery.</p>
+<p>The exact behavior varies by platform. A memory card may contain a boot project, application data, firmware-related files, or other supported content, but it should not be assumed to contain a complete editable engineering project.</p>
+<p>Record:</p>
+<ul>
+<li>Card type and compatibility.</li>
+<li>Supported backup and restoration procedure.</li>
+<li>Contents and revision.</li>
+<li>Whether the card is intended for normal operation or recovery.</li>
+<li>Required CPU and firmware compatibility.</li>
+<li>Storage location and physical protection.</li>
+</ul>
+<p>A memory card should be labeled and controlled like a recovery asset, not treated as an anonymous spare that can be swapped between machines.</p>
+<h3 id="54-online-data-and-retained-values">5.4 Online data and retained values</h3>
+<p>Some applications depend on retained counters, setpoints, recipes, calibration values, or other runtime data.</p>
+<p>These values may not be preserved by an ordinary project archive. Determine whether they must be captured separately and whether restoring them is appropriate.</p>
+<p>For example, restoring an old production counter, calibration value, or recipe can create operational or quality problems even when the PLC logic itself is correct.</p>
+<p>Never restore runtime data blindly. Confirm the data's purpose, validity, retention requirements, and approved recovery point.</p>
+<h2 id="6-backup-frequency-and-recovery-objectives">6. Backup frequency and recovery objectives</h2>
+<p>Backup frequency should be based on equipment criticality, rate of engineering change, production impact, and the time required to reconstruct the system.</p>
+<h3 id="61-recommended-backup-triggers">6.1 Recommended backup triggers</h3>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>Required action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>New machine commissioning</td>
+<td>Create and verify the initial released backup</td>
+</tr>
+<tr>
+<td>Approved PLC program change</td>
+<td>Capture the released revision after testing</td>
+</tr>
+<tr>
+<td>Hardware replacement</td>
+<td>Back up the configuration before and after the change, where practical</td>
+</tr>
+<tr>
+<td>Firmware upgrade</td>
+<td>Preserve the pre-upgrade state and create a verified post-upgrade backup</td>
+</tr>
+<tr>
+<td>Obsolescence migration</td>
+<td>Preserve source and target projects separately</td>
+</tr>
+<tr>
+<td>Major parameter change</td>
+<td>Back up affected configuration and required runtime data</td>
+</tr>
+<tr>
+<td>Safety program modification</td>
+<td>Follow the approved safety lifecycle and backup process</td>
+</tr>
+<tr>
+<td>Cybersecurity incident</td>
+<td>Preserve evidence and recover from a verified trusted copy</td>
+</tr>
+<tr>
+<td>Periodic maintenance review</td>
+<td>Confirm that backups remain current and accessible</td>
+</tr>
+<tr>
+<td>Engineering-PC replacement</td>
+<td>Verify that required projects and software dependencies remain recoverable</td>
+</tr>
+</tbody>
+</table>
+<p>A practical starting policy for critical production equipment is to back up after every approved program or configuration change, perform scheduled reviews, and test restoration periodically. The precise frequency should follow plant policy and risk assessment.</p>
+<h3 id="62-rpo-and-rto">6.2 RPO and RTO</h3>
+<p>Recovery Point Objective (RPO) defines how much recent data or engineering change the plant can afford to lose.</p>
+<p>Recovery Time Objective (RTO) defines the target time within which the affected service should be restored.</p>
+<p>For example:</p>
+<ul>
+<li>RPO: No approved PLC change may be lost after release.</li>
+<li>RTO: Restore the control system within four hours of a qualifying failure.</li>
+</ul>
+<p>These are example targets, not universal standards. A critical bottleneck machine may need a shorter RTO than a noncritical utility system.</p>
+<p>The required recovery time includes more than downloading a program:</p>
+<div class="math-display">\[ T\_{\text{recovery}} = T\_{\text{diagnosis}} + T\_{\text{hardware}} + T\_{\text{restore}} + T\_{\text{verification}} + T\_{\text{release}} \]</div>
+<p>A backup that downloads in ten minutes is of limited use if the correct engineering software takes two days to obtain.</p>
+<h2 id="7-backup-validation-and-integrity">7. Backup validation and integrity</h2>
+<h3 id="71-what-does-a-valid-backup-mean">7.1 What does a valid backup mean?</h3>
+<p>A backup should be assessed against several independent criteria.</p>
+<table>
+<thead>
+<tr>
+<th>Validation level</th>
+<th>What it establishes</th>
+<th>What it does not establish</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>File existence</td>
+<td>The expected file is present</td>
+<td>That it is complete or usable</td>
+</tr>
+<tr>
+<td>File integrity</td>
+<td>The file has not changed unexpectedly since the checksum was calculated</td>
+<td>That it contains the correct program</td>
+</tr>
+<tr>
+<td>Project opening</td>
+<td>The engineering software can read the project</td>
+<td>That the project matches the installed PLC</td>
+</tr>
+<tr>
+<td>Configuration verification</td>
+<td>The project identifies the expected CPU and hardware</td>
+<td>That all runtime behavior is correct</td>
+</tr>
+<tr>
+<td>Version comparison</td>
+<td>The backup matches the intended released revision</td>
+<td>That every dependency is available</td>
+</tr>
+<tr>
+<td>Restore test</td>
+<td>The recovery procedure works in the tested environment</td>
+<td>That every field condition has been tested</td>
+</tr>
+<tr>
+<td>Functional verification</td>
+<td>Required control functions behave as intended</td>
+<td>That every possible failure mode has been eliminated</td>
+</tr>
+</tbody>
+</table>
+<p>A checksum such as SHA-256 can help detect unexpected file changes.</p>
+<pre><code>Backup file
+    ↓
+Calculate SHA-256 checksum
+    ↓
+Store checksum in backup manifest
+    ↓
+Recalculate checksum when retrieving the file
+    ↓
+Compare values
+    ↓
+Match: file integrity confirmed
+Mismatch: investigate corruption or unexpected modification
+</code></pre>
+<p>A checksum does not prove that the project is correct, current, or safe to restore. It verifies file integrity relative to the recorded checksum.</p>
+<h3 id="72-backup-manifest">7.2 Backup manifest</h3>
+<p>Maintain a manifest with each released backup.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Example or requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Asset ID</td>
+<td>Plant-approved machine identifier</td>
+</tr>
+<tr>
+<td>PLC manufacturer</td>
+<td>Actual manufacturer</td>
+</tr>
+<tr>
+<td>PLC model</td>
+<td>Exact CPU model</td>
+</tr>
+<tr>
+<td>Firmware</td>
+<td>Installed or approved version</td>
+</tr>
+<tr>
+<td>Project revision</td>
+<td>Controlled revision identifier</td>
+</tr>
+<tr>
+<td>Backup timestamp</td>
+<td>Actual capture date and time</td>
+</tr>
+<tr>
+<td>Backup type</td>
+<td>Engineering archive, upload, or supported memory image</td>
+</tr>
+<tr>
+<td>Engineering software</td>
+<td>Exact product and version</td>
+</tr>
+<tr>
+<td>Source identity</td>
+<td>Machine and controller identity</td>
+</tr>
+<tr>
+<td>Checksum</td>
+<td>Calculated SHA-256 or approved equivalent</td>
+</tr>
+<tr>
+<td>Storage location</td>
+<td>Controlled repository identifier</td>
+</tr>
+<tr>
+<td>Change reference</td>
+<td>Approved change or work-order number</td>
+</tr>
+<tr>
+<td>Validation status</td>
+<td>Not tested, verified, or restore-tested</td>
+</tr>
+<tr>
+<td>Responsible person</td>
+<td>Actual engineer or authorized owner</td>
+</tr>
+</tbody>
+</table>
+<h2 id="8-storage-strategy-and-the-3-2-1-principle">8. Storage strategy and the 3-2-1 principle</h2>
+<p>The 3-2-1 backup principle is a useful baseline:</p>
+<ul>
+<li>Maintain at least 3 copies of important data.</li>
+<li>Use at least 2 different storage types or platforms, where practical.</li>
+<li>Keep at least 1 copy off-site or otherwise isolated from the primary failure domain.</li>
+</ul>
+<p>For industrial control systems, independence matters more than simply counting copies. Three folders on the same engineering PC do not provide meaningful resilience against disk failure, ransomware, theft, or accidental deletion.</p>
+<p>Example:</p>
+<pre><code>Primary copy
+    ↓
+Controlled engineering repository
+    ↓
+Independent backup repository
+    ↓
+Offline or isolated recovery copy
+</code></pre>
+<h3 id="81-recommended-storage-locations">8.1 Recommended storage locations</h3>
+<table>
+<thead>
+<tr>
+<th>Storage location</th>
+<th>Advantages</th>
+<th>Main risk</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Engineering PC</td>
+<td>Fast access for maintenance</td>
+<td>PC failure, theft, or malware</td>
+</tr>
+<tr>
+<td>Central engineering server</td>
+<td>Shared access and revision management</td>
+<td>Server failure or compromised permissions</td>
+</tr>
+<tr>
+<td>Isolated backup storage</td>
+<td>Reduced exposure to routine network incidents</td>
+<td>Requires controlled access and periodic checks</td>
+</tr>
+<tr>
+<td>Offline removable media</td>
+<td>Can remain disconnected from the production network</td>
+<td>Physical damage, loss, or outdated contents</td>
+</tr>
+<tr>
+<td>Approved off-site storage</td>
+<td>Supports site-level disaster recovery</td>
+<td>Access delays or storage policy failures</td>
+</tr>
+</tbody>
+</table>
+<p>Use encryption, access controls, and retention policies appropriate to the plant's cybersecurity requirements. Recovery copies should not remain permanently writable by every account that can modify production systems.</p>
+<h2 id="9-restore-procedure">9. Restore procedure</h2>
+<p>Restoration is a controlled engineering operation. Downloading the wrong program to the right CPU can be more damaging than having no backup at all.</p>
+<h3 id="91-before-restoration">9.1 Before restoration</h3>
+<ul>
+<li>Confirm the failure and determine whether restoration is necessary.</li>
+<li>Identify the exact PLC and machine.</li>
+<li>Confirm the replacement CPU and module compatibility.</li>
+<li>Select the correct approved backup revision.</li>
+<li>Verify the checksum or equivalent integrity record.</li>
+<li>Confirm the engineering software and firmware compatibility.</li>
+<li>Identify required parameters, retained data, and device configuration.</li>
+<li>Obtain the required maintenance and production authorization.</li>
+<li>Review the machine's safe-state and isolation procedures.</li>
+<li>Confirm that the restoration method will not cause an unexpected machine start.</li>
+</ul>
+<h3 id="92-restoration-sequence">9.2 Restoration sequence</h3>
+<ol>
+<li>Diagnose the fault and establish the actual recovery scope.</li>
+<li>Place the equipment in the approved safe state.</li>
+<li>Record the installed hardware, CPU identity, firmware, and communication configuration.</li>
+<li>Verify the backup revision and its compatibility with the target controller.</li>
+<li>Install or replace hardware using approved isolation and installation procedures.</li>
+<li>Connect using the supported engineering interface.</li>
+<li>Restore the required application and configuration using the manufacturer's documented procedure.</li>
+<li>Restore only the approved runtime data that is required.</li>
+<li>Verify controller mode, hardware diagnostics, and communication status.</li>
+<li>Compare the restored configuration with the approved baseline.</li>
+<li>Execute the required functional and safety verification procedures.</li>
+<li>Obtain authorization before returning the equipment to production.</li>
+<li>Create a new verified backup if the restored system becomes the new approved baseline.</li>
+</ol>
+<p>Some restoration procedures require a controller mode change or power cycle. The exact steps depend on the PLC family, so use the relevant vendor instructions rather than applying a generic sequence to every controller.</p>
+<h3 id="93-verification-after-restoration">9.3 Verification after restoration</h3>
+<p>Confirm all relevant items, not just whether the CPU enters RUN mode.</p>
+<ul>
+<li>Correct CPU and module configuration.</li>
+<li>Expected application revision.</li>
+<li>No unexplained hardware or communication faults.</li>
+<li>Correct remote I/O and network communication.</li>
+<li>Correct HMI data and operator commands.</li>
+<li>Correct drive, robot, and CNC interfaces where relevant.</li>
+<li>Expected retained values, counters, setpoints, and recipes.</li>
+<li>Correct startup behavior and interlock status.</li>
+<li>Verified response to representative machine conditions.</li>
+<li>Required safety validation completed by authorized personnel.</li>
+</ul>
+<p>Safety-critical systems: Restoring a safety PLC project requires the platform-specific safety procedure, verification of the correct approved safety application, and any required validation or proof testing. An ordinary standard PLC backup and a successful download are not substitutes for safety-system validation.</p>
+<h2 id="10-plc-backup-and-change-management">10. PLC backup and change management</h2>
+<p>Every approved PLC modification should have a traceable relationship between the engineering change, the tested program, and the released backup.</p>
+<h3 id="101-recommended-change-control-workflow">10.1 Recommended change-control workflow</h3>
+<pre><code>Change request or breakdown
+    ↓
+Identify current approved PLC revision
+    ↓
+Create pre-change backup
+    ↓
+Authorize and implement the change
+    ↓
+Test the changed program
+    ↓
+Obtain required approval
+    ↓
+Release the new revision
+    ↓
+Create and validate post-change backup
+    ↓
+Update change records and backup manifest
+</code></pre>
+<h3 id="102-revision-naming">10.2 Revision naming</h3>
+<p>Use a consistent naming convention that identifies the asset, controller, revision, and capture date.</p>
+<p>Example:</p>
+<pre><code>MACHINE_ID_PLC_CPU_REVISION_DATE
+LINE1059_PLC01_R012_20261017
+</code></pre>
+<p>The example is illustrative. Follow the plant's actual asset-identification and document-control standards.</p>
+<p>Avoid names such as <code>latest</code>, <code>final_final</code>, or <code>new_program</code>. They describe the emotional state of the person saving the file, not its engineering status.</p>
+<h3 id="103-change-record-requirements">10.3 Change record requirements</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Change ID</td>
+<td>Links the change to an approved record</td>
+</tr>
+<tr>
+<td>Reason</td>
+<td>Documents the breakdown, improvement, or modification</td>
+</tr>
+<tr>
+<td>Previous revision</td>
+<td>Identifies the pre-change baseline</td>
+</tr>
+<tr>
+<td>New revision</td>
+<td>Identifies the released result</td>
+</tr>
+<tr>
+<td>Change description</td>
+<td>Summarizes modified logic or configuration</td>
+</tr>
+<tr>
+<td>Risk assessment</td>
+<td>Identifies production and safety implications</td>
+</tr>
+<tr>
+<td>Test evidence</td>
+<td>Demonstrates that the change was verified</td>
+</tr>
+<tr>
+<td>Approval</td>
+<td>Records the required authorization</td>
+</tr>
+<tr>
+<td>Backup location</td>
+<td>Identifies the released recovery copy</td>
+</tr>
+<tr>
+<td>Rollback method</td>
+<td>Describes how to restore the previous approved state</td>
+</tr>
+</tbody>
+</table>
+<p>For emergency breakdown changes, use the plant's emergency change procedure. Document the modification and create the required verified backup as soon as the system has been safely stabilized.</p>
+<h2 id="11-disaster-recovery-scenarios">11. Disaster-recovery scenarios</h2>
+<h3 id="111-plc-cpu-failure">11.1 PLC CPU failure</h3>
+<p>Situation: The controller will not start or has a hardware failure.</p>
+<p>Recovery approach:</p>
+<ol>
+<li>Verify the fault using diagnostics and approved troubleshooting.</li>
+<li>Confirm whether the CPU itself has failed.</li>
+<li>Identify an approved replacement CPU and check compatibility.</li>
+<li>Retrieve the latest verified project and required configuration.</li>
+<li>Replace hardware under approved isolation procedures.</li>
+<li>Restore the program and parameters.</li>
+<li>Verify I/O, communications, retained data, and machine operation.</li>
+<li>Complete the required release checks.</li>
+</ol>
+<p>A CPU with the same product family name may still require a compatible firmware version, memory configuration, or hardware configuration.</p>
+<h3 id="112-accidental-plc-modification">11.2 Accidental PLC modification</h3>
+<p>Situation: An online change causes unexpected machine behavior.</p>
+<p>Recovery approach:</p>
+<ol>
+<li>Place the equipment in a safe state.</li>
+<li>Determine what changed and whether a known-good revision exists.</li>
+<li>Preserve available diagnostic evidence and the current project.</li>
+<li>Obtain authorization to restore the previous approved revision.</li>
+<li>Restore the appropriate program and configuration.</li>
+<li>Verify the original function and test affected interfaces.</li>
+<li>Document the event and implement corrective actions.</li>
+</ol>
+<p>Do not automatically overwrite the controller with an old backup before understanding the change. Recent approved improvements or important retained data could otherwise be lost.</p>
+<h3 id="113-engineering-pc-failure">11.3 Engineering PC failure</h3>
+<p>Situation: The programming PC is unavailable or its storage has failed.</p>
+<p>Recovery approach:</p>
+<ul>
+<li>Retrieve the project from the independent repository.</li>
+<li>Verify the project revision and integrity.</li>
+<li>Reinstall the supported engineering software if necessary.</li>
+<li>Recover required licenses, drivers, hardware descriptions, and dependencies through authorized procedures.</li>
+<li>Confirm connectivity and controller compatibility.</li>
+<li>Verify that the recovered project opens correctly.</li>
+</ul>
+<p>A PLC backup without the required engineering environment may not support timely recovery. Record the software version, installation media availability, license recovery method, and required dependencies.</p>
+<h3 id="114-cybersecurity-incident">11.4 Cybersecurity incident</h3>
+<p>Situation: An engineering PC or control-system server may have been compromised.</p>
+<p>Recovery approach:</p>
+<ol>
+<li>Follow the plant's incident-response procedure.</li>
+<li>Coordinate with the authorized OT/IT cybersecurity team.</li>
+<li>Isolate affected systems where directed by the response plan.</li>
+<li>Preserve relevant logs and evidence.</li>
+<li>Identify a known-good backup from before the compromise.</li>
+<li>Verify the backup's integrity and provenance.</li>
+<li>Restore into an approved, trusted environment.</li>
+<li>Validate the controller application and communications.</li>
+<li>Reconnect to production only after the required security and engineering approvals.</li>
+</ol>
+<p>A backup created after a compromise may contain malicious or unauthorized changes. A matching checksum only establishes consistency with the recorded file, not trustworthiness.</p>
+<h3 id="115-firmware-or-plc-migration">11.5 Firmware or PLC migration</h3>
+<p>Situation: An obsolete PLC is replaced with a newer controller generation.</p>
+<p>The recovery package must distinguish the original system from the migrated system.</p>
+<ul>
+<li>Preserve the source project and original hardware configuration.</li>
+<li>Record source CPU model and firmware.</li>
+<li>Create a separate target project for the new controller.</li>
+<li>Document converted logic and changed instructions.</li>
+<li>Verify I/O mapping, communications, timing, and data handling.</li>
+<li>Perform the required migration tests.</li>
+<li>Retain both source and target backups with clear revision identifiers.</li>
+</ul>
+<p>A migrated project is not a substitute for the original backup. The source project may be required for rollback, historical troubleshooting, or comparison.</p>
+<h2 id="12-backup-and-recovery-troubleshooting">12. Backup and recovery troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Likely cause</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backup file is missing</td>
+<td>Incorrect storage path or incomplete capture</td>
+<td>Check approved repositories and backup logs</td>
+</tr>
+<tr>
+<td>Project will not open</td>
+<td>Software mismatch or project corruption</td>
+<td>Verify the engineering version and retrieve another verified copy</td>
+</tr>
+<tr>
+<td>Project opens but does not match the PLC</td>
+<td>Stale or incorrect project revision</td>
+<td>Compare project identity and approved change records</td>
+</tr>
+<tr>
+<td>Upload is incomplete</td>
+<td>Platform limitations or unavailable engineering metadata</td>
+<td>Recover the original editable project or required separate data</td>
+</tr>
+<tr>
+<td>Restore fails</td>
+<td>CPU mismatch, firmware mismatch, or unsupported transfer method</td>
+<td>Check compatibility and vendor restoration requirements</td>
+</tr>
+<tr>
+<td>PLC remains in fault state</td>
+<td>Hardware, configuration, or application problem</td>
+<td>Review controller diagnostics and compare hardware configuration</td>
+</tr>
+<tr>
+<td>Remote I/O is unavailable</td>
+<td>Wrong network or device configuration</td>
+<td>Verify module identity, network parameters, and I/O assignments</td>
+</tr>
+<tr>
+<td>Retained data is incorrect</td>
+<td>Runtime values were not captured or were restored from an old revision</td>
+<td>Verify the approved data baseline and restore only required values</td>
+</tr>
+<tr>
+<td>Backup checksum differs</td>
+<td>File corruption or unexpected modification</td>
+<td>Retrieve a verified copy and investigate the discrepancy</td>
+</tr>
+<tr>
+<td>Recovery takes too long</td>
+<td>Missing software, credentials, dependencies, or unclear procedures</td>
+<td>Improve the recovery package and conduct a timed restore test</td>
+</tr>
+<tr>
+<td>Unauthorized revision appears</td>
+<td>Weak change control or repository access</td>
+<td>Investigate audit records and restore from a trusted approved baseline</td>
+</tr>
+</tbody>
+</table>
+<h2 id="13-practical-maintenance-implementation">13. Practical maintenance implementation</h2>
+<p>For a production maintenance department, the backup system should be connected to the equipment installed-base register and change-management process.</p>
+<h3 id="131-plc-backup-register">13.1 PLC backup register</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Example or requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine ID</td>
+<td>Plant-approved equipment ID</td>
+</tr>
+<tr>
+<td>Area</td>
+<td>Production line or department</td>
+</tr>
+<tr>
+<td>PLC tag</td>
+<td>Unique controller identifier</td>
+</tr>
+<tr>
+<td>Manufacturer/model</td>
+<td>Exact controller details</td>
+</tr>
+<tr>
+<td>Firmware</td>
+<td>Installed version</td>
+</tr>
+<tr>
+<td>Engineering software</td>
+<td>Supported programming software and version</td>
+</tr>
+<tr>
+<td>Latest approved revision</td>
+<td>Controlled project revision</td>
+</tr>
+<tr>
+<td>Last backup date</td>
+<td>Actual completed date</td>
+</tr>
+<tr>
+<td>Last restore test</td>
+<td>Actual completed test date</td>
+</tr>
+<tr>
+<td>Primary location</td>
+<td>Approved repository</td>
+</tr>
+<tr>
+<td>Independent copy</td>
+<td>Approved isolated or secondary repository</td>
+</tr>
+<tr>
+<td>Criticality</td>
+<td>Risk-based equipment classification</td>
+</tr>
+<tr>
+<td>Recovery target</td>
+<td>Approved RTO and RPO</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Current, overdue, failed, or under review</td>
+</tr>
+<tr>
+<td>Responsible owner</td>
+<td>Assigned engineering or maintenance role</td>
+</tr>
+</tbody>
+</table>
+<h3 id="132-maintenance-workflow-integration">13.2 Maintenance workflow integration</h3>
+<p>A practical process for a breakdown or planned intervention is:</p>
+<ol>
+<li>Identify the affected PLC and verify the current approved revision.</li>
+<li>Check whether a recent verified backup exists.</li>
+<li>Capture a pre-change backup before an authorized modification, where practical.</li>
+<li>Complete the repair or approved program change.</li>
+<li>Perform the required functional checks.</li>
+<li>Create the released post-change backup.</li>
+<li>Update the backup register and link the change to the work order.</li>
+<li>Record any new hardware, firmware, or software dependency.</li>
+<li>Confirm that the independent recovery copy has been updated.</li>
+</ol>
+<p>This provides traceability between the physical machine, PLC program, maintenance work, and recoverable engineering state.</p>
+<h3 id="133-example-folder-structure">13.3 Example folder structure</h3>
+<pre><code>PLC_BACKUP_SYSTEM/
+    01_ASSET_REGISTER/
+    02_APPROVED_PROJECTS/
+        MACHINE_1059/
+            PLC_01/
+                SOURCE_PROJECT/
+                RELEASED_BACKUPS/
+                CONFIGURATION/
+                DEPENDENCIES/
+                TEST_RECORDS/
+                CHANGE_HISTORY/
+                RECOVERY_PROCEDURE/
+    03_INDEPENDENT_RECOVERY_COPIES/
+    04_RESTORE_TEST_RECORDS/
+    05_ENGINEERING_SOFTWARE/
+    06_DISASTER_RECOVERY_PROCEDURES/
+</code></pre>
+<p>This is an example structure, not a substitute for the plant's approved repository and access-control design. Sensitive credentials and security keys should be handled separately under approved security controls.</p>
+<h2 id="14-recovery-drill-and-periodic-audit">14. Recovery drill and periodic audit</h2>
+<p>A backup policy should be tested through controlled recovery exercises. A backup that has never been restored is an unverified assumption.</p>
+<h3 id="141-recovery-drill-procedure">14.1 Recovery drill procedure</h3>
+<ol>
+<li>Select a representative nonproduction controller or approved test environment.</li>
+<li>Choose a backup from the controlled repository.</li>
+<li>Verify the manifest and checksum.</li>
+<li>Confirm software, firmware, hardware, and licensing prerequisites.</li>
+<li>Follow the documented recovery procedure.</li>
+<li>Measure the elapsed recovery time.</li>
+<li>Verify controller configuration and representative application behavior.</li>
+<li>Record missing dependencies, errors, and deviations.</li>
+<li>Correct the recovery documentation.</li>
+<li>Repeat the test when significant issues are identified.</li>
+</ol>
+<p>Do not perform an experimental restore on a live production controller merely to prove that a backup works. Use an appropriate test environment or a formally approved shutdown and recovery exercise.</p>
+<h3 id="142-audit-checklist">14.2 Audit checklist</h3>
+<ul>
+<li>All critical PLCs are identified in the installed-base register.</li>
+<li>Each critical PLC has an approved backup requirement.</li>
+<li>Backups reflect the released program revisions.</li>
+<li>Required configuration and dependencies are included.</li>
+<li>Primary and independent recovery copies exist.</li>
+<li>Access permissions and retention are appropriate.</li>
+<li>Backup integrity is checked.</li>
+<li>Restore procedures are documented.</li>
+<li>Restore tests are performed at the defined interval.</li>
+<li>Recovery times are measured against approved targets.</li>
+<li>Engineering changes trigger the required backup updates.</li>
+<li>Obsolete PLCs have documented recovery and migration strategies.</li>
+</ul>
+<h2 id="15-key-performance-indicators-for-backup-management">15. Key performance indicators for backup management</h2>
+<p>Backup management can be measured using practical maintenance and reliability indicators.</p>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Calculation or measurement</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backup coverage</td>
+<td>PLCs with required backups divided by PLCs requiring backups, multiplied by 100%</td>
+<td>Measures coverage</td>
+</tr>
+<tr>
+<td>Backup currency</td>
+<td>PLCs with backups matching approved revisions divided by PLCs requiring backups, multiplied by 100%</td>
+<td>Measures revision accuracy</td>
+</tr>
+<tr>
+<td>Restore-test success</td>
+<td>Successful restore tests divided by completed restore tests, multiplied by 100%</td>
+<td>Measures demonstrated recoverability</td>
+</tr>
+<tr>
+<td>Backup compliance</td>
+<td>Backups completed on time divided by backups scheduled, multiplied by 100%</td>
+<td>Measures process adherence</td>
+</tr>
+<tr>
+<td>Average recovery time</td>
+<td>Total measured recovery time divided by recovery events</td>
+<td>Measures recovery performance</td>
+</tr>
+<tr>
+<td>Missing dependency rate</td>
+<td>Recovery packages missing required dependencies divided by packages audited, multiplied by 100%</td>
+<td>Identifies incomplete recovery packages</td>
+</tr>
+</tbody>
+</table>
+<p>For example, if 95 out of 100 PLCs requiring backups have current, verified backups, backup coverage is 95%.</p>
+<div class="math-display">\[ \text{Backup coverage}=\frac{95}{100}\times100=95\\% \]</div>
+<p>Define each KPI carefully. Backup coverage and backup currency measure different things, and neither alone proves that the restoration process works.</p>
+<h2 id="16-interview-questions-and-technical-answers">16. Interview questions and technical answers</h2>
+<p>1. What is the difference between a PLC backup and disaster recovery?</p>
+<p>A PLC backup preserves the required program and configuration data. Disaster recovery includes identifying the failure, preparing compatible hardware and software, restoring the data, validating the system, and returning it to service safely.</p>
+<p>2. Why is uploading the PLC not always sufficient?</p>
+<p>The upload may not recover the original engineering project structure, comments, symbols, libraries, or all configuration information. The exact limitations depend on the PLC platform.</p>
+<p>3. What is a golden backup?</p>
+<p>A golden backup is a controlled, approved reference version of a defined system state. It should be associated with a known revision, verified configuration, and appropriate validation records.</p>
+<p>4. What is the difference between RPO and RTO?</p>
+<p>RPO defines the maximum acceptable loss of recent data or changes. RTO defines the target time for restoring the affected service.</p>
+<p>5. Why should backups be stored independently from the engineering PC?</p>
+<p>An independent copy protects against local disk failure, accidental deletion, theft, and some cybersecurity incidents. A copy that shares the same failure domain may be lost along with the original.</p>
+<p>6. Does a checksum prove that a PLC backup is correct?</p>
+<p>No. A checksum helps detect changes to a file relative to its recorded checksum. It does not establish that the project belongs to the correct machine, matches the approved revision, or functions correctly.</p>
+<p>7. What must be checked after replacing a PLC CPU?</p>
+<p>Verify CPU compatibility, firmware, hardware configuration, application revision, I/O mapping, communications, retained data, diagnostics, and machine functionality. Apply the required safety validation before release.</p>
+<p>8. Why must retained data be considered separately?</p>
+<p>Counters, recipes, calibration values, and other runtime values may not be included in a standard project archive. Restoring incorrect or outdated values can affect production, quality, and machine operation.</p>
+<p>9. How should a PLC backup be handled after a cybersecurity incident?</p>
+<p>Follow the incident-response process, preserve evidence, identify a trusted pre-incident backup, verify its integrity and provenance, restore in an approved environment, and obtain authorization before reconnecting to production.</p>
+<p>10. What is the most important test of a backup system?</p>
+<p>A controlled restoration test that demonstrates the backup, required dependencies, and recovery procedure can restore the intended system within the approved recovery objectives.</p>
+<h2 id="17-final-engineering-principles">17. Final engineering principles</h2>
+<ul>
+<li>Maintain an editable engineering project whenever the platform supports it.</li>
+<li>Back up before significant changes and after approved changes are released.</li>
+<li>Preserve source and migrated projects separately.</li>
+<li>Verify project identity, revision, integrity, and dependencies.</li>
+<li>Store independent recovery copies with appropriate access controls.</li>
+<li>Treat retained data and safety-system backups as distinct recovery requirements where applicable.</li>
+<li>Test restoration periodically rather than relying on file existence.</li>
+<li>Document recovery procedures so that another authorized engineer can execute them.</li>
+<li>Measure recovery performance against defined RPO and RTO targets.</li>
+<li>Release restored equipment only after the required engineering, functional, and safety checks.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\25_Backup_DR\01_Systems_Backup\02_HMI - HMI</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

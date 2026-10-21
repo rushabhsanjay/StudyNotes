@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLC Diagnostic Buffers</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">PLC Diagnostic Buffers</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-objectives-of-diagnostic-buffer-monitoring">2. Objectives of Diagnostic Buffer Monitoring</a></li>
+<li><a href="#3-diagnostic-buffer-versus-other-plc-information">3. Diagnostic Buffer Versus Other PLC Information</a></li>
+<li><a href="#4-typical-diagnostic-buffer-architecture">4. Typical Diagnostic Buffer Architecture</a></li>
+<li><a href="#5-information-stored-in-a-diagnostic-event">5. Information Stored in a Diagnostic Event</a></li>
+<li><a href="#6-diagnostic-events-faults-warnings-and-information">6. Diagnostic Events: Faults, Warnings, and Information</a></li>
+<li><a href="#7-how-diagnostic-buffers-work">7. How Diagnostic Buffers Work</a></li>
+<li><a href="#8-diagnostic-buffer-capacity-and-retention">8. Diagnostic Buffer Capacity and Retention</a><ul>
+<li><a href="#81-important-maintenance-considerations">8.1 Important maintenance considerations</a></li>
+<li><a href="#82-why-early-evidence-collection-matters">8.2 Why early evidence collection matters</a></li>
+</ul>
+</li>
+<li><a href="#9-diagnostic-buffer-reading-procedure">9. Diagnostic Buffer Reading Procedure</a><ul>
+<li><a href="#step-1-identify-the-correct-controller">Step 1: Identify the correct controller</a></li>
+<li><a href="#step-2-establish-the-safe-operating-condition">Step 2: Establish the safe operating condition</a></li>
+<li><a href="#step-3-open-the-diagnostic-information">Step 3: Open the diagnostic information</a></li>
+<li><a href="#step-4-identify-the-relevant-time-window">Step 4: Identify the relevant time window</a></li>
+<li><a href="#step-5-preserve-the-evidence">Step 5: Preserve the evidence</a></li>
+<li><a href="#step-6-build-the-event-sequence">Step 6: Build the event sequence</a></li>
+<li><a href="#step-7-test-the-hypothesis">Step 7: Test the hypothesis</a></li>
+<li><a href="#step-8-record-the-result">Step 8: Record the result</a></li>
+</ul>
+</li>
+<li><a href="#10-interpreting-diagnostic-events-correctly">10. Interpreting Diagnostic Events Correctly</a><ul>
+<li><a href="#101-the-first-event-is-not-always-the-root-cause">10.1 The first event is not always the root cause</a></li>
+</ul>
+</li>
+<li><a href="#11-timestamp-accuracy-and-event-correlation">11. Timestamp Accuracy and Event Correlation</a><ul>
+<li><a href="#111-common-timestamp-problems">11.1 Common timestamp problems</a></li>
+<li><a href="#112-practical-approach">11.2 Practical approach</a></li>
+</ul>
+</li>
+<li><a href="#12-siemens-plc-diagnostic-buffer">12. Siemens PLC Diagnostic Buffer</a><ul>
+<li><a href="#121-typical-workflow">12.1 Typical workflow</a></li>
+<li><a href="#122-events-worth-investigating">12.2 Events worth investigating</a></li>
+<li><a href="#123-important-cautions">12.3 Important cautions</a></li>
+</ul>
+</li>
+<li><a href="#13-allen-bradley-plc-fault-and-diagnostic-logs">13. Allen-Bradley PLC Fault and Diagnostic Logs</a><ul>
+<li><a href="#131-typical-workflow">13.1 Typical workflow</a></li>
+<li><a href="#132-controller-fault-considerations">13.2 Controller fault considerations</a></li>
+</ul>
+</li>
+<li><a href="#14-mitsubishi-plc-error-history">14. Mitsubishi PLC Error History</a><ul>
+<li><a href="#141-typical-workflow">14.1 Typical workflow</a></li>
+</ul>
+</li>
+<li><a href="#15-common-diagnostic-events-and-possible-causes">15. Common Diagnostic Events and Possible Causes</a></li>
+<li><a href="#16-diagnostic-buffers-and-intermittent-faults">16. Diagnostic Buffers and Intermittent Faults</a><ul>
+<li><a href="#161-recommended-investigation">16.1 Recommended investigation</a></li>
+<li><a href="#162-example">16.2 Example</a></li>
+</ul>
+</li>
+<li><a href="#17-diagnostic-buffers-and-root-cause-analysis">17. Diagnostic Buffers and Root Cause Analysis</a></li>
+<li><a href="#18-diagnostic-buffer-maintenance-checklist">18. Diagnostic Buffer Maintenance Checklist</a><ul>
+<li><a href="#before-investigation">Before investigation</a></li>
+<li><a href="#during-investigation">During investigation</a></li>
+<li><a href="#after-investigation">After investigation</a></li>
+</ul>
+</li>
+<li><a href="#19-common-mistakes-in-diagnostic-buffer-analysis">19. Common Mistakes in Diagnostic Buffer Analysis</a></li>
+<li><a href="#20-practical-example-plc-stop-event-on-a-production-machine">20. Practical Example: PLC STOP Event on a Production Machine</a><ul>
+<li><a href="#initial-observations">Initial observations</a></li>
+<li><a href="#diagnostic-investigation">Diagnostic investigation</a></li>
+<li><a href="#corrective-action-and-verification">Corrective action and verification</a></li>
+</ul>
+</li>
+<li><a href="#21-improving-diagnostic-monitoring-through-industry-40">21. Improving Diagnostic Monitoring Through Industry 4.0</a><ul>
+<li><a href="#211-useful-dashboard-indicators">21.1 Useful dashboard indicators</a></li>
+<li><a href="#212-data-collection-considerations">21.2 Data collection considerations</a></li>
+</ul>
+</li>
+<li><a href="#22-final-principles">22. Final Principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>A PLC diagnostic buffer is a controller-maintained record of diagnostic events, system events, faults, and other significant operating conditions. It helps maintenance engineers reconstruct what happened in a PLC system, identify the sequence of events, determine likely causes, and support corrective and preventive maintenance.</p>
+<p>Depending on the PLC manufacturer, similar information may be called a diagnostic buffer, controller log, fault log, event history, or error history.</p>
+<p>Diagnostic information may include:</p>
+<ul>
+<li>CPU transitions between operating states.</li>
+<li>Controller startup and shutdown events.</li>
+<li>Module faults and hardware configuration errors.</li>
+<li>Communication failures and recovery events.</li>
+<li>Power-related events.</li>
+<li>Program execution errors.</li>
+<li>Watchdog or execution-time faults.</li>
+<li>Network connection interruptions.</li>
+<li>Memory or firmware-related diagnostics.</li>
+<li>Operator or engineering actions, where the platform records them.</li>
+</ul>
+<p>A diagnostic buffer is an important maintenance tool because a machine may recover automatically from a fault before a technician reaches the equipment. The buffer may preserve evidence of the event even when the original symptom is no longer visible.</p>
+<p>Core principle: The diagnostic buffer records evidence of events. It does not automatically identify the root cause of every failure.</p>
+<h2 id="2-objectives-of-diagnostic-buffer-monitoring">2. Objectives of Diagnostic Buffer Monitoring</h2>
+<ul>
+<li>Identify the first recorded event associated with a breakdown.</li>
+<li>Reconstruct the sequence of faults and recovery events.</li>
+<li>Distinguish the initiating fault from secondary alarms.</li>
+<li>Investigate intermittent PLC and communication problems.</li>
+<li>Identify repeated hardware or software faults.</li>
+<li>Verify whether a repair eliminated the original fault.</li>
+<li>Correlate PLC events with machine alarms, HMI messages, drive faults, and production records.</li>
+<li>Support root cause analysis and corrective action.</li>
+<li>Identify developing reliability problems before they produce major downtime.</li>
+<li>Maintain an evidence-based record for maintenance reporting.</li>
+</ul>
+<p>Diagnostic buffers are particularly useful when faults are intermittent, automatically recover, or disappear after a controller restart.</p>
+<h2 id="3-diagnostic-buffer-versus-other-plc-information">3. Diagnostic Buffer Versus Other PLC Information</h2>
+<p>Several types of PLC information may appear similar but serve different purposes.</p>
+<table>
+<thead>
+<tr>
+<th>Information type</th>
+<th>Purpose</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Diagnostic buffer</td>
+<td>Records diagnostic and system events</td>
+<td>CPU entered STOP because of a detected fault</td>
+</tr>
+<tr>
+<td>PLC alarm</td>
+<td>Communicates a condition requiring attention</td>
+<td>Conveyor motor overload</td>
+</tr>
+<tr>
+<td>PLC program status</td>
+<td>Shows current application behavior</td>
+<td>Sequence step 12 is active</td>
+</tr>
+<tr>
+<td>HMI alarm history</td>
+<td>Records alarms presented to operators</td>
+<td>Station 3 sensor timeout</td>
+</tr>
+<tr>
+<td>Drive fault history</td>
+<td>Records drive-specific events</td>
+<td>VFD overcurrent trip</td>
+</tr>
+<tr>
+<td>Network diagnostics</td>
+<td>Shows communication condition and errors</td>
+<td>Remote I/O connection lost</td>
+</tr>
+<tr>
+<td>Process historian</td>
+<td>Records time-series process values</td>
+<td>Motor current trend over time</td>
+</tr>
+<tr>
+<td>Audit or change log</td>
+<td>Records configuration or user actions where supported</td>
+<td>Engineering project downloaded</td>
+</tr>
+</tbody>
+</table>
+<p>These records complement one another. A PLC diagnostic buffer may show a communication interruption, while the network switch log identifies a physical link loss and the HMI history shows which machine alarm occurred at the same time.</p>
+<h2 id="4-typical-diagnostic-buffer-architecture">4. Typical Diagnostic Buffer Architecture</h2>
+<p>A simplified diagnostic investigation may use several information sources.</p>
+<pre><code>PLC Diagnostic Buffer
+        ↓
+CPU and Module Diagnostics
+        ↓
+HMI Alarm and Event History
+        ↓
+Drive, Robot, CNC, and Remote I/O Logs
+        ↓
+Industrial Network Diagnostics
+        ↓
+Production and Maintenance Records
+        ↓
+Correlated Event Timeline
+        ↓
+Failure Analysis and Corrective Action
+</code></pre>
+<p>Not every source is available on every machine. The goal is to combine reliable evidence from the systems that exist, rather than assuming one log contains the complete story.</p>
+<h2 id="5-information-stored-in-a-diagnostic-event">5. Information Stored in a Diagnostic Event</h2>
+<p>A diagnostic event may contain some or all of the following fields:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Timestamp</td>
+<td>Date and time associated with the event</td>
+</tr>
+<tr>
+<td>Event identifier</td>
+<td>Code identifying the event type</td>
+</tr>
+<tr>
+<td>Event description</td>
+<td>Human-readable explanation</td>
+</tr>
+<tr>
+<td>Event source</td>
+<td>CPU, module, communication interface, or another component</td>
+</tr>
+<tr>
+<td>Severity or classification</td>
+<td>Indicates the event's importance, where supported</td>
+</tr>
+<tr>
+<td>Operating state</td>
+<td>Controller state associated with the event, where available</td>
+</tr>
+<tr>
+<td>Additional details</td>
+<td>Error code, affected address, module location, or diagnostic data</td>
+</tr>
+<tr>
+<td>Recovery information</td>
+<td>Whether a fault cleared or a system returned to normal, where recorded</td>
+</tr>
+</tbody>
+</table>
+<p>The exact fields depend on the PLC platform and event type.</p>
+<p>A timestamp may reflect controller time rather than the local computer's clock. Before correlating events across devices, check time synchronization and timestamp conventions.</p>
+<h2 id="6-diagnostic-events-faults-warnings-and-information">6. Diagnostic Events: Faults, Warnings, and Information</h2>
+<p>Diagnostic records do not all indicate the same level of seriousness.</p>
+<table>
+<thead>
+<tr>
+<th>Event category</th>
+<th>General meaning</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fault or error</td>
+<td>A detected condition prevents or degrades intended operation</td>
+<td>CPU fault or module failure</td>
+</tr>
+<tr>
+<td>Warning</td>
+<td>An abnormal condition needs attention but may not stop operation</td>
+<td>Resource usage approaching a limit</td>
+</tr>
+<tr>
+<td>Information</td>
+<td>A significant system event is recorded</td>
+<td>Controller startup</td>
+</tr>
+<tr>
+<td>State transition</td>
+<td>The operating state changes</td>
+<td>CPU changes from RUN to STOP</td>
+</tr>
+<tr>
+<td>Communication event</td>
+<td>A connection is established, lost, or restored</td>
+<td>Remote I/O station becomes unavailable</td>
+</tr>
+<tr>
+<td>Configuration event</td>
+<td>Hardware or software configuration is found to be inconsistent or changed</td>
+<td>Expected module does not match installed hardware</td>
+</tr>
+</tbody>
+</table>
+<p>These are general categories, not universal severity labels. Some PLCs distinguish major and minor faults, while others use different event classifications.</p>
+<p>A warning should not be ignored merely because the machine is still running. A recurring warning may reveal a developing reliability problem.</p>
+<h2 id="7-how-diagnostic-buffers-work">7. How Diagnostic Buffers Work</h2>
+<p>When the controller detects a supported diagnostic event, it records information according to the platform's event-handling mechanism.</p>
+<p>The process generally involves:</p>
+<ol>
+<li>Detecting an event or abnormal condition.</li>
+<li>Generating a diagnostic record.</li>
+<li>Recording available event details and time information.</li>
+<li>Storing the record in the controller's diagnostic history.</li>
+<li>Displaying the information through engineering software or another supported interface.</li>
+<li>Retaining records according to the controller's storage and buffer-management rules.</li>
+</ol>
+<p>Not every event is recorded. The diagnostic system may only record conditions that the controller or module is designed to detect.</p>
+<p>For example, a PLC may record that an input module is unavailable, but it may not identify a mechanically broken sensor bracket unless that condition produces a detectable electrical or logical symptom.</p>
+<h2 id="8-diagnostic-buffer-capacity-and-retention">8. Diagnostic Buffer Capacity and Retention</h2>
+<p>Diagnostic buffers have finite storage capacity unless the platform provides a separate logging mechanism with different storage behavior.</p>
+<p>When the buffer becomes full, the controller may overwrite older entries, discard certain events, or apply another manufacturer-defined retention policy.</p>
+<h3 id="81-important-maintenance-considerations">8.1 Important maintenance considerations</h3>
+<ul>
+<li>Check the supported buffer capacity.</li>
+<li>Understand whether the buffer is circular or follows another retention policy.</li>
+<li>Determine which events are retained through power cycles.</li>
+<li>Check whether controller restart affects event history.</li>
+<li>Record important events before performing resets or configuration changes.</li>
+<li>Use external logging where longer retention is required.</li>
+<li>Confirm whether the diagnostic buffer has any storage limitations relevant to the investigation.</li>
+</ul>
+<p>A diagnostic buffer should not be treated as a permanent maintenance archive.</p>
+<h3 id="82-why-early-evidence-collection-matters">8.2 Why early evidence collection matters</h3>
+<p>Suppose a machine experiences a communication fault once every two days. If the buffer is small and many additional events occur, the original fault may disappear from the available history before maintenance investigates it.</p>
+<p>For critical systems, a documented process for collecting diagnostic evidence can prevent the loss of important failure information.</p>
+<h2 id="9-diagnostic-buffer-reading-procedure">9. Diagnostic Buffer Reading Procedure</h2>
+<p>A disciplined diagnostic procedure prevents useful evidence from being lost.</p>
+<h3 id="step-1-identify-the-correct-controller">Step 1: Identify the correct controller</h3>
+<p>Record:</p>
+<ul>
+<li>Machine and equipment identification.</li>
+<li>PLC manufacturer and model.</li>
+<li>CPU part number and firmware version.</li>
+<li>Engineering software and version.</li>
+<li>Current operating state.</li>
+<li>Relevant production condition.</li>
+</ul>
+<p>Confirm that the engineering software is connected to the intended controller, particularly when multiple similar PLCs are installed.</p>
+<h3 id="step-2-establish-the-safe-operating-condition">Step 2: Establish the safe operating condition</h3>
+<p>Before connecting or performing online diagnostics:</p>
+<ul>
+<li>Follow the site's authorization and access requirements.</li>
+<li>Confirm whether the connection is read-only or could permit changes.</li>
+<li>Avoid interrupting production or safety-related operation.</li>
+<li>Do not change controller mode, download a project, or reset faults merely to access diagnostics.</li>
+<li>Follow applicable OT cybersecurity and change-control requirements.</li>
+</ul>
+<p>Reading diagnostics is usually less intrusive than modifying the controller, but online engineering access must still be controlled.</p>
+<h3 id="step-3-open-the-diagnostic-information">Step 3: Open the diagnostic information</h3>
+<p>Use the manufacturer's engineering software or supported diagnostic interface.</p>
+<p>Locate the CPU diagnostic history, module diagnostics, controller fault log, or equivalent feature.</p>
+<h3 id="step-4-identify-the-relevant-time-window">Step 4: Identify the relevant time window</h3>
+<p>Start with the reported failure time. Include events before and after the reported time because the initiating event may precede the machine stoppage.</p>
+<p>Check:</p>
+<ul>
+<li>First occurrence.</li>
+<li>Most recent occurrence.</li>
+<li>Repeated entries.</li>
+<li>Fault-clear or recovery events.</li>
+<li>CPU state transitions.</li>
+<li>Related module and communication events.</li>
+</ul>
+<h3 id="step-5-preserve-the-evidence">Step 5: Preserve the evidence</h3>
+<p>Where supported and permitted, save or export the diagnostic information. Otherwise, record the relevant entries and details using the site's approved documentation method.</p>
+<p>Capture:</p>
+<ul>
+<li>Timestamp.</li>
+<li>Event code.</li>
+<li>Full description.</li>
+<li>Source module or device.</li>
+<li>Relevant diagnostic details.</li>
+<li>Operating state.</li>
+<li>Related alarms and observations.</li>
+</ul>
+<h3 id="step-6-build-the-event-sequence">Step 6: Build the event sequence</h3>
+<p>Arrange relevant events chronologically and correlate them with HMI alarms, drive logs, network records, and operator reports.</p>
+<h3 id="step-7-test-the-hypothesis">Step 7: Test the hypothesis</h3>
+<p>Use the event sequence to identify likely causes, then verify them through approved checks and measurements.</p>
+<h3 id="step-8-record-the-result">Step 8: Record the result</h3>
+<p>Document the identified cause, corrective action, verification results, and any unresolved uncertainty.</p>
+<h2 id="10-interpreting-diagnostic-events-correctly">10. Interpreting Diagnostic Events Correctly</h2>
+<p>A diagnostic event is a clue that must be interpreted in context.</p>
+<p>Consider the following example:</p>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Event</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10:14:02</td>
+<td>Remote I/O communication lost</td>
+</tr>
+<tr>
+<td>10:14:02</td>
+<td>Several input channels become unavailable</td>
+</tr>
+<tr>
+<td>10:14:03</td>
+<td>Machine sequence reports a sensor timeout</td>
+</tr>
+<tr>
+<td>10:14:04</td>
+<td>Production station stops</td>
+</tr>
+<tr>
+<td>10:14:18</td>
+<td>Remote I/O communication restored</td>
+</tr>
+</tbody>
+</table>
+<p>The sensor timeout may be a secondary consequence of the communication loss rather than a failed sensor.</p>
+<p>The investigation should first establish why the remote I/O connection was lost. Possible causes include a power interruption, cable or switch fault, device failure, or configuration problem.</p>
+<p>Replacing the sensor simply because its associated alarm appeared would not address the earliest recorded event.</p>
+<h3 id="101-the-first-event-is-not-always-the-root-cause">10.1 The first event is not always the root cause</h3>
+<p>The earliest recorded event is a useful starting point, but it is not automatically the root cause.</p>
+<p>Reasons include:</p>
+<ul>
+<li>The underlying condition may not generate a diagnostic event.</li>
+<li>Different devices may have unsynchronized clocks.</li>
+<li>A module may report a consequence before the originating device records its fault.</li>
+<li>Events may be buffered or displayed with different timing.</li>
+<li>Diagnostic records may be incomplete.</li>
+<li>The controller may only detect the effect of a field-device failure.</li>
+</ul>
+<p>Use the earliest credible event together with physical evidence and other system records.</p>
+<h2 id="11-timestamp-accuracy-and-event-correlation">11. Timestamp Accuracy and Event Correlation</h2>
+<p>Accurate timestamps are essential for reconstructing a fault sequence.</p>
+<h3 id="111-common-timestamp-problems">11.1 Common timestamp problems</h3>
+<ul>
+<li>PLC clock differs from the HMI clock.</li>
+<li>Network devices use different time sources.</li>
+<li>Daylight-saving or time-zone settings differ.</li>
+<li>Some records use controller time while others use server time.</li>
+<li>Clock synchronization is lost after a restart.</li>
+<li>Logs use different timestamp precision.</li>
+<li>An event is displayed using the time it was processed rather than the time the physical event began.</li>
+</ul>
+<h3 id="112-practical-approach">11.2 Practical approach</h3>
+<ul>
+<li>Confirm the time source for each device.</li>
+<li>Check the PLC, HMI, engineering PC, and relevant server clocks.</li>
+<li>Record any known time offset.</li>
+<li>Use a common time reference when reconstructing events.</li>
+<li>Avoid claiming a precise causal sequence if timestamp accuracy is insufficient.</li>
+</ul>
+<p>For example, if a network switch clock is 30 seconds ahead of the PLC, its event may appear to precede the PLC event even if the physical order was different.</p>
+<h2 id="12-siemens-plc-diagnostic-buffer">12. Siemens PLC Diagnostic Buffer</h2>
+<p>For Siemens SIMATIC controllers, diagnostic information is available through supported engineering tools, with exact functions depending on the CPU generation and software version.</p>
+<p>For S7-1500 systems, TIA Portal provides online diagnostic information, including the CPU's diagnostic buffer and device or module diagnostics.</p>
+<h3 id="121-typical-workflow">12.1 Typical workflow</h3>
+<ol>
+<li>Open the correct project in TIA Portal.</li>
+<li>Connect online to the intended CPU using an approved engineering connection.</li>
+<li>Open the CPU's online diagnostic information.</li>
+<li>Locate the diagnostic buffer or equivalent event history.</li>
+<li>Select the relevant entries.</li>
+<li>Read the event details and associated information.</li>
+<li>Inspect related module or network diagnostics.</li>
+<li>Save or document the relevant evidence.</li>
+</ol>
+<p>For legacy S7 systems, the menu names and available diagnostic functions may differ depending on whether STEP 7 Classic or another supported tool is used.</p>
+<h3 id="122-events-worth-investigating">12.2 Events worth investigating</h3>
+<ul>
+<li>CPU STOP transitions.</li>
+<li>Hardware configuration mismatches.</li>
+<li>Module failure or removal.</li>
+<li>Communication errors.</li>
+<li>Startup or initialization problems.</li>
+<li>Execution-time faults.</li>
+<li>Memory-related events.</li>
+<li>Power-related diagnostic events, where supported.</li>
+</ul>
+<h3 id="123-important-cautions">12.3 Important cautions</h3>
+<ul>
+<li>Verify that the online CPU is the intended machine controller.</li>
+<li>Check the CPU model and firmware before interpreting an error.</li>
+<li>Do not download a project merely to view diagnostics.</li>
+<li>Preserve event details before restarting or modifying the system.</li>
+<li>Follow the relevant Siemens manual for the installed hardware and software versions.</li>
+</ul>
+<h2 id="13-allen-bradley-plc-fault-and-diagnostic-logs">13. Allen-Bradley PLC Fault and Diagnostic Logs</h2>
+<p>For Allen-Bradley ControlLogix and CompactLogix systems, Studio 5000 Logix Designer provides controller and module diagnostic information. The exact available records and terminology depend on the controller family and firmware.</p>
+<h3 id="131-typical-workflow">13.1 Typical workflow</h3>
+<ol>
+<li>Open the correct project.</li>
+<li>Connect to the intended controller using the approved connection.</li>
+<li>Review controller status and fault information.</li>
+<li>Inspect relevant module properties and I/O connection status.</li>
+<li>Record major or minor fault details where available.</li>
+<li>Check task execution information if a timing or execution issue is suspected.</li>
+<li>Review relevant communication-device diagnostics.</li>
+<li>Preserve the information before carrying out recovery actions.</li>
+</ol>
+<h3 id="132-controller-fault-considerations">13.2 Controller fault considerations</h3>
+<p>A major fault may stop normal controller execution, while a minor fault may allow the application to continue, depending on the fault type and configured behavior.</p>
+<p>Do not assume that every major or minor fault has the same consequences. Interpret the specific fault information and applicable controller documentation.</p>
+<h2 id="14-mitsubishi-plc-error-history">14. Mitsubishi PLC Error History</h2>
+<p>For Mitsubishi MELSEC PLCs, the diagnostic and error-history functions depend on the CPU family and engineering software, such as GX Works2 or GX Works3.</p>
+<h3 id="141-typical-workflow">14.1 Typical workflow</h3>
+<ul>
+<li>Connect to the correct CPU using the approved engineering method.</li>
+<li>Open the relevant diagnostic or error-history function.</li>
+<li>Record error codes, descriptions, and available timing information.</li>
+<li>Check CPU and module diagnostics.</li>
+<li>Review communication and remote I/O status where relevant.</li>
+<li>Compare the error history with machine alarms and operator observations.</li>
+<li>Preserve evidence before clearing errors or restarting equipment.</li>
+</ul>
+<p>Do not assume that all Mitsubishi CPU families use identical diagnostic screens, error formats, or retention rules.</p>
+<h2 id="15-common-diagnostic-events-and-possible-causes">15. Common Diagnostic Events and Possible Causes</h2>
+<table>
+<thead>
+<tr>
+<th>Diagnostic symptom</th>
+<th>Possible causes to investigate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CPU entered STOP</td>
+<td>CPU fault, program execution fault, configuration issue, power interruption, or an intentional state change</td>
+</tr>
+<tr>
+<td>Module reported missing</td>
+<td>Power problem, module failure, connection issue, incorrect slot or configuration, or supported hot-swap event</td>
+</tr>
+<tr>
+<td>Remote I/O connection lost</td>
+<td>Network interruption, adapter power loss, cable or switch fault, device fault, or configuration mismatch</td>
+</tr>
+<tr>
+<td>Watchdog or execution-time fault</td>
+<td>Excessive execution time, task overload, program changes, or a design issue</td>
+</tr>
+<tr>
+<td>Repeated controller restart</td>
+<td>Power instability, hardware problem, watchdog behavior, firmware issue, or another triggering condition</td>
+</tr>
+<tr>
+<td>Analog channel out of range</td>
+<td>Actual process condition, incorrect range configuration, wiring fault, sensor problem, or module fault</td>
+</tr>
+<tr>
+<td>Digital input diagnostic</td>
+<td>Field-supply issue, wiring problem, channel fault, or module-specific diagnostic condition</td>
+</tr>
+<tr>
+<td>Communication error after replacement</td>
+<td>Incorrect configuration, firmware incompatibility, wrong addressing, or physical connection problem</td>
+</tr>
+<tr>
+<td>Memory or storage diagnostic</td>
+<td>Storage problem, memory configuration issue, or another platform-specific condition</td>
+</tr>
+<tr>
+<td>Recurring fault after reset</td>
+<td>Underlying cause remains present, or the reset only clears the visible symptom</td>
+</tr>
+</tbody>
+</table>
+<p>These are starting points for investigation. The specific event code and hardware documentation should determine the next diagnostic step.</p>
+<h2 id="16-diagnostic-buffers-and-intermittent-faults">16. Diagnostic Buffers and Intermittent Faults</h2>
+<p>Intermittent faults are among the strongest reasons to review diagnostic history.</p>
+<p>An intermittent event may occur only during:</p>
+<ul>
+<li>Startup.</li>
+<li>Machine acceleration.</li>
+<li>High electrical load.</li>
+<li>Temperature changes.</li>
+<li>Vibration.</li>
+<li>Communication congestion.</li>
+<li>Device reconnection.</li>
+<li>Particular sequence transitions.</li>
+<li>A shift change or maintenance intervention.</li>
+</ul>
+<h3 id="161-recommended-investigation">16.1 Recommended investigation</h3>
+<ol>
+<li>Record the time and operating conditions whenever the fault occurs.</li>
+<li>Compare event history from multiple occurrences.</li>
+<li>Look for common preceding events.</li>
+<li>Check whether the fault affects one module or several devices.</li>
+<li>Compare events with temperature, load, vibration, and power conditions where data exists.</li>
+<li>Inspect likely physical causes under the approved safety procedure.</li>
+<li>Verify the suspected cause before implementing a permanent correction.</li>
+</ol>
+<h3 id="162-example">16.2 Example</h3>
+<p>A remote I/O fault occurs mainly during machine startup.</p>
+<p>The diagnostic history shows that communication is lost just after several actuators are commanded on. This suggests that the investigation should include power stability, grounding, connections, and network behavior under the startup condition.</p>
+<p>The timing is useful evidence, but it does not prove that voltage drop is the cause. Measurements and further diagnostics are required.</p>
+<h2 id="17-diagnostic-buffers-and-root-cause-analysis">17. Diagnostic Buffers and Root Cause Analysis</h2>
+<p>A useful investigation distinguishes four levels.</p>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Question</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Symptom</td>
+<td>What did the operator observe?</td>
+<td>Machine stopped</td>
+</tr>
+<tr>
+<td>Diagnostic event</td>
+<td>What did the control system record?</td>
+<td>Remote I/O connection lost</td>
+</tr>
+<tr>
+<td>Direct technical cause</td>
+<td>What physically or technically caused the event?</td>
+<td>Network connection became unstable</td>
+</tr>
+<tr>
+<td>Root cause</td>
+<td>What underlying condition allowed the failure to occur?</td>
+<td>Damaged cable routing repeatedly exposed the connection to mechanical stress</td>
+</tr>
+</tbody>
+</table>
+<p>A diagnostic event may identify the failed communication link without explaining why it failed.</p>
+<p>Root cause analysis may require physical inspection, electrical measurements, network diagnostics, maintenance history, and review of installation or design conditions.</p>
+<p>Useful analysis methods include Five Whys, cause-and-effect analysis, and fault-tree analysis for more complex events.</p>
+<h2 id="18-diagnostic-buffer-maintenance-checklist">18. Diagnostic Buffer Maintenance Checklist</h2>
+<h3 id="before-investigation">Before investigation</h3>
+<ul>
+<li>Correct PLC and machine have been identified.</li>
+<li>The operating state and production impact are understood.</li>
+<li>Access is authorized.</li>
+<li>The intended connection will not unintentionally modify the controller.</li>
+<li>Relevant timestamps and reported symptoms have been recorded.</li>
+</ul>
+<h3 id="during-investigation">During investigation</h3>
+<ul>
+<li>Diagnostic buffer or equivalent event history has been reviewed.</li>
+<li>Relevant event codes and complete descriptions have been recorded.</li>
+<li>CPU and module diagnostics have been checked.</li>
+<li>Related HMI, drive, network, and device logs have been considered.</li>
+<li>Timestamp offsets and synchronization have been considered.</li>
+<li>Evidence has been preserved before resets or other recovery actions.</li>
+<li>The event sequence has been reconstructed where possible.</li>
+</ul>
+<h3 id="after-investigation">After investigation</h3>
+<ul>
+<li>The suspected cause has been checked against available evidence.</li>
+<li>Corrective action and verification results have been recorded.</li>
+<li>Remaining uncertainty or restrictions have been documented.</li>
+<li>Follow-up work has been assigned where necessary.</li>
+<li>Recurring events have been reviewed for reliability improvements.</li>
+<li>The maintenance record has been updated.</li>
+</ul>
+<h2 id="19-common-mistakes-in-diagnostic-buffer-analysis">19. Common Mistakes in Diagnostic Buffer Analysis</h2>
+<table>
+<thead>
+<tr>
+<th>Mistake</th>
+<th>Consequence</th>
+<th>Correct approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reading only the latest event</td>
+<td>May miss the initiating fault</td>
+<td>Review the relevant sequence before and after the failure</td>
+</tr>
+<tr>
+<td>Treating every alarm as a root cause</td>
+<td>Leads to unnecessary component replacement</td>
+<td>Separate symptoms, diagnostic events, and causes</td>
+</tr>
+<tr>
+<td>Clearing the buffer before saving evidence</td>
+<td>Important records may be lost</td>
+<td>Preserve the relevant history first</td>
+</tr>
+<tr>
+<td>Ignoring timestamps</td>
+<td>Event sequence may be reconstructed incorrectly</td>
+<td>Check clock synchronization and time offsets</td>
+</tr>
+<tr>
+<td>Assuming all faults are logged</td>
+<td>Undetected conditions may be overlooked</td>
+<td>Correlate diagnostic records with other evidence</td>
+</tr>
+<tr>
+<td>Restarting immediately</td>
+<td>May erase volatile evidence or hide the original symptom</td>
+<td>Capture diagnostics before recovery when safe and practical</td>
+</tr>
+<tr>
+<td>Ignoring recurring warnings</td>
+<td>Developing issues may become major failures</td>
+<td>Trend repeated events and investigate patterns</td>
+</tr>
+<tr>
+<td>Assuming the first event is the root cause</td>
+<td>May lead to an incorrect conclusion</td>
+<td>Verify the cause using independent evidence</td>
+</tr>
+<tr>
+<td>Downloading a project to access diagnostics</td>
+<td>May change or interrupt controller operation</td>
+<td>Use the appropriate online diagnostic interface</td>
+</tr>
+<tr>
+<td>Keeping no external records</td>
+<td>Historical evidence may disappear as the buffer fills</td>
+<td>Preserve critical events in the maintenance record or approved logging system</td>
+</tr>
+</tbody>
+</table>
+<h2 id="20-practical-example-plc-stop-event-on-a-production-machine">20. Practical Example: PLC STOP Event on a Production Machine</h2>
+<p>A machine stops during production. The operator reports that the HMI has lost several machine signals.</p>
+<h3 id="initial-observations">Initial observations</h3>
+<ul>
+<li>The machine is stopped.</li>
+<li>The CPU status indicates that the controller is not in its normal RUN state.</li>
+<li>The HMI displays multiple secondary alarms.</li>
+<li>The maintenance team has not yet identified the initiating fault.</li>
+</ul>
+<h3 id="diagnostic-investigation">Diagnostic investigation</h3>
+<p>The technician follows the approved access procedure and reviews the controller's diagnostic buffer.</p>
+<p>The relevant records show:</p>
+<table>
+<thead>
+<tr>
+<th>Event sequence</th>
+<th>Observation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>First</td>
+<td>A module-related diagnostic event is recorded</td>
+</tr>
+<tr>
+<td>Second</td>
+<td>The CPU records a subsequent operating-state change</td>
+</tr>
+<tr>
+<td>Third</td>
+<td>The HMI reports several unavailable machine signals</td>
+</tr>
+<tr>
+<td>Fourth</td>
+<td>The operator reports that the machine stopped</td>
+</tr>
+</tbody>
+</table>
+<p>The sequence suggests that the module event may be related to the stoppage. It does not yet prove why the module fault occurred.</p>
+<p>The technician then checks the module details, power supply, hardware configuration, and relevant physical connections under the required safety procedure.</p>
+<p>The investigation identifies an intermittent connection affecting the module's operation.</p>
+<h3 id="corrective-action-and-verification">Corrective action and verification</h3>
+<ul>
+<li>The connection is repaired according to the approved procedure.</li>
+<li>The hardware diagnostics are checked.</li>
+<li>The CPU is returned to the required operating state using the authorized recovery procedure.</li>
+<li>The affected I/O and machine sequence are verified.</li>
+<li>Required protective functions are checked.</li>
+<li>The event and corrective action are documented.</li>
+<li>Follow-up inspection or corrective action is assigned if the underlying installation condition requires further work.</li>
+</ul>
+<p>The diagnostic buffer helped reconstruct the event, while physical inspection established the technical cause.</p>
+<h2 id="21-improving-diagnostic-monitoring-through-industry-40">21. Improving Diagnostic Monitoring Through Industry 4.0</h2>
+<p>Diagnostic buffers can become more useful when integrated with an approved maintenance data system.</p>
+<p>A possible architecture is:</p>
+<pre><code>PLC Diagnostic Information
+        ↓
+Approved Data Collection Interface
+        ↓
+Node-RED or Industrial Data Gateway
+        ↓
+SQL Database
+        ↓
+Power BI / Grafana / Maintenance Dashboard
+        ↓
+Fault Trends and Corrective Actions
+</code></pre>
+<p>This architecture is only an example. The actual design must respect the PLC platform, available interfaces, network segmentation, cybersecurity requirements, and plant policies.</p>
+<h3 id="211-useful-dashboard-indicators">21.1 Useful dashboard indicators</h3>
+<ul>
+<li>Diagnostic events by machine.</li>
+<li>Most frequent event codes.</li>
+<li>Repeated module faults.</li>
+<li>Communication-loss frequency.</li>
+<li>CPU STOP events.</li>
+<li>Time between recurring failures.</li>
+<li>Events occurring before major downtime.</li>
+<li>Open maintenance actions linked to recurring faults.</li>
+</ul>
+<h3 id="212-data-collection-considerations">21.2 Data collection considerations</h3>
+<ul>
+<li>Use an approved read-only or appropriately restricted interface where possible.</li>
+<li>Do not overload the PLC with excessive polling.</li>
+<li>Preserve original timestamps and event identifiers.</li>
+<li>Handle clock synchronization and missing data.</li>
+<li>Avoid clearing diagnostic history as part of routine collection.</li>
+<li>Secure the collection service and its credentials.</li>
+<li>Keep maintenance decisions linked to verified diagnostic evidence.</li>
+</ul>
+<p>Not all PLC diagnostic buffers expose the same data through communication interfaces. Some events may only be available through the engineering software or supported manufacturer-specific mechanisms.</p>
+<h2 id="22-final-principles">22. Final Principles</h2>
+<ul>
+<li>A diagnostic buffer is an evidence source for understanding PLC and system events.</li>
+<li>Read the event sequence, not just the latest entry.</li>
+<li>Distinguish the initiating event from secondary alarms.</li>
+<li>Verify the meaning of each event using the exact PLC and module documentation.</li>
+<li>Consider timestamps, retention limits, and missing diagnostic information.</li>
+<li>Preserve important records before resets, downloads, or other recovery actions.</li>
+<li>Correlate PLC history with HMI, drive, network, process, and maintenance records.</li>
+<li>Confirm suspected causes through appropriate technical checks.</li>
+<li>Use recurring-event trends to improve preventive maintenance and reliability.</li>
+<li>Maintain an approved process for storing critical diagnostic evidence.</li>
+</ul>
+<p>Core principle: A diagnostic buffer tells you what the controller detected and recorded. Effective troubleshooting combines that record with system knowledge, physical evidence, and a controlled investigation to establish why the failure occurred.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\18_PM\01_PLC\03_Battery - Battery</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

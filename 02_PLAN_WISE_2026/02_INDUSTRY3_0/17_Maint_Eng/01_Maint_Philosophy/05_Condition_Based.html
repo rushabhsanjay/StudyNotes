@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Condition-Based Maintenance: Act When a Limit Is Reached</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Condition-Based Maintenance: Act When a Limit Is Reached</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-objectives-of-condition-based-maintenance">2. Objectives of Condition-Based Maintenance</a></li>
+<li><a href="#3-how-condition-based-maintenance-works">3. How Condition-Based Maintenance Works</a></li>
+<li><a href="#4-condition-based-maintenance-versus-other-strategies">4. Condition-Based Maintenance Versus Other Strategies</a></li>
+<li><a href="#5-condition-indicators-and-decision-criteria">5. Condition Indicators and Decision Criteria</a></li>
+<li><a href="#6-types-of-condition-assessment">6. Types of Condition Assessment</a><ul>
+<li><a href="#61-visual-inspection">6.1 Visual inspection</a></li>
+<li><a href="#62-manual-measurement">6.2 Manual measurement</a></li>
+<li><a href="#63-online-condition-monitoring">6.3 Online condition monitoring</a></li>
+<li><a href="#64-functional-and-performance-checks">6.4 Functional and performance checks</a></li>
+</ul>
+</li>
+<li><a href="#7-understanding-thresholds-and-condition-zones">7. Understanding Thresholds and Condition Zones</a><ul>
+<li><a href="#71-warning-limit">7.1 Warning limit</a></li>
+<li><a href="#72-action-limit">7.2 Action limit</a></li>
+<li><a href="#73-critical-limit">7.3 Critical limit</a></li>
+</ul>
+</li>
+<li><a href="#8-establishing-suitable-condition-limits">8. Establishing Suitable Condition Limits</a><ul>
+<li><a href="#81-absolute-limits-and-baseline-deviation">8.1 Absolute limits and baseline deviation</a></li>
+<li><a href="#82-account-for-operating-conditions">8.2 Account for operating conditions</a></li>
+<li><a href="#83-hysteresis">8.3 Hysteresis</a></li>
+<li><a href="#84-persistence-and-debounce">8.4 Persistence and debounce</a></li>
+</ul>
+</li>
+<li><a href="#9-condition-based-maintenance-of-electrical-panels">9. Condition-Based Maintenance of Electrical Panels</a><ul>
+<li><a href="#91-useful-indicators">9.1 Useful indicators</a></li>
+<li><a href="#92-typical-actions">9.2 Typical actions</a></li>
+</ul>
+</li>
+<li><a href="#10-condition-based-maintenance-of-motors-and-rotating-equipment">10. Condition-Based Maintenance of Motors and Rotating Equipment</a><ul>
+<li><a href="#101-motor-condition">10.1 Motor condition</a></li>
+<li><a href="#102-pump-condition">10.2 Pump condition</a></li>
+<li><a href="#103-bearing-condition">10.3 Bearing condition</a></li>
+</ul>
+</li>
+<li><a href="#11-condition-based-maintenance-of-vfds-and-servo-systems">11. Condition-Based Maintenance of VFDs and Servo Systems</a><ul>
+<li><a href="#111-vfd-indicators">11.1 VFD indicators</a></li>
+<li><a href="#112-servo-indicators">11.2 Servo indicators</a></li>
+<li><a href="#113-maintenance-cautions">11.3 Maintenance cautions</a></li>
+</ul>
+</li>
+<li><a href="#12-condition-based-maintenance-of-plc-hmi-scada-and-ot-networks">12. Condition-Based Maintenance of PLC, HMI, SCADA, and OT Networks</a><ul>
+<li><a href="#121-plc-and-remote-io">12.1 PLC and remote I/O</a></li>
+<li><a href="#122-hmi-and-industrial-pc">12.2 HMI and industrial PC</a></li>
+<li><a href="#123-industrial-network">12.3 Industrial network</a></li>
+<li><a href="#124-applying-condition-criteria">12.4 Applying condition criteria</a></li>
+</ul>
+</li>
+<li><a href="#13-condition-based-maintenance-of-sensors-and-instruments">13. Condition-Based Maintenance of Sensors and Instruments</a><ul>
+<li><a href="#131-useful-indicators">13.1 Useful indicators</a></li>
+<li><a href="#132-example-pressure-transmitter">13.2 Example: Pressure transmitter</a></li>
+<li><a href="#133-calibration-interval-adjustment">13.3 Calibration interval adjustment</a></li>
+</ul>
+</li>
+<li><a href="#14-condition-based-maintenance-of-pneumatic-and-hydraulic-systems">14. Condition-Based Maintenance of Pneumatic and Hydraulic Systems</a><ul>
+<li><a href="#141-pneumatic-systems">14.1 Pneumatic systems</a></li>
+<li><a href="#142-hydraulic-systems">14.2 Hydraulic systems</a></li>
+<li><a href="#143-example-hydraulic-filter">14.3 Example: Hydraulic filter</a></li>
+</ul>
+</li>
+<li><a href="#15-condition-based-maintenance-in-cnc-and-robotic-equipment">15. Condition-Based Maintenance in CNC and Robotic Equipment</a><ul>
+<li><a href="#151-cnc-machines">15.1 CNC machines</a></li>
+<li><a href="#152-industrial-robots">15.2 Industrial robots</a></li>
+<li><a href="#153-safety-requirements">15.3 Safety requirements</a></li>
+</ul>
+</li>
+<li><a href="#16-condition-based-maintenance-versus-predictive-maintenance">16. Condition-Based Maintenance Versus Predictive Maintenance</a></li>
+<li><a href="#17-inspection-frequency-and-monitoring-interval">17. Inspection Frequency and Monitoring Interval</a><ul>
+<li><a href="#171-practical-interval-selection">17.1 Practical interval selection</a></li>
+</ul>
+</li>
+<li><a href="#18-condition-based-maintenance-workflow-and-work-orders">18. Condition-Based Maintenance Workflow and Work Orders</a><ul>
+<li><a href="#181-recommended-workflow">18.1 Recommended workflow</a></li>
+<li><a href="#182-what-the-work-order-should-contain">18.2 What the work order should contain</a></li>
+<li><a href="#183-sap-pm-application">18.3 SAP PM application</a></li>
+</ul>
+</li>
+<li><a href="#19-condition-based-maintenance-kpis">19. Condition-Based Maintenance KPIs</a></li>
+<li><a href="#20-practical-industrial-example-motor-bearing-temperature">20. Practical Industrial Example: Motor Bearing Temperature</a><ul>
+<li><a href="#201-establish-the-condition-criterion">20.1 Establish the condition criterion</a></li>
+<li><a href="#202-investigate-the-abnormal-condition">20.2 Investigate the abnormal condition</a></li>
+<li><a href="#203-verify-effectiveness">20.3 Verify effectiveness</a></li>
+</ul>
+</li>
+<li><a href="#21-practical-example-filter-differential-pressure">21. Practical Example: Filter Differential Pressure</a></li>
+<li><a href="#22-common-mistakes-in-condition-based-maintenance">22. Common Mistakes in Condition-Based Maintenance</a></li>
+<li><a href="#23-standards-and-technical-guidance">23. Standards and Technical Guidance</a></li>
+<li><a href="#24-condition-based-maintenance-checklist">24. Condition-Based Maintenance Checklist</a><ul>
+<li><a href="#program-setup">Program setup</a></li>
+<li><a href="#inspection-and-evaluation">Inspection and evaluation</a></li>
+<li><a href="#execution-and-verification">Execution and verification</a></li>
+</ul>
+</li>
+<li><a href="#25-final-principles">25. Final Principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>Condition-based maintenance (CBM) is a maintenance strategy in which maintenance actions are initiated or scheduled according to the observed condition of equipment, rather than relying only on fixed calendar intervals or operating hours.</p>
+<p>The condition is assessed through inspections, measurements, diagnostics, or monitoring systems. When a measured parameter reaches an approved decision criterion, the responsible person evaluates the result and determines the required action.</p>
+<p>Examples include:</p>
+<ul>
+<li>Replacing a filter when its differential pressure reaches the specified limit.</li>
+<li>Lubricating or inspecting a bearing when a condition indicator reaches its intervention criterion.</li>
+<li>Investigating a motor when its vibration exceeds the approved threshold.</li>
+<li>Cleaning an electrical cooling filter when airflow or differential pressure indicates restriction.</li>
+<li>Replacing a worn belt when inspection shows that it has reached its wear limit.</li>
+<li>Servicing a hydraulic system when oil contamination exceeds its permitted level.</li>
+<li>Calibrating an instrument when its measured error exceeds the accepted tolerance.</li>
+<li>Investigating a pump when flow or pressure falls outside its required operating range.</li>
+</ul>
+<p>The defining feature is that the observed condition determines the maintenance decision.</p>
+<p>Condition-based maintenance does not necessarily predict the exact date of failure. It identifies the current condition and uses established criteria to determine whether maintenance or further investigation is required.</p>
+<h2 id="2-objectives-of-condition-based-maintenance">2. Objectives of Condition-Based Maintenance</h2>
+<p>The main objectives are:</p>
+<ul>
+<li>Perform maintenance when equipment condition justifies intervention.</li>
+<li>Avoid replacing components that remain serviceable solely because a calendar interval has elapsed.</li>
+<li>Detect deterioration before it becomes a functional failure.</li>
+<li>Reduce unnecessary maintenance and component handling.</li>
+<li>Improve equipment availability and reliability.</li>
+<li>Prioritize work according to condition severity and risk.</li>
+<li>Improve spare-parts planning by identifying emerging maintenance requirements.</li>
+<li>Support maintenance decisions with recorded evidence.</li>
+<li>Reduce secondary damage caused by continued operation with a deteriorating component.</li>
+<li>Maintain required safety, quality, and process performance.</li>
+</ul>
+<p>Condition-based maintenance does not mean waiting until a component fails or until a condition becomes dangerously abnormal. The intervention criterion should provide an appropriate margin for assessment, planning, and repair.</p>
+<h2 id="3-how-condition-based-maintenance-works">3. How Condition-Based Maintenance Works</h2>
+<p>A typical CBM process follows this sequence:</p>
+<pre><code>Equipment Operates
+        ↓
+Condition Is Inspected or Measured
+        ↓
+Measurement Quality Is Verified
+        ↓
+Measured Condition Is Compared With Criteria
+        ↓
+Condition Is Classified
+        ↓
+Required Action Is Selected
+        ↓
+Maintenance Is Planned and Executed
+        ↓
+Condition Is Rechecked
+        ↓
+Results Are Recorded
+</code></pre>
+<p>The sequence contains several important controls.</p>
+<ol>
+<li>Measurement: Obtain the relevant condition information using an approved inspection or measurement method.</li>
+<li>Validation: Confirm that the measurement is credible and was taken under suitable conditions.</li>
+<li>Evaluation: Compare the result with the applicable acceptance or intervention criterion.</li>
+<li>Decision: Determine whether to continue monitoring, inspect further, schedule maintenance, or take urgent action.</li>
+<li>Execution: Carry out the authorized work using the correct procedure.</li>
+<li>Verification: Confirm that the condition has returned to an acceptable state or that the intended maintenance result has been achieved.</li>
+<li>Documentation: Record the findings, action, parts used, and post-maintenance result.</li>
+</ol>
+<p>A threshold crossing is evidence requiring an appropriate response. It is not automatically proof of a particular root cause.</p>
+<h2 id="4-condition-based-maintenance-versus-other-strategies">4. Condition-Based Maintenance Versus Other Strategies</h2>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Basis for maintenance</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Breakdown maintenance</td>
+<td>Equipment has failed</td>
+<td>Replace a motor that no longer runs</td>
+</tr>
+<tr>
+<td>Corrective maintenance</td>
+<td>A defect or deficiency has been identified</td>
+<td>Repair a leaking valve</td>
+</tr>
+<tr>
+<td>Preventive maintenance</td>
+<td>A predetermined time or usage interval</td>
+<td>Replace a component after a specified number of operating hours</td>
+</tr>
+<tr>
+<td>Condition-based maintenance</td>
+<td>Actual condition reaches a defined criterion</td>
+<td>Replace a filter after differential pressure exceeds its intervention limit</td>
+</tr>
+<tr>
+<td>Predictive maintenance</td>
+<td>Condition data and analysis indicate developing degradation or likely future failure</td>
+<td>Analyze a bearing trend to estimate when intervention may be needed</td>
+</tr>
+<tr>
+<td>Planned maintenance</td>
+<td>Work is organized in advance with an agreed scope, resources, and timing</td>
+<td>Schedule an approved pump repair during a shutdown</td>
+</tr>
+<tr>
+<td>Proactive maintenance</td>
+<td>Root causes or weaknesses are removed to prevent recurrence</td>
+<td>Redesign a recurring cable-routing problem</td>
+</tr>
+</tbody>
+</table>
+<p>These categories are not mutually exclusive.</p>
+<p>For example, a condition-based inspection may identify an abnormal bearing. The work may then be planned for the next suitable shutdown. The maintenance is condition-based because the condition triggered the need, and planned because the work was organized in advance.</p>
+<h2 id="5-condition-indicators-and-decision-criteria">5. Condition Indicators and Decision Criteria</h2>
+<p>A condition indicator is a measured or observed parameter that provides information about equipment health or performance.</p>
+<p>A decision criterion is the rule used to interpret that indicator and determine the required response.</p>
+<table>
+<thead>
+<tr>
+<th>Condition indicator</th>
+<th>Possible criterion</th>
+<th>Potential action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Vibration</td>
+<td>Approved warning or intervention limit exceeded</td>
+<td>Verify measurement and investigate machinery</td>
+</tr>
+<tr>
+<td>Bearing temperature</td>
+<td>Temperature or temperature trend exceeds approved criteria</td>
+<td>Check load, lubrication, cooling, and bearing condition</td>
+</tr>
+<tr>
+<td>Filter differential pressure</td>
+<td>Pressure drop exceeds specified limit</td>
+<td>Inspect or replace filter according to procedure</td>
+</tr>
+<tr>
+<td>Hydraulic oil contamination</td>
+<td>Contamination exceeds the equipment's permitted limit</td>
+<td>Investigate contamination source and condition the oil or system</td>
+</tr>
+<tr>
+<td>Motor current</td>
+<td>Current or imbalance falls outside expected operating limits</td>
+<td>Check load, supply, motor, and drive diagnostics</td>
+</tr>
+<tr>
+<td>Instrument error</td>
+<td>Error exceeds permitted tolerance</td>
+<td>Adjust, repair, or replace the instrument as appropriate</td>
+</tr>
+<tr>
+<td>Belt condition</td>
+<td>Wear, cracking, or tension exceeds acceptance criteria</td>
+<td>Adjust or replace the belt</td>
+</tr>
+<tr>
+<td>Compressed-air leakage</td>
+<td>Leakage exceeds the site's action criterion</td>
+<td>Locate and repair the leak</td>
+</tr>
+<tr>
+<td>Battery condition</td>
+<td>Capacity or internal resistance fails the applicable criterion</td>
+<td>Investigate or replace the battery</td>
+</tr>
+<tr>
+<td>CNC spindle condition</td>
+<td>Relevant vibration, temperature, or diagnostic criterion is exceeded</td>
+<td>Assess spindle and operating conditions</td>
+</tr>
+</tbody>
+</table>
+<p>The criteria must be appropriate to the equipment, application, measurement method, and manufacturer's instructions. A limit used for one motor, bearing, or filter cannot automatically be applied to another.</p>
+<h2 id="6-types-of-condition-assessment">6. Types of Condition Assessment</h2>
+<p>Condition-based maintenance can use simple inspections, manual measurements, or continuous monitoring.</p>
+<h3 id="61-visual-inspection">6.1 Visual inspection</h3>
+<p>Visual inspection identifies observable defects such as:</p>
+<ul>
+<li>Cracked insulation.</li>
+<li>Oil leakage.</li>
+<li>Corrosion.</li>
+<li>Loose or damaged guards.</li>
+<li>Discolored electrical components.</li>
+<li>Broken cable supports.</li>
+<li>Damaged hoses.</li>
+<li>Abnormal wear.</li>
+<li>Blocked ventilation openings.</li>
+</ul>
+<p>Visual findings should be assessed using documented acceptance criteria where practical. An observation such as "looks bad" is less useful than a description of the defect, its location, extent, and required action.</p>
+<h3 id="62-manual-measurement">6.2 Manual measurement</h3>
+<p>A technician may periodically measure:</p>
+<ul>
+<li>Temperature.</li>
+<li>Vibration.</li>
+<li>Pressure.</li>
+<li>Flow.</li>
+<li>Belt tension.</li>
+<li>Electrical parameters.</li>
+<li>Insulation-related quantities using approved test methods.</li>
+<li>Instrument accuracy.</li>
+<li>Oil contamination.</li>
+</ul>
+<p>The result is compared with the relevant criterion and previous readings.</p>
+<h3 id="63-online-condition-monitoring">6.3 Online condition monitoring</h3>
+<p>Sensors or connected devices continuously or periodically measure selected parameters.</p>
+<p>Examples include:</p>
+<ul>
+<li>Vibration sensors on critical rotating equipment.</li>
+<li>Temperature sensors on motors or bearings.</li>
+<li>Differential-pressure transmitters across filters.</li>
+<li>Oil-condition monitoring systems.</li>
+<li>Drive diagnostic data.</li>
+<li>PLC measurements recorded in SCADA or a historian.</li>
+</ul>
+<p>Online monitoring can detect changes between manual inspections, but it introduces sensor, data-quality, communication, and configuration requirements.</p>
+<h3 id="64-functional-and-performance-checks">6.4 Functional and performance checks</h3>
+<p>Some condition assessments evaluate whether equipment still performs its required function.</p>
+<p>Examples include:</p>
+<ul>
+<li>Checking whether a pump achieves the required flow and pressure.</li>
+<li>Verifying that a pneumatic cylinder reaches its expected position within the allowed time.</li>
+<li>Checking CNC axis positioning performance.</li>
+<li>Confirming that a cooling system maintains the required temperature.</li>
+<li>Testing an instrument against a traceable reference.</li>
+</ul>
+<p>Functional checks are particularly useful when a component's condition cannot be assessed reliably from a single physical measurement.</p>
+<h2 id="7-understanding-thresholds-and-condition-zones">7. Understanding Thresholds and Condition Zones</h2>
+<p>A condition-based maintenance program often classifies condition into several zones. The number of zones and their limits depend on the asset and risk.</p>
+<table>
+<thead>
+<tr>
+<th>Zone</th>
+<th>Meaning</th>
+<th>Typical response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Normal</td>
+<td>Condition is within the accepted operating range</td>
+<td>Continue operation and routine monitoring</td>
+</tr>
+<tr>
+<td>Warning</td>
+<td>Condition is approaching an intervention criterion or showing a meaningful deviation</td>
+<td>Verify the reading, investigate, and increase monitoring if appropriate</td>
+</tr>
+<tr>
+<td>Action</td>
+<td>A defined maintenance criterion has been reached</td>
+<td>Plan or perform the specified maintenance action</td>
+</tr>
+<tr>
+<td>Critical</td>
+<td>Condition presents an unacceptable risk or violates a required limit</td>
+<td>Follow the approved urgent response, including stopping equipment where required</td>
+</tr>
+</tbody>
+</table>
+<p>These zones are an example of a decision framework, not a universal industrial standard.</p>
+<h3 id="71-warning-limit">7.1 Warning limit</h3>
+<p>A warning limit indicates that the condition needs attention before it reaches the action criterion.</p>
+<p>For example, a warning may be generated when a temperature begins rising unusually quickly, even though the absolute temperature remains within the equipment's permitted range.</p>
+<p>A warning should define what the recipient is expected to do, such as verify the measurement, check operating conditions, or inspect a related component.</p>
+<h3 id="72-action-limit">7.2 Action limit</h3>
+<p>An action limit defines the condition at which a specified intervention or decision is required.</p>
+<p>The intervention might be:</p>
+<ul>
+<li>Cleaning a filter.</li>
+<li>Inspecting a bearing.</li>
+<li>Correcting a belt tension problem.</li>
+<li>Taking a confirmatory measurement.</li>
+<li>Scheduling a repair.</li>
+<li>Reducing load under an approved procedure.</li>
+<li>Stopping the equipment when continued operation is unacceptable.</li>
+</ul>
+<p>An action limit must have an associated response. A threshold that generates an alert but has no owner or defined action is an incomplete maintenance control.</p>
+<h3 id="73-critical-limit">7.3 Critical limit</h3>
+<p>A critical limit may be associated with equipment protection, process safety, quality, or a manufacturer's maximum permitted operating condition.</p>
+<p>If the criterion indicates an immediate hazard or a condition outside the approved operating envelope, the response must follow the applicable safety and operating procedure. A maintenance dashboard must never be treated as a substitute for a required protective function.</p>
+<h2 id="8-establishing-suitable-condition-limits">8. Establishing Suitable Condition Limits</h2>
+<p>Condition limits should be technically justified rather than selected merely because a value looks convenient.</p>
+<p>Useful sources include:</p>
+<ul>
+<li>Manufacturer documentation.</li>
+<li>Applicable standards and technical guidance.</li>
+<li>Engineering calculations.</li>
+<li>Equipment design limits.</li>
+<li>Historical measurements from healthy equipment.</li>
+<li>Inspection and failure history.</li>
+<li>Process and product-quality requirements.</li>
+<li>Site risk assessments.</li>
+<li>Validated monitoring methods.</li>
+</ul>
+<h3 id="81-absolute-limits-and-baseline-deviation">8.1 Absolute limits and baseline deviation</h3>
+<p>An absolute limit compares a measurement with a specified permitted value.</p>
+<p>A baseline-deviation limit compares the current measurement with expected behavior for that particular asset and operating state.</p>
+<p>Both can be useful.</p>
+<p>For example, a motor may remain below an absolute temperature limit while its temperature rises abnormally relative to its established baseline. The deviation may justify investigation before the absolute limit is reached.</p>
+<p>Conversely, a stable measurement is not necessarily acceptable if it is already outside the required operating range.</p>
+<h3 id="82-account-for-operating-conditions">8.2 Account for operating conditions</h3>
+<p>Condition measurements can change normally with:</p>
+<ul>
+<li>Load.</li>
+<li>Speed.</li>
+<li>Ambient temperature.</li>
+<li>Production recipe.</li>
+<li>Duty cycle.</li>
+<li>Cooling airflow.</li>
+<li>Lubricant temperature.</li>
+<li>Material being processed.</li>
+<li>Startup and shutdown conditions.</li>
+</ul>
+<p>A meaningful criterion must account for these effects when they materially influence the measurement.</p>
+<p>For instance, a motor operating at a higher load may draw more current than it does at low load. Comparing the two readings without context may lead to an incorrect diagnosis.</p>
+<h3 id="83-hysteresis">8.3 Hysteresis</h3>
+<p>Hysteresis uses different thresholds for entering and leaving a condition state. It helps prevent repeated switching when a measurement fluctuates around a single threshold.</p>
+<p>Example:</p>
+<ul>
+<li>Enter warning state when temperature rises above <span class="math-inline">\(80^\circ\text{C}\)</span>.</li>
+<li>Clear the warning only after temperature falls below <span class="math-inline">\(75^\circ\text{C}\)</span>, subject to the approved logic and equipment requirements.</li>
+</ul>
+<p>The values are illustrative only. They are not general limits for industrial motors.</p>
+<p>Hysteresis is useful for alert stability, but it must not delay a required protective action.</p>
+<h3 id="84-persistence-and-debounce">8.4 Persistence and debounce</h3>
+<p>A condition may need to remain abnormal for a defined period before a maintenance alert is generated. This can reduce false alarms caused by brief transients.</p>
+<p>However, persistence filtering must be designed carefully. A rapidly developing hazardous condition may require immediate action rather than waiting for a timer.</p>
+<p>The monitoring rule should distinguish routine condition alerts from protective trips and safety-related responses.</p>
+<h2 id="9-condition-based-maintenance-of-electrical-panels">9. Condition-Based Maintenance of Electrical Panels</h2>
+<p>Electrical panels are suitable for several forms of condition assessment, provided the methods are safe and appropriate.</p>
+<h3 id="91-useful-indicators">9.1 Useful indicators</h3>
+<ul>
+<li>Abnormal thermal patterns.</li>
+<li>Discoloration or signs of overheating.</li>
+<li>Damaged insulation.</li>
+<li>Corrosion or moisture ingress.</li>
+<li>Cooling-fan condition.</li>
+<li>Filter blockage.</li>
+<li>Abnormal supply voltage.</li>
+<li>Repeated protective-device trips.</li>
+<li>Loose or damaged external cable supports.</li>
+<li>Unusual electrical noise or odor, assessed under the site's safety procedure.</li>
+</ul>
+<h3 id="92-typical-actions">9.2 Typical actions</h3>
+<ul>
+<li>Investigate a thermal anomaly using an approved inspection procedure.</li>
+<li>Replace a blocked filter.</li>
+<li>Repair damaged cooling equipment.</li>
+<li>Investigate repeated trips using fault history and approved testing.</li>
+<li>Correct moisture ingress.</li>
+<li>Replace damaged components after appropriate isolation and verification.</li>
+</ul>
+<p>Electrical connections should not be tightened indiscriminately as a condition-based maintenance action. The required isolation, torque specification, inspection method, and re-energization procedure must be followed.</p>
+<p>Condition assessment does not authorize unsafe work on energized equipment.</p>
+<h2 id="10-condition-based-maintenance-of-motors-and-rotating-equipment">10. Condition-Based Maintenance of Motors and Rotating Equipment</h2>
+<p>Motors, pumps, fans, gearboxes, and similar assets can be assessed using combinations of vibration, temperature, current, lubrication, noise, and performance measurements.</p>
+<h3 id="101-motor-condition">10.1 Motor condition</h3>
+<p>Potential indicators include:</p>
+<ul>
+<li>Bearing temperature.</li>
+<li>Vibration.</li>
+<li>Current imbalance.</li>
+<li>Abnormal starting behavior.</li>
+<li>Cooling-system condition.</li>
+<li>Repeated drive faults.</li>
+<li>Changes in operating noise.</li>
+</ul>
+<p>A high motor current may be caused by increased mechanical load, supply problems, motor faults, or drive-related issues. The measurement identifies a condition to investigate, not necessarily the root cause.</p>
+<h3 id="102-pump-condition">10.2 Pump condition</h3>
+<p>Potential indicators include:</p>
+<ul>
+<li>Flow.</li>
+<li>Discharge pressure.</li>
+<li>Suction pressure.</li>
+<li>Bearing vibration.</li>
+<li>Bearing temperature.</li>
+<li>Motor current.</li>
+<li>Leakage.</li>
+<li>Noise.</li>
+<li>Energy consumption for comparable operating conditions.</li>
+</ul>
+<p>For example, reduced flow combined with abnormal vibration may justify an investigation into suction conditions, impeller condition, cavitation, or another fault. The diagnosis should be based on the actual pump design and operating data.</p>
+<h3 id="103-bearing-condition">10.3 Bearing condition</h3>
+<p>Bearing assessments may include:</p>
+<ul>
+<li>Vibration measurements.</li>
+<li>Temperature trends.</li>
+<li>Lubrication condition.</li>
+<li>Audible or ultrasonic indications.</li>
+<li>Inspection findings.</li>
+<li>Operating history.</li>
+</ul>
+<p>A bearing should not be replaced solely because one unexplained measurement is slightly different from a previous reading. Measurement validity, trend, severity, and the applicable criterion must be considered.</p>
+<h2 id="11-condition-based-maintenance-of-vfds-and-servo-systems">11. Condition-Based Maintenance of VFDs and Servo Systems</h2>
+<p>VFDs and servo drives provide useful diagnostic information, but the meaning of each value depends on the drive model and application.</p>
+<h3 id="111-vfd-indicators">11.1 VFD indicators</h3>
+<ul>
+<li>Heatsink temperature.</li>
+<li>Cooling-fan status, where available.</li>
+<li>Repeated overtemperature warnings.</li>
+<li>Output-current trend.</li>
+<li>Repeated overload events.</li>
+<li>Fault history.</li>
+<li>Abnormal DC-bus diagnostic values.</li>
+<li>Environmental and cabinet cooling conditions.</li>
+</ul>
+<p>A recurring drive overtemperature warning may require checking ambient temperature, airflow, fan condition, filter blockage, load, and installation conditions.</p>
+<h3 id="112-servo-indicators">11.2 Servo indicators</h3>
+<ul>
+<li>Following error.</li>
+<li>Torque demand.</li>
+<li>Motor current.</li>
+<li>Feedback faults.</li>
+<li>Overload events.</li>
+<li>Positioning deviations.</li>
+<li>Repeated drive alarms.</li>
+<li>Changes in movement time or settling behavior.</li>
+</ul>
+<p>A rising torque demand may indicate increased mechanical resistance, but the cause may also be a changed process load, an incorrect parameter, or another operating change.</p>
+<h3 id="113-maintenance-cautions">11.3 Maintenance cautions</h3>
+<ul>
+<li>Confirm the exact drive and motor model.</li>
+<li>Use manufacturer-specific diagnostic definitions.</li>
+<li>Preserve the approved parameter backup before authorized configuration changes.</li>
+<li>Do not change tuning parameters merely to suppress a symptom.</li>
+<li>Use approved isolation and discharge procedures before electrical work.</li>
+<li>Verify operation after maintenance without bypassing safety functions.</li>
+</ul>
+<h2 id="12-condition-based-maintenance-of-plc-hmi-scada-and-ot-networks">12. Condition-Based Maintenance of PLC, HMI, SCADA, and OT Networks</h2>
+<p>Automation equipment can be assessed through diagnostic events, operating statistics, environmental measurements, and system performance.</p>
+<h3 id="121-plc-and-remote-io">12.1 PLC and remote I/O</h3>
+<p>Monitor:</p>
+<ul>
+<li>Repeated module faults.</li>
+<li>Communication errors.</li>
+<li>Power-supply diagnostics.</li>
+<li>Abnormal cabinet temperature.</li>
+<li>Controller restart history.</li>
+<li>Unstable input readings.</li>
+<li>Repeated loss of remote I/O.</li>
+<li>Device disconnections.</li>
+</ul>
+<h3 id="122-hmi-and-industrial-pc">12.2 HMI and industrial PC</h3>
+<p>Monitor:</p>
+<ul>
+<li>Repeated application crashes.</li>
+<li>Storage capacity.</li>
+<li>Disk-health warnings.</li>
+<li>CPU and memory utilization.</li>
+<li>Service restart history.</li>
+<li>Communication timeouts.</li>
+<li>Database latency.</li>
+<li>Backup status and recovery readiness.</li>
+</ul>
+<h3 id="123-industrial-network">12.3 Industrial network</h3>
+<p>Monitor:</p>
+<ul>
+<li>Link flapping.</li>
+<li>Port errors.</li>
+<li>Packet loss.</li>
+<li>Communication retries.</li>
+<li>Latency changes.</li>
+<li>Repeated device reconnects.</li>
+<li>Switch diagnostic events.</li>
+<li>Unexpected changes in network traffic.</li>
+</ul>
+<p>A communication error does not automatically prove that a cable is defective. Possible causes include configuration errors, power interruptions, overloaded devices, duplicate addresses, electromagnetic interference, switch problems, or application-level issues.</p>
+<h3 id="124-applying-condition-criteria">12.4 Applying condition criteria</h3>
+<p>For example, a remote I/O adapter may produce repeated communication faults. A condition-based response could require:</p>
+<ol>
+<li>Confirming that the faults are genuine and not caused by stale diagnostic data.</li>
+<li>Reviewing timestamps and event frequency.</li>
+<li>Checking device power and network status.</li>
+<li>Inspecting approved diagnostics and relevant physical connections.</li>
+<li>Determining whether the problem is recurring and operationally significant.</li>
+<li>Planning corrective work based on risk.</li>
+<li>Verifying stable communications after the intervention.</li>
+</ol>
+<p>The fault history should be preserved before clearing diagnostics when it is needed for analysis.</p>
+<h2 id="13-condition-based-maintenance-of-sensors-and-instruments">13. Condition-Based Maintenance of Sensors and Instruments</h2>
+<p>Instruments may continue producing values while their accuracy deteriorates. A plausible-looking value is not proof that the instrument remains accurate.</p>
+<h3 id="131-useful-indicators">13.1 Useful indicators</h3>
+<ul>
+<li>Calibration error.</li>
+<li>Drift relative to a reference.</li>
+<li>Unstable output.</li>
+<li>Signal saturation.</li>
+<li>Repeated out-of-range alarms.</li>
+<li>Noise or intermittent signal loss.</li>
+<li>Process readings inconsistent with independent measurements.</li>
+<li>Physical damage or contamination.</li>
+</ul>
+<h3 id="132-example-pressure-transmitter">13.2 Example: Pressure transmitter</h3>
+<p>Suppose a pressure transmitter is compared with an approved reference instrument during a verification activity. If the measured error exceeds the permitted tolerance, the instrument requires an appropriate response.</p>
+<p>Possible actions include:</p>
+<ul>
+<li>Confirming the test setup and reference instrument.</li>
+<li>Checking the measurement range and configuration.</li>
+<li>Adjusting the instrument if permitted.</li>
+<li>Repairing or replacing the instrument.</li>
+<li>Reviewing affected process measurements if the error could have influenced production or safety decisions.</li>
+<li>Recording as-found and as-left results.</li>
+</ul>
+<p>An adjustment should not erase the as-found evidence. That information helps determine whether earlier measurements may have been unreliable.</p>
+<h3 id="133-calibration-interval-adjustment">13.3 Calibration interval adjustment</h3>
+<p>Condition and calibration history may support an engineering review of calibration intervals where the applicable quality system and regulations permit it.</p>
+<p>However, a condition-based approach must not override mandatory calibration requirements or required verification intervals.</p>
+<h2 id="14-condition-based-maintenance-of-pneumatic-and-hydraulic-systems">14. Condition-Based Maintenance of Pneumatic and Hydraulic Systems</h2>
+<p>Fluid-power systems often provide visible and measurable signs of deterioration.</p>
+<h3 id="141-pneumatic-systems">14.1 Pneumatic systems</h3>
+<p>Potential indicators include:</p>
+<ul>
+<li>Air leakage.</li>
+<li>Pressure drop.</li>
+<li>Slow cylinder movement.</li>
+<li>Inconsistent actuator position.</li>
+<li>Excessive air consumption.</li>
+<li>Filter condition.</li>
+<li>Regulator instability.</li>
+<li>Valve faults.</li>
+</ul>
+<p>Possible actions include leak repair, filter servicing, regulator investigation, or valve replacement after confirming the cause.</p>
+<h3 id="142-hydraulic-systems">14.2 Hydraulic systems</h3>
+<p>Potential indicators include:</p>
+<ul>
+<li>Oil contamination.</li>
+<li>Oil temperature.</li>
+<li>Filter differential pressure.</li>
+<li>Pressure instability.</li>
+<li>Abnormal pump noise.</li>
+<li>Leakage.</li>
+<li>Slow actuator movement.</li>
+<li>Abnormal cycle time.</li>
+<li>Changes in pump or motor load.</li>
+</ul>
+<p>A high filter differential pressure may indicate restriction, but the measurement must be interpreted using the filter specification and system operating conditions. A failed sensor or incorrect installation can also produce misleading readings.</p>
+<h3 id="143-example-hydraulic-filter">14.3 Example: Hydraulic filter</h3>
+<ol>
+<li>Measure differential pressure across the filter.</li>
+<li>Verify that the transmitter and pressure connections are functioning correctly.</li>
+<li>Compare the reading with the specified warning and replacement criteria.</li>
+<li>Check whether the system is operating in a representative state.</li>
+<li>Replace or service the filter when the approved criterion requires it.</li>
+<li>Investigate the source of abnormal contamination if relevant.</li>
+<li>Verify that differential pressure returns to an acceptable range.</li>
+</ol>
+<p>Replacing filters repeatedly without investigating abnormal contamination may treat the symptom while allowing the underlying problem to continue.</p>
+<h2 id="15-condition-based-maintenance-in-cnc-and-robotic-equipment">15. Condition-Based Maintenance in CNC and Robotic Equipment</h2>
+<h3 id="151-cnc-machines">15.1 CNC machines</h3>
+<p>Potential indicators include:</p>
+<ul>
+<li>Spindle vibration.</li>
+<li>Spindle temperature.</li>
+<li>Abnormal spindle load.</li>
+<li>Axis following error.</li>
+<li>Lubrication alarms.</li>
+<li>Hydraulic or pneumatic pressure.</li>
+<li>Tool-changer cycle time.</li>
+<li>Repeated servo alarms.</li>
+<li>Positioning performance.</li>
+</ul>
+<p>The assessment must account for the machine model, operating sequence, tooling, workpiece, cutting parameters, and manufacturer's diagnostic guidance.</p>
+<h3 id="152-industrial-robots">15.2 Industrial robots</h3>
+<p>Potential indicators include:</p>
+<ul>
+<li>Servo overload events.</li>
+<li>Abnormal motor temperature.</li>
+<li>Repeated axis alarms.</li>
+<li>Increased torque demand.</li>
+<li>Positioning deviations.</li>
+<li>Lubrication-related findings.</li>
+<li>Changes in cycle time under comparable conditions.</li>
+</ul>
+<p>The robot's payload, speed, path, posture, and duty cycle can affect measured behavior. A condition comparison is meaningful only when relevant operating context is considered.</p>
+<h3 id="153-safety-requirements">15.3 Safety requirements</h3>
+<p>Maintenance and condition checks must follow the machine's approved isolation, access, and safeguarding procedures.</p>
+<p>A maintenance alert does not authorize entry into a hazardous robot workspace or intervention inside a CNC machine while dangerous motion remains possible.</p>
+<h2 id="16-condition-based-maintenance-versus-predictive-maintenance">16. Condition-Based Maintenance Versus Predictive Maintenance</h2>
+<p>These approaches overlap, but their primary decision logic differs.</p>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Condition-based maintenance</th>
+<th>Predictive maintenance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Primary basis</td>
+<td>Current measured or observed condition</td>
+<td>Condition trends, patterns, and analytical evidence</td>
+</tr>
+<tr>
+<td>Typical trigger</td>
+<td>Defined criterion is reached</td>
+<td>Evidence indicates developing degradation or likely future failure</td>
+</tr>
+<tr>
+<td>Analysis complexity</td>
+<td>Can be simple or sophisticated</td>
+<td>Often includes trend analysis, diagnosis, or prognosis</td>
+</tr>
+<tr>
+<td>Example</td>
+<td>Replace a filter at its specified differential-pressure limit</td>
+<td>Estimate filter restriction progression from differential-pressure and operating trends</td>
+</tr>
+<tr>
+<td>Failure-date estimate</td>
+<td>Not normally required</td>
+<td>May be estimated when sufficient evidence and a suitable model exist</td>
+</tr>
+<tr>
+<td>Maintenance action</td>
+<td>Triggered by condition and risk</td>
+<td>Planned using condition, likely progression, and uncertainty</td>
+</tr>
+</tbody>
+</table>
+<p>A CBM program can use predictive analysis to improve its decisions. The distinction is the role of the evidence in determining the maintenance response, not whether a computer or sensor is present.</p>
+<h2 id="17-inspection-frequency-and-monitoring-interval">17. Inspection Frequency and Monitoring Interval</h2>
+<p>Condition-based maintenance requires a suitable measurement frequency.</p>
+<p>The interval depends on:</p>
+<ul>
+<li>How quickly the condition can deteriorate.</li>
+<li>The consequences of missing a developing problem.</li>
+<li>The sensitivity and reliability of the measurement method.</li>
+<li>The time needed to respond to a warning.</li>
+<li>The stability of the operating conditions.</li>
+<li>Applicable inspection requirements.</li>
+<li>The cost and practicality of measurement.</li>
+</ul>
+<p>A slowly changing condition may be assessed through periodic manual inspection. A rapidly developing fault on a critical asset may require continuous monitoring or much more frequent checks.</p>
+<p>The inspection interval must be short enough to provide a reasonable opportunity for action. It should not be selected merely because a weekly or monthly schedule is convenient.</p>
+<h3 id="171-practical-interval-selection">17.1 Practical interval selection</h3>
+<p>A sensible approach is to:</p>
+<ol>
+<li>Identify the failure mode and its likely progression.</li>
+<li>Determine how early the selected method can detect the condition.</li>
+<li>Assess the consequence of delayed detection.</li>
+<li>Estimate the time required to verify and act on a finding.</li>
+<li>Select an interval that provides adequate intervention opportunity.</li>
+<li>Review the interval using actual inspection results and failure history.</li>
+</ol>
+<p>Where the failure progression is uncertain, use a conservative, risk-based approach rather than assuming that the condition will deteriorate slowly.</p>
+<h2 id="18-condition-based-maintenance-workflow-and-work-orders">18. Condition-Based Maintenance Workflow and Work Orders</h2>
+<p>Condition assessment must connect to an accountable maintenance process.</p>
+<h3 id="181-recommended-workflow">18.1 Recommended workflow</h3>
+<pre><code>Inspection or Measurement
+        ↓
+Record the Result and Operating Context
+        ↓
+Validate Measurement Quality
+        ↓
+Compare With Approved Criteria
+        ↓
+Classify Severity and Risk
+        ↓
+Assign an Owner and Required Response
+        ↓
+Create or Update Maintenance Notification
+        ↓
+Plan and Execute Work
+        ↓
+Verify the Result
+        ↓
+Close the Work With Evidence
+</code></pre>
+<h3 id="182-what-the-work-order-should-contain">18.2 What the work order should contain</h3>
+<ul>
+<li>Asset number and equipment location.</li>
+<li>Date and time of the finding.</li>
+<li>Measurement or observation.</li>
+<li>Engineering unit and measurement method.</li>
+<li>Applicable criterion.</li>
+<li>Operating condition at the time of measurement.</li>
+<li>Description of the abnormality.</li>
+<li>Risk and priority.</li>
+<li>Required inspection or corrective action.</li>
+<li>Required tools, parts, and permits.</li>
+<li>Responsible person or team.</li>
+<li>Findings after intervention.</li>
+<li>Post-maintenance verification result.</li>
+</ul>
+<p>A vague work order such as "check motor" provides little guidance. A useful work order identifies the symptom, location, evidence, criterion, and required assessment.</p>
+<h3 id="183-sap-pm-application">18.3 SAP PM application</h3>
+<p>In SAP Plant Maintenance, the exact transaction and workflow depend on the site's SAP configuration.</p>
+<p>A typical process may involve:</p>
+<ul>
+<li>Recording an inspection result or notification.</li>
+<li>Identifying the functional location or equipment.</li>
+<li>Assigning a priority and planning group.</li>
+<li>Creating a maintenance order when work is required.</li>
+<li>Planning components, labor, and operations.</li>
+<li>Scheduling execution.</li>
+<li>Recording findings, actual work, and component usage.</li>
+<li>Completing technical confirmation and closure according to local procedures.</li>
+</ul>
+<p>Condition-based findings should be linked to the asset's history so that repeated deviations can be recognized.</p>
+<h2 id="19-condition-based-maintenance-kpis">19. Condition-Based Maintenance KPIs</h2>
+<p>Useful performance indicators include:</p>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Condition inspection compliance</td>
+<td>Measures whether required assessments were completed</td>
+</tr>
+<tr>
+<td>Action-limit exceedances</td>
+<td>Tracks how often measured conditions cross intervention criteria</td>
+</tr>
+<tr>
+<td>Response time</td>
+<td>Measures time from condition identification to assessment or action</td>
+</tr>
+<tr>
+<td>Overdue condition actions</td>
+<td>Identifies unresolved maintenance findings</td>
+</tr>
+<tr>
+<td>Repeat abnormal findings</td>
+<td>Helps identify recurring defects or ineffective interventions</td>
+</tr>
+<tr>
+<td>Unplanned downtime</td>
+<td>Tracks disruption associated with equipment failure</td>
+</tr>
+<tr>
+<td>Condition-related work orders</td>
+<td>Measures maintenance demand triggered by observed condition</td>
+</tr>
+<tr>
+<td>False alarm rate</td>
+<td>Tracks alerts that do not correspond to the intended abnormal condition</td>
+</tr>
+<tr>
+<td>Post-maintenance verification rate</td>
+<td>Measures whether the repaired condition was rechecked</td>
+</tr>
+<tr>
+<td>Maintenance cost</td>
+<td>Tracks the cost of inspections, repairs, and monitoring</td>
+</tr>
+<tr>
+<td>MTBF</td>
+<td>Measures average operating time between defined failures</td>
+</tr>
+<tr>
+<td>MTTR</td>
+<td>Measures average time to restore equipment under the site's definition</td>
+</tr>
+</tbody>
+</table>
+<p>No single KPI demonstrates success by itself. For example, a reduction in condition-related work orders might indicate improved equipment health, but it could also indicate missed inspections or under-reporting.</p>
+<p>KPIs should be interpreted alongside reliability, quality, safety, and maintenance execution evidence.</p>
+<h2 id="20-practical-industrial-example-motor-bearing-temperature">20. Practical Industrial Example: Motor Bearing Temperature</h2>
+<p>Consider a motor that drives a critical production conveyor. The maintenance team monitors bearing temperature during operation.</p>
+<h3 id="201-establish-the-condition-criterion">20.1 Establish the condition criterion</h3>
+<p>The team documents:</p>
+<ul>
+<li>The motor and bearing identification.</li>
+<li>The sensor location and measurement method.</li>
+<li>Normal temperature behavior at representative loads.</li>
+<li>The manufacturer's applicable limits.</li>
+<li>The site's approved warning and action criteria.</li>
+<li>The required response to each condition level.</li>
+</ul>
+<p>The values below are illustrative and must not be applied directly to actual equipment.</p>
+<table>
+<thead>
+<tr>
+<th>Condition</th>
+<th>Example reading</th>
+<th>Response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Normal</td>
+<td><span class="math-inline">\(55^\circ\text{C}\)</span></td>
+<td>Continue normal monitoring</td>
+</tr>
+<tr>
+<td>Warning</td>
+<td><span class="math-inline">\(70^\circ\text{C}\)</span></td>
+<td>Verify the reading and assess operating conditions</td>
+</tr>
+<tr>
+<td>Action</td>
+<td><span class="math-inline">\(80^\circ\text{C}\)</span></td>
+<td>Initiate the defined inspection or maintenance response</td>
+</tr>
+<tr>
+<td>Critical</td>
+<td>Equipment-specific critical criterion reached</td>
+<td>Follow the approved urgent response, including shutdown where required</td>
+</tr>
+</tbody>
+</table>
+<p>The response must also account for the rate of temperature rise, operating load, ambient temperature, and any applicable manufacturer limits. A more restrictive required limit takes precedence.</p>
+<h3 id="202-investigate-the-abnormal-condition">20.2 Investigate the abnormal condition</h3>
+<p>Suppose the measured temperature rises above the action criterion.</p>
+<p>The maintenance team should:</p>
+<ol>
+<li>Verify the sensor reading and data quality.</li>
+<li>Confirm the motor's operating state and load.</li>
+<li>Check cooling airflow and ventilation.</li>
+<li>Review lubrication and bearing inspection history.</li>
+<li>Examine relevant vibration and drive diagnostics.</li>
+<li>Assess the risk of continued operation.</li>
+<li>Schedule or perform the required maintenance according to the approved procedure.</li>
+<li>Record the actual cause found during inspection.</li>
+<li>Recheck the temperature after the intervention.</li>
+</ol>
+<p>Possible causes include lubrication problems, bearing deterioration, excessive load, restricted cooling, or an instrumentation fault. The temperature reading alone does not identify which cause is responsible.</p>
+<h3 id="203-verify-effectiveness">20.3 Verify effectiveness</h3>
+<p>After maintenance, compare the new measurement with the established baseline under comparable operating conditions.</p>
+<p>If the temperature remains abnormal, the team should not close the problem merely because a component was replaced. Further investigation may be necessary.</p>
+<p>The recorded history should include the initial condition, diagnosis, corrective action, and verification result. This evidence helps improve future maintenance decisions.</p>
+<h2 id="21-practical-example-filter-differential-pressure">21. Practical Example: Filter Differential Pressure</h2>
+<p>A filter in a hydraulic system has a differential-pressure transmitter measuring the pressure difference across the filter.</p>
+<p>The system uses the manufacturer's approved criteria to determine when investigation or replacement is required.</p>
+<p>The maintenance response should consider:</p>
+<ul>
+<li>Differential pressure at the current operating flow.</li>
+<li>Whether the transmitter and impulse connections are functioning correctly.</li>
+<li>The filter specification and permitted operating range.</li>
+<li>Oil temperature and viscosity where relevant.</li>
+<li>The condition of the oil and possible contamination sources.</li>
+<li>Whether the reading is rising progressively or changed suddenly.</li>
+</ul>
+<p>If the action criterion is reached, the team follows the approved filter-service procedure. After replacement, it verifies the differential pressure and investigates the reason for unusually rapid filter restriction.</p>
+<p>This is condition-based maintenance because the observed differential pressure triggers the intervention decision. Trend analysis may help estimate when the limit will be reached, but that additional forecasting is not required for the basic CBM decision.</p>
+<h2 id="22-common-mistakes-in-condition-based-maintenance">22. Common Mistakes in Condition-Based Maintenance</h2>
+<table>
+<thead>
+<tr>
+<th>Mistake</th>
+<th>Why it is a problem</th>
+<th>Correct approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Using generic thresholds for every asset</td>
+<td>Equipment and measurement conditions differ</td>
+<td>Use applicable manufacturer guidance and approved engineering criteria</td>
+</tr>
+<tr>
+<td>Acting on an unverified reading</td>
+<td>Sensor faults and data errors can trigger unnecessary work</td>
+<td>Validate measurement quality first</td>
+</tr>
+<tr>
+<td>Waiting until functional failure</td>
+<td>The intervention window may be lost</td>
+<td>Define suitable warning and action criteria</td>
+</tr>
+<tr>
+<td>Treating every warning as an emergency</td>
+<td>Resources are diverted from higher-risk problems</td>
+<td>Apply severity and risk-based response rules</td>
+</tr>
+<tr>
+<td>Ignoring warning trends below a fixed limit</td>
+<td>Developing deterioration may be overlooked</td>
+<td>Review trends as well as absolute limits</td>
+</tr>
+<tr>
+<td>Clearing alarms without investigation</td>
+<td>Recurring defects remain unresolved</td>
+<td>Preserve evidence and document the cause</td>
+</tr>
+<tr>
+<td>Replacing components without confirming the fault</td>
+<td>The actual problem may remain</td>
+<td>Diagnose and verify the suspected failure mechanism</td>
+</tr>
+<tr>
+<td>Ignoring operating context</td>
+<td>Normal load changes may appear abnormal</td>
+<td>Compare equivalent operating conditions</td>
+</tr>
+<tr>
+<td>Measuring without recording results</td>
+<td>History and repeatability are lost</td>
+<td>Record values, units, conditions, and actions</td>
+</tr>
+<tr>
+<td>Creating alerts without assigned ownership</td>
+<td>Findings may remain unresolved</td>
+<td>Assign responsibility and response times</td>
+</tr>
+<tr>
+<td>Failing to verify after maintenance</td>
+<td>Repair effectiveness remains uncertain</td>
+<td>Repeat the appropriate measurement or functional check</td>
+</tr>
+<tr>
+<td>Ignoring mandatory maintenance requirements</td>
+<td>Condition monitoring may not satisfy required inspection or test obligations</td>
+<td>Retain all required statutory, safety, and quality controls</td>
+</tr>
+</tbody>
+</table>
+<h2 id="23-standards-and-technical-guidance">23. Standards and Technical Guidance</h2>
+<p>Applicable standards depend on the equipment, industry, and local requirements. The following references provide useful frameworks.</p>
+<table>
+<thead>
+<tr>
+<th>Standard or framework</th>
+<th>Relevance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ISO 55000 series</td>
+<td>Asset management principles and management systems</td>
+</tr>
+<tr>
+<td>ISO 17359</td>
+<td>General procedures for machine condition monitoring and diagnostics</td>
+</tr>
+<tr>
+<td>ISO 13373 series</td>
+<td>Vibration condition monitoring of machines</td>
+</tr>
+<tr>
+<td>ISO 20816 series</td>
+<td>Evaluation of machine vibration within defined scopes</td>
+</tr>
+<tr>
+<td>ISO 14224</td>
+<td>Reliability and maintenance data collection in applicable industries</td>
+</tr>
+<tr>
+<td>IEC 60300 series</td>
+<td>Dependability management and related guidance</td>
+</tr>
+<tr>
+<td>ISO 9001</td>
+<td>Quality management and control of documented processes</td>
+</tr>
+<tr>
+<td>ISO 12100</td>
+<td>Machinery risk assessment and risk reduction</td>
+</tr>
+<tr>
+<td>IEC 62443 series</td>
+<td>Industrial automation and control-system cybersecurity</td>
+</tr>
+<tr>
+<td>Manufacturer manuals</td>
+<td>Equipment-specific operating limits, maintenance instructions, and diagnostic methods</td>
+</tr>
+</tbody>
+</table>
+<p>These references do not establish one universal condition limit for all equipment. Check the applicable edition, equipment scope, measurement method, and site requirements before using a standard to set an acceptance criterion.</p>
+<h2 id="24-condition-based-maintenance-checklist">24. Condition-Based Maintenance Checklist</h2>
+<h3 id="program-setup">Program setup</h3>
+<ul>
+<li>Target assets and their criticality are identified.</li>
+<li>Relevant failure modes and condition indicators are documented.</li>
+<li>Inspection and measurement methods are defined.</li>
+<li>Condition limits and warning criteria are technically justified.</li>
+<li>Operating conditions are recorded where they affect interpretation.</li>
+<li>Required inspection intervals are established.</li>
+<li>Every alert has a defined response and responsible owner.</li>
+</ul>
+<h3 id="inspection-and-evaluation">Inspection and evaluation</h3>
+<ul>
+<li>The correct asset and measurement point are confirmed.</li>
+<li>Instruments and sensors are suitable for the task.</li>
+<li>Units, timestamps, and data quality are checked.</li>
+<li>Readings are compared with approved criteria.</li>
+<li>Relevant trends and historical findings are reviewed.</li>
+<li>Abnormal results are investigated before assigning a root cause.</li>
+<li>Risks are evaluated before continued operation or maintenance is authorized.</li>
+</ul>
+<h3 id="execution-and-verification">Execution and verification</h3>
+<ul>
+<li>Notifications and work orders contain actionable details.</li>
+<li>Required labor, parts, tools, and permits are arranged.</li>
+<li>Work follows approved safety and engineering procedures.</li>
+<li>Corrective action addresses the identified condition.</li>
+<li>Post-maintenance measurements or functional checks are completed.</li>
+<li>Findings and actual work are recorded against the asset.</li>
+<li>Recurring abnormalities trigger a review of the maintenance strategy.</li>
+</ul>
+<h2 id="25-final-principles">25. Final Principles</h2>
+<ul>
+<li>Condition-based maintenance uses actual equipment condition to trigger or determine maintenance action.</li>
+<li>Condition indicators must be compared with appropriate acceptance or intervention criteria.</li>
+<li>A threshold crossing requires a suitable response, but does not automatically prove a specific root cause.</li>
+<li>Limits must account for equipment design, operating conditions, measurement quality, and risk.</li>
+<li>Condition-based maintenance can use visual inspection, manual measurement, online monitoring, or functional checks.</li>
+<li>Condition-based maintenance and predictive maintenance overlap, but predictive maintenance places greater emphasis on interpreting degradation and anticipating future condition.</li>
+<li>Maintenance decisions must consider severity, uncertainty, and the consequences of continued operation.</li>
+<li>Every actionable finding should have an owner, a response, a record, and a verification step.</li>
+<li>Condition monitoring does not replace mandatory inspections, calibration, safety functions, or approved operating limits.</li>
+<li>The goal is not to react to every changing number. It is to recognize meaningful changes and act at the right time.</li>
+</ul>
+<p>The central principle: Measure the actual condition, compare it with a justified criterion, take the appropriate action, and verify that the intervention worked.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\17_Maint_Eng\01_Maint_Philosophy\06_Planned - Planned: Scheduled in advance</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

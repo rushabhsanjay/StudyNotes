@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fault Recovery in Industrial Machine Commissioning</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Fault Recovery in Industrial Machine Commissioning</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-of-fault-recovery">1. Definition of Fault Recovery</a></li>
+<li><a href="#2-why-fault-recovery-matters">2. Why Fault Recovery Matters</a></li>
+<li><a href="#3-fault-recovery-architecture">3. Fault Recovery Architecture</a></li>
+<li><a href="#4-fault-alarm-trip-stop-reset-and-recovery">4. Fault, Alarm, Trip, Stop, Reset, and Recovery</a></li>
+<li><a href="#5-types-of-industrial-faults">5. Types of Industrial Faults</a></li>
+<li><a href="#6-three-states-that-must-agree-during-recovery">6. Three States That Must Agree During Recovery</a><ul>
+<li><a href="#61-physical-state">6.1 Physical state</a></li>
+<li><a href="#62-control-state">6.2 Control state</a></li>
+<li><a href="#63-process-state">6.3 Process state</a></li>
+</ul>
+</li>
+<li><a href="#7-fault-detection-and-diagnostic-information">7. Fault Detection and Diagnostic Information</a><ul>
+<li><a href="#71-fault-detection-methods">7.1 Fault detection methods</a></li>
+<li><a href="#72-command-to-feedback-timeout">7.2 Command-to-feedback timeout</a></li>
+<li><a href="#73-diagnostic-hierarchy">7.3 Diagnostic hierarchy</a></li>
+</ul>
+</li>
+<li><a href="#8-fault-latching-and-reset-logic">8. Fault Latching and Reset Logic</a><ul>
+<li><a href="#81-non-latching-faults">8.1 Non-latching faults</a></li>
+<li><a href="#82-latching-faults">8.2 Latching faults</a></li>
+<li><a href="#83-typical-reset-conditions">8.3 Typical reset conditions</a></li>
+</ul>
+</li>
+<li><a href="#9-recovery-strategies">9. Recovery Strategies</a></li>
+<li><a href="#10-retry-logic-and-its-limitations">10. Retry Logic and Its Limitations</a></li>
+<li><a href="#11-plc-recovery-logic">11. PLC Recovery Logic</a><ul>
+<li><a href="#111-simplified-structured-text-example">11.1 Simplified Structured Text example</a></li>
+</ul>
+</li>
+<li><a href="#12-practical-example-automotive-fixture-and-robot-fault">12. Practical Example: Automotive Fixture and Robot Fault</a><ul>
+<li><a href="#121-fault-scenario">12.1 Fault scenario</a></li>
+<li><a href="#122-correct-recovery-sequence">12.2 Correct recovery sequence</a></li>
+<li><a href="#123-why-simply-resetting-is-wrong">12.3 Why simply resetting is wrong</a></li>
+</ul>
+</li>
+<li><a href="#13-coordinated-recovery-across-plc-robot-and-cnc">13. Coordinated Recovery Across PLC, Robot, and CNC</a></li>
+<li><a href="#14-recovery-after-power-loss-or-controller-restart">14. Recovery After Power Loss or Controller Restart</a></li>
+<li><a href="#15-fault-recovery-and-safety">15. Fault Recovery and Safety</a></li>
+<li><a href="#16-fault-recovery-during-commissioning">16. Fault Recovery During Commissioning</a><ul>
+<li><a href="#step-1-review-fault-and-recovery-requirements">Step 1: Review fault and recovery requirements</a></li>
+<li><a href="#step-2-verify-fault-detection">Step 2: Verify fault detection</a></li>
+<li><a href="#step-3-verify-the-fault-response">Step 3: Verify the fault response</a></li>
+<li><a href="#step-4-verify-diagnostic-information">Step 4: Verify diagnostic information</a></li>
+<li><a href="#step-5-verify-cause-correction-and-reset">Step 5: Verify cause correction and reset</a></li>
+<li><a href="#step-6-verify-state-reconciliation">Step 6: Verify state reconciliation</a></li>
+<li><a href="#step-7-verify-restart-and-repeated-operation">Step 7: Verify restart and repeated operation</a></li>
+<li><a href="#step-8-record-evidence">Step 8: Record evidence</a></li>
+</ul>
+</li>
+<li><a href="#17-fat-and-sat-for-fault-recovery">17. FAT and SAT for Fault Recovery</a><ul>
+<li><a href="#171-acceptance-criteria">17.1 Acceptance criteria</a></li>
+</ul>
+</li>
+<li><a href="#18-troubleshooting-fault-recovery">18. Troubleshooting Fault Recovery</a></li>
+<li><a href="#19-common-fault-recovery-mistakes">19. Common Fault Recovery Mistakes</a></li>
+<li><a href="#20-interview-questions-and-answers">20. Interview Questions and Answers</a><ul>
+<li><a href="#q1-what-is-fault-recovery">Q1. What is fault recovery?</a></li>
+<li><a href="#q2-what-is-the-difference-between-reset-and-recovery">Q2. What is the difference between reset and recovery?</a></li>
+<li><a href="#q3-why-should-a-machine-not-automatically-restart-after-every-fault">Q3. Why should a machine not automatically restart after every fault?</a></li>
+<li><a href="#q4-what-is-a-command-to-feedback-timeout">Q4. What is a command-to-feedback timeout?</a></li>
+<li><a href="#q5-what-is-the-difference-between-retry-and-recovery">Q5. What is the difference between retry and recovery?</a></li>
+<li><a href="#q6-how-do-you-recover-a-pneumatic-clamp-timeout">Q6. How do you recover a pneumatic clamp timeout?</a></li>
+<li><a href="#q7-how-should-a-machine-recover-after-a-power-failure">Q7. How should a machine recover after a power failure?</a></li>
+<li><a href="#q8-why-is-fault-recovery-important-in-robot-cnc-integration">Q8. Why is fault recovery important in robot-CNC integration?</a></li>
+<li><a href="#q9-when-is-automatic-recovery-acceptable">Q9. When is automatic recovery acceptable?</a></li>
+<li><a href="#q10-what-should-be-included-in-a-recovery-test">Q10. What should be included in a recovery test?</a></li>
+</ul>
+</li>
+<li><a href="#21-final-fault-recovery-checklist">21. Final Fault Recovery Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition-of-fault-recovery">1. Definition of Fault Recovery</h2>
+<p>Fault recovery is the controlled process of identifying a machine fault, correcting its cause, verifying that the machine and process are in a valid state, and returning the system to operation according to the approved recovery procedure.</p>
+<p>In industrial automation, clearing an alarm is not the same as recovering a machine. A fault may disappear while the physical equipment remains in an uncertain state, a workpiece remains partially processed, or the PLC sequence remains interrupted.</p>
+<p>A proper recovery process must establish that:</p>
+<ul>
+<li>The fault cause has been identified and addressed.</li>
+<li>The equipment is in a known, valid state.</li>
+<li>Required feedback signals are valid.</li>
+<li>Safety conditions remain satisfied.</li>
+<li>The workpiece and tooling states are understood.</li>
+<li>The sequence can resume from a defined point or return to a known starting state.</li>
+<li>The restart is deliberate and authorized.</li>
+</ul>
+<p>Core principle: A machine must not resume merely because the fault message has disappeared. Its physical state, control state, and process state must all be understood.</p>
+<h2 id="2-why-fault-recovery-matters">2. Why Fault Recovery Matters</h2>
+<p>Industrial machines can stop because of sensor failures, actuator faults, communication loss, overloads, process deviations, sequence timeouts, safety demands, or operator actions.</p>
+<p>Poor recovery logic can turn a recoverable fault into equipment damage, rejected production, lost traceability, or a hazardous restart.</p>
+<p>Fault recovery is required to:</p>
+<ul>
+<li>Restore operation without creating additional faults.</li>
+<li>Prevent unexpected motion after a reset.</li>
+<li>Avoid repeating an operation that has already completed.</li>
+<li>Prevent a workpiece from being processed twice or skipped.</li>
+<li>Preserve CNC programs, robot positions, recipe data, and process records.</li>
+<li>Ensure coordinated recovery between interconnected machines.</li>
+<li>Reduce downtime by identifying the actual cause.</li>
+<li>Record the fault, corrective action, and retest evidence.</li>
+</ul>
+<p>Recovery design is particularly important in automotive production lines, where robots, CNC machines, fixtures, conveyors, and inspection systems operate as one coordinated process.</p>
+<h2 id="3-fault-recovery-architecture">3. Fault Recovery Architecture</h2>
+<p>A typical recovery architecture separates fault detection, diagnosis, correction, state validation, and restart authorization.</p>
+<pre><code>Fault Occurs
+     ↓
+Detect and Identify Fault
+     ↓
+Bring Equipment to Defined Response State
+     ↓
+Display Fault and Diagnostic Information
+     ↓
+Investigate Physical and Control Conditions
+     ↓
+Correct the Root Cause
+     ↓
+Validate Equipment and Feedback States
+     ↓
+Validate Workpiece and Sequence State
+     ↓
+Perform Approved Reset or Recovery Action
+     ↓
+Confirm Restart Conditions
+     ↓
+Operator or Sequence Authorizes Restart
+     ↓
+Resume from Defined State or Return to Home
+     ↓
+Verify Successful Operation
+     ↓
+Record Recovery and Corrective Action
+</code></pre>
+<p>The exact response depends on the fault. Some faults require an immediate protective stop. Others permit a controlled stop, a process hold, or continued operation of unaffected equipment.</p>
+<p>The recovery strategy must be defined in the machine specification and, where relevant, the safety requirements.</p>
+<h2 id="4-fault-alarm-trip-stop-reset-and-recovery">4. Fault, Alarm, Trip, Stop, Reset, and Recovery</h2>
+<p>These terms describe different aspects of abnormal operation.</p>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fault</td>
+<td>An abnormal condition affecting equipment or process operation</td>
+<td>Clamp fails to reach its closed position</td>
+</tr>
+<tr>
+<td>Alarm</td>
+<td>An operator notification about an abnormal or attention-required condition</td>
+<td>Clamp-close timeout</td>
+</tr>
+<tr>
+<td>Trip</td>
+<td>A protective action that disables or stops specified equipment</td>
+<td>Motor overload trips the drive</td>
+</tr>
+<tr>
+<td>Stop</td>
+<td>A machine or process ceases motion or operation according to a defined stop response</td>
+<td>Conveyor stops due to downstream blockage</td>
+</tr>
+<tr>
+<td>Reset</td>
+<td>Clears a resettable fault or latch after its reset conditions are met</td>
+<td>Acknowledging a cleared device fault</td>
+</tr>
+<tr>
+<td>Recovery</td>
+<td>Restores the system to a valid state and prepares it for controlled operation</td>
+<td>Verifying the clamp, part, robot, and sequence states before restart</td>
+</tr>
+<tr>
+<td>Restart</td>
+<td>A deliberate command to begin or resume operation</td>
+<td>Operator starts the next automatic cycle</td>
+</tr>
+</tbody>
+</table>
+<p>A reset may be one step within recovery, but it does not prove that the underlying cause has been repaired.</p>
+<p>Similarly, a reset must not automatically initiate hazardous movement unless the machine's validated design explicitly permits the relevant behavior and all applicable requirements are satisfied. Safety-related resets must not themselves initiate hazardous motion.</p>
+<h2 id="5-types-of-industrial-faults">5. Types of Industrial Faults</h2>
+<table>
+<thead>
+<tr>
+<th>Fault category</th>
+<th>Typical example</th>
+<th>Recovery focus</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sensor or feedback</td>
+<td>Part sensor does not detect the workpiece</td>
+<td>Verify the part, sensor, wiring, and signal mapping</td>
+</tr>
+<tr>
+<td>Actuator</td>
+<td>Pneumatic cylinder fails to extend</td>
+<td>Inspect air supply, valve, actuator, and end-position feedback</td>
+</tr>
+<tr>
+<td>Electrical</td>
+<td>Motor overload or power-supply fault</td>
+<td>Identify and correct the electrical cause</td>
+</tr>
+<tr>
+<td>Drive or motion</td>
+<td>Servo following error or VFD trip</td>
+<td>Check the drive diagnostics, mechanical load, feedback, and configured limits</td>
+</tr>
+<tr>
+<td>PLC or control</td>
+<td>Sequence timeout or invalid state</td>
+<td>Inspect the sequence logic, timer conditions, and actual machine state</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>Robot or CNC status becomes unavailable</td>
+<td>Restore communication and validate current device status</td>
+</tr>
+<tr>
+<td>Mechanical</td>
+<td>Fixture jam or tool collision</td>
+<td>Inspect the mechanical condition and determine whether damage occurred</td>
+</tr>
+<tr>
+<td>Process</td>
+<td>Pressure, temperature, or quality condition outside limits</td>
+<td>Restore the process conditions and assess product quality</td>
+</tr>
+<tr>
+<td>Safety-related</td>
+<td>Guard or other safety function demands a stop</td>
+<td>Follow the approved safety recovery and validation procedure</td>
+</tr>
+<tr>
+<td>Traceability</td>
+<td>Barcode read failure or duplicate part ID</td>
+<td>Verify part identity and restore traceability without inventing data</td>
+</tr>
+<tr>
+<td>Power interruption</td>
+<td>PLC or machine restarts during an incomplete cycle</td>
+<td>Reconcile retained sequence state with physical equipment and workpiece state</td>
+</tr>
+<tr>
+<td>Coordination</td>
+<td>Downstream station is not ready</td>
+<td>Restore line coordination and validate buffer or occupancy states</td>
+</tr>
+</tbody>
+</table>
+<p>A fault message often identifies the symptom, not the root cause. For example, <code>Servo Following Error</code> may result from excessive mechanical load, an obstruction, incorrect tuning, encoder issues, or a motion command problem.</p>
+<h2 id="6-three-states-that-must-agree-during-recovery">6. Three States That Must Agree During Recovery</h2>
+<p>A major recovery mistake is considering only the PLC sequence state.</p>
+<p>A machine has at least three relevant state dimensions.</p>
+<h3 id="61-physical-state">6.1 Physical state</h3>
+<p>The actual condition of the equipment:</p>
+<ul>
+<li>Robot location and motion state.</li>
+<li>Cylinder position.</li>
+<li>Fixture clamping condition.</li>
+<li>CNC door and spindle state.</li>
+<li>Conveyor position.</li>
+<li>Presence and orientation of the workpiece.</li>
+<li>Tool condition and possible mechanical damage.</li>
+</ul>
+<h3 id="62-control-state">6.2 Control state</h3>
+<p>The controller's current understanding:</p>
+<ul>
+<li>Current sequence step.</li>
+<li>Active commands.</li>
+<li>Fault latches.</li>
+<li>Timers and timeout states.</li>
+<li>Automatic or manual mode.</li>
+<li>Device-ready status.</li>
+<li>Retained values after restart.</li>
+</ul>
+<h3 id="63-process-state">6.3 Process state</h3>
+<p>The manufacturing status of the workpiece:</p>
+<ul>
+<li>Raw part, loaded part, or completed part.</li>
+<li>Whether machining has started.</li>
+<li>Whether a cycle completed successfully.</li>
+<li>Whether inspection passed.</li>
+<li>Whether the part ID has been recorded.</li>
+<li>Whether the part must be scrapped, reworked, or reinspected.</li>
+</ul>
+<p>These states can disagree. For example, the PLC may show <code>CycleStep = 40</code>, while the robot physically holds a part that has not been recorded in the tracking system.</p>
+<pre><code>Physical State
+      +
+Control State
+      +
+Process and Workpiece State
+      ↓
+Cross-Check and Reconcile
+      ↓
+Valid Recovery State
+      ↓
+Permit Defined Restart
+</code></pre>
+<p>If the states cannot be reconciled confidently, the correct response is to hold the affected operation and investigate rather than guess.</p>
+<h2 id="7-fault-detection-and-diagnostic-information">7. Fault Detection and Diagnostic Information</h2>
+<h3 id="71-fault-detection-methods">7.1 Fault detection methods</h3>
+<p>Industrial controllers detect faults using several mechanisms.</p>
+<ul>
+<li>Direct device diagnostics: Drive fault codes, CNC alarms, robot controller faults, and device status words.</li>
+<li>Timeout monitoring: Expected feedback does not arrive within a defined time.</li>
+<li>Plausibility checks: A signal or combination of signals is inconsistent with the machine's physical design.</li>
+<li>Communication monitoring: Connection loss, invalid quality, heartbeat timeout, or stale data.</li>
+<li>Process-limit monitoring: Temperature, pressure, flow, or another process value exceeds specified limits.</li>
+<li>Sequence monitoring: The machine fails to complete an expected state transition.</li>
+<li>Diagnostic feedback: The controller detects a power, sensor, module, or configuration problem.</li>
+</ul>
+<h3 id="72-command-to-feedback-timeout">7.2 Command-to-feedback timeout</h3>
+<p>Suppose a pneumatic clamp is commanded to close. The controller expects <code>ClampClosedConfirmed</code> within the specified time.</p>
+<p>If the feedback does not arrive, the sequence should invoke the defined fault response.</p>
+<p>The timeout must be based on validated operating conditions, actuator performance, sensor response, and process requirements. It should not be increased blindly just to suppress recurring alarms.</p>
+<h3 id="73-diagnostic-hierarchy">7.3 Diagnostic hierarchy</h3>
+<p>A useful diagnostic hierarchy is:</p>
+<pre><code>Machine Fault
+     ↓
+Subsystem
+     ↓
+Device
+     ↓
+Signal or Diagnostic Code
+     ↓
+Physical or Logical Cause
+     ↓
+Corrective Action
+</code></pre>
+<p>For example:</p>
+<pre><code>Robot Entry Blocked
+     ↓
+Fixture Not Ready
+     ↓
+Clamp Closed Feedback Missing
+     ↓
+Check Actual Clamp Position
+     ↓
+Check Sensor and Wiring
+     ↓
+Check Pneumatic Supply and Valve
+</code></pre>
+<p>Good HMI diagnostics reduce troubleshooting time by exposing the condition that blocks the operation, not just the final sequence timeout.</p>
+<h2 id="8-fault-latching-and-reset-logic">8. Fault Latching and Reset Logic</h2>
+<h3 id="81-non-latching-faults">8.1 Non-latching faults</h3>
+<p>A non-latching fault clears when its triggering condition disappears, provided the fault design permits automatic clearing.</p>
+<p>Example: a temporary downstream-busy condition clears when the downstream station becomes ready.</p>
+<p>Non-latching behavior is suitable only where automatic clearing and continued operation are safe and consistent with the machine specification.</p>
+<h3 id="82-latching-faults">8.2 Latching faults</h3>
+<p>A latching fault remains recorded after the initiating condition disappears.</p>
+<p>Example: a robot loading timeout remains latched until the cause is addressed and the defined reset or recovery procedure is completed.</p>
+<p>Latching is useful when the event requires operator attention, diagnosis, or an explicit recovery decision.</p>
+<h3 id="83-typical-reset-conditions">8.3 Typical reset conditions</h3>
+<p>A reset may require:</p>
+<ul>
+<li>The original fault cause to be cleared.</li>
+<li>Required device status to be valid.</li>
+<li>Relevant actuators to be in an allowed state.</li>
+<li>Communication to be restored and fresh data confirmed.</li>
+<li>The machine to be in an allowed mode.</li>
+<li>Conflicting commands to be removed.</li>
+<li>The sequence to be placed in a valid recovery state.</li>
+</ul>
+<p>The exact requirements must follow the machine's functional specification.</p>
+<p>Reset is not repair. If a motor overload is reset without correcting a jammed mechanism or excessive load, the fault may recur and equipment damage may result.</p>
+<h2 id="9-recovery-strategies">9. Recovery Strategies</h2>
+<p>Different faults require different recovery methods. There is no universally correct rule to home every axis, reset every fault, or restart every sequence from step one.</p>
+<table>
+<thead>
+<tr>
+<th>Recovery strategy</th>
+<th>Meaning</th>
+<th>Suitable example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Automatic continuation</td>
+<td>Continue after a temporary condition clears, where explicitly permitted</td>
+<td>Waiting for downstream availability</td>
+</tr>
+<tr>
+<td>Operator-confirmed continuation</td>
+<td>Resume a defined operation after the cause is cleared and states are verified</td>
+<td>Releasing a non-safety process hold</td>
+</tr>
+<tr>
+<td>Step retry</td>
+<td>Repeat a specific operation after confirming it is safe and has not already completed</td>
+<td>Retry a failed barcode read</td>
+</tr>
+<tr>
+<td>Controlled return to known state</td>
+<td>Move equipment to a defined recovery position using approved logic</td>
+<td>Recovering a robot from a permitted intermediate position</td>
+</tr>
+<tr>
+<td>Sequence restart</td>
+<td>Return the process to a defined sequence entry point</td>
+<td>Restarting a cycle when the workpiece state is confirmed</td>
+</tr>
+<tr>
+<td>Manual recovery</td>
+<td>Use approved manual or setup actions to establish a valid state</td>
+<td>Removing a rejected part from a fixture</td>
+</tr>
+<tr>
+<td>Maintenance intervention</td>
+<td>Require qualified personnel to repair or inspect the equipment</td>
+<td>Resolving a mechanical jam or drive hardware fault</td>
+</tr>
+<tr>
+<td>Safety recovery</td>
+<td>Follow the specified procedure after a safety-related stop or demand</td>
+<td>Restoring a guard condition and performing the required reset</td>
+</tr>
+</tbody>
+</table>
+<p>Automatic continuation is not appropriate when the controller cannot determine whether the previous operation completed, when the process state is ambiguous, or when the recovery could create a hazard.</p>
+<h2 id="10-retry-logic-and-its-limitations">10. Retry Logic and Its Limitations</h2>
+<p>A retry repeats a failed operation. It can improve availability for transient faults, but uncontrolled retries can worsen a fault or repeat an irreversible process action.</p>
+<p>Before implementing retries, define:</p>
+<ul>
+<li>Which faults are eligible.</li>
+<li>The maximum number of retries.</li>
+<li>The delay between attempts.</li>
+<li>The conditions that must be revalidated before each attempt.</li>
+<li>The conditions that terminate retrying.</li>
+<li>The operator message when retries are exhausted.</li>
+<li>Whether the operation is safe and valid to repeat.</li>
+</ul>
+<p>Examples of potentially retryable operations include a barcode read or a communication request, provided the data and process requirements allow it.</p>
+<p>Examples that generally require much more caution include machining, dispensing adhesive, tightening a fastener, welding, pressing, or any operation where repetition changes the workpiece or tooling.</p>
+<p>A cycle-complete signal should not be assumed false simply because a timeout occurred. The physical operation may have completed even if the completion feedback was not received.</p>
+<h2 id="11-plc-recovery-logic">11. PLC Recovery Logic</h2>
+<p>A robust PLC sequence separates normal operation from fault handling and recovery.</p>
+<p>A simplified state model might contain:</p>
+<ul>
+<li><code>IDLE</code></li>
+<li><code>STARTING</code></li>
+<li><code>RUNNING</code></li>
+<li><code>FAULTED</code></li>
+<li><code>RECOVERY_REQUIRED</code></li>
+<li><code>READY_TO_RESTART</code></li>
+<li><code>COMPLETE</code></li>
+</ul>
+<p>The actual state model should reflect the machine design and must not be copied blindly into a live application.</p>
+<pre><code>RUNNING
+   ↓
+Fault Detected
+   ↓
+Execute Defined Fault Response
+   ↓
+FAULTED
+   ↓
+Fault Cause Cleared
+   ↓
+RECOVERY_REQUIRED
+   ↓
+Validate Physical and Process State
+   ↓
+READY_TO_RESTART
+   ↓
+New Start Request
+   ↓
+RUNNING
+</code></pre>
+<p>The transition from <code>FAULTED</code> to <code>RECOVERY_REQUIRED</code> does not necessarily occur automatically. Some faults require maintenance intervention, safety validation, or an explicit operator action first.</p>
+<h3 id="111-simplified-structured-text-example">11.1 Simplified Structured Text example</h3>
+<p>The following illustrates standard control logic for a recoverable process fault. It is not safety-rated code and is not a complete machine program.</p>
+<pre><code>IF ClampCloseTimeout THEN
+    ClampFaultLatched := TRUE;
+END_IF;
+
+RecoveryConditionsValid :=
+    NOT ClampCloseTimeout
+    AND ClampClosedFeedbackValid
+    AND RelevantDevicesReady
+    AND SequenceStateKnown;
+
+IF ResetRequest
+   AND ClampFaultLatched
+   AND RecoveryConditionsValid THEN
+    ClampFaultLatched := FALSE;
+    RecoveryRequired := TRUE;
+END_IF;
+
+IF RecoveryRequired
+   AND RecoveryConditionsValid
+   AND RestartRequest THEN
+    RecoveryRequired := FALSE;
+    CycleStartRequest := TRUE;
+END_IF;
+</code></pre>
+<p>This example requires adaptation before use. A production implementation must define how the timeout is generated, how signals are validated, whether the clamp state is appropriate for the recovery, how the sequence state is reconciled, and how restart requests are accepted. It must also prevent unintended repeated starts and account for any safety-related requirements through the appropriate safety system.</p>
+<p>A reset should not directly energize motion outputs. Recovery and restart must be separate, explicit control actions where required by the design.</p>
+<h2 id="12-practical-example-automotive-fixture-and-robot-fault">12. Practical Example: Automotive Fixture and Robot Fault</h2>
+<p>Consider an automotive assembly station with a robot, pneumatic fixture, part-presence sensors, and a downstream conveyor.</p>
+<p>The robot places a component in the fixture. The fixture clamps it, the controller verifies the position, and the process continues.</p>
+<h3 id="121-fault-scenario">12.1 Fault scenario</h3>
+<p>The PLC issues <code>ClampCloseCommand</code>, but <code>ClampClosedConfirmed</code> does not become true before the configured timeout.</p>
+<p>The machine raises <code>Clamp Close Timeout</code> and blocks the next operation.</p>
+<h3 id="122-correct-recovery-sequence">12.2 Correct recovery sequence</h3>
+<ol>
+<li>Confirm the station has entered the specified fault response.</li>
+<li>Read the clamp and station diagnostic information.</li>
+<li>Verify the actual fixture and workpiece condition using the approved procedure.</li>
+<li>Check the pneumatic supply, valve state, actuator movement, sensor target, wiring, and PLC input.</li>
+<li>Correct the identified cause.</li>
+<li>Verify that the clamp can reach the required state and that the feedback is valid.</li>
+<li>Determine whether the workpiece was correctly located and whether any process operation already occurred.</li>
+<li>Execute the approved fault reset or recovery action.</li>
+<li>Reconcile the PLC sequence state with the actual equipment and workpiece state.</li>
+<li>Issue a deliberate restart request and verify the next operation.</li>
+</ol>
+<h3 id="123-why-simply-resetting-is-wrong">12.3 Why simply resetting is wrong</h3>
+<p>If the cylinder is mechanically jammed, resetting the alarm does not remove the obstruction. If the clamp closed but its sensor failed, repeating the close command without verifying the physical state may produce an unexpected condition. If the robot has already placed the part, restarting the entire cycle may duplicate the placement operation.</p>
+<p>Recovery must address the actual condition, not just the visible alarm.</p>
+<h2 id="13-coordinated-recovery-across-plc-robot-and-cnc">13. Coordinated Recovery Across PLC, Robot, and CNC</h2>
+<p>In an integrated manufacturing cell, multiple controllers may retain different states after a fault.</p>
+<p>For example:</p>
+<ul>
+<li>The PLC believes the CNC cycle is in progress.</li>
+<li>The CNC reports that machining is complete.</li>
+<li>The robot controller reports that the robot is holding a workpiece.</li>
+<li>The part-tracking system still records the workpiece as unprocessed.</li>
+</ul>
+<p>These states must be reconciled before the next operation.</p>
+<p>A coordinated recovery procedure should establish:</p>
+<ul>
+<li>Which controller owns each operation.</li>
+<li>The authoritative completion signal for each process step.</li>
+<li>How communication status is validated.</li>
+<li>Whether commands and acknowledgements are synchronized.</li>
+<li>Whether a request may be repeated without duplicating the action.</li>
+<li>How retained states are handled after a power interruption.</li>
+<li>What happens if one controller restarts while the others continue running.</li>
+</ul>
+<p>A common interface pattern is:</p>
+<pre><code>Request
+   ↓
+Validate Request and Preconditions
+   ↓
+Execute Operation
+   ↓
+Return Busy / Complete / Fault Status
+   ↓
+Validate Acknowledgement and Data Freshness
+   ↓
+Update Coordinated Sequence State
+</code></pre>
+<p>The exact protocol may use discrete I/O, industrial Ethernet, fieldbus, or a higher-level data interface. The important point is that request, acceptance, completion, and fault states must have clear meanings.</p>
+<h2 id="14-recovery-after-power-loss-or-controller-restart">14. Recovery After Power Loss or Controller Restart</h2>
+<p>Power loss can leave a machine in an intermediate physical state even when retained PLC values suggest that the sequence was progressing normally.</p>
+<p>Before resuming, the system may need to verify:</p>
+<ul>
+<li>Actual robot and axis positions.</li>
+<li>Homing or reference validity.</li>
+<li>Fixture and actuator positions.</li>
+<li>Tool and spindle state.</li>
+<li>Presence and identity of the workpiece.</li>
+<li>Whether the last operation completed.</li>
+<li>Whether the PLC, robot, and CNC retained compatible states.</li>
+<li>Whether communication data is current.</li>
+<li>Whether process records were committed successfully.</li>
+</ul>
+<p>Do not automatically resume a retained step simply because the step number survived a power cycle.</p>
+<p>Depending on the design, the correct response may be to re-home an axis using the approved procedure, return the machine to a known state, manually recover a workpiece, or require maintenance intervention. Homing itself must be carried out under the specified movement restrictions and safety conditions.</p>
+<p>For traceable manufacturing, reconcile the physical workpiece state with the recorded process state before allowing further processing.</p>
+<h2 id="15-fault-recovery-and-safety">15. Fault Recovery and Safety</h2>
+<p>Fault recovery can involve movement, stored energy, unexpected equipment behavior, and access to hazardous areas. Safety must be considered throughout the process.</p>
+<p>Important principles:</p>
+<ul>
+<li>A safety-related stop must be handled according to the validated safety design.</li>
+<li>Restoring a guard or clearing an emergency stop does not automatically mean the machine is ready to restart.</li>
+<li>Safety reset and machine restart are distinct functions where required by the design.</li>
+<li>Personnel must not enter hazardous areas merely because the PLC displays a fault.</li>
+<li>Unexpected motion and stored pneumatic, hydraulic, electrical, gravitational, or mechanical energy must be controlled using the approved procedures.</li>
+<li>Maintenance intervention must follow applicable isolation and energy-control requirements.</li>
+<li>Standard PLC recovery logic must not replace the required safety system.</li>
+<li>Testing must not bypass or defeat safety safeguards.</li>
+</ul>
+<p>Where personnel protection is involved, the required stop behavior, restart prevention, access control, and validation must follow the machine risk assessment and applicable safety standards.</p>
+<h2 id="16-fault-recovery-during-commissioning">16. Fault Recovery During Commissioning</h2>
+<p>Commissioning should verify not only that the machine runs normally, but also that it recovers correctly from realistic faults.</p>
+<h3 id="step-1-review-fault-and-recovery-requirements">Step 1: Review fault and recovery requirements</h3>
+<p>Review the sequence specification, fault list, alarm list, interlock matrix, recovery procedures, controller interface specification, and safety requirements.</p>
+<p>Identify which faults permit automatic recovery, which require operator action, and which require maintenance intervention.</p>
+<h3 id="step-2-verify-fault-detection">Step 2: Verify fault detection</h3>
+<p>Use approved test methods to confirm that each specified fault is detected under the expected conditions.</p>
+<p>Examples include a missing sensor response, a drive fault, a communication interruption, and a sequence timeout.</p>
+<h3 id="step-3-verify-the-fault-response">Step 3: Verify the fault response</h3>
+<p>Confirm that the affected equipment enters the specified state. Check which operations stop, which are allowed to continue, and which outputs must be inhibited.</p>
+<p>Do not assume that every fault requires a complete line stop. The intended response depends on the design and risk assessment.</p>
+<h3 id="step-4-verify-diagnostic-information">Step 4: Verify diagnostic information</h3>
+<p>Check that the HMI reports the correct fault, device, or missing condition. Confirm that the message is not misleading when multiple conditions are invalid.</p>
+<h3 id="step-5-verify-cause-correction-and-reset">Step 5: Verify cause correction and reset</h3>
+<p>Correct the simulated or actual fault using the approved procedure. Confirm that reset is accepted only when the specified reset conditions are met.</p>
+<h3 id="step-6-verify-state-reconciliation">Step 6: Verify state reconciliation</h3>
+<p>Confirm that the PLC, devices, and workpiece tracking agree on the current machine and process state.</p>
+<h3 id="step-7-verify-restart-and-repeated-operation">Step 7: Verify restart and repeated operation</h3>
+<p>Confirm that the operator or sequence must provide the appropriate restart action and that the machine continues from the intended point without duplicated, skipped, or unintended operations.</p>
+<h3 id="step-8-record-evidence">Step 8: Record evidence</h3>
+<p>Document the test conditions, expected response, observed response, result, defects, corrective actions, and retest evidence.</p>
+<h2 id="17-fat-and-sat-for-fault-recovery">17. FAT and SAT for Fault Recovery</h2>
+<table>
+<thead>
+<tr>
+<th>Test area</th>
+<th>FAT focus</th>
+<th>SAT focus</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fault detection</td>
+<td>Simulated device and sequence faults</td>
+<td>Actual field-device and installed-machine faults</td>
+</tr>
+<tr>
+<td>Fault response</td>
+<td>Verify logic and defined controller states</td>
+<td>Verify actual mechanical and process response</td>
+</tr>
+<tr>
+<td>HMI diagnostics</td>
+<td>Verify alarm messages and blocking reasons</td>
+<td>Confirm messages match real equipment conditions</td>
+</tr>
+<tr>
+<td>Reset conditions</td>
+<td>Verify latches and reset permissives</td>
+<td>Confirm physical causes must be corrected where required</td>
+</tr>
+<tr>
+<td>Communication recovery</td>
+<td>Simulate lost or invalid status</td>
+<td>Test installed network and device recovery</td>
+</tr>
+<tr>
+<td>Power recovery</td>
+<td>Verify retained-state and startup logic where practicable</td>
+<td>Validate actual restart behavior and physical-state reconciliation</td>
+</tr>
+<tr>
+<td>Workpiece tracking</td>
+<td>Verify process-state transitions</td>
+<td>Confirm physical part and production records agree</td>
+</tr>
+<tr>
+<td>Safety recovery</td>
+<td>Verify the specified safety design and test plan</td>
+<td>Complete required on-site safety validation</td>
+</tr>
+<tr>
+<td>Recovery documentation</td>
+<td>Review procedures and test evidence</td>
+<td>Verify as-installed procedures and acceptance records</td>
+</tr>
+</tbody>
+</table>
+<h3 id="171-acceptance-criteria">17.1 Acceptance criteria</h3>
+<p>Fault recovery can be accepted when:</p>
+<ul>
+<li>Specified faults are detected correctly.</li>
+<li>The equipment responds according to the functional and safety requirements.</li>
+<li>Diagnostic messages identify the relevant problem.</li>
+<li>Reset is rejected when its required conditions are invalid.</li>
+<li>Recovery establishes a known and valid machine state.</li>
+<li>Workpiece and traceability states remain correct.</li>
+<li>Restart behavior is deliberate and predictable.</li>
+<li>Operations are not duplicated or skipped.</li>
+<li>Communication and power-loss recovery behave as specified.</li>
+<li>Safety-related functions pass their required validation.</li>
+<li>Recovery procedures, defects, retests, and sign-off are documented.</li>
+</ul>
+<h2 id="18-troubleshooting-fault-recovery">18. Troubleshooting Fault Recovery</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Diagnostic approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Alarm clears but machine remains blocked</td>
+<td>Another permissive is false or sequence state is invalid</td>
+<td>Inspect the recovery state and all required conditions</td>
+</tr>
+<tr>
+<td>Reset is rejected</td>
+<td>Fault cause remains active or reset conditions are unmet</td>
+<td>Check the original fault, device status, and reset logic</td>
+</tr>
+<tr>
+<td>Machine restarts from the wrong step</td>
+<td>Retained sequence state does not match physical state</td>
+<td>Reconcile the sequence, equipment, and workpiece states</td>
+</tr>
+<tr>
+<td>Same fault repeatedly returns</td>
+<td>Root cause was not corrected</td>
+<td>Investigate the physical device, wiring, configuration, and operating conditions</td>
+</tr>
+<tr>
+<td>Recovery takes too long</td>
+<td>Diagnostics are vague or procedure is incomplete</td>
+<td>Improve fault messages and establish a step-by-step recovery method</td>
+</tr>
+<tr>
+<td>Part is processed twice</td>
+<td>Completion state or retry behavior is incorrect</td>
+<td>Review operation acknowledgements, retained state, and part tracking</td>
+</tr>
+<tr>
+<td>PLC shows complete but equipment is not complete</td>
+<td>Completion signal is incorrect, stale, or mapped improperly</td>
+<td>Verify the actual device status and signal source</td>
+</tr>
+<tr>
+<td>Robot and CNC disagree on status</td>
+<td>Interface handshake or communication recovery is incomplete</td>
+<td>Check request, acknowledgement, completion, and data freshness</td>
+</tr>
+<tr>
+<td>Machine resumes unexpectedly after reset</td>
+<td>Reset and restart are incorrectly coupled</td>
+<td>Separate reset, state validation, and deliberate restart according to requirements</td>
+</tr>
+<tr>
+<td>Drive fault returns immediately</td>
+<td>Mechanical overload, wiring, feedback, or drive configuration remains incorrect</td>
+<td>Inspect the drive diagnostics and underlying mechanical and electrical conditions</td>
+</tr>
+</tbody>
+</table>
+<h2 id="19-common-fault-recovery-mistakes">19. Common Fault Recovery Mistakes</h2>
+<ul>
+<li>Resetting an alarm without finding the cause.</li>
+<li>Restarting the whole cycle when the last operation may already have completed.</li>
+<li>Assuming retained PLC memory represents the actual physical state.</li>
+<li>Repeating an irreversible process operation without checking its completion state.</li>
+<li>Using one generic recovery procedure for every fault category.</li>
+<li>Allowing automatic restart after an uncontrolled power interruption.</li>
+<li>Ignoring robot, CNC, and PLC state disagreement.</li>
+<li>Treating communication reconnection as proof that received data is fresh.</li>
+<li>Using repeated retries to hide a hardware or process fault.</li>
+<li>Increasing timeouts without investigating why the original timeout occurred.</li>
+<li>Clearing diagnostic history before recording the failure.</li>
+<li>Allowing an HMI reset button to bypass the required recovery sequence.</li>
+<li>Treating a standard control reset as a safety reset.</li>
+<li>Failing to document which workpieces were affected by the fault.</li>
+</ul>
+<h2 id="20-interview-questions-and-answers">20. Interview Questions and Answers</h2>
+<h3 id="q1-what-is-fault-recovery">Q1. What is fault recovery?</h3>
+<p>Fault recovery is the controlled process of diagnosing a fault, correcting its cause, validating the machine and process states, and restoring operation through the defined restart procedure.</p>
+<h3 id="q2-what-is-the-difference-between-reset-and-recovery">Q2. What is the difference between reset and recovery?</h3>
+<p>Reset clears a resettable fault or latch when the specified conditions are met. Recovery additionally verifies the physical equipment, control sequence, and process state before operation resumes.</p>
+<h3 id="q3-why-should-a-machine-not-automatically-restart-after-every-fault">Q3. Why should a machine not automatically restart after every fault?</h3>
+<p>The machine may be in an uncertain physical or process state. Automatic restart could cause unexpected motion, repeat an operation, damage tooling, or produce an incorrectly processed workpiece.</p>
+<h3 id="q4-what-is-a-command-to-feedback-timeout">Q4. What is a command-to-feedback timeout?</h3>
+<p>It is a condition in which the expected feedback does not arrive within the configured time after a command. It may indicate a device, sensor, wiring, process, or timing problem.</p>
+<h3 id="q5-what-is-the-difference-between-retry-and-recovery">Q5. What is the difference between retry and recovery?</h3>
+<p>A retry repeats a particular operation. Recovery establishes a valid machine and process state after a fault. A retry may be one part of a recovery procedure, but it is not a substitute for state validation.</p>
+<h3 id="q6-how-do-you-recover-a-pneumatic-clamp-timeout">Q6. How do you recover a pneumatic clamp timeout?</h3>
+<p>Verify the actual clamp and workpiece condition, inspect air supply, valve, actuator, sensor, and wiring, correct the cause, confirm valid feedback, reconcile the sequence state, and execute the approved reset and restart procedure.</p>
+<h3 id="q7-how-should-a-machine-recover-after-a-power-failure">Q7. How should a machine recover after a power failure?</h3>
+<p>Verify actual equipment positions, actuator states, workpiece identity, process completion, controller states, and communication validity. Resume only when the physical, control, and process states agree and the specified restart conditions are satisfied.</p>
+<h3 id="q8-why-is-fault-recovery-important-in-robot-cnc-integration">Q8. Why is fault recovery important in robot-CNC integration?</h3>
+<p>The robot, CNC, PLC, and tracking system may retain different states after a fault. Recovery must reconcile their states to avoid collisions, duplicate operations, skipped machining, and traceability errors.</p>
+<h3 id="q9-when-is-automatic-recovery-acceptable">Q9. When is automatic recovery acceptable?</h3>
+<p>When the fault is specifically identified as recoverable, the required conditions are verified, repeating or continuing the operation is valid, and the approved design permits automatic continuation without violating safety or process requirements.</p>
+<h3 id="q10-what-should-be-included-in-a-recovery-test">Q10. What should be included in a recovery test?</h3>
+<p>Fault trigger, initial state, expected machine response, diagnostic message, cause correction, reset requirements, state validation, restart behavior, workpiece outcome, observed result, and retest evidence.</p>
+<h2 id="21-final-fault-recovery-checklist">21. Final Fault Recovery Checklist</h2>
+<ul>
+<li>Fault detection and response requirements are documented.</li>
+<li>Each fault has a defined recovery strategy.</li>
+<li>Fault causes are distinguishable from symptoms.</li>
+<li>HMI messages identify the relevant device or condition.</li>
+<li>Reset is permitted only when the specified conditions are met.</li>
+<li>Physical, control, and process states are reconciled.</li>
+<li>Feedback and communication data are validated.</li>
+<li>Retry limits and retry eligibility are defined.</li>
+<li>Irreversible operations are not repeated without checking completion.</li>
+<li>Power-loss and controller-restart behavior are verified.</li>
+<li>Robot, CNC, PLC, and tracking states remain coordinated.</li>
+<li>Restart requires the appropriate authorization or deliberate command.</li>
+<li>Safety recovery follows the validated safety design.</li>
+<li>No unauthorized safeguard bypass is used.</li>
+<li>FAT/SAT evidence, corrective actions, and sign-off are complete.</li>
+</ul>
+<p>The practical rule: fault recovery is complete only when the cause has been addressed, the machine state is known, the workpiece state is correct, the required safeguards are satisfied, and the next operation can proceed under defined conditions.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\13_Commissioning\05_Stage5_Sequence\08_E_Stop - E-stop</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

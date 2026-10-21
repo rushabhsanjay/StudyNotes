@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>03. Diagnostics: Diagnostic Buffer, LEDs, and Fault Codes</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">03. Diagnostics: Diagnostic Buffer, LEDs, and Fault Codes</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-why-plc-diagnostics-matter">1. Why PLC Diagnostics Matter</a></li>
+<li><a href="#2-plc-diagnostic-architecture">2. PLC Diagnostic Architecture</a></li>
+<li><a href="#3-controller-status-leds">3. Controller Status LEDs</a><ul>
+<li><a href="#common-led-interpretations">Common LED interpretations</a></li>
+<li><a href="#steady-versus-flashing-leds">Steady versus flashing LEDs</a></li>
+</ul>
+</li>
+<li><a href="#4-diagnostic-buffer">4. Diagnostic Buffer</a><ul>
+<li><a href="#example-diagnostic-sequence">Example diagnostic sequence</a></li>
+<li><a href="#how-to-inspect-a-diagnostic-buffer">How to inspect a diagnostic buffer</a></li>
+<li><a href="#why-event-order-matters">Why event order matters</a></li>
+</ul>
+</li>
+<li><a href="#5-fault-codes-and-error-messages">5. Fault Codes and Error Messages</a><ul>
+<li><a href="#fault-categories">Fault categories</a></li>
+<li><a href="#fault-versus-alarm">Fault versus alarm</a></li>
+</ul>
+</li>
+<li><a href="#6-diagnostic-information-from-io-modules">6. Diagnostic Information from I/O Modules</a><ul>
+<li><a href="#digital-input-example">Digital input example</a></li>
+<li><a href="#analog-input-example">Analog input example</a></li>
+</ul>
+</li>
+<li><a href="#7-communication-diagnostics">7. Communication Diagnostics</a><ul>
+<li><a href="#example-remote-io-fault">Example: Remote I/O fault</a></li>
+</ul>
+</li>
+<li><a href="#8-program-level-diagnostics">8. Program-Level Diagnostics</a><ul>
+<li><a href="#example-cylinder-extension-timeout">Example: Cylinder extension timeout</a></li>
+</ul>
+</li>
+<li><a href="#9-systematic-plc-fault-troubleshooting-procedure">9. Systematic PLC Fault-Troubleshooting Procedure</a><ul>
+<li><a href="#step-1-establish-the-condition">Step 1: Establish the condition</a></li>
+<li><a href="#step-2-check-controller-status">Step 2: Check controller status</a></li>
+<li><a href="#step-3-read-diagnostic-information">Step 3: Read diagnostic information</a></li>
+<li><a href="#step-4-identify-the-first-abnormal-event">Step 4: Identify the first abnormal event</a></li>
+<li><a href="#step-5-trace-the-signal-path">Step 5: Trace the signal path</a></li>
+<li><a href="#step-6-verify-the-suspected-cause">Step 6: Verify the suspected cause</a></li>
+<li><a href="#step-7-correct-and-validate">Step 7: Correct and validate</a></li>
+<li><a href="#step-8-record-the-result">Step 8: Record the result</a></li>
+</ul>
+</li>
+<li><a href="#10-common-troubleshooting-mistakes">10. Common Troubleshooting Mistakes</a></li>
+<li><a href="#11-diagnostic-buffer-led-and-fault-code-how-they-work-together">11. Diagnostic Buffer, LED, and Fault Code: How They Work Together</a></li>
+<li><a href="#12-manufacturer-specific-considerations">12. Manufacturer-Specific Considerations</a></li>
+<li><a href="#13-interview-questions-and-answers">13. Interview Questions and Answers</a></li>
+<li><a href="#14-practical-study-exercise">14. Practical Study Exercise</a></li>
+<li><a href="#15-final-mental-model">15. Final Mental Model</a></li>
+<li><a href="#next-topic-01_ladder">Next Topic: 01_Ladder</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\02_Auto_Tech\01_PLC\03_Diagnostics</code></p>
+<p>PLC diagnostics is the process of identifying, interpreting, and isolating faults in a control system using controller status indicators, diagnostic records, error codes, module information, communication status, and program-level fault information.</p>
+<p>For industrial maintenance, the goal is not merely to identify that a PLC has a fault. The goal is to determine what failed, where it failed, why it failed, and what evidence confirms the root cause.</p>
+<p>A PLC fault can originate from the CPU, power supply, I/O module, field wiring, communication network, program logic, or an external machine condition. Replacing the PLC whenever a machine stops is an expensive way to practice guessing.</p>
+<h2 id="1-why-plc-diagnostics-matter">1. Why PLC Diagnostics Matter</h2>
+<p>Consider a robot welding station that suddenly stops during production.</p>
+<p>Possible causes include:</p>
+<ul>
+<li>PLC CPU fault.</li>
+<li>Robot communication loss.</li>
+<li>Remote I/O module fault.</li>
+<li>Sensor or actuator circuit failure.</li>
+<li>Safety-system interlock.</li>
+<li>Program execution fault.</li>
+<li>Network cable or switch failure.</li>
+<li>A process condition that has not been satisfied.</li>
+</ul>
+<p>The machine symptom may be identical in several cases: the sequence stops. Diagnostics helps distinguish them.</p>
+<p>A useful troubleshooting hierarchy is:</p>
+<pre><code>Machine Stops
+     |
+     v
+Check Machine and Controller Status
+     |
+     v
+Read Diagnostic Buffer and Fault Information
+     |
+     v
+Identify Affected Device or Function
+     |
+     v
+Verify Power, Wiring, Network, I/O and Logic
+     |
+     v
+Confirm Root Cause
+     |
+     v
+Correct Fault and Validate Recovery
+</code></pre>
+<p>The diagnostic process should follow evidence from the system rather than assumptions based on the visible symptom.</p>
+<h2 id="2-plc-diagnostic-architecture">2. PLC Diagnostic Architecture</h2>
+<p>A PLC system provides diagnostic information at several levels.</p>
+<table>
+<thead>
+<tr>
+<th>Diagnostic level</th>
+<th>What it tells you</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CPU/controller</td>
+<td>Overall controller condition</td>
+<td>CPU fault or operating-mode change</td>
+</tr>
+<tr>
+<td>Power supply</td>
+<td>Power status and supply-related faults</td>
+<td>Supply module fault indicator</td>
+</tr>
+<tr>
+<td>I/O module</td>
+<td>Module health and channel status</td>
+<td>Input module fault</td>
+</tr>
+<tr>
+<td>Field device</td>
+<td>Sensor or actuator condition</td>
+<td>Sensor not detecting a component</td>
+</tr>
+<tr>
+<td>Communication network</td>
+<td>Device connectivity and data exchange</td>
+<td>Remote I/O connection timeout</td>
+</tr>
+<tr>
+<td>Program/application</td>
+<td>Logic conditions and execution faults</td>
+<td>Invalid data or sequence timeout</td>
+</tr>
+<tr>
+<td>Safety system</td>
+<td>Safety-related status and fault information</td>
+<td>Safety interlock not satisfied</td>
+</tr>
+</tbody>
+</table>
+<p>A fault indication identifies a condition, but it does not always identify the root cause.</p>
+<p>For example, a remote I/O communication fault may be caused by a damaged cable, failed switch port, loss of module power, incorrect configuration, or a failed communication module.</p>
+<h2 id="3-controller-status-leds">3. Controller Status LEDs</h2>
+<p>LEDs provide a quick indication of the controller's operating state without requiring a programming computer.</p>
+<p>Common labels include <code>RUN</code>, <code>OK</code>, <code>ERR</code>, <code>FAULT</code>, <code>SF</code>, <code>BF</code>, <code>I/O</code>, and <code>COMM</code>. The exact labels, colors, blink patterns, and meanings depend on the manufacturer and controller model.</p>
+<p>Illustrative PLC front-panel indicators</p>
+<pre><code>+------------------------------------+
+|             PLC CPU                |
+|                                    |
+|  [ RUN ]   Green / Status          |
+|  [ ERR ]   Red / Error             |
+|  [ I/O ]   Module or I/O Status    |
+|  [ COMM ]  Communication Status    |
+|                                    |
+|  PORT 1             PORT 2         |
++------------------------------------+
+</code></pre>
+<p>This is a conceptual illustration, not a model-specific LED map.</p>
+<h3 id="common-led-interpretations">Common LED interpretations</h3>
+<table>
+<thead>
+<tr>
+<th>Indicator</th>
+<th>Possible meaning</th>
+<th>What to check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RUN</td>
+<td>Controller is executing its program</td>
+<td>Confirm the expected operating mode</td>
+</tr>
+<tr>
+<td>STOP</td>
+<td>Controller is not executing normal logic</td>
+<td>Check operating mode and stop cause</td>
+</tr>
+<tr>
+<td>ERR or FAULT</td>
+<td>Controller or program fault</td>
+<td>Read the fault details and diagnostic records</td>
+</tr>
+<tr>
+<td>SF</td>
+<td>System fault on some platforms</td>
+<td>Inspect CPU, module, or system diagnostics</td>
+</tr>
+<tr>
+<td>BF</td>
+<td>Bus fault on some platforms</td>
+<td>Inspect network configuration and connected devices</td>
+</tr>
+<tr>
+<td>I/O</td>
+<td>I/O status or module fault, depending on platform</td>
+<td>Check module and channel diagnostics</td>
+</tr>
+<tr>
+<td>COMM</td>
+<td>Communication activity or status, depending on platform</td>
+<td>Check device connection and network diagnostics</td>
+</tr>
+</tbody>
+</table>
+<p>Important: An LED's meaning must be verified against the exact controller manual. The same label does not guarantee the same behavior across manufacturers.</p>
+<h3 id="steady-versus-flashing-leds">Steady versus flashing LEDs</h3>
+<p>A steady indicator may represent a persistent state, while a flashing indicator may represent a specific fault, startup condition, or communication state.</p>
+<p>Do not assume that flashing always means a fault. Record the exact LED label, color, and blink pattern before consulting the relevant manual.</p>
+<h2 id="4-diagnostic-buffer">4. Diagnostic Buffer</h2>
+<p>A diagnostic buffer is a controller-maintained record of diagnostic events, faults, warnings, and operating-state changes.</p>
+<p>Depending on the platform, it may include:</p>
+<ul>
+<li>CPU startup and restart events.</li>
+<li>Controller mode changes.</li>
+<li>I/O module faults.</li>
+<li>Communication interruptions.</li>
+<li>Program or execution errors.</li>
+<li>Configuration inconsistencies.</li>
+<li>Power-related events.</li>
+<li>Module insertion, removal, or recovery events.</li>
+</ul>
+<p>The diagnostic buffer is especially useful for intermittent problems because it may preserve evidence of an event that is no longer active.</p>
+<h3 id="example-diagnostic-sequence">Example diagnostic sequence</h3>
+<p>Imagine a production station stops at 14:32.</p>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Event</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>14:31:58</td>
+<td>Remote I/O connection interrupted</td>
+</tr>
+<tr>
+<td>14:32:00</td>
+<td>Production sequence stops</td>
+</tr>
+<tr>
+<td>14:32:03</td>
+<td>Device communication fault recorded</td>
+</tr>
+<tr>
+<td>14:32:12</td>
+<td>Communication restored</td>
+</tr>
+<tr>
+<td>14:32:15</td>
+<td>Operator reports that the station is stopped</td>
+</tr>
+</tbody>
+</table>
+<p>The operator sees a stopped station, but the diagnostic history indicates that communication was interrupted first.</p>
+<p>The timing suggests a possible relationship, but further investigation is still required to establish the root cause.</p>
+<h3 id="how-to-inspect-a-diagnostic-buffer">How to inspect a diagnostic buffer</h3>
+<ol>
+<li>Connect to the correct PLC using the approved engineering software.</li>
+<li>Confirm the controller identity and operating state.</li>
+<li>Open the controller's diagnostic or event-buffer view.</li>
+<li>Record the event timestamp, identifier, description, and affected component.</li>
+<li>Inspect the events immediately before and after the failure.</li>
+<li>Compare the recorded events with the machine sequence and operator observations.</li>
+<li>Preserve the evidence before clearing or resetting anything.</li>
+</ol>
+<p>The exact menu names differ between engineering environments.</p>
+<h3 id="why-event-order-matters">Why event order matters</h3>
+<p>A fault recorded after a machine stops may be a consequence rather than the original cause.</p>
+<p>For example:</p>
+<pre><code>Network Connection Lost
+          |
+          v
+Remote I/O Data Becomes Unavailable
+          |
+          v
+Sequence Cannot Continue
+          |
+          v
+Machine Stops
+</code></pre>
+<p>The network fault is a candidate initiating event. The machine stop is a resulting symptom.</p>
+<p>This distinction is essential when preparing root-cause analysis reports.</p>
+<h2 id="5-fault-codes-and-error-messages">5. Fault Codes and Error Messages</h2>
+<p>A fault code is an identifier associated with a detected error or abnormal condition. The corresponding message or diagnostic details explain what the controller detected.</p>
+<p>Fault information may include:</p>
+<ul>
+<li>Error code or identifier.</li>
+<li>Fault description.</li>
+<li>Affected module, task, instruction, or channel.</li>
+<li>Timestamp.</li>
+<li>Fault location or program context.</li>
+<li>Additional status or diagnostic data.</li>
+<li>Suggested corrective checks.</li>
+</ul>
+<p>There is no universal PLC fault-code list. A code from one manufacturer, CPU family, or software version may mean something entirely different on another platform.</p>
+<h3 id="fault-categories">Fault categories</h3>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Example</th>
+<th>First area to investigate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CPU/system fault</td>
+<td>Controller enters a fault state</td>
+<td>CPU diagnostics and execution records</td>
+</tr>
+<tr>
+<td>Program fault</td>
+<td>Invalid instruction execution or execution error</td>
+<td>Program location and relevant data</td>
+</tr>
+<tr>
+<td>I/O fault</td>
+<td>Module or channel reports an error</td>
+<td>Module status, wiring, configuration</td>
+</tr>
+<tr>
+<td>Communication fault</td>
+<td>Connection to a remote device is lost</td>
+<td>Network, device power, connection configuration</td>
+</tr>
+<tr>
+<td>Configuration fault</td>
+<td>Hardware configuration does not match the installed system</td>
+<td>Hardware configuration and module identity</td>
+</tr>
+<tr>
+<td>Process/application fault</td>
+<td>Cylinder fails to reach its expected position</td>
+<td>Sensor feedback, sequence conditions, actuator</td>
+</tr>
+<tr>
+<td>Safety-related fault</td>
+<td>Safety condition prevents operation</td>
+<td>Approved safety diagnostics and safety-system documentation</td>
+</tr>
+</tbody>
+</table>
+<h3 id="fault-versus-alarm">Fault versus alarm</h3>
+<p>These terms are related but not interchangeable.</p>
+<table>
+<thead>
+<tr>
+<th>Fault</th>
+<th>Alarm</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Indicates an abnormal or failed condition</td>
+<td>Notifies an operator of a condition requiring attention</td>
+</tr>
+<tr>
+<td>May affect controller operation or machine availability</td>
+<td>May be informational, warning-level, or stop-related</td>
+</tr>
+<tr>
+<td>May be generated by the CPU, module, or application</td>
+<td>Often generated by application logic or an HMI</td>
+</tr>
+<tr>
+<td>Can exist without a dedicated operator alarm</td>
+<td>Can exist without a controller-level fault</td>
+</tr>
+</tbody>
+</table>
+<p>For example, a PLC may be operating normally while an HMI displays a <code>CLAMP EXTEND TIMEOUT</code> alarm. The application has detected that a process condition was not met, but the CPU itself may have no execution fault.</p>
+<h2 id="6-diagnostic-information-from-io-modules">6. Diagnostic Information from I/O Modules</h2>
+<p>I/O diagnostics help determine whether a problem exists at the module level, the channel level, or further downstream in the field circuit.</p>
+<h3 id="digital-input-example">Digital input example</h3>
+<p>A sensor is physically detecting a component, but the PLC input tag remains <code>FALSE</code>.</p>
+<p>Investigate the signal path in order:</p>
+<pre><code>Component
+    |
+    v
+Sensor Detects Component
+    |
+    v
+Sensor Output
+    |
+    v
+Field Wiring and Supply
+    |
+    v
+Input Module Channel
+    |
+    v
+PLC Input Data
+    |
+    v
+Program Tag and Logic
+</code></pre>
+<p>At each stage, ask what evidence confirms that the signal has reached that point.</p>
+<table>
+<thead>
+<tr>
+<th>Observation</th>
+<th>Possible interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sensor indicator is OFF</td>
+<td>Detection, sensor supply, or sensor configuration issue</td>
+</tr>
+<tr>
+<td>Sensor indicator is ON, PLC channel is OFF</td>
+<td>Wiring, electrical compatibility, or input-channel issue</td>
+</tr>
+<tr>
+<td>Input channel is ON, PLC tag is OFF</td>
+<td>Mapping, addressing, update, or tag-selection issue</td>
+</tr>
+<tr>
+<td>PLC tag is ON, output command is OFF</td>
+<td>Logic conditions, interlocks, permissives, or sequence state</td>
+</tr>
+<tr>
+<td>Output command is ON, actuator does not operate</td>
+<td>Output module, circuit, supply, valve, or actuator issue</td>
+</tr>
+</tbody>
+</table>
+<p>These are diagnostic clues, not automatic conclusions. Confirm each one through appropriate measurements and controller diagnostics.</p>
+<h3 id="analog-input-example">Analog input example</h3>
+<p>A pressure transmitter should report a valid pressure, but the PLC value is zero or outside the expected range.</p>
+<p>Check:</p>
+<ul>
+<li>Transmitter supply and wiring.</li>
+<li>Signal type and range, such as 4 to 20 mA or 0 to 10 V.</li>
+<li>Input module configuration.</li>
+<li>Channel diagnostics and wire-break detection, if supported.</li>
+<li>Raw input value and engineering-unit scaling.</li>
+<li>Program logic and any range checks.</li>
+</ul>
+<p>Do not assume that an analog value of zero means the physical pressure is zero. It could indicate a configuration, wiring, scaling, or signal problem.</p>
+<h2 id="7-communication-diagnostics">7. Communication Diagnostics</h2>
+<p>Modern automation systems often depend on communication between PLCs, remote I/O, robots, drives, HMIs, and supervisory systems.</p>
+<p>Communication diagnostics can help identify:</p>
+<ul>
+<li>Lost or interrupted connections.</li>
+<li>Device timeouts.</li>
+<li>Configuration mismatches.</li>
+<li>Addressing problems.</li>
+<li>Network congestion or excessive update delays.</li>
+<li>Device power loss.</li>
+<li>Cable, connector, or switch faults.</li>
+</ul>
+<p>A communication fault may affect only one device or an entire group of devices, depending on the network architecture.</p>
+<h3 id="example-remote-io-fault">Example: Remote I/O fault</h3>
+<p>Suppose several sensors connected to one remote I/O station stop updating simultaneously, while sensors on the local PLC rack continue working.</p>
+<p>This pattern suggests investigating the shared remote I/O path before testing every sensor individually.</p>
+<p>Check the remote station's power, network link, connection status, module diagnostics, and controller-side connection records.</p>
+<p>If multiple unrelated signals fail together, look for a shared cause.</p>
+<h2 id="8-program-level-diagnostics">8. Program-Level Diagnostics</h2>
+<p>Not every machine stoppage creates a CPU fault. Many important failures are detected and handled by the application program.</p>
+<p>Examples include:</p>
+<ul>
+<li>A timer expires before a cylinder reaches its end position.</li>
+<li>A robot-ready signal is missing.</li>
+<li>A permissive condition is not satisfied.</li>
+<li>A sequence step does not receive the expected feedback.</li>
+<li>A drive reports a fault through a PLC tag.</li>
+<li>A part-presence signal contradicts another sensor.</li>
+</ul>
+<h3 id="example-cylinder-extension-timeout">Example: Cylinder extension timeout</h3>
+<pre><code>Command Cylinder Extend
+          |
+          v
+Wait for Extended Sensor
+          |
+          +---- Sensor ON ----&gt; Continue Sequence
+          |
+          +---- Timeout -----&gt; Set Alarm
+                              Stop or Hold Sequence
+</code></pre>
+<p>If the timeout alarm activates, investigate both the logic and the physical system.</p>
+<p>Possible causes include a failed sensor, a disconnected wire, low pneumatic pressure, a stuck valve, mechanical obstruction, incorrect timer settings, or a sequencing issue.</p>
+<p>The alarm identifies the failed expectation. It does not prove which component caused it.</p>
+<h2 id="9-systematic-plc-fault-troubleshooting-procedure">9. Systematic PLC Fault-Troubleshooting Procedure</h2>
+<p>Use this sequence when investigating a real fault.</p>
+<h3 id="step-1-establish-the-condition">Step 1: Establish the condition</h3>
+<p>Record the machine state, fault time, affected station, operating mode, and what the equipment was doing immediately before the stop.</p>
+<h3 id="step-2-check-controller-status">Step 2: Check controller status</h3>
+<p>Observe the CPU operating state and all relevant status indicators. Record exact LED labels, colors, and blink patterns.</p>
+<h3 id="step-3-read-diagnostic-information">Step 3: Read diagnostic information</h3>
+<p>Inspect the controller diagnostic buffer, module diagnostics, network status, and relevant program messages.</p>
+<h3 id="step-4-identify-the-first-abnormal-event">Step 4: Identify the first abnormal event</h3>
+<p>Compare timestamps and event order. Determine which abnormal condition occurred first, rather than focusing only on the final alarm.</p>
+<h3 id="step-5-trace-the-signal-path">Step 5: Trace the signal path</h3>
+<p>For an input problem, trace from the sensor to the PLC tag. For an output problem, trace from the program command to the physical actuator.</p>
+<h3 id="step-6-verify-the-suspected-cause">Step 6: Verify the suspected cause</h3>
+<p>Use approved measurements, engineering diagnostics, wiring diagrams, and component documentation. Distinguish confirmed findings from assumptions.</p>
+<h3 id="step-7-correct-and-validate">Step 7: Correct and validate</h3>
+<p>Follow the site's isolation, safety, change-control, and restart procedures. Confirm that the original function works and that no related faults remain.</p>
+<h3 id="step-8-record-the-result">Step 8: Record the result</h3>
+<p>Document the symptom, root cause, corrective action, verification, and any preventive action needed to reduce recurrence.</p>
+<h2 id="10-common-troubleshooting-mistakes">10. Common Troubleshooting Mistakes</h2>
+<table>
+<thead>
+<tr>
+<th>Mistake</th>
+<th>Why it is a problem</th>
+<th>Better approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Resetting the PLC immediately</td>
+<td>Can remove useful evidence or change the observed condition</td>
+<td>Record the fault and diagnostic history first</td>
+</tr>
+<tr>
+<td>Replacing a module based only on an LED</td>
+<td>The fault may originate in wiring, power, or configuration</td>
+<td>Confirm the diagnosis using module and field measurements</td>
+</tr>
+<tr>
+<td>Assuming every machine stop is a CPU fault</td>
+<td>Process interlocks and missing feedback can stop a machine without a CPU fault</td>
+<td>Check application and field-device conditions</td>
+</tr>
+<tr>
+<td>Looking only at the latest event</td>
+<td>The latest event may be a consequence</td>
+<td>Review the preceding event sequence</td>
+</tr>
+<tr>
+<td>Clearing faults before recording them</td>
+<td>May destroy or obscure useful troubleshooting evidence</td>
+<td>Preserve relevant records first</td>
+</tr>
+<tr>
+<td>Forcing an input or output to test it</td>
+<td>Can bypass normal logic and create unexpected machine movement</td>
+<td>Use approved test procedures and risk controls</td>
+</tr>
+<tr>
+<td>Increasing timers without identifying the cause</td>
+<td>Can hide a real mechanical or electrical problem</td>
+<td>Verify the physical process and timing requirements</td>
+</tr>
+<tr>
+<td>Assuming a fault code is universal</td>
+<td>Codes vary by platform and version</td>
+<td>Use the correct manufacturer documentation</td>
+</tr>
+</tbody>
+</table>
+<h2 id="11-diagnostic-buffer-led-and-fault-code-how-they-work-together">11. Diagnostic Buffer, LED, and Fault Code: How They Work Together</h2>
+<p>These three tools provide different kinds of evidence.</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Primary purpose</th>
+<th>Limitation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LEDs</td>
+<td>Rapid indication of controller or module status</td>
+<td>Often insufficient to identify the root cause</td>
+</tr>
+<tr>
+<td>Diagnostic buffer</td>
+<td>Records diagnostic events and their sequence</td>
+<td>Records depend on what the platform captures and retains</td>
+</tr>
+<tr>
+<td>Fault codes and messages</td>
+<td>Identify a specific detected condition</td>
+<td>A code may identify the symptom without proving the underlying cause</td>
+</tr>
+</tbody>
+</table>
+<p>For example, a red fault LED tells you that a fault condition exists. The diagnostic buffer may show when it began. The fault details may identify the affected remote I/O connection. Network and module checks can then establish whether the cause is power, wiring, configuration, or hardware.</p>
+<p>The strongest diagnosis combines all three with direct verification.</p>
+<h2 id="12-manufacturer-specific-considerations">12. Manufacturer-Specific Considerations</h2>
+<table>
+<thead>
+<tr>
+<th>Platform</th>
+<th>General diagnostic approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Siemens SIMATIC</td>
+<td>Inspect CPU and module diagnostic information, diagnostic buffers, status LEDs, and online diagnostics in the applicable engineering software</td>
+</tr>
+<tr>
+<td>Rockwell Automation Logix</td>
+<td>Inspect controller faults, module and connection status, task or program faults, and relevant diagnostic information in the engineering environment</td>
+</tr>
+<tr>
+<td>Mitsubishi MELSEC</td>
+<td>Inspect CPU error information, module status, diagnostic records, and communication-related information using the applicable engineering software</td>
+</tr>
+</tbody>
+</table>
+<p>The exact menus, terminology, fault identifiers, and recovery procedures depend on the controller family, firmware, and software version.</p>
+<p>Use the manufacturer's manual for the specific hardware installed on the machine. Never apply a reset or recovery procedure solely because it worked on a different PLC model.</p>
+<h2 id="13-interview-questions-and-answers">13. Interview Questions and Answers</h2>
+<p>Q1. What is PLC diagnostics?</p>
+<p>The process of identifying and analyzing faults using controller status, diagnostic records, fault codes, module information, communication status, and application-level information.</p>
+<p>Q2. What is a diagnostic buffer?</p>
+<p>A controller-maintained record of diagnostic events, faults, warnings, and operating-state changes, subject to the capabilities and retention behavior of the PLC.</p>
+<p>Q3. What information can a PLC status LED provide?</p>
+<p>It can indicate operating state, system fault, communication status, or module condition. Exact meanings depend on the controller model and LED pattern.</p>
+<p>Q4. What is a fault code?</p>
+<p>An identifier associated with a detected abnormal condition. Its meaning must be interpreted using the correct manufacturer's documentation.</p>
+<p>Q5. Why should the diagnostic buffer be checked before resetting a PLC?</p>
+<p>Because it may contain evidence about the original fault, including event order, timestamps, and affected components.</p>
+<p>Q6. Can a PLC stop a machine without having a CPU fault?</p>
+<p>Yes. The application may stop a sequence because an interlock, permissive, safety condition, or process feedback requirement is not satisfied.</p>
+<p>Q7. What is the difference between a fault and its root cause?</p>
+<p>The fault is the detected abnormal condition. The root cause is the underlying reason that produced it. A communication fault, for example, may be caused by a failed cable or loss of device power.</p>
+<p>Q8. Why is the first abnormal event important?</p>
+<p>It can help distinguish the initiating failure from later alarms and secondary consequences.</p>
+<p>Q9. What should be checked when multiple I/O signals fail simultaneously?</p>
+<p>Investigate shared components such as the remote I/O station, power supply, network connection, common wiring, or communication configuration.</p>
+<p>Q10. Should a fault always be reset immediately?</p>
+<p>No. Record and investigate the fault first, then follow the approved recovery procedure. Resetting without understanding the cause may conceal evidence or allow the fault to recur.</p>
+<h2 id="14-practical-study-exercise">14. Practical Study Exercise</h2>
+<p>Use an approved engineering environment or an available training PLC. Do not create faults on a running production machine merely to practise diagnostics.</p>
+<p>Record the following:</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>What to document</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Controller identity</td>
+<td>Manufacturer, model, firmware</td>
+</tr>
+<tr>
+<td>Controller status</td>
+<td>RUN/STOP state and relevant LEDs</td>
+</tr>
+<tr>
+<td>Diagnostic event</td>
+<td>Exact message and fault identifier</td>
+</tr>
+<tr>
+<td>Event time</td>
+<td>Timestamp and sequence of related events</td>
+</tr>
+<tr>
+<td>Affected device</td>
+<td>CPU, module, channel, network node, or application</td>
+</tr>
+<tr>
+<td>Signal evidence</td>
+<td>Relevant input, output, or status tag</td>
+</tr>
+<tr>
+<td>Suspected cause</td>
+<td>Initial hypothesis based on evidence</td>
+</tr>
+<tr>
+<td>Verification</td>
+<td>Test or diagnostic result supporting or rejecting the hypothesis</td>
+</tr>
+<tr>
+<td>Corrective action</td>
+<td>Repair, configuration correction, or approved recovery</td>
+</tr>
+<tr>
+<td>Final validation</td>
+<td>Confirmation that the function operates correctly</td>
+</tr>
+</tbody>
+</table>
+<p>The objective is to learn how to move from a fault indication to a verified diagnosis, with enough recorded evidence that another engineer can understand and reproduce the reasoning.</p>
+<h2 id="15-final-mental-model">15. Final Mental Model</h2>
+<ul>
+<li>LEDs: Show an immediate status indication.</li>
+<li>Diagnostic buffer: Shows recorded events and their sequence.</li>
+<li>Fault codes: Identify detected error conditions.</li>
+<li>Module diagnostics: Narrow the problem to a device, channel, or connection.</li>
+<li>Program diagnostics: Reveal missing conditions and sequence failures.</li>
+<li>Root-cause analysis: Establishes why the failure occurred.</li>
+<li>Validation: Confirms that the corrective action actually solved the problem.</li>
+</ul>
+<p>The core principle is simple: observe, record, isolate, verify, correct, and validate. Good diagnostics turns an unexpected machine stop into a structured technical investigation.</p>
+<h1 id="next-topic-01_ladder">Next Topic: 01_Ladder</h1>
+<p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\02_Auto_Tech\01_PLC\04_Programming\01_Ladder</code></p>
+<p>Topic: Ladder Logic (Ladder Diagram)</p>
+<p>This topic will introduce the ladder-logic programming model, including rails and rungs, contacts, coils, Boolean logic, execution order, and how to read industrial PLC programs.</p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

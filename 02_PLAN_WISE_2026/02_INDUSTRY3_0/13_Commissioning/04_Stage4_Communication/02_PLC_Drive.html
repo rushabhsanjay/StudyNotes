@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLC-Drive Communication Commissioning</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">PLC-Drive Communication Commissioning</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-scope-of-plc-drive-commissioning">2. Scope of PLC-Drive Commissioning</a></li>
+<li><a href="#3-plc-drive-system-architecture">3. PLC-Drive System Architecture</a></li>
+<li><a href="#4-main-components-and-their-functions">4. Main Components and Their Functions</a></li>
+<li><a href="#5-common-plc-drive-control-methods">5. Common PLC-Drive Control Methods</a><ul>
+<li><a href="#51-hardwired-control">5.1 Hardwired control</a></li>
+<li><a href="#52-industrial-network-control">5.2 Industrial network control</a></li>
+<li><a href="#53-hybrid-control">5.3 Hybrid control</a></li>
+</ul>
+</li>
+<li><a href="#6-plc-drive-communication-protocols">6. PLC-Drive Communication Protocols</a></li>
+<li><a href="#7-cyclic-process-data-and-acyclic-parameter-access">7. Cyclic Process Data and Acyclic Parameter Access</a></li>
+<li><a href="#8-drive-control-word-and-status-word">8. Drive Control Word and Status Word</a><ul>
+<li><a href="#81-example-of-a-simplified-control-interface">8.1 Example of a simplified control interface</a></li>
+</ul>
+</li>
+<li><a href="#9-drive-state-machine-and-enable-sequence">9. Drive State Machine and Enable Sequence</a></li>
+<li><a href="#10-network-addressing-and-device-configuration">10. Network Addressing and Device Configuration</a><ul>
+<li><a href="#101-ip-based-drives">10.1 IP-based drives</a></li>
+<li><a href="#102-profinet-specific-checks">10.2 PROFINET-specific checks</a></li>
+<li><a href="#103-ethernetip-specific-checks">10.3 EtherNet/IP-specific checks</a></li>
+</ul>
+</li>
+<li><a href="#11-plc-tag-mapping-and-data-types">11. PLC Tag Mapping and Data Types</a><ul>
+<li><a href="#111-reference-scaling">11.1 Reference scaling</a></li>
+<li><a href="#112-actual-speed-conversion">11.2 Actual speed conversion</a></li>
+</ul>
+</li>
+<li><a href="#12-pre-commissioning-electrical-and-mechanical-checks">12. Pre-Commissioning Electrical and Mechanical Checks</a><ul>
+<li><a href="#electrical-checks">Electrical checks</a></li>
+<li><a href="#mechanical-checks">Mechanical checks</a></li>
+</ul>
+</li>
+<li><a href="#13-drive-parameter-verification">13. Drive Parameter Verification</a></li>
+<li><a href="#14-controlled-functional-commissioning">14. Controlled Functional Commissioning</a><ul>
+<li><a href="#stage-1-verify-communication-without-motion">Stage 1: Verify communication without motion</a></li>
+<li><a href="#stage-2-verify-command-behavior">Stage 2: Verify command behavior</a></li>
+<li><a href="#stage-3-verify-reference-handling">Stage 3: Verify reference handling</a></li>
+<li><a href="#stage-4-verify-motor-operation">Stage 4: Verify motor operation</a></li>
+<li><a href="#stage-5-verify-faults-and-recovery">Stage 5: Verify faults and recovery</a></li>
+</ul>
+</li>
+<li><a href="#15-start-stop-direction-and-speed-commands">15. Start, Stop, Direction, and Speed Commands</a><ul>
+<li><a href="#151-start-command">15.1 Start command</a></li>
+<li><a href="#152-stop-command">15.2 Stop command</a></li>
+<li><a href="#153-direction-command">15.3 Direction command</a></li>
+<li><a href="#154-speed-command">15.4 Speed command</a></li>
+</ul>
+</li>
+<li><a href="#16-interlocks-and-permissives">16. Interlocks and Permissives</a><ul>
+<li><a href="#161-interlock-commissioning-test">16.1 Interlock commissioning test</a></li>
+</ul>
+</li>
+<li><a href="#17-communication-loss-and-fault-response">17. Communication Loss and Fault Response</a><ul>
+<li><a href="#171-required-checks">17.1 Required checks</a></li>
+</ul>
+</li>
+<li><a href="#18-drive-diagnostics-and-troubleshooting">18. Drive Diagnostics and Troubleshooting</a><ul>
+<li><a href="#181-diagnostic-order">18.1 Diagnostic order</a></li>
+</ul>
+</li>
+<li><a href="#19-performance-and-data-update-verification">19. Performance and Data Update Verification</a></li>
+<li><a href="#20-special-considerations-for-servo-drives">20. Special Considerations for Servo Drives</a><ul>
+<li><a href="#201-position-scaling-example">20.1 Position scaling example</a></li>
+</ul>
+</li>
+<li><a href="#21-safety-considerations">21. Safety Considerations</a></li>
+<li><a href="#22-fat-and-sat-for-plc-drive-communication">22. FAT and SAT for PLC-Drive Communication</a></li>
+<li><a href="#23-acceptance-criteria">23. Acceptance Criteria</a></li>
+<li><a href="#24-example-plc-controlled-conveyor-vfd">24. Example: PLC-Controlled Conveyor VFD</a><ul>
+<li><a href="#241-commissioning-sequence">24.1 Commissioning sequence</a></li>
+<li><a href="#242-example-acceptance-table">24.2 Example acceptance table</a></li>
+</ul>
+</li>
+<li><a href="#25-common-commissioning-mistakes">25. Common Commissioning Mistakes</a></li>
+<li><a href="#26-interview-questions-and-answers">26. Interview Questions and Answers</a></li>
+<li><a href="#27-final-plc-drive-commissioning-checklist">27. Final PLC-Drive Commissioning Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>PLC-Drive communication commissioning is the process of configuring, testing, and validating data exchange between a Programmable Logic Controller (PLC) and a motor drive, such as a Variable Frequency Drive (VFD), servo drive, or other networked drive.</p>
+<p>The objective is to ensure that the PLC can send the intended commands and reference values to the drive, receive correct status and feedback, detect faults, and coordinate machine operation reliably.</p>
+<p>A drive may be controlled through hardwired digital and analog signals, an industrial communication network, or a combination of both. Commissioning must verify the actual control method implemented in the machine.</p>
+<p>Core principle: A PLC communication status showing healthy does not prove that the drive is ready, the motor rotates in the correct direction, the speed reference is interpreted correctly, or the machine is safe to operate.</p>
+<h2 id="2-scope-of-plc-drive-commissioning">2. Scope of PLC-Drive Commissioning</h2>
+<p>PLC-Drive commissioning includes:</p>
+<ul>
+<li>Physical connections and communication hardware.</li>
+<li>Drive network configuration and addressing.</li>
+<li>Protocol, device profile, and PLC hardware configuration.</li>
+<li>PLC-to-drive command and reference mapping.</li>
+<li>Drive-to-PLC status and feedback mapping.</li>
+<li>Start, stop, enable, reset, speed, torque, and direction commands.</li>
+<li>Drive permissives, interlocks, and fault handling.</li>
+<li>Motor nameplate data and drive parameter verification.</li>
+<li>Communication timeout, fault response, and recovery behavior.</li>
+<li>Controlled functional tests, performance checks, and handover records.</li>
+</ul>
+<p>It also requires coordination with electrical installation, motor commissioning, machine sequencing, and safety validation. Communication commissioning does not replace those activities.</p>
+<h2 id="3-plc-drive-system-architecture">3. PLC-Drive System Architecture</h2>
+<p>A typical network-controlled drive system has the following structure:</p>
+<pre><code>Operator / HMI
+      ↓
+PLC Program and Sequence Logic
+      ↓
+PLC Communication Interface
+      ↓
+Industrial Network
+      ↓
+Drive Communication Interface
+      ↓
+VFD / Servo Drive
+      ↓
+Motor
+      ↓
+Machine Load
+</code></pre>
+<p>Feedback travels in the reverse direction:</p>
+<pre><code>Motor / Drive
+      ↓
+Speed, Current, Torque, Status, Faults
+      ↓
+Drive Communication Interface
+      ↓
+Industrial Network
+      ↓
+PLC Input Data
+      ↓
+PLC Sequence and Diagnostic Logic
+      ↓
+HMI / SCADA
+</code></pre>
+<p>In some systems, the PLC uses hardwired signals for enable, run, or fault status while communication carries speed references, actual values, and diagnostics. This hybrid arrangement must be documented and tested according to the actual design.</p>
+<h2 id="4-main-components-and-their-functions">4. Main Components and Their Functions</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+<th>Commissioning focus</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC CPU</td>
+<td>Executes sequence and motion-related logic</td>
+<td>Operating state, program version, command logic</td>
+</tr>
+<tr>
+<td>PLC network interface</td>
+<td>Connects the PLC to the drive network</td>
+<td>IP settings, device configuration, communication status</td>
+</tr>
+<tr>
+<td>Network switch</td>
+<td>Connects networked devices</td>
+<td>Port status, topology, VLANs, network faults</td>
+</tr>
+<tr>
+<td>Drive communication module</td>
+<td>Exchanges cyclic and diagnostic data</td>
+<td>Compatibility, addressing, firmware, configuration</td>
+</tr>
+<tr>
+<td>VFD</td>
+<td>Controls induction or other supported motors</td>
+<td>Motor data, control mode, limits, protection</td>
+</tr>
+<tr>
+<td>Servo drive</td>
+<td>Controls servo motor position, speed, and torque</td>
+<td>Feedback configuration, tuning, motion parameters</td>
+</tr>
+<tr>
+<td>Motor</td>
+<td>Converts electrical energy into mechanical motion</td>
+<td>Wiring, nameplate data, direction, load suitability</td>
+</tr>
+<tr>
+<td>Encoder or feedback device</td>
+<td>Measures position or speed where fitted</td>
+<td>Wiring, scaling, polarity, feedback validity</td>
+</tr>
+<tr>
+<td>Safety circuit</td>
+<td>Performs defined safety functions</td>
+<td>Approved architecture, safety devices, validation</td>
+</tr>
+<tr>
+<td>HMI</td>
+<td>Displays status and permits authorized commands</td>
+<td>Tag mapping, alarm display, command feedback</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-common-plc-drive-control-methods">5. Common PLC-Drive Control Methods</h2>
+<h3 id="51-hardwired-control">5.1 Hardwired control</h3>
+<p>Commands and feedback use discrete or analog electrical signals.</p>
+<p>Typical signals include:</p>
+<ul>
+<li>Digital output: run or enable command.</li>
+<li>Digital input: drive ready or drive fault.</li>
+<li>Analog output: speed reference.</li>
+<li>Analog input: actual speed or another measured value.</li>
+</ul>
+<p>Advantages include simple interfaces and straightforward testing. Limitations include additional wiring and fewer available diagnostic details.</p>
+<p>Commissioning must check signal polarity, voltage/current ranges, analog scaling, common references, isolation, and wiring against the approved drawings.</p>
+<h3 id="52-industrial-network-control">5.2 Industrial network control</h3>
+<p>The PLC exchanges commands, references, status words, actual values, and diagnostic information over a communication network.</p>
+<p>Advantages include reduced point-to-point wiring, richer diagnostics, and easier integration with HMI and SCADA systems.</p>
+<p>Potential failure points include incorrect device addresses, incompatible profiles, incorrect process-data mapping, configuration mismatches, network interruptions, and stale feedback.</p>
+<h3 id="53-hybrid-control">5.3 Hybrid control</h3>
+<p>A system may use network communication for speed reference and monitoring but retain hardwired signals for selected enables, interlocks, or fault indications.</p>
+<p>The commissioning engineer must establish which channel owns each function. Two conflicting command paths can cause confusing or unpredictable behavior if the drive's command-source configuration is not understood.</p>
+<h2 id="6-plc-drive-communication-protocols">6. PLC-Drive Communication Protocols</h2>
+<table>
+<thead>
+<tr>
+<th>Protocol</th>
+<th>Typical use</th>
+<th>Commissioning considerations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PROFINET</td>
+<td>Siemens PLCs and compatible drives</td>
+<td>Device name, IP settings, GSDML configuration, cyclic data mapping</td>
+</tr>
+<tr>
+<td>EtherNet/IP</td>
+<td>Allen-Bradley PLCs and compatible drives</td>
+<td>Device identity, EDS or profile support, assembly instances and sizes</td>
+</tr>
+<tr>
+<td>Modbus TCP</td>
+<td>Drives and controllers from multiple manufacturers</td>
+<td>Register addresses, data types, scaling, function codes</td>
+</tr>
+<tr>
+<td>PROFIBUS DP</td>
+<td>Legacy and existing industrial installations</td>
+<td>Node address, GSD configuration, bus termination and diagnostics</td>
+</tr>
+<tr>
+<td>EtherCAT</td>
+<td>High-performance control and motion applications</td>
+<td>Network topology, device configuration, distributed clock requirements</td>
+</tr>
+<tr>
+<td>CANopen</td>
+<td>Drives and devices on CAN-based networks</td>
+<td>Node ID, baud rate, PDO mapping, state machine</td>
+</tr>
+<tr>
+<td>Modbus RTU</td>
+<td>Serial-connected drives</td>
+<td>Baud rate, parity, stop bits, slave address, RS-485 wiring</td>
+</tr>
+</tbody>
+</table>
+<p>The supported protocols depend on the exact PLC, drive model, communication module, firmware, and device profile. A protocol name alone does not establish compatibility.</p>
+<h2 id="7-cyclic-process-data-and-acyclic-parameter-access">7. Cyclic Process Data and Acyclic Parameter Access</h2>
+<p>Many industrial drive networks use two broad categories of data exchange.</p>
+<p>Cyclic process data is exchanged repeatedly during normal operation. It commonly includes control words, speed references, status words, and actual speed values.</p>
+<p>Acyclic parameter access reads or writes configuration and diagnostic parameters on demand. Examples include reading a fault history or accessing a drive parameter through a supported engineering interface.</p>
+<p>Cyclic data is typically used for time-sensitive operational commands. Acyclic access is commonly used for setup and diagnostics, although the exact implementation depends on the protocol and device.</p>
+<p>A drive may have a healthy cyclic connection while parameter access fails, or vice versa. Commission both separately when both are required.</p>
+<h2 id="8-drive-control-word-and-status-word">8. Drive Control Word and Status Word</h2>
+<p>A control word is a bit field sent to the drive to request operating states or actions. A status word is a bit field returned by the drive to report its state.</p>
+<p>Typical control-word functions may include:</p>
+<ul>
+<li>Enable or disable operation.</li>
+<li>Request a run state.</li>
+<li>Select direction.</li>
+<li>Acknowledge a fault.</li>
+<li>Request a defined state transition.</li>
+</ul>
+<p>Typical status-word information may include:</p>
+<ul>
+<li>Ready to switch on.</li>
+<li>Ready to operate.</li>
+<li>Operation enabled.</li>
+<li>Running or at speed.</li>
+<li>Fault active.</li>
+<li>Warning active.</li>
+<li>Reference reached.</li>
+</ul>
+<p>Important: There is no universal control-word bit layout for every drive. Bit meanings, sequencing, and required combinations depend on the drive manufacturer, protocol, and supported profile.</p>
+<h3 id="81-example-of-a-simplified-control-interface">8.1 Example of a simplified control interface</h3>
+<table>
+<thead>
+<tr>
+<th>PLC-to-drive data</th>
+<th>Purpose</th>
+<th>Required verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Drive_Enable_Request</code></td>
+<td>Requests permission to operate</td>
+<td>Correct mode and permissives</td>
+</tr>
+<tr>
+<td><code>Drive_Run_Request</code></td>
+<td>Requests operation</td>
+<td>Command logic and start conditions</td>
+</tr>
+<tr>
+<td><code>Speed_Reference</code></td>
+<td>Requests speed</td>
+<td>Units, sign, scaling, limits</td>
+</tr>
+<tr>
+<td><code>Direction_Request</code></td>
+<td>Requests direction</td>
+<td>Permitted direction and mechanical suitability</td>
+</tr>
+<tr>
+<td><code>Fault_Reset_Request</code></td>
+<td>Requests fault acknowledgement</td>
+<td>Fault condition and reset rules</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Drive-to-PLC data</th>
+<th>Purpose</th>
+<th>Required verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Drive_Ready</code></td>
+<td>Indicates readiness</td>
+<td>Correct interpretation of status bits</td>
+</tr>
+<tr>
+<td><code>Drive_Enabled</code></td>
+<td>Indicates enabled state</td>
+<td>Matches the actual drive state</td>
+</tr>
+<tr>
+<td><code>Drive_Running</code></td>
+<td>Indicates operation</td>
+<td>Correct state definition</td>
+</tr>
+<tr>
+<td><code>Actual_Speed</code></td>
+<td>Reports speed</td>
+<td>Correct units and sign</td>
+</tr>
+<tr>
+<td><code>Drive_Fault</code></td>
+<td>Indicates a fault</td>
+<td>Correct mapping and response</td>
+</tr>
+<tr>
+<td><code>Drive_Warning</code></td>
+<td>Indicates a warning</td>
+<td>Correct mapping and alarm handling</td>
+</tr>
+</tbody>
+</table>
+<p>These names are illustrative PLC tags, not standardized drive parameters.</p>
+<h2 id="9-drive-state-machine-and-enable-sequence">9. Drive State Machine and Enable Sequence</h2>
+<p>Many drives implement a defined state machine. A command to run may be ignored if the drive is not in the required state.</p>
+<p>A simplified operating sequence is:</p>
+<pre><code>Drive Powered
+      ↓
+Initialization Complete
+      ↓
+Ready State
+      ↓
+Enable Conditions Satisfied
+      ↓
+Operation Enabled
+      ↓
+Run Command Accepted
+      ↓
+Motor Accelerates
+      ↓
+Target Operating Condition Reached
+</code></pre>
+<p>Faults, missing permissives, or an invalid control-word sequence may prevent a transition.</p>
+<p>Commissioning must verify both the commands sent by the PLC and the actual states reported by the drive. Do not assume that setting a single PLC bit is sufficient to enable every drive model.</p>
+<h2 id="10-network-addressing-and-device-configuration">10. Network Addressing and Device Configuration</h2>
+<h3 id="101-ip-based-drives">10.1 IP-based drives</h3>
+<p>For Ethernet-based communication, confirm:</p>
+<ul>
+<li>Correct PLC and drive IP addresses.</li>
+<li>Correct subnet mask and any required gateway.</li>
+<li>No duplicate IP addresses.</li>
+<li>Correct device name where required by the protocol.</li>
+<li>Correct communication module and firmware compatibility.</li>
+<li>Correct drive device description or hardware configuration.</li>
+<li>Correct cyclic data size and mapping.</li>
+<li>Required switch and network settings.</li>
+</ul>
+<p>Example addressing:</p>
+<table>
+<thead>
+<tr>
+<th>Device</th>
+<th>Example IP address</th>
+<th>Subnet mask</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC</td>
+<td><code>192.168.20.10</code></td>
+<td><code>255.255.255.0</code></td>
+</tr>
+<tr>
+<td>Drive 1</td>
+<td><code>192.168.20.21</code></td>
+<td><code>255.255.255.0</code></td>
+</tr>
+<tr>
+<td>Drive 2</td>
+<td><code>192.168.20.22</code></td>
+<td><code>255.255.255.0</code></td>
+</tr>
+<tr>
+<td>Engineering PC</td>
+<td><code>192.168.20.30</code></td>
+<td><code>255.255.255.0</code></td>
+</tr>
+</tbody>
+</table>
+<p>These addresses are examples only. Always use the approved plant network plan.</p>
+<h3 id="102-profinet-specific-checks">10.2 PROFINET-specific checks</h3>
+<p>For a PROFINET drive, verify:</p>
+<ul>
+<li>Correct device name.</li>
+<li>Correct IP configuration.</li>
+<li>Correct GSDML file and device version.</li>
+<li>Correct module or submodule configuration.</li>
+<li>Correct input and output process-data lengths.</li>
+<li>Correct PLC hardware configuration and downloaded project.</li>
+<li>Correct assignment of process data to PLC tags.</li>
+</ul>
+<p>A device name or configuration mismatch can prevent the drive from entering data exchange even when the cable and IP address appear correct.</p>
+<h3 id="103-ethernetip-specific-checks">10.3 EtherNet/IP-specific checks</h3>
+<p>For an EtherNet/IP drive, verify:</p>
+<ul>
+<li>Correct device profile or electronic data sheet.</li>
+<li>Correct IP address and device identity.</li>
+<li>Correct input and output assembly instances.</li>
+<li>Correct assembly data sizes.</li>
+<li>Correct connection parameters and supported connection type.</li>
+<li>Correct PLC tag mapping to the drive's process data.</li>
+</ul>
+<p>Incorrect assembly sizes or instances can prevent a connection or result in incorrect process data.</p>
+<h2 id="11-plc-tag-mapping-and-data-types">11. PLC Tag Mapping and Data Types</h2>
+<p>The PLC program must map communication data to meaningful engineering variables.</p>
+<p>Typical signals include:</p>
+<ul>
+<li>Command bits and control words.</li>
+<li>Speed, torque, or position references.</li>
+<li>Drive status and fault words.</li>
+<li>Actual speed, torque, current, and position.</li>
+<li>Warning codes and diagnostic data.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Common representation</th>
+<th>Common mistake</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Run request</td>
+<td>BOOL or control-word bit</td>
+<td>Wrong bit or incorrect command sequence</td>
+</tr>
+<tr>
+<td>Control word</td>
+<td>UINT or WORD</td>
+<td>Incorrect bit layout or signed interpretation</td>
+</tr>
+<tr>
+<td>Speed reference</td>
+<td>INT, DINT, REAL, or profile-specific value</td>
+<td>Wrong scaling or range</td>
+</tr>
+<tr>
+<td>Status word</td>
+<td>UINT or WORD</td>
+<td>Incorrect bit decoding</td>
+</tr>
+<tr>
+<td>Actual speed</td>
+<td>Integer or floating-point value</td>
+<td>Incorrect unit or sign</td>
+</tr>
+<tr>
+<td>Fault code</td>
+<td>Integer or structured diagnostic data</td>
+<td>Incorrect interpretation of code</td>
+</tr>
+<tr>
+<td>Position feedback</td>
+<td>Integer, DINT, or REAL</td>
+<td>Wrong counts-per-unit conversion</td>
+</tr>
+</tbody>
+</table>
+<p>Use the exact data types specified by the drive's communication profile.</p>
+<h3 id="111-reference-scaling">11.1 Reference scaling</h3>
+<p>A drive may represent its speed reference as a percentage of a configured reference value, as an engineering-unit value, or through a manufacturer-specific raw scale.</p>
+<p>For example, if the drive documentation defines a raw value of 16384 as 100% reference, a 50% command would be:</p>
+<div class="math-display">\[ N = \frac{50}{100}\times 16384 = 8192 \]</div>
+<p>This relationship is valid only for that assumed scaling definition. Other drives may use different ranges, signed values, or direct engineering units.</p>
+<h3 id="112-actual-speed-conversion">11.2 Actual speed conversion</h3>
+<p>Suppose a hypothetical drive defines 100% reference as 1500 rpm and reports actual speed as a signed percentage of that reference.</p>
+<div class="math-display">\[ n = \frac{N}{16384}\times 1500 \]</div>
+<p>If the returned value is 8192:</p>
+<div class="math-display">\[ n = \frac{8192}{16384}\times 1500 = 750\text{ rpm} \]</div>
+<p>This example assumes the drive uses the stated raw range and reference convention. Confirm the actual parameterization and sign convention before applying a conversion.</p>
+<h2 id="12-pre-commissioning-electrical-and-mechanical-checks">12. Pre-Commissioning Electrical and Mechanical Checks</h2>
+<p>Communication should not be used to conceal incorrect installation or unsafe machine conditions.</p>
+<p>Before commanding motion, verify the approved installation requirements.</p>
+<h3 id="electrical-checks">Electrical checks</h3>
+<ul>
+<li>Drive supply voltage and phase configuration match the specification.</li>
+<li>Protective earth and bonding are correct.</li>
+<li>Motor cable and terminals match the electrical drawings.</li>
+<li>Motor nameplate data has been entered correctly.</li>
+<li>Control and feedback wiring are correct.</li>
+<li>Encoder wiring and feedback configuration are verified where applicable.</li>
+<li>Shielding and cable separation meet the manufacturer's requirements.</li>
+<li>Emergency stop and safety functions are installed and validated as specified.</li>
+</ul>
+<h3 id="mechanical-checks">Mechanical checks</h3>
+<ul>
+<li>Machine and motor installation are complete.</li>
+<li>Couplings, guards, and mechanical restraints are checked.</li>
+<li>The load can be moved safely during testing.</li>
+<li>Rotation direction can be checked under controlled conditions.</li>
+<li>Brakes and holding devices are configured correctly where fitted.</li>
+<li>The test area is clear and personnel are outside hazardous zones.</li>
+</ul>
+<p>Perform electrical isolation and lockout/tagout where required. Never handle motor power terminals, feedback wiring, or rotating equipment under unsafe energized conditions.</p>
+<h2 id="13-drive-parameter-verification">13. Drive Parameter Verification</h2>
+<p>A correctly communicating drive can still operate incorrectly if its parameters do not match the motor or application.</p>
+<p>Common parameter groups include:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter group</th>
+<th>Examples</th>
+<th>Verification objective</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Motor data</td>
+<td>Rated voltage, current, frequency, speed, power</td>
+<td>Correct motor model and protection</td>
+</tr>
+<tr>
+<td>Command source</td>
+<td>Terminals, network, local keypad</td>
+<td>Intended source has control authority</td>
+</tr>
+<tr>
+<td>Reference source</td>
+<td>Analog input, network, local keypad</td>
+<td>Correct source selected</td>
+</tr>
+<tr>
+<td>Acceleration/deceleration</td>
+<td>Ramp times</td>
+<td>Motion matches machine requirements</td>
+</tr>
+<tr>
+<td>Speed limits</td>
+<td>Minimum and maximum speed</td>
+<td>Required operating range</td>
+</tr>
+<tr>
+<td>Direction</td>
+<td>Forward/reverse permission</td>
+<td>Correct rotation and permitted motion</td>
+</tr>
+<tr>
+<td>Control mode</td>
+<td>V/f, sensorless vector, closed-loop vector</td>
+<td>Correct control strategy</td>
+</tr>
+<tr>
+<td>Protection</td>
+<td>Overload, overcurrent, overvoltage</td>
+<td>Correct protective settings</td>
+</tr>
+<tr>
+<td>Feedback</td>
+<td>Encoder type, pulses, polarity</td>
+<td>Correct speed or position feedback</td>
+</tr>
+<tr>
+<td>Brake control</td>
+<td>Brake timing and control</td>
+<td>Correct sequence for applicable loads</td>
+</tr>
+</tbody>
+</table>
+<p>Parameter names and available options differ across manufacturers. Verify every critical setting against the approved parameter list and the drive manual.</p>
+<h2 id="14-controlled-functional-commissioning">14. Controlled Functional Commissioning</h2>
+<h3 id="stage-1-verify-communication-without-motion">Stage 1: Verify communication without motion</h3>
+<ol>
+<li>Confirm the correct drive identity.</li>
+<li>Confirm the network connection and process-data exchange.</li>
+<li>Read the drive status word and actual-value data.</li>
+<li>Verify fault and warning information.</li>
+<li>Confirm that the PLC maps each signal correctly.</li>
+<li>Check whether the drive is in the intended command and reference mode.</li>
+</ol>
+<h3 id="stage-2-verify-command-behavior">Stage 2: Verify command behavior</h3>
+<ol>
+<li>Confirm the drive is in the specified safe test state.</li>
+<li>Verify that the PLC's enable request follows the required sequence.</li>
+<li>Confirm that the drive reports the expected state.</li>
+<li>Test a stop request and verify the specified response.</li>
+<li>Test fault acknowledgement only under approved conditions.</li>
+<li>Confirm the PLC handles rejected commands and missing permissives correctly.</li>
+</ol>
+<h3 id="stage-3-verify-reference-handling">Stage 3: Verify reference handling</h3>
+<ol>
+<li>Apply a low, approved reference value.</li>
+<li>Confirm the value received by the drive.</li>
+<li>Confirm the actual value reported to the PLC.</li>
+<li>Verify scaling, sign, limits, and units.</li>
+<li>Check reference changes and ramp behavior.</li>
+<li>Verify the response to an out-of-range request.</li>
+</ol>
+<h3 id="stage-4-verify-motor-operation">Stage 4: Verify motor operation</h3>
+<ol>
+<li>Confirm the test area and load conditions are safe.</li>
+<li>Start the motor under the approved procedure.</li>
+<li>Check rotation direction.</li>
+<li>Verify actual speed and current.</li>
+<li>Check acceleration, deceleration, and stop behavior.</li>
+<li>Verify the expected drive status and PLC sequence feedback.</li>
+<li>Record results and investigate any deviation.</li>
+</ol>
+<h3 id="stage-5-verify-faults-and-recovery">Stage 5: Verify faults and recovery</h3>
+<ol>
+<li>Use approved methods to create or simulate the specified fault conditions.</li>
+<li>Verify the PLC detects the fault and displays the correct status.</li>
+<li>Confirm the configured stop response.</li>
+<li>Restore the fault condition safely.</li>
+<li>Verify acknowledgement and restart permissives.</li>
+<li>Confirm that communication recovery does not generate unintended motion.</li>
+</ol>
+<h2 id="15-start-stop-direction-and-speed-commands">15. Start, Stop, Direction, and Speed Commands</h2>
+<h3 id="151-start-command">15.1 Start command</h3>
+<p>The PLC should request operation only when the required conditions are satisfied. These can include automatic mode, drive ready, no active fault, valid machine sequence, and process permissives.</p>
+<p>The precise permissives depend on the machine design. Safety functions must remain independent of ordinary HMI or PLC communication commands where required by the safety architecture.</p>
+<h3 id="152-stop-command">15.2 Stop command</h3>
+<p>The required stop behavior depends on the application and risk assessment. It may involve a controlled deceleration, a coast stop, a defined drive stop function, or a safety-related stop function.</p>
+<p>Do not assume that every stop command is equivalent. Verify the configured stopping behavior, including what happens when communication is lost.</p>
+<h3 id="153-direction-command">15.3 Direction command</h3>
+<p>Check:</p>
+<ul>
+<li>Motor wiring and phase sequence where applicable.</li>
+<li>Drive direction configuration.</li>
+<li>PLC direction mapping.</li>
+<li>Mechanical restrictions.</li>
+<li>Whether reversal is permitted while running.</li>
+<li>Whether the drive requires a stop before reversal.</li>
+</ul>
+<p>Never assume that a positive reference necessarily means clockwise rotation. Direction conventions depend on wiring, motor orientation, and application configuration.</p>
+<h3 id="154-speed-command">15.4 Speed command</h3>
+<p>Verify the complete signal chain:</p>
+<pre><code>PLC Speed Request
+      ↓
+Engineering-Unit Conversion
+      ↓
+Drive Reference Data
+      ↓
+Drive Internal Limits and Ramps
+      ↓
+Motor Actual Speed
+      ↓
+Drive Feedback Data
+      ↓
+PLC Actual-Speed Tag
+</code></pre>
+<p>A difference between commanded speed and actual speed may be normal during acceleration or under load. Commissioning should compare actual behavior against the specified limits and response profile.</p>
+<h2 id="16-interlocks-and-permissives">16. Interlocks and Permissives</h2>
+<p>An interlock prevents an operation when a defined condition is not satisfied. A permissive indicates that the conditions required for an operation are met.</p>
+<p>Examples include:</p>
+<ul>
+<li>Guard or access conditions.</li>
+<li>Machine sequence state.</li>
+<li>Motor overload or drive fault state.</li>
+<li>Brake release confirmation.</li>
+<li>Cooling or lubrication availability.</li>
+<li>Process equipment ready status.</li>
+<li>Required upstream or downstream machine conditions.</li>
+<li>Valid operating mode.</li>
+</ul>
+<p>The PLC must enforce its intended control conditions rather than assuming the drive or HMI will enforce every machine-level requirement.</p>
+<h3 id="161-interlock-commissioning-test">16.1 Interlock commissioning test</h3>
+<p>For each interlock:</p>
+<ol>
+<li>Identify the input condition and the affected command.</li>
+<li>Confirm the normal permitted state.</li>
+<li>Create the specified non-permissive state under safe test conditions.</li>
+<li>Verify the PLC prevents or stops the intended operation.</li>
+<li>Confirm the operator receives the correct diagnostic.</li>
+<li>Restore the condition.</li>
+<li>Verify that the machine does not restart unexpectedly.</li>
+<li>Record the result.</li>
+</ol>
+<p>Safety-related interlocks must be tested according to the approved safety validation procedure.</p>
+<h2 id="17-communication-loss-and-fault-response">17. Communication Loss and Fault Response</h2>
+<p>Possible communication failure causes include:</p>
+<ul>
+<li>Network cable or switch failure.</li>
+<li>Incorrect device address.</li>
+<li>Drive communication module fault.</li>
+<li>PLC or drive restart.</li>
+<li>Incorrect process-data configuration.</li>
+<li>Network congestion or connection timeout.</li>
+<li>Protocol configuration mismatch.</li>
+<li>Power interruption.</li>
+</ul>
+<p>The drive and PLC may have different responses to a lost connection. The PLC may detect that data is invalid while the drive executes its configured communication-loss reaction.</p>
+<h3 id="171-required-checks">17.1 Required checks</h3>
+<ul>
+<li>Confirm how communication loss is detected.</li>
+<li>Verify the drive's configured communication-loss reaction.</li>
+<li>Verify the PLC detects invalid or stale drive data.</li>
+<li>Confirm the machine enters the specified state.</li>
+<li>Confirm the HMI shows the correct fault or communication warning.</li>
+<li>Verify the response to PLC restart and drive restart.</li>
+<li>Verify reconnection without unintended motion.</li>
+<li>Confirm commands are not replayed unexpectedly.</li>
+<li>Verify fault reset and restart permissives.</li>
+</ul>
+<p>The safe response cannot be generalized to “always stop immediately.” The appropriate reaction depends on the drive application, process, risk assessment, and designed stop function. It must be explicitly specified and validated.</p>
+<h2 id="18-drive-diagnostics-and-troubleshooting">18. Drive Diagnostics and Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Likely causes</th>
+<th>Diagnostic action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Drive not detected</td>
+<td>Wiring, address, device configuration, or module issue</td>
+<td>Check link status, addressing, device identity, and diagnostics</td>
+</tr>
+<tr>
+<td>Communication healthy but drive will not run</td>
+<td>Drive not enabled, fault active, missing permissive, wrong command source</td>
+<td>Inspect state word, drive mode, PLC sequence, and permissives</td>
+</tr>
+<tr>
+<td>Speed remains zero</td>
+<td>Reference missing, wrong source, enable sequence incomplete, limit active</td>
+<td>Check reference data, command state, and configured limits</td>
+</tr>
+<tr>
+<td>Actual speed display is wrong</td>
+<td>Scaling, data type, sign, or mapping error</td>
+<td>Compare drive value, PLC raw data, and HMI display</td>
+</tr>
+<tr>
+<td>Drive runs in wrong direction</td>
+<td>Direction mapping, wiring, or configuration issue</td>
+<td>Verify direction logic and approved motor test procedure</td>
+</tr>
+<tr>
+<td>Intermittent communication fault</td>
+<td>Cable, switch port, power, network load, or device issue</td>
+<td>Inspect network diagnostics and physical connections</td>
+</tr>
+<tr>
+<td>Drive trips during acceleration</td>
+<td>Excessive load, unsuitable ramp, parameter mismatch, or mechanical issue</td>
+<td>Review fault history, load, motor data, and ramp settings</td>
+</tr>
+<tr>
+<td>Fault reset does not work</td>
+<td>Fault still present, reset sequence incorrect, or unsupported command</td>
+<td>Read fault code and verify reset conditions</td>
+</tr>
+<tr>
+<td>PLC status is stuck</td>
+<td>Stale data, mapping error, communication issue, or PLC logic defect</td>
+<td>Check data validity, timestamps, driver diagnostics, and program logic</td>
+</tr>
+<tr>
+<td>Repeated start/stop cycling</td>
+<td>Unstable permissive, conflicting command sources, or faulty handshake</td>
+<td>Trend commands, state bits, and interlock conditions</td>
+</tr>
+<tr>
+<td>Motor overshoots speed</td>
+<td>Reference scaling, ramp, tuning, or control mode issue</td>
+<td>Verify reference units and drive control parameters</td>
+</tr>
+<tr>
+<td>Drive reports ready but PLC blocks operation</td>
+<td>PLC interlock, mode, or sequence condition is false</td>
+<td>Identify the exact blocking condition in PLC logic</td>
+</tr>
+</tbody>
+</table>
+<h3 id="181-diagnostic-order">18.1 Diagnostic order</h3>
+<pre><code>1. Electrical supply and installation
+      ↓
+2. Physical network and device addressing
+      ↓
+3. Protocol connection and device configuration
+      ↓
+4. PLC-to-drive process-data mapping
+      ↓
+5. Drive state, parameters, and command source
+      ↓
+6. PLC sequence, permissives, and interlocks
+      ↓
+7. Motor, feedback, load, and performance
+</code></pre>
+<p>Use the drive's diagnostic buffer and fault history. Record the actual fault code and its operating context before resetting it. Repeatedly resetting a drive without identifying the cause is a reliable way to turn a diagnosable fault into an intermittent one.</p>
+<h2 id="19-performance-and-data-update-verification">19. Performance and Data Update Verification</h2>
+<p>Check the timing and consistency of:</p>
+<ul>
+<li>PLC command updates.</li>
+<li>Drive control-word changes.</li>
+<li>Drive status-word updates.</li>
+<li>Speed-reference changes.</li>
+<li>Actual-speed feedback.</li>
+<li>Fault detection.</li>
+<li>Stop response.</li>
+<li>Communication-loss detection and recovery.</li>
+</ul>
+<p>The acceptable response time depends on the application and communication design.</p>
+<p>Ordinary networked drive communication should not be assumed to provide deterministic safety response. Safety-related communication and timing require an appropriate certified architecture and validation.</p>
+<h2 id="20-special-considerations-for-servo-drives">20. Special Considerations for Servo Drives</h2>
+<p>Servo systems require additional commissioning beyond basic run and speed control.</p>
+<p>Verify:</p>
+<ul>
+<li>Motor and drive compatibility.</li>
+<li>Encoder or resolver type and feedback wiring.</li>
+<li>Feedback polarity and scaling.</li>
+<li>Motor identification and commutation where applicable.</li>
+<li>Position and velocity units.</li>
+<li>Electronic gearing and gear ratios.</li>
+<li>Homing sequence and reference sensors.</li>
+<li>Software travel limits.</li>
+<li>Following-error limits.</li>
+<li>Torque limits.</li>
+<li>Motion profile and tuning.</li>
+<li>Brake sequencing where applicable.</li>
+<li>Safe motion functions where fitted.</li>
+</ul>
+<h3 id="201-position-scaling-example">20.1 Position scaling example</h3>
+<p>Suppose a machine axis uses a configured conversion of 10,000 encoder counts per millimetre. A measured change of 50,000 counts corresponds to:</p>
+<div class="math-display">\[ x = \frac{50000}{10000} = 5\text{ mm} \]</div>
+<p>This assumes the configured scale is valid and the feedback is expressed in the stated counts. Actual servo systems may use internal units, electronic gearing, encoder interpolation, or other scaling conventions.</p>
+<p>Servo tuning and motion tests should follow the drive and machine manufacturer's procedures. Do not run aggressive tuning or high-speed positioning on an unverified mechanical axis.</p>
+<h2 id="21-safety-considerations">21. Safety Considerations</h2>
+<p>PLC-Drive communication is part of the control system, but normal communication alone is not a safety-rated means of stopping hazardous motion.</p>
+<p>Relevant concepts include:</p>
+<ul>
+<li>STO: Safe Torque Off, which prevents the drive from producing torque under the specified conditions. It does not necessarily bring a moving load to a controlled stop.</li>
+<li>SS1: Safe Stop 1, a safety function that generally initiates a controlled stop followed by torque removal, subject to the implemented system.</li>
+<li>SS2: Safe Stop 2, a safety function that brings the drive to a controlled stop and maintains a defined safe operating state according to the implementation.</li>
+<li>Safety-rated fieldbus: A certified communication method designed for specified safety-related functions, when used with compatible equipment and an appropriately engineered safety system.</li>
+</ul>
+<p>Availability and exact behavior depend on the drive, safety hardware, configuration, and applicable standards.</p>
+<p>Commissioning must verify:</p>
+<ul>
+<li>Correct safety circuit wiring and configuration.</li>
+<li>Correct safety function selection.</li>
+<li>Correct stopping behavior.</li>
+<li>Required feedback and diagnostics.</li>
+<li>Reset and restart behavior.</li>
+<li>Validation records and authorized sign-off.</li>
+</ul>
+<p>Never bypass a safety circuit to make communication commissioning easier.</p>
+<h2 id="22-fat-and-sat-for-plc-drive-communication">22. FAT and SAT for PLC-Drive Communication</h2>
+<p>Factory Acceptance Testing (FAT) verifies the configured system before shipment. Site Acceptance Testing (SAT) validates the installed equipment and network under actual site conditions.</p>
+<table>
+<thead>
+<tr>
+<th>Test item</th>
+<th>FAT focus</th>
+<th>SAT focus</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Device connection</td>
+<td>Configured PLC-drive connection</td>
+<td>Actual installed network</td>
+</tr>
+<tr>
+<td>Data mapping</td>
+<td>Simulated or bench-verified process data</td>
+<td>Actual drive feedback and commands</td>
+</tr>
+<tr>
+<td>Control word</td>
+<td>Correct state transitions</td>
+<td>Correct response on the installed machine</td>
+</tr>
+<tr>
+<td>Speed reference</td>
+<td>Known values and scaling</td>
+<td>Actual motor response</td>
+</tr>
+<tr>
+<td>Direction</td>
+<td>Controlled motor test where feasible</td>
+<td>Verified direction under site conditions</td>
+</tr>
+<tr>
+<td>Fault diagnostics</td>
+<td>Simulated or approved fault tests</td>
+<td>Actual fault handling and recovery</td>
+</tr>
+<tr>
+<td>Interlocks</td>
+<td>Logic verification</td>
+<td>Installed device and machine behavior</td>
+</tr>
+<tr>
+<td>Communication loss</td>
+<td>Simulated disconnection</td>
+<td>Approved site-specific failure test</td>
+</tr>
+<tr>
+<td>Safety functions</td>
+<td>Design verification and planned tests</td>
+<td>Site validation according to the safety plan</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Approved settings and test records</td>
+<td>As-built configuration and sign-off</td>
+</tr>
+</tbody>
+</table>
+<h2 id="23-acceptance-criteria">23. Acceptance Criteria</h2>
+<p>The project specification should define measurable acceptance limits. Typical criteria include:</p>
+<ul>
+<li>PLC and drive exchange the required process data.</li>
+<li>All required control and status bits are correctly mapped.</li>
+<li>Reference and feedback values use correct scaling, units, and sign conventions.</li>
+<li>The drive responds to permitted commands as specified.</li>
+<li>The drive rejects or blocks commands when required conditions are absent.</li>
+<li>The correct fault and warning information reaches the PLC and HMI.</li>
+<li>Communication loss produces the specified response.</li>
+<li>Reconnection does not cause unintended operation.</li>
+<li>Motor direction, speed range, ramp behavior, and performance meet requirements.</li>
+<li>Required safety functions pass their separate validation tests.</li>
+<li>Configuration backups, test records, and defect disposition are complete.</li>
+</ul>
+<p>Do not assume a universal network response time, speed tolerance, or stopping time. These values must come from the approved application requirements and the relevant drive and machine specifications.</p>
+<h2 id="24-example-plc-controlled-conveyor-vfd">24. Example: PLC-Controlled Conveyor VFD</h2>
+<p>Consider a conveyor controlled by a PLC through an Ethernet-connected VFD.</p>
+<p>The PLC sends a run request and speed reference. The drive returns ready status, running status, actual speed, and fault information.</p>
+<h3 id="241-commissioning-sequence">24.1 Commissioning sequence</h3>
+<ol>
+<li>Confirm the drive identity, address, and network connection.</li>
+<li>Verify the motor nameplate data and configured control mode.</li>
+<li>Confirm the PLC control word and status word mapping.</li>
+<li>Check that the drive uses the intended network command and reference sources.</li>
+<li>Verify the run permissives, including required machine and safety conditions.</li>
+<li>Apply a low, approved speed reference.</li>
+<li>Verify actual speed and direction.</li>
+<li>Test controlled stopping and the required deceleration.</li>
+<li>Test an approved drive fault condition and verify PLC diagnostics.</li>
+<li>Test communication loss under controlled conditions.</li>
+<li>Restore communication and confirm no unintended restart.</li>
+<li>Record the final settings and results.</li>
+</ol>
+<h3 id="242-example-acceptance-table">24.2 Example acceptance table</h3>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Expected result</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC-drive connection</td>
+<td>Connection healthy</td>
+<td>PLC and drive diagnostics</td>
+</tr>
+<tr>
+<td>Drive ready</td>
+<td>PLC status matches drive state</td>
+<td>Status word and online monitoring</td>
+</tr>
+<tr>
+<td>Low-speed command</td>
+<td>Motor runs at the specified test speed</td>
+<td>Reference and actual-speed record</td>
+</tr>
+<tr>
+<td>Stop request</td>
+<td>Specified stop response occurs</td>
+<td>Drive state and measured behavior</td>
+</tr>
+<tr>
+<td>Drive fault</td>
+<td>Correct fault is detected and displayed</td>
+<td>Fault code and alarm record</td>
+</tr>
+<tr>
+<td>Missing permissive</td>
+<td>Run command is blocked as specified</td>
+<td>PLC logic status and test record</td>
+</tr>
+<tr>
+<td>Communication loss</td>
+<td>Specified response occurs</td>
+<td>Fault indication and timestamp</td>
+</tr>
+<tr>
+<td>Recovery</td>
+<td>Correct state restored without unintended run</td>
+<td>PLC and drive status record</td>
+</tr>
+</tbody>
+</table>
+<h2 id="25-common-commissioning-mistakes">25. Common Commissioning Mistakes</h2>
+<ul>
+<li>Assuming network connectivity means the drive is ready to run.</li>
+<li>Using the wrong device profile, process-data layout, or assembly size.</li>
+<li>Mapping the control word or status word incorrectly.</li>
+<li>Ignoring the drive's command-source selection.</li>
+<li>Using the wrong motor nameplate values.</li>
+<li>Applying incorrect speed scaling or signedness.</li>
+<li>Resetting faults before recording diagnostic information.</li>
+<li>Testing direction without confirming mechanical safety.</li>
+<li>Allowing conflicting hardwired and network command sources.</li>
+<li>Treating an ordinary network stop as a safety-rated stop.</li>
+<li>Ignoring communication-loss behavior and restart conditions.</li>
+<li>Failing to back up the final PLC and drive configurations.</li>
+</ul>
+<h2 id="26-interview-questions-and-answers">26. Interview Questions and Answers</h2>
+<p>Q1. What is PLC-Drive communication commissioning?</p>
+<p>It is the verification of communication, command and feedback mapping, drive state transitions, reference scaling, fault handling, and controlled motor operation between a PLC and a drive.</p>
+<p>Q2. What is the difference between a control word and a status word?</p>
+<p>The control word carries commands from the PLC to the drive. The status word reports the drive's current state and selected diagnostic conditions back to the PLC.</p>
+<p>Q3. Why might a drive communicate correctly but refuse to run?</p>
+<p>The drive may not be enabled, a fault may be active, the command source may be incorrect, or a required permissive or state transition may be missing.</p>
+<p>Q4. What is cyclic process data?</p>
+<p>It is data exchanged repeatedly during normal operation, typically including commands, references, status, and actual values.</p>
+<p>Q5. Why is reference scaling important?</p>
+<p>The PLC and drive must interpret the reference consistently. Incorrect scaling can cause the motor to run at an unintended speed or position.</p>
+<p>Q6. Why must the communication-loss reaction be checked?</p>
+<p>The PLC and drive may react differently to a lost connection. Testing verifies the specified fault response, stale-data handling, and recovery behavior.</p>
+<p>Q7. What is STO?</p>
+<p>Safe Torque Off is a safety function that prevents the drive from producing torque under its specified conditions. It does not necessarily stop a moving load in a controlled manner.</p>
+<p>Q8. Why should the drive fault code be recorded before resetting?</p>
+<p>The diagnostic record provides evidence for root-cause analysis. Resetting may clear or obscure the information needed to identify the original failure.</p>
+<p>Q9. What additional checks are required for servo drives?</p>
+<p>Encoder feedback, position scaling, homing, travel limits, following error, torque limits, motion tuning, and any applicable safety-related motion functions.</p>
+<p>Q10. What proves that PLC-Drive commissioning is complete?</p>
+<p>Verified process-data mapping, correct command and feedback behavior, successful functional and fault-recovery tests, required safety validation, and completed configuration and handover records.</p>
+<h2 id="27-final-plc-drive-commissioning-checklist">27. Final PLC-Drive Commissioning Checklist</h2>
+<ul>
+<li>Electrical and mechanical installation verified.</li>
+<li>PLC and drive models, firmware, and configurations confirmed.</li>
+<li>Communication interface and protocol configured.</li>
+<li>Device addressing and process-data layout verified.</li>
+<li>Control word and status word mapping checked.</li>
+<li>Speed, torque, or position reference scaling verified.</li>
+<li>Drive command and reference sources confirmed.</li>
+<li>Motor nameplate and critical drive parameters verified.</li>
+<li>Enable, start, stop, direction, and reset behavior tested.</li>
+<li>Permissives and interlocks tested.</li>
+<li>Faults, warnings, and diagnostics verified.</li>
+<li>Communication loss and recovery tested.</li>
+<li>Motor operation and performance verified.</li>
+<li>Safety functions validated separately as required.</li>
+<li>Final settings, backups, and test records saved.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\13_Commissioning\04_Stage4_Communication\03_PLC_Robot - PLC-Robot</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

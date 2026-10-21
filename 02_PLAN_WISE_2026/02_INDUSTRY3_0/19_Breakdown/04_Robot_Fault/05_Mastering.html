@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robot Fault: Mastering, Lost or Incorrect Reference</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Robot Fault: Mastering, Lost or Incorrect Reference</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-of-robot-mastering">1. Definition of Robot Mastering</a></li>
+<li><a href="#2-important-terminology">2. Important Terminology</a></li>
+<li><a href="#3-why-mastering-is-important">3. Why Mastering Is Important</a></li>
+<li><a href="#4-common-reasons-mastering-is-lost-or-incorrect">4. Common Reasons Mastering Is Lost or Incorrect</a></li>
+<li><a href="#5-symptoms-of-incorrect-mastering">5. Symptoms of Incorrect Mastering</a><ul>
+<li><a href="#51-position-deviation">5.1 Position deviation</a></li>
+<li><a href="#52-position-mismatch-after-power-up">5.2 Position mismatch after power-up</a></li>
+<li><a href="#53-position-error-after-component-replacement">5.3 Position error after component replacement</a></li>
+<li><a href="#54-position-error-varies-by-robot-pose">5.4 Position error varies by robot pose</a></li>
+</ul>
+</li>
+<li><a href="#6-mastering-versus-homing-versus-teaching">6. Mastering Versus Homing Versus Teaching</a></li>
+<li><a href="#7-encoder-batteries-and-position-retention">7. Encoder Batteries and Position Retention</a><ul>
+<li><a href="#71-battery-related-failure-mechanism">7.1 Battery-related failure mechanism</a></li>
+<li><a href="#72-maintenance-precautions">7.2 Maintenance precautions</a></li>
+</ul>
+</li>
+<li><a href="#8-mastering-marks-and-mechanical-reference">8. Mastering Marks and Mechanical Reference</a><ul>
+<li><a href="#81-why-mechanical-reference-matters">8.1 Why mechanical reference matters</a></li>
+<li><a href="#82-precautions">8.2 Precautions</a></li>
+</ul>
+</li>
+<li><a href="#9-mastering-methods">9. Mastering Methods</a></li>
+<li><a href="#10-safe-diagnostic-procedure">10. Safe Diagnostic Procedure</a><ul>
+<li><a href="#step-1-record-the-fault">Step 1: Record the fault</a></li>
+<li><a href="#step-2-make-the-equipment-safe">Step 2: Make the equipment safe</a></li>
+<li><a href="#step-3-check-position-validity">Step 3: Check position validity</a></li>
+<li><a href="#step-4-review-maintenance-history">Step 4: Review maintenance history</a></li>
+<li><a href="#step-5-inspect-feedback-and-mechanics">Step 5: Inspect feedback and mechanics</a></li>
+<li><a href="#step-6-decide-whether-mastering-is-required">Step 6: Decide whether mastering is required</a></li>
+</ul>
+</li>
+<li><a href="#11-mastering-recovery-procedure">11. Mastering Recovery Procedure</a><ul>
+<li><a href="#111-why-backup-data-must-be-checked">11.1 Why backup data must be checked</a></li>
+</ul>
+</li>
+<li><a href="#12-distinguishing-mastering-faults-from-other-position-errors">12. Distinguishing Mastering Faults from Other Position Errors</a></li>
+<li><a href="#13-mastering-and-mechanical-accuracy">13. Mastering and Mechanical Accuracy</a></li>
+<li><a href="#14-practical-breakdown-example-position-shift-after-battery-failure">14. Practical Breakdown Example: Position Shift After Battery Failure</a></li>
+<li><a href="#15-practical-breakdown-example-position-error-after-gearbox-replacement">15. Practical Breakdown Example: Position Error After Gearbox Replacement</a></li>
+<li><a href="#16-practical-breakdown-example-incorrect-tcp-after-maintenance">16. Practical Breakdown Example: Incorrect TCP After Maintenance</a></li>
+<li><a href="#17-preventive-maintenance">17. Preventive Maintenance</a></li>
+<li><a href="#18-mastering-maintenance-record-template">18. Mastering Maintenance Record Template</a></li>
+<li><a href="#19-interview-questions-and-answers">19. Interview Questions and Answers</a><ul>
+<li><a href="#q1-what-is-robot-mastering">Q1. What is robot mastering?</a></li>
+<li><a href="#q2-what-causes-mastering-loss">Q2. What causes mastering loss?</a></li>
+<li><a href="#q3-what-is-the-difference-between-mastering-and-homing">Q3. What is the difference between mastering and homing?</a></li>
+<li><a href="#q4-does-an-encoder-battery-alarm-always-mean-mastering-is-lost">Q4. Does an encoder battery alarm always mean mastering is lost?</a></li>
+<li><a href="#q5-can-a-robot-move-normally-with-incorrect-mastering">Q5. Can a robot move normally with incorrect mastering?</a></li>
+<li><a href="#q6-what-is-the-difference-between-mastering-and-tcp-calibration">Q6. What is the difference between mastering and TCP calibration?</a></li>
+<li><a href="#q7-why-must-mastering-data-backups-be-verified">Q7. Why must mastering data backups be verified?</a></li>
+<li><a href="#q8-should-all-robot-position-errors-be-corrected-by-mastering">Q8. Should all robot position errors be corrected by mastering?</a></li>
+<li><a href="#q9-what-must-be-verified-after-mastering">Q9. What must be verified after mastering?</a></li>
+<li><a href="#q10-why-is-mastering-important-after-gearbox-or-motor-replacement">Q10. Why is mastering important after gearbox or motor replacement?</a></li>
+</ul>
+</li>
+<li><a href="#20-completion-checklist">20. Completion Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\19_Breakdown\04_Robot_Fault\05_Mastering</code></p>
+<h2 id="1-definition-of-robot-mastering">1. Definition of Robot Mastering</h2>
+<p>Robot mastering is the process of establishing or restoring the correct relationship between a robot joint's physical mechanical position and the position value interpreted by its controller.</p>
+<p>Industrial robots use position feedback devices, commonly encoders or resolvers, to determine joint position. The controller uses calibration and mastering data to interpret these measurements as robot joint coordinates.</p>
+<p>If mastering data is lost, incorrect, or mismatched with the robot's mechanical configuration, the controller may report a position that does not correspond to the actual physical position. The robot can then move to incorrect locations even when the program and motion commands have not changed.</p>
+<p>Critical distinction: Mastering is not the same as homing, program-position teaching, or simply resetting a servo alarm.</p>
+<h2 id="2-important-terminology">2. Important Terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mastering</td>
+<td>Establishing the correct joint-position reference relationship</td>
+</tr>
+<tr>
+<td>Calibration</td>
+<td>Establishing or correcting the relationship between measured positions and the robot's coordinate system</td>
+</tr>
+<tr>
+<td>Encoder</td>
+<td>Device measuring motor or joint position</td>
+</tr>
+<tr>
+<td>Absolute encoder</td>
+<td>Encoder that reports position within its defined measurement range without necessarily requiring a complete reference search after every power cycle</td>
+</tr>
+<tr>
+<td>Incremental encoder</td>
+<td>Encoder that measures movement from a reference and may require homing or referencing</td>
+</tr>
+<tr>
+<td>Mastering mark</td>
+<td>Manufacturer-defined mechanical reference mark used during a specified mastering procedure</td>
+</tr>
+<tr>
+<td>Zero position</td>
+<td>Defined reference position for a robot joint; not necessarily the physical end of travel</td>
+</tr>
+<tr>
+<td>Home position</td>
+<td>A programmed or configured position used for reference, initialization, or process purposes</td>
+</tr>
+<tr>
+<td>Joint coordinates</td>
+<td>Position values for individual robot axes, usually expressed in degrees</td>
+</tr>
+<tr>
+<td>Cartesian coordinates</td>
+<td>Tool or reference-frame position expressed using coordinates such as X, Y, Z and orientation</td>
+</tr>
+<tr>
+<td>Calibration data</td>
+<td>Data describing the relationship between the robot's measured joint positions and its defined geometry</td>
+</tr>
+<tr>
+<td>Mastering data</td>
+<td>Reference data used to interpret joint feedback correctly</td>
+</tr>
+<tr>
+<td>Encoder battery</td>
+<td>A battery used by certain systems to preserve position-related information when power is removed</td>
+</tr>
+<tr>
+<td>Position validity</td>
+<td>The controller's determination that position feedback and reference data are trustworthy</td>
+</tr>
+</tbody>
+</table>
+<p>Terminology differs across manufacturers. Some systems distinguish mastering, calibration, and zeroing very strictly; others use overlapping terms in their interfaces.</p>
+<h2 id="3-why-mastering-is-important">3. Why Mastering Is Important</h2>
+<p>Robot motion depends on the controller interpreting feedback correctly.</p>
+<pre><code>Physical Joint Position
+        ↓
+Encoder / Position Feedback
+        ↓
+Mastering and Calibration Data
+        ↓
+Controller Joint Coordinates
+        ↓
+Robot Kinematics
+        ↓
+Calculated Tool Position
+        ↓
+Programmed Motion
+</code></pre>
+<p>If the reference data is incorrect, the controller may calculate the wrong joint coordinates and consequently the wrong tool position.</p>
+<p>Potential consequences include:</p>
+<ul>
+<li>Tool center point (TCP) deviation.</li>
+<li>Incorrect approach or withdrawal paths.</li>
+<li>Fixture or workpiece collision.</li>
+<li>Incorrect welding, dispensing, handling, or assembly position.</li>
+<li>Unexpected axis movement during recovery.</li>
+<li>Inaccurate repeatability relative to the intended programmed path.</li>
+<li>Interference with surrounding equipment.</li>
+<li>Production quality defects.</li>
+</ul>
+<p>A robot can appear to move smoothly and still be incorrectly mastered. Smooth motion alone does not prove coordinate accuracy.</p>
+<h2 id="4-common-reasons-mastering-is-lost-or-incorrect">4. Common Reasons Mastering Is Lost or Incorrect</h2>
+<table>
+<thead>
+<tr>
+<th>Cause</th>
+<th>What may happen</th>
+<th>Diagnostic direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Encoder battery failure</td>
+<td>Position data may be lost on supported systems</td>
+<td>Check battery and position-validity diagnostics</td>
+</tr>
+<tr>
+<td>Battery disconnected during maintenance</td>
+<td>Retained position information may be lost</td>
+<td>Review maintenance history and controller alarms</td>
+</tr>
+<tr>
+<td>Encoder replacement</td>
+<td>New encoder reference may not match the existing calibration</td>
+<td>Follow the manufacturer's replacement and mastering procedure</td>
+</tr>
+<tr>
+<td>Motor replacement</td>
+<td>Feedback reference or motor-to-axis relationship may change</td>
+<td>Verify motor compatibility and mastering requirements</td>
+</tr>
+<tr>
+<td>Servo motor removal</td>
+<td>Mechanical coupling or reference relationship may be disturbed</td>
+<td>Check installation and specified reference procedure</td>
+</tr>
+<tr>
+<td>Gearbox or joint replacement</td>
+<td>Mechanical relationship may change</td>
+<td>Perform the specified calibration or mastering process</td>
+</tr>
+<tr>
+<td>Robot collision</td>
+<td>Mechanical damage or coupling movement may alter accuracy</td>
+<td>Inspect for damage and compare reference measurements</td>
+</tr>
+<tr>
+<td>Incorrect mastering procedure</td>
+<td>Reference values may be set incorrectly</td>
+<td>Review the exact procedure and recorded values</td>
+</tr>
+<tr>
+<td>Wrong backup restored</td>
+<td>Position data may not match the installed robot or hardware</td>
+<td>Verify robot identity and backup compatibility</td>
+</tr>
+<tr>
+<td>Controller or encoder fault</td>
+<td>Position may become invalid or inconsistent</td>
+<td>Check encoder diagnostics and controller alarms</td>
+</tr>
+<tr>
+<td>Mechanical looseness</td>
+<td>Actual motion may not correspond accurately to measured joint position</td>
+<td>Inspect gearbox, coupling, and mechanical transmission</td>
+</tr>
+<tr>
+<td>Incorrect configuration</td>
+<td>Wrong encoder or joint configuration may be interpreted</td>
+<td>Verify approved controller and hardware configuration</td>
+</tr>
+</tbody>
+</table>
+<p>Important: A collision does not automatically mean mastering is lost. It may cause mechanical damage, change a coupling relationship, or leave the mastering data intact. Diagnose before performing a mastering operation.</p>
+<h2 id="5-symptoms-of-incorrect-mastering">5. Symptoms of Incorrect Mastering</h2>
+<h3 id="51-position-deviation">5.1 Position deviation</h3>
+<p>The robot reaches a programmed position, but the tool does not align with the expected physical location.</p>
+<p>Possible observations:</p>
+<ul>
+<li>TCP position differs from a verified reference.</li>
+<li>Welding or dispensing points shift.</li>
+<li>The robot approaches a fixture at the wrong angle.</li>
+<li>The robot moves correctly in one region but shows unacceptable error in another.</li>
+</ul>
+<h3 id="52-position-mismatch-after-power-up">5.2 Position mismatch after power-up</h3>
+<p>The controller reports invalid or unreferenced joint positions after power is restored.</p>
+<p>Possible causes include:</p>
+<ul>
+<li>Encoder position loss.</li>
+<li>Battery-related issues on supported systems.</li>
+<li>Encoder communication failure.</li>
+<li>Missing or incompatible mastering data.</li>
+<li>Controller configuration mismatch.</li>
+</ul>
+<h3 id="53-position-error-after-component-replacement">5.3 Position error after component replacement</h3>
+<p>A motor, encoder, gearbox, or joint component was replaced, after which the robot no longer reaches its previous physical positions.</p>
+<p>Investigate whether the replacement procedure required:</p>
+<ul>
+<li>Mechanical alignment.</li>
+<li>Encoder reference transfer.</li>
+<li>Mastering.</li>
+<li>Calibration.</li>
+<li>Configuration restoration.</li>
+<li>Tool or frame verification.</li>
+</ul>
+<h3 id="54-position-error-varies-by-robot-pose">5.4 Position error varies by robot pose</h3>
+<p>The robot reaches one reference point correctly but deviates at other locations.</p>
+<p>This may indicate:</p>
+<ul>
+<li>Incorrect mastering of one or more axes.</li>
+<li>Mechanical backlash or looseness.</li>
+<li>Joint or gearbox damage.</li>
+<li>Incorrect kinematic or calibration data.</li>
+<li>Tool or workpiece coordinate errors.</li>
+</ul>
+<p>A single correct TCP position does not prove that every joint is correctly mastered.</p>
+<h2 id="6-mastering-versus-homing-versus-teaching">6. Mastering Versus Homing Versus Teaching</h2>
+<p>These processes solve different problems.</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Purpose</th>
+<th>What it does not necessarily do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mastering</td>
+<td>Establishes the correct relationship between joint feedback and mechanical reference</td>
+<td>Does not automatically correct a wrongly taught program point</td>
+</tr>
+<tr>
+<td>Homing</td>
+<td>Moves or references an axis using a defined home procedure</td>
+<td>Does not necessarily restore the robot's factory mastering</td>
+</tr>
+<tr>
+<td>Teaching</td>
+<td>Records or modifies program positions</td>
+<td>Does not repair incorrect encoder-to-joint reference data</td>
+</tr>
+<tr>
+<td>TCP calibration</td>
+<td>Determines the tool center point relative to the tool flange</td>
+<td>Does not automatically correct joint mastering</td>
+</tr>
+<tr>
+<td>User-frame calibration</td>
+<td>Establishes a workpiece or user coordinate frame</td>
+<td>Does not repair a mechanical or encoder reference fault</td>
+</tr>
+<tr>
+<td>Servo reset</td>
+<td>Clears a fault when the underlying condition permits</td>
+<td>Does not restore lost mastering data</td>
+</tr>
+</tbody>
+</table>
+<p>Confusing these procedures can create additional errors. If a robot is incorrectly mastered, reteaching program points may conceal the symptom without correcting the underlying reference problem.</p>
+<h2 id="7-encoder-batteries-and-position-retention">7. Encoder Batteries and Position Retention</h2>
+<p>Some industrial robot systems use battery-backed encoders or controller-supported retention mechanisms to preserve position information while the system is switched off.</p>
+<p>Not every robot uses the same design. Some modern systems use absolute encoders or other retention arrangements and may not have the same battery requirements.</p>
+<h3 id="71-battery-related-failure-mechanism">7.1 Battery-related failure mechanism</h3>
+<pre><code>Robot Power Removed
+        ↓
+Position Retention Requirement
+        ↓
+Battery / Retention System Fails
+        ↓
+Position Data May Become Invalid
+        ↓
+Controller Reports Position or Encoder Alarm
+        ↓
+Manufacturer-Specified Recovery Required
+</code></pre>
+<h3 id="72-maintenance-precautions">7.2 Maintenance precautions</h3>
+<ul>
+<li>Follow the robot manufacturer's battery replacement procedure.</li>
+<li>Confirm whether the battery must be replaced with controller power on or whether another approved retention method is specified.</li>
+<li>Do not assume a battery can be replaced safely with the controller powered down.</li>
+<li>Record the alarm before performing maintenance.</li>
+<li>Check battery condition and service-life requirements.</li>
+<li>Confirm position validity after replacement.</li>
+<li>Do not perform mastering merely because a battery alarm occurred. First determine whether reference data was actually lost.</li>
+</ul>
+<p>A low-battery warning and actual loss of mastering are not equivalent conditions.</p>
+<h2 id="8-mastering-marks-and-mechanical-reference">8. Mastering Marks and Mechanical Reference</h2>
+<p>Many industrial robot manufacturers provide physical mastering marks, gauges, fixtures, or dedicated measurement procedures.</p>
+<p>These references may be located on the robot axes, motor assemblies, or manufacturer-specified calibration features.</p>
+<h3 id="81-why-mechanical-reference-matters">8.1 Why mechanical reference matters</h3>
+<p>The controller's encoder reading is meaningful only when interpreted using the correct reference relationship. A mastering procedure establishes that relationship according to the robot's design.</p>
+<p>If the physical reference is incorrect, a controller may display plausible numerical values while the actual mechanical position is wrong.</p>
+<h3 id="82-precautions">8.2 Precautions</h3>
+<ul>
+<li>Identify the exact robot model and controller generation.</li>
+<li>Use the specified mastering method for that robot.</li>
+<li>Confirm that the correct axis and reference marks are being used.</li>
+<li>Inspect for mechanical damage before relying on reference marks.</li>
+<li>Use manufacturer-approved gauges or fixtures when required.</li>
+<li>Follow the specified axis positioning and safety procedure.</li>
+<li>Record the original mastering values and the reason for the work.</li>
+</ul>
+<p>Do not assume that all robot axes use the same marks, reference positions, or mastering sequence.</p>
+<h2 id="9-mastering-methods">9. Mastering Methods</h2>
+<p>The supported method depends on the robot manufacturer, encoder design, controller generation, and maintenance history.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>General principle</th>
+<th>Important limitation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Witness-mark mastering</td>
+<td>Aligns specified mechanical marks</td>
+<td>Accuracy depends on the design and prescribed alignment method</td>
+</tr>
+<tr>
+<td>Single-axis mastering</td>
+<td>Establishes the reference for a particular axis</td>
+<td>Requires correct identification and manufacturer procedure</td>
+</tr>
+<tr>
+<td>Encoder-reference recovery</td>
+<td>Restores a supported reference relationship using retained or recorded data</td>
+<td>Requires valid, compatible reference data</td>
+</tr>
+<tr>
+<td>Mastering fixture or gauge</td>
+<td>Uses a dedicated mechanical or measurement fixture</td>
+<td>Requires the correct tool and procedure</td>
+</tr>
+<tr>
+<td>Absolute-reference method</td>
+<td>Uses supported absolute-position information</td>
+<td>Absolute feedback does not eliminate every calibration or validity requirement</td>
+</tr>
+<tr>
+<td>Full calibration</td>
+<td>Uses specified measurement methods to establish robot geometry or reference accuracy</td>
+<td>May require specialist tools, procedures, and verification</td>
+</tr>
+</tbody>
+</table>
+<p>A mastering method should never be selected solely because it is the fastest available option. The correct procedure is determined by the robot's design and the confirmed failure mechanism.</p>
+<h2 id="10-safe-diagnostic-procedure">10. Safe Diagnostic Procedure</h2>
+<h3 id="step-1-record-the-fault">Step 1: Record the fault</h3>
+<p>Before changing parameters or resetting data, record:</p>
+<ul>
+<li>Robot identification and controller model.</li>
+<li>Affected axis or axes.</li>
+<li>Exact alarm code and message.</li>
+<li>Joint position values.</li>
+<li>Position-validity status.</li>
+<li>Recent battery, motor, encoder, gearbox, or controller work.</li>
+<li>Recent collision or abnormal mechanical event.</li>
+<li>Whether the fault appeared after power-up or during movement.</li>
+</ul>
+<h3 id="step-2-make-the-equipment-safe">Step 2: Make the equipment safe</h3>
+<ul>
+<li>Follow the site's robot safety and lockout/tagout procedure.</li>
+<li>Prevent unexpected motion.</li>
+<li>Consider gravity-loaded axes and stored mechanical energy.</li>
+<li>Use approved mechanical supports where required.</li>
+<li>Do not enter the robot's hazardous space based solely on a displayed servo-off state.</li>
+<li>Follow the manufacturer's procedure for any inspection requiring power.</li>
+</ul>
+<h3 id="step-3-check-position-validity">Step 3: Check position validity</h3>
+<p>Use the controller's supported diagnostics to determine whether joint positions are valid.</p>
+<p>Distinguish among:</p>
+<ul>
+<li>Position data invalid.</li>
+<li>Encoder communication fault.</li>
+<li>Battery or retention warning.</li>
+<li>Incorrect mastering data.</li>
+<li>Mechanical accuracy error despite valid position feedback.</li>
+</ul>
+<p>These conditions may require different corrective actions.</p>
+<h3 id="step-4-review-maintenance-history">Step 4: Review maintenance history</h3>
+<p>Check whether the problem started after:</p>
+<ul>
+<li>Battery replacement.</li>
+<li>Motor or encoder replacement.</li>
+<li>Gearbox work.</li>
+<li>Robot collision.</li>
+<li>Controller replacement.</li>
+<li>Backup restoration.</li>
+<li>Parameter changes.</li>
+<li>Cable or connector maintenance.</li>
+</ul>
+<p>The timing of the fault can significantly narrow the investigation.</p>
+<h3 id="step-5-inspect-feedback-and-mechanics">Step 5: Inspect feedback and mechanics</h3>
+<p>Where indicated by diagnostics, inspect:</p>
+<ul>
+<li>Encoder connectors and cables.</li>
+<li>Encoder supply and communication status.</li>
+<li>Motor mounting and mechanical coupling.</li>
+<li>Gearbox and joint condition.</li>
+<li>Signs of collision or deformation.</li>
+<li>Relevant calibration or mastering records.</li>
+</ul>
+<p>Do not assume a mastering problem when the actual cause is a defective encoder or damaged mechanical transmission.</p>
+<h3 id="step-6-decide-whether-mastering-is-required">Step 6: Decide whether mastering is required</h3>
+<p>Mastering is appropriate only when the evidence and manufacturer procedure establish that the reference relationship is missing or incorrect.</p>
+<p>If the controller has valid position data and the actual position is inaccurate, investigate mechanical damage, calibration, TCP, workpiece frame, and program-position errors before changing mastering data.</p>
+<h2 id="11-mastering-recovery-procedure">11. Mastering Recovery Procedure</h2>
+<p>Mastering recovery is robot-specific. The following is a general framework, not a substitute for the exact manufacturer procedure.</p>
+<ol>
+<li>Identify the robot model, controller, axis, and exact fault.</li>
+<li>Confirm the mechanical condition and investigate collision damage.</li>
+<li>Determine why mastering or position validity was lost.</li>
+<li>Retrieve approved records and compatible backup data.</li>
+<li>Confirm the correct mastering method for the installed hardware.</li>
+<li>Secure the equipment and follow the specified safety procedure.</li>
+<li>Perform the authorized reference or mastering procedure.</li>
+<li>Verify the controller's position-validity status.</li>
+<li>Confirm that the displayed joint positions correspond to the required reference.</li>
+<li>Perform the prescribed calibration and accuracy checks.</li>
+<li>Verify TCP and workpiece frames where applicable.</li>
+<li>Test the robot using the approved controlled-motion procedure.</li>
+<li>Record the final values, procedure, and verification results.</li>
+</ol>
+<h3 id="111-why-backup-data-must-be-checked">11.1 Why backup data must be checked</h3>
+<p>A backup may contain useful mastering information, but it must belong to the correct robot and match the relevant hardware and configuration.</p>
+<p>Restoring unrelated or incompatible data may create additional position errors. Preserve the original data before making changes and use only an approved recovery path.</p>
+<h2 id="12-distinguishing-mastering-faults-from-other-position-errors">12. Distinguishing Mastering Faults from Other Position Errors</h2>
+<table>
+<thead>
+<tr>
+<th>Observation</th>
+<th>Possible cause</th>
+<th>What to investigate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>All program positions shift after encoder-reference loss</td>
+<td>Mastering or position-validity problem</td>
+<td>Controller position diagnostics and mastering records</td>
+</tr>
+<tr>
+<td>Only one tool is consistently offset</td>
+<td>TCP or tool configuration</td>
+<td>Tool calibration and tool data</td>
+</tr>
+<tr>
+<td>All positions are shifted relative to a fixture</td>
+<td>User frame or workpiece setup</td>
+<td>Frame calibration and fixture location</td>
+</tr>
+<tr>
+<td>Error varies with robot pose</td>
+<td>Mastering, calibration, or mechanical problem</td>
+<td>Reference checks across multiple poses</td>
+</tr>
+<tr>
+<td>Position changes unpredictably</td>
+<td>Feedback, mechanical looseness, or encoder issue</td>
+<td>Feedback diagnostics and joint transmission</td>
+</tr>
+<tr>
+<td>Error began after gearbox replacement</td>
+<td>Mechanical reference or calibration mismatch</td>
+<td>Installation and mastering requirements</td>
+</tr>
+<tr>
+<td>Error occurs only in one program point</td>
+<td>Teaching or program-data issue</td>
+<td>Program position and motion configuration</td>
+</tr>
+<tr>
+<td>Position invalid alarm appears after power loss</td>
+<td>Retention or encoder issue</td>
+<td>Battery, encoder design, and position-validity status</td>
+</tr>
+<tr>
+<td>Robot moves smoothly but TCP accuracy is poor</td>
+<td>Mastering, calibration, TCP, or frame issue</td>
+<td>Independent reference and calibration checks</td>
+</tr>
+</tbody>
+</table>
+<h2 id="13-mastering-and-mechanical-accuracy">13. Mastering and Mechanical Accuracy</h2>
+<p>Correct mastering is necessary for accurate robot coordinates, but it does not guarantee complete mechanical accuracy.</p>
+<p>Actual accuracy may also depend on:</p>
+<ul>
+<li>Robot geometry and calibration.</li>
+<li>Gearbox backlash.</li>
+<li>Structural deflection.</li>
+<li>Payload.</li>
+<li>Tool mounting.</li>
+<li>Temperature.</li>
+<li>Mechanical wear.</li>
+<li>TCP and user-frame accuracy.</li>
+<li>Measurement method.</li>
+</ul>
+<p>Repeatability and absolute accuracy are different. A robot may repeatedly return to the same position while consistently missing the intended physical target.</p>
+<p>A mastering problem often affects the relationship between reported joint coordinates and physical joint position. A mechanical accuracy problem can persist even when the reference data is valid.</p>
+<h2 id="14-practical-breakdown-example-position-shift-after-battery-failure">14. Practical Breakdown Example: Position Shift After Battery Failure</h2>
+<p>Reported condition: After a planned shutdown, the robot reports a position-related alarm. Once the controller is restarted, its position data is not valid.</p>
+<p>Investigation:</p>
+<ol>
+<li>Record the exact encoder or position alarm.</li>
+<li>Review the battery and maintenance history.</li>
+<li>Determine whether the robot uses battery-backed position retention.</li>
+<li>Check controller diagnostics and position-validity status.</li>
+<li>Follow the approved retention and recovery procedure.</li>
+<li>Establish whether the mastering data remains valid or must be restored.</li>
+</ol>
+<p>Possible root cause: Position retention was lost in a system that relies on battery-backed encoder data.</p>
+<p>Corrective action: Repair the retention problem and perform the manufacturer-specified recovery procedure. If mastering has been lost, restore the reference using the approved method.</p>
+<p>Verification:</p>
+<ul>
+<li>Confirm position validity.</li>
+<li>Verify the required reference positions.</li>
+<li>Check TCP and workpiece coordinates where necessary.</li>
+<li>Perform controlled-motion tests.</li>
+<li>Record the final mastering status and maintenance action.</li>
+</ul>
+<h2 id="15-practical-breakdown-example-position-error-after-gearbox-replacement">15. Practical Breakdown Example: Position Error After Gearbox Replacement</h2>
+<p>Reported condition: A robot joint reaches its programmed position, but the tool is consistently offset from the expected location after a gearbox replacement.</p>
+<p>Investigation:</p>
+<ol>
+<li>Review the replacement work order.</li>
+<li>Confirm the gearbox part number and installation orientation.</li>
+<li>Check whether the manufacturer's procedure requires mastering or calibration after replacement.</li>
+<li>Inspect mechanical alignment and coupling integrity.</li>
+<li>Verify the joint reference and controller position data.</li>
+<li>Check TCP and workpiece frames if the mechanical reference is verified.</li>
+</ol>
+<p>Possible root cause: The replacement changed the joint's mechanical reference relationship, and the required mastering or calibration was not completed.</p>
+<p>Corrective action: Correct the installation or perform the specified mastering and calibration procedure.</p>
+<p>Verification: Confirm the affected joint reference, test representative poses, and verify tool position using the approved measurement method.</p>
+<h2 id="16-practical-breakdown-example-incorrect-tcp-after-maintenance">16. Practical Breakdown Example: Incorrect TCP After Maintenance</h2>
+<p>Reported condition: The robot reaches the same joint coordinates as before maintenance, but a welding torch or gripper is incorrectly positioned relative to the workpiece.</p>
+<p>Investigation:</p>
+<ol>
+<li>Confirm joint-position validity and mastering status.</li>
+<li>Check whether the tool was removed, replaced, or remounted.</li>
+<li>Verify the active TCP and tool-data selection.</li>
+<li>Check workpiece frame and fixture references.</li>
+<li>Inspect tool mounting and mechanical alignment.</li>
+<li>Recalibrate the tool if required.</li>
+</ol>
+<p>Possible root cause: The tool mounting changed, invalidating the previous TCP data.</p>
+<p>Corrective action: Restore the mechanical mounting and perform the required TCP calibration.</p>
+<p>Verification: Confirm tool geometry and test representative program positions under the approved procedure.</p>
+<p>This example demonstrates why not every robot position error is a mastering fault.</p>
+<h2 id="17-preventive-maintenance">17. Preventive Maintenance</h2>
+<ul>
+<li>Monitor encoder battery and retention-system warnings.</li>
+<li>Replace batteries according to the manufacturer's service procedure.</li>
+<li>Maintain approved mastering and calibration records.</li>
+<li>Back up compatible robot configuration data.</li>
+<li>Record mastering values before relevant maintenance.</li>
+<li>Follow prescribed procedures after motor, encoder, or gearbox replacement.</li>
+<li>Inspect the robot after collisions.</li>
+<li>Check mechanical looseness and abnormal joint behavior.</li>
+<li>Maintain encoder cable and connector condition.</li>
+<li>Verify position validity after applicable maintenance.</li>
+<li>Perform TCP and frame checks when tooling or fixtures change.</li>
+<li>Maintain records of accuracy verification.</li>
+<li>Restrict mastering changes to trained, authorized personnel.</li>
+</ul>
+<h2 id="18-mastering-maintenance-record-template">18. Mastering Maintenance Record Template</h2>
+<pre><code>Robot ID:
+Robot Model:
+Controller Model:
+Affected Axis:
+Robot Serial Number:
+
+Reported Alarm:
+Exact Alarm Code:
+Position Validity:
+Reported Joint Position:
+Expected Reference:
+Observed Physical Position:
+
+Recent Maintenance:
+Battery / Retention Status:
+Encoder Status:
+Mechanical Condition:
+Collision History:
+Backup Identification:
+Backup Compatibility Verified:
+
+Mastering Method:
+Manufacturer Procedure:
+Mastering Data Before:
+Mastering Data After:
+Calibration Required:
+TCP Verification:
+User-Frame Verification:
+Accuracy Test Result:
+Controlled-Motion Test Result:
+
+Root Cause:
+Corrective Action:
+Parts Replaced:
+Final Position Validity:
+Final Machine Status:
+Technician:
+Work Order:
+Date:
+</code></pre>
+<h2 id="19-interview-questions-and-answers">19. Interview Questions and Answers</h2>
+<h3 id="q1-what-is-robot-mastering">Q1. What is robot mastering?</h3>
+<p>It establishes the correct relationship between the robot's physical joint reference and the joint-position values interpreted by the controller.</p>
+<h3 id="q2-what-causes-mastering-loss">Q2. What causes mastering loss?</h3>
+<p>Possible causes include position-retention failure, encoder replacement, mechanical work, incorrect recovery procedures, incompatible data restoration, or feedback-system faults.</p>
+<h3 id="q3-what-is-the-difference-between-mastering-and-homing">Q3. What is the difference between mastering and homing?</h3>
+<p>Mastering establishes the correct joint reference relationship. Homing moves or references an axis using a defined home procedure and does not necessarily restore mastering.</p>
+<h3 id="q4-does-an-encoder-battery-alarm-always-mean-mastering-is-lost">Q4. Does an encoder battery alarm always mean mastering is lost?</h3>
+<p>No. The alarm may indicate a low battery before position information is lost. The actual condition must be confirmed using controller diagnostics and the manufacturer's procedure.</p>
+<h3 id="q5-can-a-robot-move-normally-with-incorrect-mastering">Q5. Can a robot move normally with incorrect mastering?</h3>
+<p>Yes. The servo system may control motion smoothly while the relationship between physical joint position and interpreted coordinates is incorrect.</p>
+<h3 id="q6-what-is-the-difference-between-mastering-and-tcp-calibration">Q6. What is the difference between mastering and TCP calibration?</h3>
+<p>Mastering concerns the relationship between joint feedback and mechanical reference. TCP calibration determines the tool center point relative to the robot flange.</p>
+<h3 id="q7-why-must-mastering-data-backups-be-verified">Q7. Why must mastering data backups be verified?</h3>
+<p>The data must correspond to the correct robot, controller configuration, and relevant hardware. Incompatible data can introduce additional position errors.</p>
+<h3 id="q8-should-all-robot-position-errors-be-corrected-by-mastering">Q8. Should all robot position errors be corrected by mastering?</h3>
+<p>No. The cause may be TCP data, workpiece frames, program positions, mechanical damage, feedback faults, or calibration errors.</p>
+<h3 id="q9-what-must-be-verified-after-mastering">Q9. What must be verified after mastering?</h3>
+<p>Position validity, joint reference, required calibration, TCP and frame data where applicable, safety conditions, and controlled-motion accuracy.</p>
+<h3 id="q10-why-is-mastering-important-after-gearbox-or-motor-replacement">Q10. Why is mastering important after gearbox or motor replacement?</h3>
+<p>The mechanical and feedback reference relationship may have changed. The replacement procedure determines whether mastering, calibration, or another reference operation is required.</p>
+<h2 id="20-completion-checklist">20. Completion Checklist</h2>
+<ul>
+<li>Understand robot mastering and joint-reference interpretation.</li>
+<li>Distinguish mastering, homing, teaching, and calibration.</li>
+<li>Identify encoder retention and battery-related issues.</li>
+<li>Recognize symptoms of invalid or incorrect mastering.</li>
+<li>Distinguish reference faults from mechanical and TCP errors.</li>
+<li>Understand mastering requirements after motor or gearbox replacement.</li>
+<li>Follow safe, manufacturer-approved recovery procedures.</li>
+<li>Verify position validity and physical accuracy after recovery.</li>
+<li>Maintain compatible backups and mastering records.</li>
+<li>Document the confirmed root cause and corrective action.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\19_Breakdown\04_Robot_Fault\06_Program - Program: Position and logic errors</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

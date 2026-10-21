@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Root Cause Analysis in CAPA</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Root Cause Analysis in CAPA</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-of-root-cause-analysis">1. Definition of Root Cause Analysis</a></li>
+<li><a href="#2-position-of-rca-in-the-capa-process">2. Position of RCA in the CAPA Process</a></li>
+<li><a href="#3-symptom-immediate-cause-contributing-cause-and-root-cause">3. Symptom, Immediate Cause, Contributing Cause, and Root Cause</a></li>
+<li><a href="#4-why-rca-is-necessary-in-industrial-maintenance">4. Why RCA Is Necessary in Industrial Maintenance</a></li>
+<li><a href="#5-when-should-rca-be-conducted">5. When Should RCA Be Conducted?</a></li>
+<li><a href="#6-the-rca-investigation-method">6. The RCA Investigation Method</a><ul>
+<li><a href="#step-1-define-the-problem">Step 1: Define the problem</a></li>
+<li><a href="#step-2-collect-evidence">Step 2: Collect evidence</a></li>
+<li><a href="#step-3-establish-the-event-sequence">Step 3: Establish the event sequence</a></li>
+<li><a href="#step-4-generate-possible-causes">Step 4: Generate possible causes</a></li>
+<li><a href="#step-5-test-the-hypotheses">Step 5: Test the hypotheses</a></li>
+<li><a href="#step-6-identify-the-causal-mechanism">Step 6: Identify the causal mechanism</a></li>
+<li><a href="#step-7-identify-control-and-escape-failures">Step 7: Identify control and escape failures</a></li>
+<li><a href="#step-8-document-the-conclusion">Step 8: Document the conclusion</a></li>
+</ul>
+</li>
+<li><a href="#7-the-5-whys-method">7. The 5 Whys Method</a><ul>
+<li><a href="#example-repeated-remote-io-communication-failure">Example: Repeated remote I/O communication failure</a></li>
+<li><a href="#limitations-of-5-whys">Limitations of 5 Whys</a></li>
+</ul>
+</li>
+<li><a href="#8-fishbone-analysis">8. Fishbone Analysis</a><ul>
+<li><a href="#example-cnc-spindle-overheating">Example: CNC spindle overheating</a></li>
+</ul>
+</li>
+<li><a href="#9-fault-tree-analysis">9. Fault-Tree Analysis</a></li>
+<li><a href="#10-failure-mode-and-effects-analysis">10. Failure Mode and Effects Analysis</a></li>
+<li><a href="#11-evidence-based-hypothesis-testing">11. Evidence-Based Hypothesis Testing</a><ul>
+<li><a href="#example-vfd-overcurrent-trip">Example: VFD overcurrent trip</a></li>
+</ul>
+</li>
+<li><a href="#12-distinguishing-correlation-from-causation">12. Distinguishing Correlation from Causation</a></li>
+<li><a href="#13-root-cause-categories-in-industrial-automation">13. Root Cause Categories in Industrial Automation</a></li>
+<li><a href="#14-root-cause-vs-escape-cause">14. Root Cause vs Escape Cause</a></li>
+<li><a href="#15-rca-in-software-and-plc-logic">15. RCA in Software and PLC Logic</a><ul>
+<li><a href="#example-intermittent-sequence-failure">Example: Intermittent sequence failure</a></li>
+</ul>
+</li>
+<li><a href="#16-rca-in-cnc-servo-and-robot-systems">16. RCA in CNC, Servo, and Robot Systems</a><ul>
+<li><a href="#cnc">CNC</a></li>
+<li><a href="#servo-and-motion-control">Servo and motion control</a></li>
+<li><a href="#robots">Robots</a></li>
+</ul>
+</li>
+<li><a href="#17-data-analysis-for-recurring-failures">17. Data Analysis for Recurring Failures</a><ul>
+<li><a href="#mean-time-between-failures">Mean Time Between Failures</a></li>
+<li><a href="#mean-time-to-repair">Mean Time To Repair</a></li>
+<li><a href="#failure-rate">Failure rate</a></li>
+</ul>
+</li>
+<li><a href="#18-common-rca-errors">18. Common RCA Errors</a></li>
+<li><a href="#19-rca-report-structure">19. RCA Report Structure</a></li>
+<li><a href="#20-practical-rca-example-repeated-machine-stops">20. Practical RCA Example: Repeated Machine Stops</a><ul>
+<li><a href="#problem">Problem</a></li>
+<li><a href="#initial-hypotheses">Initial hypotheses</a></li>
+<li><a href="#investigation">Investigation</a></li>
+<li><a href="#illustrative-finding">Illustrative finding</a></li>
+<li><a href="#rca-conclusion">RCA conclusion</a></li>
+</ul>
+</li>
+<li><a href="#21-interview-questions-and-answers">21. Interview Questions and Answers</a></li>
+<li><a href="#22-final-rca-checklist">22. Final RCA Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition-of-root-cause-analysis">1. Definition of Root Cause Analysis</h2>
+<p>Root Cause Analysis (RCA) is a systematic investigation used to identify and verify the underlying reasons a problem occurred, rather than merely treating its visible symptoms.</p>
+<p>In industrial maintenance, RCA is used to investigate recurring breakdowns, PLC and network faults, CNC alarms, VFD trips, robot failures, quality defects, process deviations, and failures of maintenance procedures.</p>
+<p>The objective is to establish a defensible causal explanation supported by evidence and use it to develop effective corrective actions.</p>
+<p>A fault may have several contributing causes. Therefore, RCA should not always stop at a single explanation.</p>
+<p>For example, a VFD may trip because the motor current exceeds its protection threshold. That describes the detected condition. The investigation may reveal excessive mechanical resistance, a damaged bearing, incorrect drive configuration, or another cause. The correct conclusion depends on measurements and tests, not guesswork.</p>
+<h2 id="2-position-of-rca-in-the-capa-process">2. Position of RCA in the CAPA Process</h2>
+<p>RCA follows problem identification and initial containment, and it provides the technical basis for corrective action.</p>
+<pre><code>Problem identification
+        ↓
+Containment and immediate risk control
+        ↓
+Root cause analysis
+        ↓
+Cause verification
+        ↓
+Corrective action planning
+        ↓
+Corrective action implementation
+        ↓
+Verification and effectiveness monitoring
+        ↓
+CAPA closure
+</code></pre>
+<p>The process may involve returning to earlier stages when new evidence changes the understanding of the problem.</p>
+<p>For example, an investigation initially focused on one faulty sensor may reveal that several machines use an unsuitable sensor mounting design. The problem scope and corrective action plan must then be expanded.</p>
+<h2 id="3-symptom-immediate-cause-contributing-cause-and-root-cause">3. Symptom, Immediate Cause, Contributing Cause, and Root Cause</h2>
+<p>These terms describe different levels of an investigation.</p>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Symptom</td>
+<td>Observable indication of abnormal operation</td>
+<td>Conveyor stops unexpectedly</td>
+</tr>
+<tr>
+<td>Fault indication</td>
+<td>What a monitoring or protection system reports</td>
+<td>VFD overcurrent alarm</td>
+</tr>
+<tr>
+<td>Immediate cause</td>
+<td>Direct condition producing the event</td>
+<td>Motor current exceeds the drive trip threshold</td>
+</tr>
+<tr>
+<td>Contributing cause</td>
+<td>A factor that increases likelihood or severity</td>
+<td>Excessive mechanical resistance</td>
+</tr>
+<tr>
+<td>Root cause</td>
+<td>An underlying causal condition that explains the failure and is supported by evidence</td>
+<td>A bearing lubrication arrangement allows progressive lubrication loss, if the investigation confirms this mechanism</td>
+</tr>
+<tr>
+<td>Escape cause</td>
+<td>Why the failure was not detected or prevented before its impact</td>
+<td>The existing inspection method cannot detect the developing bearing condition</td>
+</tr>
+</tbody>
+</table>
+<p>The term escape cause is especially useful in quality and reliability investigations. It concerns why existing controls failed to detect, prevent, or contain the problem.</p>
+<p>A complete investigation may identify multiple root causes, contributing causes, and escape causes. The goal is not to force every incident into one cause category.</p>
+<h2 id="4-why-rca-is-necessary-in-industrial-maintenance">4. Why RCA Is Necessary in Industrial Maintenance</h2>
+<p>Without RCA, maintenance teams can become trapped in a cycle of alarm, reset, restart, and repeat breakdown.</p>
+<p>RCA helps to:</p>
+<ul>
+<li>Reduce recurring equipment failures.</li>
+<li>Avoid unnecessary replacement of healthy components.</li>
+<li>Identify design weaknesses and unsuitable operating conditions.</li>
+<li>Improve PLC, CNC, VFD, servo, robot, and network reliability.</li>
+<li>Detect weaknesses in preventive maintenance.</li>
+<li>Improve machine availability and maintainability.</li>
+<li>Reduce scrap, rework, downtime, and repair expenditure.</li>
+<li>Identify gaps in procedures, training, and engineering controls.</li>
+<li>Improve spare-parts strategy and obsolescence planning.</li>
+<li>Establish a technical basis for CAPA actions.</li>
+<li>Convert individual breakdown knowledge into reusable organizational knowledge.</li>
+</ul>
+<p>A machine returning to production proves that operation has resumed. It does not prove that the cause of the failure has been eliminated.</p>
+<h2 id="5-when-should-rca-be-conducted">5. When Should RCA Be Conducted?</h2>
+<p>The depth of RCA should be proportional to the risk, impact, and complexity of the problem.</p>
+<p>RCA is particularly appropriate for:</p>
+<ul>
+<li>Repeated or recurring breakdowns.</li>
+<li>High-downtime failures.</li>
+<li>Safety incidents and relevant near misses.</li>
+<li>Customer complaints and major quality deviations.</li>
+<li>Repeated CNC dimensional defects.</li>
+<li>Unexplained PLC or remote I/O communication losses.</li>
+<li>Repeated VFD, servo, or spindle trips.</li>
+<li>Failures occurring soon after maintenance.</li>
+<li>Equipment damage or premature component failure.</li>
+<li>Failures involving multiple systems or departments.</li>
+<li>Audit findings and compliance-related nonconformities.</li>
+<li>Problems that persist despite previous corrective actions.</li>
+</ul>
+<p>A simple, isolated failure may need only a documented diagnosis and repair. A high-risk or recurring failure may require formal RCA and CAPA under the organization's procedure.</p>
+<h2 id="6-the-rca-investigation-method">6. The RCA Investigation Method</h2>
+<p>A disciplined investigation follows a sequence.</p>
+<h3 id="step-1-define-the-problem">Step 1: Define the problem</h3>
+<p>Use a specific problem statement containing the equipment, abnormal condition, operating context, frequency, and impact.</p>
+<p>Example:</p>
+<p>"The H8 conveyor stopped six times over two shifts because the VFD recorded overcurrent trips during loaded acceleration, resulting in 32 minutes of cumulative downtime."</p>
+<p>This establishes what needs explaining without prematurely declaring a cause.</p>
+<h3 id="step-2-collect-evidence">Step 2: Collect evidence</h3>
+<p>Collect the relevant records before they disappear or are altered.</p>
+<p>Examples include:</p>
+<ul>
+<li>PLC diagnostic buffers and I/O states.</li>
+<li>VFD, servo, CNC, and robot alarm histories.</li>
+<li>HMI and SCADA trends.</li>
+<li>Network switch and remote I/O diagnostics.</li>
+<li>Electrical measurements.</li>
+<li>Mechanical inspection findings.</li>
+<li>Machine program and parameter revisions.</li>
+<li>Maintenance and repair records.</li>
+<li>Production, quality, and downtime data.</li>
+<li>Environmental conditions and operating loads.</li>
+<li>Operator observations and maintenance handover records.</li>
+</ul>
+<p>Distinguish between a measured fact, a reported observation, an assumption, and a hypothesis.</p>
+<h3 id="step-3-establish-the-event-sequence">Step 3: Establish the event sequence</h3>
+<p>Determine what happened before, during, and after the failure.</p>
+<pre><code>Normal operation
+        ↓
+Abnormal condition develops
+        ↓
+Triggering event occurs
+        ↓
+Equipment detects or experiences fault
+        ↓
+Machine response or protective trip
+        ↓
+Production impact
+        ↓
+Operator or maintenance intervention
+        ↓
+Recovery or temporary restoration
+</code></pre>
+<p>The actual sequence must be reconstructed from the evidence. Timestamps from PLCs, drives, SCADA, and databases may not be directly comparable unless their clock settings and synchronization are checked.</p>
+<h3 id="step-4-generate-possible-causes">Step 4: Generate possible causes</h3>
+<p>Use structured techniques such as 5 Whys, fishbone analysis, fault-tree analysis, and failure-mode analysis to identify plausible causes.</p>
+<p>Do not select a cause merely because it is familiar or easy to repair.</p>
+<h3 id="step-5-test-the-hypotheses">Step 5: Test the hypotheses</h3>
+<p>Use measurements, inspection, controlled testing, design review, and historical comparisons to determine which hypotheses are supported.</p>
+<p>Testing must follow the applicable safety and engineering procedures. A hypothesis should not be tested by bypassing protective functions or exposing personnel to uncontrolled hazards.</p>
+<h3 id="step-6-identify-the-causal-mechanism">Step 6: Identify the causal mechanism</h3>
+<p>Explain how the confirmed condition produces the observed failure.</p>
+<p>For example, excessive mechanical resistance increases the torque demand during acceleration. This can increase motor current until the drive's protection threshold is reached.</p>
+<p>The causal explanation must match the actual drive behavior, motor characteristics, mechanical conditions, and recorded evidence.</p>
+<h3 id="step-7-identify-control-and-escape-failures">Step 7: Identify control and escape failures</h3>
+<p>Ask why existing design features, alarms, inspections, preventive maintenance, or operating procedures did not prevent or detect the condition earlier.</p>
+<p>This is important because repairing the failed component may not prevent the same failure mechanism from appearing again.</p>
+<h3 id="step-8-document-the-conclusion">Step 8: Document the conclusion</h3>
+<p>Record the verified cause, supporting evidence, rejected hypotheses where relevant, contributing factors, escape causes, and remaining uncertainty.</p>
+<p>The RCA output becomes the technical input for corrective action implementation.</p>
+<h2 id="7-the-5-whys-method">7. The 5 Whys Method</h2>
+<p>The 5 Whys technique investigates a causal chain by repeatedly asking why a condition occurred.</p>
+<p>The number five is a guide, not a rule. Some problems require fewer questions; complex problems require several branches and additional analytical methods.</p>
+<h3 id="example-repeated-remote-io-communication-failure">Example: Repeated remote I/O communication failure</h3>
+<p>Problem: A production machine repeatedly stops after losing communication with a remote I/O adapter.</p>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Illustrative finding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Why did the machine stop?</td>
+<td>The PLC detected loss of the required remote I/O connection.</td>
+</tr>
+<tr>
+<td>Why was the connection lost?</td>
+<td>The adapter's network link was interrupted during operation.</td>
+</tr>
+<tr>
+<td>Why was the link interrupted?</td>
+<td>Inspection and event records indicate intermittent connection instability at the adapter's network connection.</td>
+</tr>
+<tr>
+<td>Why was the connection unstable?</td>
+<td>Testing identifies an unsuitable or damaged connection arrangement.</td>
+</tr>
+<tr>
+<td>Why was the arrangement not identified earlier?</td>
+<td>The maintenance inspection and installation acceptance process did not adequately verify connection integrity under the relevant operating conditions.</td>
+</tr>
+</tbody>
+</table>
+<p>These are illustrative findings, not a diagnosis of any specific machine. In an actual investigation, every answer must be verified.</p>
+<p>The investigation may identify two separate issues: the physical connection defect that caused the failure and the control weakness that allowed it to remain undetected.</p>
+<h3 id="limitations-of-5-whys">Limitations of 5 Whys</h3>
+<ul>
+<li>It can oversimplify complex failures.</li>
+<li>Investigators may force a predetermined conclusion.</li>
+<li>It may ignore multiple simultaneous causes.</li>
+<li>It can incorrectly assign responsibility to an individual.</li>
+<li>Each answer may be plausible without being proven.</li>
+<li>It may overlook design, environmental, and organizational factors.</li>
+</ul>
+<p>Use 5 Whys as a reasoning aid, not as proof by repetition.</p>
+<h2 id="8-fishbone-analysis">8. Fishbone Analysis</h2>
+<p>Fishbone analysis, also called the Ishikawa or cause-and-effect diagram, organizes possible causes into categories.</p>
+<p>Common categories include the 6M framework:</p>
+<ul>
+<li>Manpower: Skills, staffing, communication, and task execution.</li>
+<li>Machine: Equipment condition, wear, design, and component failure.</li>
+<li>Method: Procedures, setup, maintenance, and operating methods.</li>
+<li>Material: Parts, cables, lubricants, consumables, and incoming quality.</li>
+<li>Measurement: Instruments, calibration, sensing, and data quality.</li>
+<li>Mother Nature or Environment: Temperature, humidity, dust, vibration, and electrical interference.</li>
+</ul>
+<p>Some organizations use adapted categories for software, management, or automation systems.</p>
+<h3 id="example-cnc-spindle-overheating">Example: CNC spindle overheating</h3>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Potential causes to investigate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Manpower</td>
+<td>Incorrect setup or incomplete handover</td>
+</tr>
+<tr>
+<td>Machine</td>
+<td>Cooling-system defect, bearing damage, or lubrication failure</td>
+</tr>
+<tr>
+<td>Method</td>
+<td>Unsuitable operating cycle or maintenance procedure</td>
+</tr>
+<tr>
+<td>Material</td>
+<td>Incorrect lubricant or unsuitable replacement component</td>
+</tr>
+<tr>
+<td>Measurement</td>
+<td>Faulty temperature sensor or misleading trend</td>
+</tr>
+<tr>
+<td>Environment</td>
+<td>Excessive ambient temperature or restricted ventilation</td>
+</tr>
+</tbody>
+</table>
+<p>These are candidate causes, not conclusions. Evidence must determine which are relevant.</p>
+<p>Fishbone analysis is useful when several disciplines may be involved. It helps broaden the investigation before the team narrows it through testing.</p>
+<h2 id="9-fault-tree-analysis">9. Fault-Tree Analysis</h2>
+<p>Fault-tree analysis begins with an undesired top event and works backward through combinations of conditions that could produce it.</p>
+<p>It uses logical relationships, often represented as AND and OR gates.</p>
+<ul>
+<li>OR relationship: Any one of the listed events can produce the higher-level event.</li>
+<li>AND relationship: All specified conditions must occur for the higher-level event through that path.</li>
+</ul>
+<p>Example:</p>
+<pre><code>TOP EVENT: Conveyor fails to operate
+        ↓
+Possible OR branches
+        ↓
+Power supply failure
+OR drive fault
+OR control permissive absent
+OR mechanical obstruction
+        ↓
+Investigate each branch using evidence
+</code></pre>
+<p>A more detailed tree may separate a drive fault into power-stage faults, protection trips, configuration problems, or external load conditions.</p>
+<p>Fault-tree analysis is especially useful for complex automation systems where several independent or interacting failure paths can produce the same symptom.</p>
+<h2 id="10-failure-mode-and-effects-analysis">10. Failure Mode and Effects Analysis</h2>
+<p>Failure Mode and Effects Analysis (FMEA) is used to identify potential failure modes, their effects, causes, and existing controls.</p>
+<p>Although FMEA is often used proactively during design and process planning, it can also support RCA by helping investigators understand how a specific failure fits into the system's known failure mechanisms.</p>
+<table>
+<thead>
+<tr>
+<th>Element</th>
+<th>Example for a conveyor drive</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Function</td>
+<td>Control conveyor motor speed and torque</td>
+</tr>
+<tr>
+<td>Failure mode</td>
+<td>Drive trips during acceleration</td>
+</tr>
+<tr>
+<td>Effect</td>
+<td>Conveyor stops and production is interrupted</td>
+</tr>
+<tr>
+<td>Potential causes</td>
+<td>Excessive load, electrical fault, unsuitable settings, or mechanical resistance</td>
+</tr>
+<tr>
+<td>Existing controls</td>
+<td>Drive protection, alarms, preventive inspection</td>
+</tr>
+<tr>
+<td>Detection weakness</td>
+<td>Existing monitoring may not identify a developing mechanical problem</td>
+</tr>
+<tr>
+<td>Potential improvement</td>
+<td>Add a validated diagnostic or inspection control</td>
+</tr>
+</tbody>
+</table>
+<p>FMEA identifies potential failure mechanisms and prioritizes risks. It does not prove that a particular failure was caused by one of the listed mechanisms.</p>
+<h2 id="11-evidence-based-hypothesis-testing">11. Evidence-Based Hypothesis Testing</h2>
+<p>RCA should use evidence to distinguish between competing explanations.</p>
+<h3 id="example-vfd-overcurrent-trip">Example: VFD overcurrent trip</h3>
+<p>Possible hypotheses:</p>
+<ul>
+<li>Excessive mechanical load.</li>
+<li>Motor winding or cable fault.</li>
+<li>Incorrect drive configuration.</li>
+<li>Acceleration settings unsuitable for the load.</li>
+<li>Intermittent mechanical obstruction.</li>
+<li>Drive hardware fault.</li>
+</ul>
+<p>A useful investigation plan connects each hypothesis to an observable prediction.</p>
+<table>
+<thead>
+<tr>
+<th>Hypothesis</th>
+<th>Evidence to collect</th>
+<th>Example test</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Excessive mechanical load</td>
+<td>Mechanical condition, current trend, load variation</td>
+<td>Inspect and evaluate the mechanical load using an approved procedure</td>
+</tr>
+<tr>
+<td>Motor or cable fault</td>
+<td>Insulation, winding, and cable test results</td>
+<td>Perform the applicable electrical tests with equipment safely isolated</td>
+</tr>
+<tr>
+<td>Incorrect configuration</td>
+<td>Approved settings and current drive parameters</td>
+<td>Compare the actual configuration with the approved baseline</td>
+</tr>
+<tr>
+<td>Acceleration settings unsuitable for the application</td>
+<td>Acceleration profile, load behavior, drive diagnostics</td>
+<td>Review the approved application settings and validate the response</td>
+</tr>
+<tr>
+<td>Mechanical obstruction</td>
+<td>Movement, torque demand, and inspection findings</td>
+<td>Inspect the mechanism and verify free movement safely</td>
+</tr>
+<tr>
+<td>Drive hardware fault</td>
+<td>Diagnostic records and suitable test results</td>
+<td>Conduct manufacturer-recommended checks or controlled substitution where appropriate</td>
+</tr>
+</tbody>
+</table>
+<p>A hypothesis becomes stronger when its predicted evidence is observed and competing explanations are addressed. A single correlation does not always establish causation.</p>
+<h2 id="12-distinguishing-correlation-from-causation">12. Distinguishing Correlation from Causation</h2>
+<p>Two events occurring together does not automatically mean one caused the other.</p>
+<p>For example, if remote I/O faults appear more often during a particular shift, possible explanations include operating temperature, machine load, network activity, environmental conditions, maintenance activity, or differences in reporting. The shift itself may not be causal.</p>
+<p>To establish a causal relationship:</p>
+<ul>
+<li>Verify the event sequence.</li>
+<li>Confirm that the proposed cause precedes the effect.</li>
+<li>Identify a credible physical, electrical, software, or process mechanism.</li>
+<li>Compare affected and unaffected operating conditions.</li>
+<li>Reproduce or test the mechanism when safe and appropriate.</li>
+<li>Evaluate competing explanations.</li>
+<li>Confirm that the evidence supports the proposed causal link.</li>
+</ul>
+<p>Controlled experiments are not always necessary or safe. In such cases, diagnostic records, inspections, engineering analysis, and repeated observations may provide sufficient evidence under the applicable investigation standard.</p>
+<h2 id="13-root-cause-categories-in-industrial-automation">13. Root Cause Categories in Industrial Automation</h2>
+<p>A useful classification system helps organize evidence without prematurely restricting the investigation.</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Typical examples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Human or task execution</td>
+<td>Incorrect setup, missed inspection, or incomplete handover</td>
+</tr>
+<tr>
+<td>Design</td>
+<td>Inadequate protection, poor maintainability, or unsuitable component selection</td>
+</tr>
+<tr>
+<td>Component</td>
+<td>Premature failure, internal defect, or wear</td>
+</tr>
+<tr>
+<td>Wiring and installation</td>
+<td>Loose termination, damaged cable, poor shielding, or incorrect wiring</td>
+</tr>
+<tr>
+<td>Software and logic</td>
+<td>Incorrect sequence, race condition, missing fault handling, or defective data handling</td>
+</tr>
+<tr>
+<td>Parameter or configuration</td>
+<td>Unsuitable drive settings, incorrect scaling, or incompatible configuration</td>
+</tr>
+<tr>
+<td>Environmental</td>
+<td>Heat, dust, moisture, vibration, or electromagnetic interference</td>
+</tr>
+<tr>
+<td>Process and management</td>
+<td>Inadequate standards, weak change control, or insufficient verification</td>
+</tr>
+<tr>
+<td>Detection and monitoring</td>
+<td>Missing alarm, inadequate inspection, or failure to recognize deteriorating condition</td>
+</tr>
+</tbody>
+</table>
+<p>Several categories may apply to one incident. For example, a component may fail because of an environmental condition, while the detection system fails to identify the deterioration before a production stoppage.</p>
+<p>The classification should describe the evidence and causal role, not act as a shortcut to a conclusion.</p>
+<h2 id="14-root-cause-vs-escape-cause">14. Root Cause vs Escape Cause</h2>
+<p>Finding why the failure occurred is not always enough. Investigators should also determine why the existing controls failed to prevent, detect, or limit its impact.</p>
+<p>Example:</p>
+<ul>
+<li>Failure mechanism: A bearing loses lubrication and overheats.</li>
+<li>Root cause: The confirmed lubrication arrangement fails to deliver the required lubrication under the relevant operating conditions.</li>
+<li>Escape cause: The preventive maintenance task does not verify the relevant lubrication condition, and no suitable early-warning control exists.</li>
+<li>Correction: Replace or repair the damaged bearing.</li>
+<li>Corrective action: Correct the confirmed lubrication-system defect and verify delivery under the required conditions.</li>
+<li>Control improvement: Update the inspection or monitoring method to detect the relevant deterioration.</li>
+</ul>
+<p>This distinction prevents the investigation from stopping after the failed component has been replaced.</p>
+<h2 id="15-rca-in-software-and-plc-logic">15. RCA in Software and PLC Logic</h2>
+<p>Software-related failures require more than inspecting hardware and replacing components.</p>
+<p>Relevant evidence may include:</p>
+<ul>
+<li>PLC program revision and change history.</li>
+<li>Online logic state and relevant tag values.</li>
+<li>Sequence transitions and interlocks.</li>
+<li>Timer and counter behavior.</li>
+<li>Task execution and scan-related diagnostics.</li>
+<li>Communication status and data validity.</li>
+<li>Retentive memory and initialization behavior.</li>
+<li>HMI command and acknowledgment sequences.</li>
+<li>Alarm handling and fault recovery.</li>
+<li>Firmware and compatibility information.</li>
+<li>Version control and backup records.</li>
+</ul>
+<h3 id="example-intermittent-sequence-failure">Example: Intermittent sequence failure</h3>
+<p>Problem: A machine sometimes advances to the next sequence step before a required operation is complete.</p>
+<p>Possible investigation areas:</p>
+<ul>
+<li>Is the completion feedback generated correctly?</li>
+<li>Can the signal change briefly and disappear?</li>
+<li>Is the logic using the correct transition condition?</li>
+<li>Can two events occur in an unexpected order?</li>
+<li>Is the acknowledgment retained or cleared prematurely?</li>
+<li>Does a communication delay affect the sequence?</li>
+<li>Does the fault occur only under specific timing conditions?</li>
+<li>Are PLC and external device states being sampled or updated as expected?</li>
+</ul>
+<p>The investigation should reconstruct the sequence using actual state transitions and event evidence. Adding a timer or increasing a delay may suppress the symptom without correcting the underlying logic defect.</p>
+<h2 id="16-rca-in-cnc-servo-and-robot-systems">16. RCA in CNC, Servo, and Robot Systems</h2>
+<p>These systems involve interactions between control software, mechanical components, electrical drives, feedback devices, and process conditions.</p>
+<h3 id="cnc">CNC</h3>
+<p>Investigate:</p>
+<ul>
+<li>Alarm history and exact alarm context.</li>
+<li>Program and tool-offset revisions.</li>
+<li>Spindle, axis, and servo conditions.</li>
+<li>Encoder feedback and following error.</li>
+<li>Tool wear, workholding, and machine geometry.</li>
+<li>Lubrication and thermal conditions.</li>
+<li>Part measurement results.</li>
+</ul>
+<h3 id="servo-and-motion-control">Servo and motion control</h3>
+<p>Investigate:</p>
+<ul>
+<li>Drive alarms and actual feedback.</li>
+<li>Encoder and feedback cable condition.</li>
+<li>Motor current and load behavior.</li>
+<li>Mechanical binding or excessive inertia.</li>
+<li>Homing and reference conditions.</li>
+<li>Position, velocity, and torque settings.</li>
+<li>Regenerative energy and DC-bus behavior where relevant.</li>
+</ul>
+<h3 id="robots">Robots</h3>
+<p>Investigate:</p>
+<ul>
+<li>Robot and PLC event histories.</li>
+<li>Motion and position-related faults.</li>
+<li>Interlock and permissive states.</li>
+<li>Tool and fixture conditions.</li>
+<li>Payload and motion settings.</li>
+<li>Cable routing and peripheral interfaces.</li>
+<li>Program revision and recovery sequence.</li>
+<li>Safety-system status using approved diagnostic methods.</li>
+</ul>
+<p>Do not infer a mechanical failure from a servo alarm alone. A servo following error, for example, may arise from mechanical resistance, feedback issues, tuning, configuration, or other conditions.</p>
+<h2 id="17-data-analysis-for-recurring-failures">17. Data Analysis for Recurring Failures</h2>
+<p>Historical maintenance and production data can reveal patterns that are not obvious from one breakdown.</p>
+<p>Useful analyses include:</p>
+<ul>
+<li>Failure frequency by machine and subsystem.</li>
+<li>Failure rate by operating hours or production cycles.</li>
+<li>Time between failures.</li>
+<li>Downtime by failure category.</li>
+<li>Repeat-failure rate after repair.</li>
+<li>Failure distribution by shift or operating condition.</li>
+<li>Alarm frequency before and after a change.</li>
+<li>Defect rate by product, tool, or machine revision.</li>
+<li>Comparison of affected and unaffected equipment.</li>
+</ul>
+<h3 id="mean-time-between-failures">Mean Time Between Failures</h3>
+<p>For repairable equipment, a commonly used approximation is:</p>
+<div class="math-display">\[ \text{MTBF} = \frac{\text{Total Operating Time}}{\text{Number of Failures}} \]</div>
+<p>The organization's definition of operating time and failure events must be consistent.</p>
+<h3 id="mean-time-to-repair">Mean Time To Repair</h3>
+<div class="math-display">\[ \text{MTTR} = \frac{\text{Total Repair Time}}{\text{Number of Repairs}} \]</div>
+<p>Repair-time boundaries vary between organizations. For example, some records include diagnostic and verification time, while others measure a narrower repair interval.</p>
+<h3 id="failure-rate">Failure rate</h3>
+<div class="math-display">\[ \text{Failure Rate} = \frac{\text{Number of Failures}}{\text{Operating Exposure}} \]</div>
+<p>Operating exposure may be operating hours, cycles, units produced, or another relevant denominator.</p>
+<p>Use the denominator that matches the failure mechanism. A cycle-dependent failure may be better compared by cycles than by calendar days.</p>
+<p>These metrics identify patterns and support prioritization. They do not, by themselves, prove a root cause.</p>
+<h2 id="18-common-rca-errors">18. Common RCA Errors</h2>
+<ul>
+<li>Replacing the failed component and declaring the root cause found.</li>
+<li>Accepting the alarm message as the complete causal explanation.</li>
+<li>Choosing the first plausible hypothesis without testing alternatives.</li>
+<li>Using 5 Whys to force a predetermined answer.</li>
+<li>Ignoring interactions between electrical, mechanical, software, and process conditions.</li>
+<li>Treating correlation as proof of causation.</li>
+<li>Blaming an operator without investigating the design and working conditions.</li>
+<li>Ignoring why preventive maintenance failed to detect deterioration.</li>
+<li>Modifying PLC logic or drive parameters before preserving the original configuration.</li>
+<li>Failing to include similar equipment in the investigation scope.</li>
+<li>Making changes during testing without documenting them.</li>
+<li>Declaring a cause confirmed when the evidence remains inconclusive.</li>
+<li>Closing the investigation without connecting the cause to a verifiable corrective action.</li>
+</ul>
+<h2 id="19-rca-report-structure">19. RCA Report Structure</h2>
+<p>A practical RCA report should contain:</p>
+<table>
+<thead>
+<tr>
+<th>Section</th>
+<th>Required content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Problem statement</td>
+<td>Clear, measurable description of the abnormal condition</td>
+</tr>
+<tr>
+<td>Scope</td>
+<td>Affected equipment, process, product, and period</td>
+</tr>
+<tr>
+<td>Impact</td>
+<td>Safety, quality, downtime, cost, and production consequences</td>
+</tr>
+<tr>
+<td>Evidence</td>
+<td>Logs, measurements, inspections, and historical records</td>
+</tr>
+<tr>
+<td>Event timeline</td>
+<td>Sequence of relevant events</td>
+</tr>
+<tr>
+<td>Investigation method</td>
+<td>5 Whys, fishbone, fault tree, testing, or other method used</td>
+</tr>
+<tr>
+<td>Candidate causes</td>
+<td>Hypotheses evaluated during the investigation</td>
+</tr>
+<tr>
+<td>Verification</td>
+<td>Evidence supporting or rejecting each significant hypothesis</td>
+</tr>
+<tr>
+<td>Root cause</td>
+<td>Evidence-supported causal explanation</td>
+</tr>
+<tr>
+<td>Contributing causes</td>
+<td>Additional conditions that increased the likelihood or impact</td>
+</tr>
+<tr>
+<td>Escape cause</td>
+<td>Why existing controls did not prevent or detect the issue, where applicable</td>
+</tr>
+<tr>
+<td>Immediate correction and containment</td>
+<td>Actions already taken to control the problem</td>
+</tr>
+<tr>
+<td>Corrective action requirements</td>
+<td>Changes needed to eliminate the confirmed cause</td>
+</tr>
+<tr>
+<td>Residual risk</td>
+<td>Remaining uncertainty and required controls</td>
+</tr>
+<tr>
+<td>Approval</td>
+<td>Responsible investigator and required technical or management approval</td>
+</tr>
+</tbody>
+</table>
+<p>A strong report explains not only what conclusion was reached but also why the evidence supports it.</p>
+<h2 id="20-practical-rca-example-repeated-machine-stops">20. Practical RCA Example: Repeated Machine Stops</h2>
+<h3 id="problem">Problem</h3>
+<p>A PLC-controlled conveyor stops intermittently after a remote I/O communication fault. The problem has occurred eight times in three days and caused 45 minutes of cumulative downtime.</p>
+<h3 id="initial-hypotheses">Initial hypotheses</h3>
+<ul>
+<li>Remote I/O adapter fault.</li>
+<li>Intermittent network connection.</li>
+<li>Network switch or power supply issue.</li>
+<li>Cable or connector damage.</li>
+<li>Configuration or compatibility issue.</li>
+<li>Electrical interference.</li>
+</ul>
+<h3 id="investigation">Investigation</h3>
+<ol>
+<li>Preserve PLC diagnostic history and event timestamps.</li>
+<li>Compare the failure times with switch diagnostics and adapter status.</li>
+<li>Inspect the relevant connections and power supply.</li>
+<li>Compare affected and unaffected network devices.</li>
+<li>Review network topology and configuration.</li>
+<li>Conduct approved testing under representative operating conditions.</li>
+<li>Determine whether the evidence supports a specific causal mechanism.</li>
+</ol>
+<h3 id="illustrative-finding">Illustrative finding</h3>
+<p>Suppose the investigation establishes that the adapter loses its link because a connector has an intermittent physical connection. Inspection confirms that the connector's retention mechanism is damaged, and controlled testing reproduces the interruption when the connection is disturbed under safe conditions.</p>
+<p>The investigation also finds that the maintenance inspection did not include a suitable check of connector retention.</p>
+<h3 id="rca-conclusion">RCA conclusion</h3>
+<ul>
+<li>Root cause: The damaged connector retention mechanism allows intermittent loss of the network connection.</li>
+<li>Escape cause: The existing inspection method does not adequately verify connector retention.</li>
+<li>Correction: Replace the damaged connector or assembly with an approved compatible component.</li>
+<li>Corrective action: Correct the defective connection and verify communication reliability under the specified operating conditions.</li>
+<li>Control improvement: Update the relevant inspection method and assess equivalent installations.</li>
+</ul>
+<p>The conclusion is valid only if the described evidence is actually obtained. In a real investigation, a connector should not be declared the root cause simply because it looks damaged.</p>
+<h2 id="21-interview-questions-and-answers">21. Interview Questions and Answers</h2>
+<p>Q1. What is Root Cause Analysis?</p>
+<p>RCA is a systematic investigation used to identify and verify the underlying causes of a problem using evidence and structured reasoning.</p>
+<p>Q2. What is the difference between a symptom and a root cause?</p>
+<p>A symptom is the observable indication of a problem. A root cause is an underlying condition that contributes causally to the problem and is supported by evidence.</p>
+<p>Q3. Is replacing a failed component an RCA?</p>
+<p>No. Replacement may be a correction. RCA requires investigating why the component failed and, where relevant, why existing controls did not prevent or detect the failure.</p>
+<p>Q4. What is the 5 Whys method?</p>
+<p>It is a technique that repeatedly asks why a problem occurred to develop a causal explanation. Each answer must be evaluated against evidence.</p>
+<p>Q5. When would you use fishbone analysis?</p>
+<p>When the problem may involve several categories of causes, such as equipment, people, procedures, materials, measurement, and environment.</p>
+<p>Q6. What is an escape cause?</p>
+<p>An escape cause explains why an existing control failed to prevent, detect, or contain the problem before it produced its impact.</p>
+<p>Q7. How do you verify a root cause?</p>
+<p>Identify predictions implied by the hypothesis and evaluate them using measurements, inspection, diagnostic records, controlled tests, or other appropriate evidence. Consider competing explanations.</p>
+<p>Q8. Can a problem have multiple root causes?</p>
+<p>Yes. Complex failures can involve multiple interacting causes, contributing conditions, and weaknesses in detection or prevention controls.</p>
+<p>Q9. What is the relationship between RCA and CAPA?</p>
+<p>RCA establishes the causal basis for action. CAPA uses that basis to implement and verify changes intended to eliminate the cause or reduce recurrence risk.</p>
+<p>Q10. When is RCA complete?</p>
+<p>When the problem has been investigated to the required level, the significant causal conclusions are supported by evidence, remaining uncertainty is documented, and the findings provide a sufficient basis for corrective action.</p>
+<h2 id="22-final-rca-checklist">22. Final RCA Checklist</h2>
+<ul>
+<li>The problem statement is specific and measurable.</li>
+<li>The affected scope and operational impact are established.</li>
+<li>Relevant evidence has been preserved.</li>
+<li>The event sequence has been reconstructed.</li>
+<li>Multiple plausible causes have been considered.</li>
+<li>Suitable RCA methods have been applied.</li>
+<li>Important hypotheses have been tested against evidence.</li>
+<li>Correlation has not been mistaken for causation.</li>
+<li>Root causes and contributing causes are distinguished.</li>
+<li>Escape causes and detection weaknesses have been considered.</li>
+<li>Relevant similar machines or processes have been assessed.</li>
+<li>Conclusions, rejected hypotheses, and remaining uncertainty are documented.</li>
+<li>Corrective action requirements are linked to the confirmed causes.</li>
+<li>Required technical review and approval are complete.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\21_CAPA\04_Corrective_Action_Impl - Corrective action implementation</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

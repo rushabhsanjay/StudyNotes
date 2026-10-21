@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hardware Change Management</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Hardware Change Management</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and Scope</a></li>
+<li><a href="#2-essential-terminology">2. Essential Terminology</a></li>
+<li><a href="#3-why-hardware-changes-must-be-controlled">3. Why Hardware Changes Must Be Controlled</a><ul>
+<li><a href="#31-safety">3.1 Safety</a></li>
+<li><a href="#32-functional-performance">3.2 Functional performance</a></li>
+<li><a href="#33-compatibility">3.3 Compatibility</a></li>
+<li><a href="#34-quality-and-process-performance">3.4 Quality and process performance</a></li>
+<li><a href="#35-reliability-and-maintainability">3.5 Reliability and maintainability</a></li>
+<li><a href="#36-documentation-and-traceability">3.6 Documentation and traceability</a></li>
+<li><a href="#37-cybersecurity">3.7 Cybersecurity</a></li>
+</ul>
+</li>
+<li><a href="#4-common-hardware-change-triggers">4. Common Hardware Change Triggers</a></li>
+<li><a href="#5-types-of-hardware-changes">5. Types of Hardware Changes</a><ul>
+<li><a href="#51-like-for-like-replacement">5.1 Like-for-like replacement</a></li>
+<li><a href="#52-equivalent-replacement">5.2 Equivalent replacement</a></li>
+<li><a href="#53-upgrade">5.3 Upgrade</a></li>
+<li><a href="#54-retrofit">5.4 Retrofit</a></li>
+<li><a href="#55-design-modification">5.5 Design modification</a></li>
+</ul>
+</li>
+<li><a href="#6-hardware-change-classification">6. Hardware Change Classification</a></li>
+<li><a href="#7-hardware-change-management-workflow">7. Hardware Change Management Workflow</a></li>
+<li><a href="#8-initial-assessment-define-the-problem-correctly">8. Initial Assessment: Define the Problem Correctly</a><ul>
+<li><a href="#example-repeated-vfd-failures">Example: Repeated VFD failures</a></li>
+</ul>
+</li>
+<li><a href="#9-technical-compatibility-assessment">9. Technical Compatibility Assessment</a><ul>
+<li><a href="#91-electrical-compatibility">9.1 Electrical compatibility</a></li>
+<li><a href="#92-mechanical-compatibility">9.2 Mechanical compatibility</a></li>
+<li><a href="#93-functional-compatibility">9.3 Functional compatibility</a></li>
+<li><a href="#94-automation-compatibility">9.4 Automation compatibility</a></li>
+<li><a href="#95-lifecycle-compatibility">9.5 Lifecycle compatibility</a></li>
+</ul>
+</li>
+<li><a href="#10-plc-hardware-changes">10. PLC Hardware Changes</a><ul>
+<li><a href="#101-replacing-an-io-module">10.1 Replacing an I/O module</a></li>
+<li><a href="#102-replacing-a-plc-cpu">10.2 Replacing a PLC CPU</a></li>
+<li><a href="#103-adding-io">10.3 Adding I/O</a></li>
+</ul>
+</li>
+<li><a href="#11-sensor-and-instrumentation-changes">11. Sensor and Instrumentation Changes</a><ul>
+<li><a href="#111-digital-sensors">11.1 Digital sensors</a></li>
+<li><a href="#112-analog-instruments">11.2 Analog instruments</a></li>
+<li><a href="#113-safety-related-sensors">11.3 Safety-related sensors</a></li>
+</ul>
+</li>
+<li><a href="#12-vfd-servo-and-motor-hardware-changes">12. VFD, Servo, and Motor Hardware Changes</a><ul>
+<li><a href="#121-vfd-replacement">12.1 VFD replacement</a></li>
+<li><a href="#122-servo-system-replacement">12.2 Servo system replacement</a></li>
+<li><a href="#123-motor-replacement">12.3 Motor replacement</a></li>
+</ul>
+</li>
+<li><a href="#13-industrial-network-and-computer-hardware-changes">13. Industrial Network and Computer Hardware Changes</a><ul>
+<li><a href="#131-network-switches">13.1 Network switches</a></li>
+<li><a href="#132-industrial-pcs-and-servers">13.2 Industrial PCs and servers</a></li>
+<li><a href="#133-cybersecurity-considerations">13.3 Cybersecurity considerations</a></li>
+</ul>
+</li>
+<li><a href="#14-safety-and-risk-assessment">14. Safety and Risk Assessment</a><ul>
+<li><a href="#141-change-risk-assessment">14.1 Change risk assessment</a></li>
+<li><a href="#142-change-specific-questions">14.2 Change-specific questions</a></li>
+</ul>
+</li>
+<li><a href="#15-change-approval-and-responsibility">15. Change Approval and Responsibility</a></li>
+<li><a href="#16-implementation-planning">16. Implementation Planning</a><ul>
+<li><a href="#161-rollback-planning">16.1 Rollback planning</a></li>
+</ul>
+</li>
+<li><a href="#17-testing-and-commissioning-after-a-hardware-change">17. Testing and Commissioning After a Hardware Change</a><ul>
+<li><a href="#171-typical-verification-stages">17.1 Typical verification stages</a></li>
+<li><a href="#172-example-replacing-a-pressure-transmitter">17.2 Example: Replacing a pressure transmitter</a></li>
+</ul>
+</li>
+<li><a href="#18-documentation-and-asset-record-updates">18. Documentation and Asset Record Updates</a></li>
+<li><a href="#19-hardware-change-register">19. Hardware Change Register</a></li>
+<li><a href="#20-spare-parts-and-hardware-obsolescence">20. Spare Parts and Hardware Obsolescence</a><ul>
+<li><a href="#201-spare-parts-assessment">20.1 Spare-parts assessment</a></li>
+<li><a href="#202-successor-validation">20.2 Successor validation</a></li>
+<li><a href="#203-installed-by-machine-spare-mapping">20.3 Installed-by-machine spare mapping</a></li>
+</ul>
+</li>
+<li><a href="#21-practical-example-replacing-an-obsolete-plc-module">21. Practical Example: Replacing an Obsolete PLC Module</a><ul>
+<li><a href="#assessment">Assessment</a></li>
+<li><a href="#controlled-implementation">Controlled implementation</a></li>
+</ul>
+</li>
+<li><a href="#22-common-hardware-change-management-failures">22. Common Hardware Change Management Failures</a></li>
+<li><a href="#23-practical-hardware-change-checklist">23. Practical Hardware Change Checklist</a><ul>
+<li><a href="#before-the-change">Before the change</a></li>
+<li><a href="#during-implementation">During implementation</a></li>
+<li><a href="#after-implementation">After implementation</a></li>
+</ul>
+</li>
+<li><a href="#24-interview-questions-and-answers">24. Interview Questions and Answers</a><ul>
+<li><a href="#q1-what-is-hardware-change-management">Q1. What is hardware change management?</a></li>
+<li><a href="#q2-what-can-trigger-a-hardware-change">Q2. What can trigger a hardware change?</a></li>
+<li><a href="#q3-is-a-like-for-like-replacement-always-exempt-from-change-control">Q3. Is a like-for-like replacement always exempt from change control?</a></li>
+<li><a href="#q4-why-is-compatibility-more-than-matching-voltage-and-dimensions">Q4. Why is compatibility more than matching voltage and dimensions?</a></li>
+<li><a href="#q5-what-should-be-checked-before-replacing-a-plc-module">Q5. What should be checked before replacing a PLC module?</a></li>
+<li><a href="#q6-why-must-a-hardware-change-include-a-risk-assessment">Q6. Why must a hardware change include a risk assessment?</a></li>
+<li><a href="#q7-what-is-the-difference-between-a-replacement-and-a-retrofit">Q7. What is the difference between a replacement and a retrofit?</a></li>
+<li><a href="#q8-what-is-a-rollback-plan">Q8. What is a rollback plan?</a></li>
+<li><a href="#q9-why-must-documentation-be-updated-after-a-hardware-change">Q9. Why must documentation be updated after a hardware change?</a></li>
+<li><a href="#q10-what-tests-are-required-after-replacing-a-sensor">Q10. What tests are required after replacing a sensor?</a></li>
+<li><a href="#q11-why-is-hardware-obsolescence-a-change-management-concern">Q11. Why is hardware obsolescence a change-management concern?</a></li>
+<li><a href="#q12-when-can-a-hardware-change-be-closed">Q12. When can a hardware change be closed?</a></li>
+</ul>
+</li>
+<li><a href="#25-key-principles-to-remember">25. Key Principles to Remember</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-and-scope">1. Purpose and Scope</h2>
+<p>Hardware change management is the controlled process of identifying, assessing, approving, implementing, testing, documenting, and closing changes to physical equipment and hardware components.</p>
+<p>In industrial maintenance and automation, hardware changes include replacing a PLC module, upgrading a VFD, changing a sensor, adding an industrial network switch, modifying a control panel, replacing a motor, or retrofitting a machine with a newer technology.</p>
+<p>The fundamental rule is that a hardware change is not complete merely because the replacement component works. Its safety, compatibility, functional performance, documentation, maintainability, and effect on connected systems must also be assessed.</p>
+<p>This topic covers:</p>
+<ul>
+<li>Hardware change triggers and classification.</li>
+<li>Compatibility and engineering assessment.</li>
+<li>Safety, risk, and quality implications.</li>
+<li>Approval and implementation controls.</li>
+<li>PLC, HMI, CNC, robot, VFD, servo, and network hardware changes.</li>
+<li>Testing, commissioning, as-built updates, and closure.</li>
+<li>Spare parts, obsolescence, lifecycle planning, and change registers.</li>
+<li>Practical industrial examples, checklists, and interview questions.</li>
+</ul>
+<h2 id="2-essential-terminology">2. Essential Terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hardware change</td>
+<td>Modification, replacement, addition, removal, or relocation of physical equipment</td>
+</tr>
+<tr>
+<td>Change trigger</td>
+<td>Event or condition that creates the need to consider a change</td>
+</tr>
+<tr>
+<td>Like-for-like replacement</td>
+<td>Replacement with an equivalent component without changing the intended design or function, subject to verification</td>
+</tr>
+<tr>
+<td>Upgrade</td>
+<td>Change to a newer or more capable component or system</td>
+</tr>
+<tr>
+<td>Retrofit</td>
+<td>Modification of existing equipment to introduce new or improved functionality</td>
+</tr>
+<tr>
+<td>Obsolescence</td>
+<td>A product or component is discontinued, unsupported, or no longer suitable for continued use</td>
+</tr>
+<tr>
+<td>Compatibility assessment</td>
+<td>Evaluation of whether a replacement can operate correctly with the existing system</td>
+</tr>
+<tr>
+<td>Impact assessment</td>
+<td>Evaluation of the effects of a proposed change on related equipment, functions, risks, and processes</td>
+</tr>
+<tr>
+<td>MOC</td>
+<td>Management of Change, the structured process for controlling changes</td>
+</tr>
+<tr>
+<td>FAT</td>
+<td>Factory Acceptance Test, testing performed before equipment is accepted or shipped, where applicable</td>
+</tr>
+<tr>
+<td>SAT</td>
+<td>Site Acceptance Test, verification performed at the installation site</td>
+</tr>
+<tr>
+<td>Commissioning</td>
+<td>Activities used to verify installation, configuration, operation, and readiness</td>
+</tr>
+<tr>
+<td>As-built documentation</td>
+<td>Controlled records updated to represent the actual accepted configuration</td>
+</tr>
+<tr>
+<td>Baseline</td>
+<td>Approved reference configuration used for comparison and restoration</td>
+</tr>
+<tr>
+<td>Rollback plan</td>
+<td>Approved plan to restore a previous safe and functional configuration if the change fails</td>
+</tr>
+<tr>
+<td>Change owner</td>
+<td>Person or role accountable for coordinating the change</td>
+</tr>
+<tr>
+<td>Technical authority</td>
+<td>Person or function authorized to approve relevant engineering decisions</td>
+</tr>
+</tbody>
+</table>
+<p>A hardware replacement can be a change even when the physical dimensions appear identical. Electrical characteristics, firmware compatibility, safety certification, communication behavior, and fault-response behavior may differ.</p>
+<h2 id="3-why-hardware-changes-must-be-controlled">3. Why Hardware Changes Must Be Controlled</h2>
+<h3 id="31-safety">3.1 Safety</h3>
+<p>A replacement device may have different electrical ratings, protective characteristics, stopping behavior, isolation requirements, or safety-related capabilities.</p>
+<p>An apparently simple substitution can therefore affect machine safety.</p>
+<h3 id="32-functional-performance">3.2 Functional performance</h3>
+<p>Different response times, input thresholds, output ratings, encoder interfaces, or communication capabilities can change machine behavior.</p>
+<h3 id="33-compatibility">3.3 Compatibility</h3>
+<p>A replacement module may not be supported by the installed controller firmware, engineering software, backplane, communication protocol, or power supply.</p>
+<h3 id="34-quality-and-process-performance">3.4 Quality and process performance</h3>
+<p>Changes to sensors, measurement interfaces, drives, test equipment, or signal-conditioning hardware can affect product quality, measurement accuracy, and process capability.</p>
+<h3 id="35-reliability-and-maintainability">3.5 Reliability and maintainability</h3>
+<p>A replacement may improve availability, but it may also introduce unfamiliar diagnostics, new failure modes, longer recovery time, or different spare-parts requirements.</p>
+<h3 id="36-documentation-and-traceability">3.6 Documentation and traceability</h3>
+<p>If the installed hardware changes but the electrical drawings, I/O list, network topology, spare-parts register, and software configuration remain unchanged, future troubleshooting becomes unreliable.</p>
+<h3 id="37-cybersecurity">3.7 Cybersecurity</h3>
+<p>New controllers, gateways, switches, and industrial PCs may introduce different services, firmware dependencies, access methods, or vulnerabilities.</p>
+<p>Hardware change management must therefore consider the whole affected system, not just the individual component being replaced.</p>
+<h2 id="4-common-hardware-change-triggers">4. Common Hardware Change Triggers</h2>
+<p>Hardware changes may be initiated by planned improvement or by an unexpected failure.</p>
+<table>
+<thead>
+<tr>
+<th>Trigger</th>
+<th>Example</th>
+<th>Typical response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hardware failure</td>
+<td>PLC input module fails repeatedly</td>
+<td>Diagnose cause and replace or redesign</td>
+</tr>
+<tr>
+<td>Obsolescence</td>
+<td>Manufacturer discontinues a drive</td>
+<td>Assess successor or migration options</td>
+</tr>
+<tr>
+<td>Spare unavailability</td>
+<td>Critical sensor cannot be procured</td>
+<td>Evaluate approved alternative</td>
+</tr>
+<tr>
+<td>Reliability improvement</td>
+<td>Repeated encoder failures</td>
+<td>Investigate root cause and improve design</td>
+</tr>
+<tr>
+<td>Capacity limitation</td>
+<td>Existing power supply is overloaded</td>
+<td>Assess load and redesign capacity</td>
+</tr>
+<tr>
+<td>Performance improvement</td>
+<td>Slow data acquisition</td>
+<td>Evaluate a suitable faster module</td>
+</tr>
+<tr>
+<td>Safety requirement</td>
+<td>Existing protective device is inadequate</td>
+<td>Perform formal safety assessment</td>
+</tr>
+<tr>
+<td>Quality issue</td>
+<td>Measurement interface produces unstable readings</td>
+<td>Assess sensing and acquisition hardware</td>
+</tr>
+<tr>
+<td>Energy improvement</td>
+<td>Inefficient motor or drive arrangement</td>
+<td>Assess energy and process impacts</td>
+</tr>
+<tr>
+<td>Cybersecurity concern</td>
+<td>Unsupported industrial switch</td>
+<td>Assess migration and security controls</td>
+</tr>
+<tr>
+<td>Expansion</td>
+<td>New station or sensor is added</td>
+<td>Review capacity, interfaces, and network impact</td>
+</tr>
+<tr>
+<td>Supplier change</td>
+<td>Approved component is no longer available</td>
+<td>Validate the proposed alternative</td>
+</tr>
+<tr>
+<td>Environmental conditions</td>
+<td>Excessive heat damages electronics</td>
+<td>Assess cooling, enclosure, and component ratings</td>
+</tr>
+<tr>
+<td>Engineering standardization</td>
+<td>Multiple incompatible device types exist</td>
+<td>Evaluate standardization and migration risks</td>
+</tr>
+</tbody>
+</table>
+<p>A trigger initiates assessment. It does not automatically authorize a change.</p>
+<p>For example, repeated PLC module failures may indicate a defective module, but they may also result from electrical noise, incorrect grounding, overvoltage, excessive temperature, or field wiring faults. Replacing the module without diagnosing the cause may simply purchase the same failure again.</p>
+<h2 id="5-types-of-hardware-changes">5. Types of Hardware Changes</h2>
+<h3 id="51-like-for-like-replacement">5.1 Like-for-like replacement</h3>
+<p>The failed component is replaced with an equivalent approved component.</p>
+<p>Examples:</p>
+<ul>
+<li>Replacing a damaged contactor with the approved equivalent.</li>
+<li>Replacing a failed sensor with the same model and specification.</li>
+<li>Replacing a PLC module with an approved identical spare.</li>
+</ul>
+<p>Even a like-for-like replacement requires verification of ratings, wiring, configuration, and functional operation. A different serial number or production revision may also require checks where relevant.</p>
+<h3 id="52-equivalent-replacement">5.2 Equivalent replacement</h3>
+<p>A different model or manufacturer is used because the original part is unavailable.</p>
+<p>The replacement must be assessed for electrical, mechanical, environmental, functional, and regulatory compatibility.</p>
+<p>Matching the connector or nominal voltage is not enough.</p>
+<h3 id="53-upgrade">5.3 Upgrade</h3>
+<p>A component is replaced with a newer or more capable version.</p>
+<p>Examples:</p>
+<ul>
+<li>Upgrading an industrial PC.</li>
+<li>Replacing an older network switch with a supported model.</li>
+<li>Upgrading a drive with improved diagnostics or communication capabilities.</li>
+</ul>
+<p>Upgrades often require software, firmware, wiring, network, and operator-interface changes.</p>
+<h3 id="54-retrofit">5.4 Retrofit</h3>
+<p>Existing equipment is modified to add functionality or extend its useful life.</p>
+<p>Examples:</p>
+<ul>
+<li>Adding condition-monitoring sensors to a motor.</li>
+<li>Replacing relay logic with a PLC-based control system.</li>
+<li>Retrofitting an older test-bed with digital data acquisition.</li>
+<li>Replacing discontinued controller hardware with a modern control platform.</li>
+</ul>
+<p>Retrofits can create substantial interface and documentation work even when the machine's basic purpose remains unchanged.</p>
+<h3 id="55-design-modification">5.5 Design modification</h3>
+<p>The existing design itself changes.</p>
+<p>Examples:</p>
+<ul>
+<li>Increasing a motor's rated capacity.</li>
+<li>Changing the safety circuit architecture.</li>
+<li>Adding a new actuator or axis.</li>
+<li>Changing a network topology.</li>
+<li>Modifying panel power distribution.</li>
+</ul>
+<p>These changes generally require broader engineering review than a simple component replacement.</p>
+<h2 id="6-hardware-change-classification">6. Hardware Change Classification</h2>
+<p>Organizations should define their own change categories and approval requirements.</p>
+<table>
+<thead>
+<tr>
+<th>Classification</th>
+<th>Example</th>
+<th>Typical control approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Routine replacement</td>
+<td>Approved identical sensor</td>
+<td>Standard work procedure and verification</td>
+</tr>
+<tr>
+<td>Equivalent substitution</td>
+<td>Alternative approved sensor model</td>
+<td>Compatibility assessment and authorization</td>
+</tr>
+<tr>
+<td>Functional modification</td>
+<td>Adding a new PLC input or actuator</td>
+<td>Engineering review, testing, and document updates</td>
+</tr>
+<tr>
+<td>Major retrofit</td>
+<td>Replacing the control platform</td>
+<td>Formal change project, risk assessment, validation, and handover</td>
+</tr>
+<tr>
+<td>Safety-related change</td>
+<td>Modifying a guard interlock</td>
+<td>Formal safety review and required validation</td>
+</tr>
+<tr>
+<td>Emergency change</td>
+<td>Critical component fails during production</td>
+<td>Controlled emergency authorization and documented follow-up</td>
+</tr>
+</tbody>
+</table>
+<p>The classification should be based on risk and impact, not merely the cost or size of the component.</p>
+<p>A small sensor can have major safety implications. A large enclosure fan may have relatively limited functional impact. Engineering significance is not measured in kilograms.</p>
+<h2 id="7-hardware-change-management-workflow">7. Hardware Change Management Workflow</h2>
+<pre><code>Change trigger identified
+    ↓
+Problem and requirement defined
+    ↓
+Existing condition and failure cause assessed
+    ↓
+Proposed hardware change documented
+    ↓
+Technical, safety, quality, and cybersecurity impacts assessed
+    ↓
+Compatibility and lifecycle reviewed
+    ↓
+Required approvals obtained
+    ↓
+Implementation and rollback plans prepared
+    ↓
+Change implemented under controlled conditions
+    ↓
+Inspection, testing, and commissioning completed
+    ↓
+Documentation and asset records updated
+    ↓
+Users and maintainers informed
+    ↓
+Change reviewed and formally closed
+</code></pre>
+<p>Emergency changes may require an accelerated authorization path, but they should not become undocumented permanent modifications.</p>
+<p>The process should define who can authorize emergency action, what minimum safety controls apply, how the configuration is recorded, and when the normal review and documentation requirements must be completed.</p>
+<h2 id="8-initial-assessment-define-the-problem-correctly">8. Initial Assessment: Define the Problem Correctly</h2>
+<p>Before selecting replacement hardware, establish what problem the change is intended to solve.</p>
+<p>Record:</p>
+<ul>
+<li>Asset and machine identification.</li>
+<li>Existing component and part number.</li>
+<li>Failure symptom or improvement requirement.</li>
+<li>Relevant alarm and fault history.</li>
+<li>Operating conditions when the problem occurred.</li>
+<li>Previous repairs and replacements.</li>
+<li>Measured electrical or mechanical conditions.</li>
+<li>Current design and approved configuration.</li>
+<li>Production, quality, safety, and maintenance impact.</li>
+<li>Required outcome and acceptance criteria.</li>
+</ul>
+<h3 id="example-repeated-vfd-failures">Example: Repeated VFD failures</h3>
+<p>A drive repeatedly fails in an electrical panel.</p>
+<p>Possible causes include:</p>
+<ul>
+<li>High ambient temperature.</li>
+<li>Restricted ventilation.</li>
+<li>Excessive switching or load conditions.</li>
+<li>Incorrect motor or drive sizing.</li>
+<li>Supply voltage disturbances.</li>
+<li>Poor cable termination.</li>
+<li>Motor insulation problems.</li>
+<li>Incorrect parameter settings.</li>
+<li>Inadequate EMC practices.</li>
+</ul>
+<p>Replacing the drive with a more expensive model may not solve the underlying issue.</p>
+<p>The assessment should distinguish between a component failure and a system-level design or operating problem.</p>
+<h2 id="9-technical-compatibility-assessment">9. Technical Compatibility Assessment</h2>
+<p>A replacement component must be checked against all relevant interfaces.</p>
+<h3 id="91-electrical-compatibility">9.1 Electrical compatibility</h3>
+<p>Assess:</p>
+<ul>
+<li>Supply voltage and frequency.</li>
+<li>Rated current and power.</li>
+<li>Inrush current.</li>
+<li>Short-circuit and protective-device coordination.</li>
+<li>Input and output signal characteristics.</li>
+<li>Isolation requirements.</li>
+<li>Grounding and bonding.</li>
+<li>Wiring and terminal compatibility.</li>
+<li>Power supply capacity.</li>
+<li>Heat dissipation.</li>
+<li>Environmental and enclosure ratings.</li>
+</ul>
+<h3 id="92-mechanical-compatibility">9.2 Mechanical compatibility</h3>
+<p>Assess:</p>
+<ul>
+<li>Dimensions and mounting pattern.</li>
+<li>Connector orientation.</li>
+<li>Cable entry and bend radius.</li>
+<li>Vibration and shock requirements.</li>
+<li>Cooling clearance.</li>
+<li>Weight and structural loading.</li>
+<li>Protection against dust, moisture, oil, and chemicals.</li>
+<li>Access for inspection and replacement.</li>
+</ul>
+<h3 id="93-functional-compatibility">9.3 Functional compatibility</h3>
+<p>Assess:</p>
+<ul>
+<li>Required performance and response time.</li>
+<li>Operating range and accuracy.</li>
+<li>Resolution and repeatability.</li>
+<li>Input/output behavior.</li>
+<li>Fail-safe or fault behavior.</li>
+<li>Required operating modes.</li>
+<li>Interlocks and diagnostics.</li>
+<li>Process and quality requirements.</li>
+</ul>
+<h3 id="94-automation-compatibility">9.4 Automation compatibility</h3>
+<p>Assess:</p>
+<ul>
+<li>Controller support.</li>
+<li>Firmware and engineering-software compatibility.</li>
+<li>Module and chassis compatibility.</li>
+<li>I/O addressing and mapping.</li>
+<li>Communication protocol and data types.</li>
+<li>Network speed and topology.</li>
+<li>HMI and SCADA dependencies.</li>
+<li>Diagnostic and alarm behavior.</li>
+<li>Safety-system compatibility.</li>
+</ul>
+<h3 id="95-lifecycle-compatibility">9.5 Lifecycle compatibility</h3>
+<p>Assess:</p>
+<ul>
+<li>Manufacturer support status.</li>
+<li>Availability of replacement parts.</li>
+<li>Expected product lifecycle.</li>
+<li>Repairability.</li>
+<li>Required engineering software and licenses.</li>
+<li>Training requirements.</li>
+<li>Firmware availability and update policy.</li>
+<li>Supplier support and lead times.</li>
+</ul>
+<h2 id="10-plc-hardware-changes">10. PLC Hardware Changes</h2>
+<p>PLC hardware changes may involve the controller, power supply, I/O modules, communication modules, memory, chassis, or safety hardware.</p>
+<h3 id="101-replacing-an-io-module">10.1 Replacing an I/O module</h3>
+<p>Before replacement, verify:</p>
+<ul>
+<li>Exact module catalog number and hardware revision where relevant.</li>
+<li>Input or output type.</li>
+<li>Voltage and current ratings.</li>
+<li>Channel count.</li>
+<li>Isolation characteristics.</li>
+<li>Supported chassis and controller.</li>
+<li>Firmware and software compatibility.</li>
+<li>Terminal base or connector compatibility.</li>
+<li>Required configuration changes.</li>
+<li>Field wiring and channel assignments.</li>
+</ul>
+<p>After replacement, complete the applicable inspection and functional checks.</p>
+<p>For a digital input module, verify the intended field signals and channel status.</p>
+<p>For an analog input module, verify the signal type, range, wiring, scaling, and engineering-unit interpretation.</p>
+<p>For an output module, verify the correct actuator response, load characteristics, and relevant protective arrangements.</p>
+<h3 id="102-replacing-a-plc-cpu">10.2 Replacing a PLC CPU</h3>
+<p>A CPU replacement can affect:</p>
+<ul>
+<li>Firmware compatibility.</li>
+<li>Program compatibility.</li>
+<li>Memory and retentive data.</li>
+<li>Communication interfaces.</li>
+<li>Network addresses.</li>
+<li>Motion and safety functions.</li>
+<li>HMI communication.</li>
+<li>Clock and time synchronization.</li>
+<li>License requirements.</li>
+<li>Program restoration and validation.</li>
+</ul>
+<p>The replacement must follow the manufacturer's procedures and the organization's approved recovery plan.</p>
+<p>Do not assume that a project file downloaded from a shared folder is the correct production baseline.</p>
+<h3 id="103-adding-io">10.3 Adding I/O</h3>
+<p>Adding I/O may require:</p>
+<ul>
+<li>Available chassis or remote-I/O capacity.</li>
+<li>Power and current-load assessment.</li>
+<li>Network capacity.</li>
+<li>Updated module configuration.</li>
+<li>New or revised PLC logic.</li>
+<li>Updated I/O list and electrical drawings.</li>
+<li>HMI or SCADA tag changes.</li>
+<li>Additional testing and commissioning.</li>
+</ul>
+<h2 id="11-sensor-and-instrumentation-changes">11. Sensor and Instrumentation Changes</h2>
+<p>Sensor substitutions are common but can have hidden consequences.</p>
+<h3 id="111-digital-sensors">11.1 Digital sensors</h3>
+<p>Check:</p>
+<ul>
+<li>PNP or NPN output.</li>
+<li>Normally open or normally closed behavior.</li>
+<li>Supply voltage.</li>
+<li>Output current.</li>
+<li>Switching frequency.</li>
+<li>Sensing distance.</li>
+<li>Connector and pinout.</li>
+<li>Environmental rating.</li>
+<li>Response time.</li>
+<li>Diagnostic behavior.</li>
+</ul>
+<p>A sensor with the correct connector can still have an incompatible output type.</p>
+<h3 id="112-analog-instruments">11.2 Analog instruments</h3>
+<p>Check:</p>
+<ul>
+<li>Output signal type, such as 4–20 mA or 0–10 V.</li>
+<li>Measurement range.</li>
+<li>Accuracy and repeatability.</li>
+<li>Electrical isolation.</li>
+<li>Loop power requirements.</li>
+<li>Input impedance and burden.</li>
+<li>Cable and shielding requirements.</li>
+<li>Engineering-unit scaling.</li>
+<li>Calibration and verification requirements.</li>
+</ul>
+<p>For a linear analog measurement, the engineering value may be calculated as:</p>
+<div class="math-display">\[ X = X\_{\min} + \frac{I-I\_{\min}}{I\_{\max}-I\_{\min}} (X\_{\max}-X\_{\min}) \]</div>
+<p>Here, <span class="math-inline">\(I\)</span> is the measured input signal, <span class="math-inline">\(I\_{\min}\)</span> and <span class="math-inline">\(I\_{\max}\)</span> are the configured signal limits, and <span class="math-inline">\(X\_{\min}\)</span> and <span class="math-inline">\(X\_{\max}\)</span> are the corresponding engineering limits.</p>
+<p>Changing the sensor range without updating the scaling can make the PLC display a plausible but incorrect value.</p>
+<h3 id="113-safety-related-sensors">11.3 Safety-related sensors</h3>
+<p>For safety light curtains, interlocks, scanners, and safety switches, assess the complete safety function and required performance level or safety integrity requirements where applicable.</p>
+<p>A standard sensor is not an acceptable substitute for a safety-rated device simply because both detect the same physical condition.</p>
+<h2 id="12-vfd-servo-and-motor-hardware-changes">12. VFD, Servo, and Motor Hardware Changes</h2>
+<h3 id="121-vfd-replacement">12.1 VFD replacement</h3>
+<p>Assess:</p>
+<ul>
+<li>Input supply and output ratings.</li>
+<li>Motor rated data.</li>
+<li>Overload capability.</li>
+<li>Control mode.</li>
+<li>Braking requirements.</li>
+<li>Feedback and encoder interfaces.</li>
+<li>Communication and I/O.</li>
+<li>EMC and cable requirements.</li>
+<li>Cooling and enclosure requirements.</li>
+<li>Safety-related drive functions where used.</li>
+<li>Parameter migration and verification.</li>
+</ul>
+<h3 id="122-servo-system-replacement">12.2 Servo system replacement</h3>
+<p>Assess:</p>
+<ul>
+<li>Motor and drive compatibility.</li>
+<li>Encoder or resolver interface.</li>
+<li>Feedback resolution and direction.</li>
+<li>Torque and speed requirements.</li>
+<li>Inertia and mechanical coupling.</li>
+<li>Axis tuning.</li>
+<li>Homing and reference behavior.</li>
+<li>Motion-controller compatibility.</li>
+<li>Safety and stopping behavior.</li>
+<li>Required machine validation.</li>
+</ul>
+<h3 id="123-motor-replacement">12.3 Motor replacement</h3>
+<p>Assess:</p>
+<ul>
+<li>Rated power, voltage, current, frequency, and speed.</li>
+<li>Duty cycle and thermal class.</li>
+<li>Insulation and environmental suitability.</li>
+<li>Mounting and shaft dimensions.</li>
+<li>Load torque and inertia.</li>
+<li>Cooling method.</li>
+<li>Starting method or drive compatibility.</li>
+<li>Protection settings.</li>
+<li>Earthing and cable requirements.</li>
+</ul>
+<p>A motor with the same power rating is not automatically an equivalent replacement if speed, torque characteristics, duty, mounting, or thermal performance differ.</p>
+<h2 id="13-industrial-network-and-computer-hardware-changes">13. Industrial Network and Computer Hardware Changes</h2>
+<h3 id="131-network-switches">13.1 Network switches</h3>
+<p>Assess:</p>
+<ul>
+<li>Port count and media type.</li>
+<li>Copper or fiber interfaces.</li>
+<li>Speed and duplex support.</li>
+<li>VLAN and managed-switch capabilities.</li>
+<li>Redundancy protocols.</li>
+<li>Environmental and temperature ratings.</li>
+<li>Power requirements.</li>
+<li>Network segmentation and access control.</li>
+<li>Configuration backup and restoration.</li>
+<li>Compatibility with existing network design.</li>
+</ul>
+<h3 id="132-industrial-pcs-and-servers">13.2 Industrial PCs and servers</h3>
+<p>Assess:</p>
+<ul>
+<li>Operating system support.</li>
+<li>Processor, memory, and storage.</li>
+<li>Interfaces and expansion cards.</li>
+<li>Drivers and software compatibility.</li>
+<li>Licensing and activation.</li>
+<li>Database and historian dependencies.</li>
+<li>Backup and recovery capability.</li>
+<li>Cybersecurity controls.</li>
+<li>Remote-access requirements.</li>
+<li>Hardware lifecycle and spare availability.</li>
+</ul>
+<p>A replacement industrial PC may boot successfully yet fail to run a legacy application because a driver, runtime license, communication card, or operating-system dependency is missing.</p>
+<h3 id="133-cybersecurity-considerations">13.3 Cybersecurity considerations</h3>
+<p>Hardware changes should include a review of:</p>
+<ul>
+<li>Default accounts and services.</li>
+<li>Firmware and support status.</li>
+<li>Network exposure.</li>
+<li>Remote-access arrangements.</li>
+<li>Configuration backup protection.</li>
+<li>Approved update procedures.</li>
+<li>Device identity and asset inventory.</li>
+<li>Relevant security requirements.</li>
+</ul>
+<p>Do not connect new hardware to an operational network before the required configuration and security controls have been assessed.</p>
+<h2 id="14-safety-and-risk-assessment">14. Safety and Risk Assessment</h2>
+<p>The depth of the assessment should match the risk and impact of the change.</p>
+<p>Consider:</p>
+<ul>
+<li>Electrical hazards.</li>
+<li>Mechanical movement and stored energy.</li>
+<li>Pneumatic and hydraulic energy.</li>
+<li>Unexpected startup.</li>
+<li>Safety interlocks and protective devices.</li>
+<li>Process pressure and temperature.</li>
+<li>Quality and measurement risks.</li>
+<li>Human-machine interface changes.</li>
+<li>Cybersecurity risks affecting control.</li>
+<li>Maintenance access and ergonomics.</li>
+<li>Emergency-stop and recovery behavior.</li>
+</ul>
+<h3 id="141-change-risk-assessment">14.1 Change risk assessment</h3>
+<p>A basic qualitative assessment can classify risks using likelihood and consequence.</p>
+<div class="math-display">\[ R = L \times S \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(R\)</span> is the calculated risk score.</li>
+<li><span class="math-inline">\(L\)</span> is the selected likelihood rating.</li>
+<li><span class="math-inline">\(S\)</span> is the selected severity rating.</li>
+</ul>
+<p>This equation is only an example of a simple scoring method. It is not a universal risk standard, and a numeric score does not replace engineering judgment or a required formal safety assessment.</p>
+<p>For safety-related changes, follow the applicable machinery-safety standards, validation requirements, and organizational procedures.</p>
+<h3 id="142-change-specific-questions">14.2 Change-specific questions</h3>
+<ul>
+<li>Could the change affect a safety function?</li>
+<li>Does it alter a protective device or interlock?</li>
+<li>Could it cause unexpected motion or startup?</li>
+<li>Does it change the behavior of a failed or disconnected signal?</li>
+<li>Does it affect the isolation procedure?</li>
+<li>Could it affect a measurement used to accept or reject a product?</li>
+<li>Does it introduce new communication or cybersecurity risks?</li>
+<li>Are additional training or operating instructions required?</li>
+</ul>
+<h2 id="15-change-approval-and-responsibility">15. Change Approval and Responsibility</h2>
+<p>Approval requirements depend on the change category, organizational procedure, and applicable requirements.</p>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Typical responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Change requester</td>
+<td>Defines the need and expected outcome</td>
+</tr>
+<tr>
+<td>Maintenance</td>
+<td>Provides failure history, repairability, and operational input</td>
+</tr>
+<tr>
+<td>Electrical or controls engineering</td>
+<td>Assesses technical compatibility and control-system effects</td>
+</tr>
+<tr>
+<td>Mechanical engineering</td>
+<td>Assesses mechanical interfaces and structural effects</td>
+</tr>
+<tr>
+<td>Safety function or safety engineering</td>
+<td>Reviews relevant safety implications</td>
+</tr>
+<tr>
+<td>Quality</td>
+<td>Reviews effects on product, test validity, and process control</td>
+</tr>
+<tr>
+<td>OT or IT cybersecurity</td>
+<td>Reviews relevant network, software, and security implications</td>
+</tr>
+<tr>
+<td>Production or operations</td>
+<td>Coordinates production impact and operational acceptance</td>
+</tr>
+<tr>
+<td>Procurement or stores</td>
+<td>Checks sourcing, approved suppliers, and spare availability</td>
+</tr>
+<tr>
+<td>Document control</td>
+<td>Maintains approved records and revision traceability</td>
+</tr>
+<tr>
+<td>Change authority</td>
+<td>Approves the change according to delegated responsibility</td>
+</tr>
+</tbody>
+</table>
+<p>One person may hold multiple responsibilities in a smaller organization. The important requirement is that the necessary technical reviews and authorization steps are clearly assigned and completed.</p>
+<h2 id="16-implementation-planning">16. Implementation Planning</h2>
+<p>Before implementation, prepare a plan appropriate to the risk and complexity of the change.</p>
+<p>Include:</p>
+<ul>
+<li>Scope and purpose.</li>
+<li>Asset and component identification.</li>
+<li>Approved replacement specification.</li>
+<li>Required drawings and configuration files.</li>
+<li>Required tools and competent personnel.</li>
+<li>Shutdown and isolation requirements.</li>
+<li>Production coordination.</li>
+<li>Risk controls and work instructions.</li>
+<li>Test and acceptance criteria.</li>
+<li>Rollback or recovery plan.</li>
+<li>Spare-parts availability.</li>
+<li>Documentation and handover requirements.</li>
+</ul>
+<h3 id="161-rollback-planning">16.1 Rollback planning</h3>
+<p>A rollback plan should define the conditions that require stopping or reversing the change, the safe restoration method, and the resources needed.</p>
+<p>For automation changes, it may include a verified previous configuration, compatible hardware, required software tools, restoration steps, and post-restoration tests.</p>
+<p>Rollback must not blindly restore a previous state that is unsafe, incompatible, or no longer approved.</p>
+<h2 id="17-testing-and-commissioning-after-a-hardware-change">17. Testing and Commissioning After a Hardware Change</h2>
+<p>Testing must be selected according to the equipment and the change's impact.</p>
+<h3 id="171-typical-verification-stages">17.1 Typical verification stages</h3>
+<ol>
+<li>Installation inspection: Confirm model, ratings, mounting, wiring, terminations, grounding, and environmental suitability.</li>
+<li>Power-up checks: Confirm supply conditions, device status, diagnostics, and absence of unexpected faults.</li>
+<li>Configuration checks: Verify hardware configuration, parameters, addressing, and communication.</li>
+<li>Functional testing: Verify the required functions under controlled conditions.</li>
+<li>Interface testing: Confirm connected PLC, HMI, drive, sensor, robot, CNC, and network behavior as applicable.</li>
+<li>Safety verification: Perform the required checks and validation of affected safety functions.</li>
+<li>Process or quality verification: Confirm that critical process results and measurements remain valid.</li>
+<li>Acceptance and handover: Record results, outstanding issues, approval, and operating restrictions.</li>
+</ol>
+<p>Not every change needs every test stage. The approved test plan should define the required scope.</p>
+<h3 id="172-example-replacing-a-pressure-transmitter">17.2 Example: Replacing a pressure transmitter</h3>
+<p>The verification plan may include:</p>
+<ul>
+<li>Confirming the model and measurement range.</li>
+<li>Checking the supply and output wiring.</li>
+<li>Verifying loop current at known pressure points.</li>
+<li>Confirming PLC scaling and engineering units.</li>
+<li>Comparing displayed pressure with a suitable reference instrument.</li>
+<li>Checking alarm thresholds and interlocks.</li>
+<li>Recording calibration or verification results as required.</li>
+</ul>
+<p>A displayed value alone does not prove measurement accuracy.</p>
+<h2 id="18-documentation-and-asset-record-updates">18. Documentation and Asset Record Updates</h2>
+<p>A hardware change may require updates to several interconnected records.</p>
+<table>
+<thead>
+<tr>
+<th>Record</th>
+<th>Example update</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Electrical schematic</td>
+<td>Revised wiring or terminal assignment</td>
+</tr>
+<tr>
+<td>Panel layout</td>
+<td>New component position or dimensions</td>
+</tr>
+<tr>
+<td>PLC hardware configuration</td>
+<td>New module model or slot arrangement</td>
+</tr>
+<tr>
+<td>I/O list</td>
+<td>Revised channel and signal assignment</td>
+</tr>
+<tr>
+<td>HMI documentation</td>
+<td>Updated tag or alarm mapping</td>
+</tr>
+<tr>
+<td>Network diagram</td>
+<td>New switch, port, or device address</td>
+</tr>
+<tr>
+<td>Software baseline</td>
+<td>Updated approved project or configuration reference</td>
+</tr>
+<tr>
+<td>Spare-parts register</td>
+<td>New approved spare and successor information</td>
+</tr>
+<tr>
+<td>Maintenance procedure</td>
+<td>Revised replacement or verification steps</td>
+</tr>
+<tr>
+<td>Risk assessment</td>
+<td>Updated hazards and controls</td>
+</tr>
+<tr>
+<td>As-built package</td>
+<td>Verified actual installed configuration</td>
+</tr>
+<tr>
+<td>Asset register</td>
+<td>Updated model, serial number, or component association</td>
+</tr>
+<tr>
+<td>Commissioning record</td>
+<td>Test results and acceptance evidence</td>
+</tr>
+</tbody>
+</table>
+<p>Only records affected by the change need to be revised, but the impact assessment must identify those records rather than relying on memory.</p>
+<p>The change should not be closed while mandatory safety, approval, testing, or documentation requirements remain incomplete unless the organization's process explicitly permits a controlled open action with defined restrictions.</p>
+<h2 id="19-hardware-change-register">19. Hardware Change Register</h2>
+<p>A change register helps track the lifecycle of a modification.</p>
+<p>Recommended fields:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Change ID</td>
+<td>Unique change reference</td>
+</tr>
+<tr>
+<td>Asset ID</td>
+<td>Machine or system affected</td>
+</tr>
+<tr>
+<td>Change title</td>
+<td>Short description</td>
+</tr>
+<tr>
+<td>Trigger</td>
+<td>Failure, obsolescence, upgrade, safety issue, or other reason</td>
+</tr>
+<tr>
+<td>Existing hardware</td>
+<td>Current component and specification</td>
+</tr>
+<tr>
+<td>Proposed hardware</td>
+<td>Replacement or modified component</td>
+</tr>
+<tr>
+<td>Technical assessment</td>
+<td>Compatibility and engineering findings</td>
+</tr>
+<tr>
+<td>Risk assessment</td>
+<td>Identified risks and controls</td>
+</tr>
+<tr>
+<td>Approval status</td>
+<td>Current authorization state</td>
+</tr>
+<tr>
+<td>Change owner</td>
+<td>Accountable coordinator</td>
+</tr>
+<tr>
+<td>Planned implementation</td>
+<td>Scheduled date or window</td>
+</tr>
+<tr>
+<td>Test requirements</td>
+<td>Required verification and acceptance criteria</td>
+</tr>
+<tr>
+<td>Test result</td>
+<td>Recorded outcome</td>
+</tr>
+<tr>
+<td>Rollback reference</td>
+<td>Recovery plan or relevant record</td>
+</tr>
+<tr>
+<td>Documentation status</td>
+<td>Drawing and configuration update status</td>
+</tr>
+<tr>
+<td>Closure status</td>
+<td>Open, implemented, verified, or closed</td>
+</tr>
+<tr>
+<td>Follow-up actions</td>
+<td>Outstanding tasks and responsible owners</td>
+</tr>
+</tbody>
+</table>
+<p>A register is useful only if status fields reflect actual completion. Marking every stage complete because the machine restarted is administrative fiction, not change management.</p>
+<h2 id="20-spare-parts-and-hardware-obsolescence">20. Spare Parts and Hardware Obsolescence</h2>
+<p>Hardware change management should consider the long-term availability and supportability of the selected component.</p>
+<h3 id="201-spare-parts-assessment">20.1 Spare-parts assessment</h3>
+<p>Check:</p>
+<ul>
+<li>Installed quantity and criticality.</li>
+<li>Failure history and expected replacement frequency.</li>
+<li>Current stock and repairable stock.</li>
+<li>Supplier lead time.</li>
+<li>Manufacturer support status.</li>
+<li>Compatible successor models.</li>
+<li>Required configuration tools.</li>
+<li>Interchangeability restrictions.</li>
+<li>Storage and shelf-life requirements.</li>
+<li>Impact of a prolonged supply interruption.</li>
+</ul>
+<h3 id="202-successor-validation">20.2 Successor validation</h3>
+<p>A manufacturer's successor product is not automatically a drop-in replacement.</p>
+<p>Verify the compatibility of electrical ratings, mounting, connectors, firmware, software tools, communications, safety approvals, and relevant application requirements.</p>
+<p>Where migration is required, plan the change before the original hardware fails whenever practical.</p>
+<h3 id="203-installed-by-machine-spare-mapping">20.3 Installed-by-machine spare mapping</h3>
+<p>For industrial maintenance, link the spare part to the equipment where it is installed.</p>
+<p>A useful record identifies:</p>
+<ul>
+<li>Machine or asset ID.</li>
+<li>Component tag.</li>
+<li>Manufacturer and model.</li>
+<li>Part or catalog number.</li>
+<li>Installed quantity.</li>
+<li>Criticality.</li>
+<li>Approved replacement or successor.</li>
+<li>Required configuration or firmware.</li>
+<li>Stock location and quantity.</li>
+<li>Compatibility notes.</li>
+<li>Associated change reference.</li>
+</ul>
+<p>This helps prevent an available spare from being issued merely because it looks similar to the failed component.</p>
+<h2 id="21-practical-example-replacing-an-obsolete-plc-module">21. Practical Example: Replacing an Obsolete PLC Module</h2>
+<p>Assume a production test-bed uses a discontinued PLC input module. A proposed successor has the same number of channels but a different hardware generation.</p>
+<h3 id="assessment">Assessment</h3>
+<p>The engineering team must verify:</p>
+<ul>
+<li>Controller and chassis support.</li>
+<li>Firmware and engineering-software requirements.</li>
+<li>Input electrical characteristics.</li>
+<li>Isolation and diagnostic behavior.</li>
+<li>Terminal base or connector compatibility.</li>
+<li>I/O addressing and configuration changes.</li>
+<li>Availability of a suitable spare.</li>
+<li>Potential effects on PLC logic and HMI diagnostics.</li>
+<li>Safety and quality implications.</li>
+<li>Required commissioning and validation.</li>
+</ul>
+<h3 id="controlled-implementation">Controlled implementation</h3>
+<ol>
+<li>Create the change record and define the need.</li>
+<li>Assess compatibility and risks.</li>
+<li>Obtain required approvals.</li>
+<li>Prepare drawings, software, and recovery arrangements.</li>
+<li>Plan isolation and production downtime.</li>
+<li>Install the approved module.</li>
+<li>Verify wiring and hardware configuration.</li>
+<li>Test each affected input and relevant sequence.</li>
+<li>Verify connected alarms and interlocks.</li>
+<li>Complete required safety and process validation.</li>
+<li>Update as-built drawings, I/O lists, and spare records.</li>
+<li>Release the approved configuration and close the change after required evidence is complete.</li>
+</ol>
+<p>If the successor requires different wiring or a software change, the work is not a simple like-for-like replacement.</p>
+<h2 id="22-common-hardware-change-management-failures">22. Common Hardware Change Management Failures</h2>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Consequence</th>
+<th>Preventive control</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Replacing a component without root-cause analysis</td>
+<td>Repeated failures</td>
+<td>Diagnose the failure mechanism</td>
+</tr>
+<tr>
+<td>Assuming similar models are interchangeable</td>
+<td>Compatibility or safety problems</td>
+<td>Verify technical specifications</td>
+</tr>
+<tr>
+<td>Installing hardware before approval</td>
+<td>Unauthorized configuration change</td>
+<td>Apply the approved change process</td>
+</tr>
+<tr>
+<td>Ignoring firmware compatibility</td>
+<td>Device may not operate correctly</td>
+<td>Verify the complete configuration</td>
+</tr>
+<tr>
+<td>Failing to check power capacity</td>
+<td>Overloads or unstable operation</td>
+<td>Calculate loads and check ratings</td>
+</tr>
+<tr>
+<td>Skipping functional tests</td>
+<td>Hidden faults reach production</td>
+<td>Use approved acceptance criteria</td>
+</tr>
+<tr>
+<td>Ignoring safety functions</td>
+<td>Hazardous machine behavior</td>
+<td>Complete the required safety review and validation</td>
+</tr>
+<tr>
+<td>Failing to update drawings</td>
+<td>Future troubleshooting errors</td>
+<td>Update and release affected records</td>
+</tr>
+<tr>
+<td>Keeping an unverified old backup</td>
+<td>Incorrect recovery after failure</td>
+<td>Maintain approved asset-specific baselines</td>
+</tr>
+<tr>
+<td>Ignoring network security</td>
+<td>New attack paths or configuration weaknesses</td>
+<td>Review OT security implications</td>
+</tr>
+<tr>
+<td>Not updating spare records</td>
+<td>Wrong replacements or prolonged downtime</td>
+<td>Maintain installed-by-machine mapping</td>
+</tr>
+<tr>
+<td>Closing the change too early</td>
+<td>Missing evidence and unresolved risks</td>
+<td>Verify required closure criteria</td>
+</tr>
+</tbody>
+</table>
+<h2 id="23-practical-hardware-change-checklist">23. Practical Hardware Change Checklist</h2>
+<h3 id="before-the-change">Before the change</h3>
+<ul>
+<li>Change trigger and requirement documented.</li>
+<li>Existing hardware and configuration identified.</li>
+<li>Failure cause assessed where applicable.</li>
+<li>Replacement specification checked.</li>
+<li>Electrical and mechanical compatibility verified.</li>
+<li>Automation and network compatibility verified where relevant.</li>
+<li>Safety, quality, and cybersecurity impacts assessed.</li>
+<li>Required approvals obtained.</li>
+<li>Implementation and rollback plans prepared.</li>
+<li>Required spares, tools, and competent personnel available.</li>
+<li>Test plan and acceptance criteria defined.</li>
+</ul>
+<h3 id="during-implementation">During implementation</h3>
+<ul>
+<li>Required shutdown and isolation controls applied.</li>
+<li>Correct hardware and revision installed.</li>
+<li>Wiring, mounting, grounding, and protection verified.</li>
+<li>Required configuration changes completed.</li>
+<li>Unexpected deviations assessed and authorized.</li>
+<li>Installation findings recorded.</li>
+</ul>
+<h3 id="after-implementation">After implementation</h3>
+<ul>
+<li>Hardware diagnostics checked.</li>
+<li>Functional and interface tests completed.</li>
+<li>Required safety validation completed.</li>
+<li>Process and quality performance verified where applicable.</li>
+<li>Approved baseline and backup records updated.</li>
+<li>As-built documentation released.</li>
+<li>Spare-parts and asset records updated.</li>
+<li>Users and maintainers informed.</li>
+<li>Outstanding actions controlled.</li>
+<li>Required evidence reviewed before closure.</li>
+</ul>
+<h2 id="24-interview-questions-and-answers">24. Interview Questions and Answers</h2>
+<h3 id="q1-what-is-hardware-change-management">Q1. What is hardware change management?</h3>
+<p>It is the controlled process of assessing, approving, implementing, testing, documenting, and closing changes to physical equipment and hardware configurations.</p>
+<h3 id="q2-what-can-trigger-a-hardware-change">Q2. What can trigger a hardware change?</h3>
+<p>Failure, obsolescence, spare unavailability, reliability improvement, performance requirements, safety issues, capacity limitations, cybersecurity needs, or planned expansion.</p>
+<h3 id="q3-is-a-like-for-like-replacement-always-exempt-from-change-control">Q3. Is a like-for-like replacement always exempt from change control?</h3>
+<p>No. The organization may have a simplified procedure for approved routine replacements, but compatibility, safety, correct installation, and required verification still apply.</p>
+<h3 id="q4-why-is-compatibility-more-than-matching-voltage-and-dimensions">Q4. Why is compatibility more than matching voltage and dimensions?</h3>
+<p>Because software support, communication protocols, signal characteristics, protective behavior, environmental ratings, diagnostics, and safety capabilities may also differ.</p>
+<h3 id="q5-what-should-be-checked-before-replacing-a-plc-module">Q5. What should be checked before replacing a PLC module?</h3>
+<p>The module specification, controller and chassis support, firmware compatibility, signal characteristics, channel assignments, wiring, power requirements, and affected software and documentation.</p>
+<h3 id="q6-why-must-a-hardware-change-include-a-risk-assessment">Q6. Why must a hardware change include a risk assessment?</h3>
+<p>Because the change may affect electrical safety, machine movement, process performance, quality, maintenance, cybersecurity, and connected systems.</p>
+<h3 id="q7-what-is-the-difference-between-a-replacement-and-a-retrofit">Q7. What is the difference between a replacement and a retrofit?</h3>
+<p>A replacement restores or substitutes existing hardware, while a retrofit modifies existing equipment to introduce new or improved functionality. A replacement can still require substantial engineering change control.</p>
+<h3 id="q8-what-is-a-rollback-plan">Q8. What is a rollback plan?</h3>
+<p>A controlled recovery plan that defines when to stop or reverse the change and how to restore a safe, compatible, approved operating state.</p>
+<h3 id="q9-why-must-documentation-be-updated-after-a-hardware-change">Q9. Why must documentation be updated after a hardware change?</h3>
+<p>To ensure that drawings, I/O lists, configuration baselines, network records, spare-parts information, and maintenance procedures reflect the actual accepted system.</p>
+<h3 id="q10-what-tests-are-required-after-replacing-a-sensor">Q10. What tests are required after replacing a sensor?</h3>
+<p>Tests depend on the application but may include wiring and supply checks, signal verification, scaling checks, comparison with a suitable reference, alarm checks, and required calibration or functional testing.</p>
+<h3 id="q11-why-is-hardware-obsolescence-a-change-management-concern">Q11. Why is hardware obsolescence a change-management concern?</h3>
+<p>A discontinued component can create supply and support risks. A successor may require hardware, software, wiring, or process modifications, which must be assessed before migration.</p>
+<h3 id="q12-when-can-a-hardware-change-be-closed">Q12. When can a hardware change be closed?</h3>
+<p>When the required implementation, verification, approval, documentation, communication, and evidence requirements have been completed or any permitted outstanding actions are formally controlled.</p>
+<h2 id="25-key-principles-to-remember">25. Key Principles to Remember</h2>
+<ul>
+<li>A change trigger starts an assessment; it does not authorize implementation by itself.</li>
+<li>The reason for a hardware change must be understood before selecting a replacement.</li>
+<li>Compatibility must cover electrical, mechanical, functional, automation, safety, and lifecycle requirements as applicable.</li>
+<li>Like-for-like replacements still require the checks specified by the applicable procedure.</li>
+<li>Hardware changes can affect software, network configurations, alarms, safety functions, and quality results.</li>
+<li>Testing must be based on the change's scope and risk.</li>
+<li>Rollback arrangements should be established before high-impact changes.</li>
+<li>As-built documents, approved configuration baselines, and spare-parts records must be updated as required.</li>
+<li>Hardware obsolescence should be managed proactively wherever practical.</li>
+<li>Closure requires evidence, not merely a machine that starts and runs.</li>
+</ul>
+<p>The practical maintenance principle: Treat hardware as part of a complete engineered system. A component may be physically replaceable without being functionally interchangeable.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\31_Change_Mgmt\01_Triggers\02_Software - Software</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

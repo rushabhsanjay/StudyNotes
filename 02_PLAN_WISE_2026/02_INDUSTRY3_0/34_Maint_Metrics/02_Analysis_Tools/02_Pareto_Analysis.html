@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pareto Analysis</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Pareto Analysis</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-the-pareto-principle">2. The Pareto Principle</a></li>
+<li><a href="#3-pareto-chart-structure">3. Pareto Chart Structure</a></li>
+<li><a href="#4-types-of-maintenance-pareto-analysis">4. Types of Maintenance Pareto Analysis</a></li>
+<li><a href="#5-pareto-analysis-calculations">5. Pareto Analysis Calculations</a><ul>
+<li><a href="#51-total-downtime">5.1 Total downtime</a></li>
+<li><a href="#52-individual-percentage-contribution">5.2 Individual percentage contribution</a></li>
+<li><a href="#53-cumulative-downtime">5.3 Cumulative downtime</a></li>
+<li><a href="#54-cumulative-percentage">5.4 Cumulative percentage</a></li>
+</ul>
+</li>
+<li><a href="#6-completed-pareto-table">6. Completed Pareto Table</a></li>
+<li><a href="#7-how-to-conduct-pareto-analysis">7. How to Conduct Pareto Analysis</a><ul>
+<li><a href="#step-1-define-the-problem">Step 1: Define the problem</a></li>
+<li><a href="#step-2-select-the-measurement-period">Step 2: Select the measurement period</a></li>
+<li><a href="#step-3-collect-and-validate-data">Step 3: Collect and validate data</a></li>
+<li><a href="#step-4-group-records-into-categories">Step 4: Group records into categories</a></li>
+<li><a href="#step-5-aggregate-the-selected-measure">Step 5: Aggregate the selected measure</a></li>
+<li><a href="#step-6-sort-categories-in-descending-order">Step 6: Sort categories in descending order</a></li>
+<li><a href="#step-7-calculate-individual-and-cumulative-percentages">Step 7: Calculate individual and cumulative percentages</a></li>
+<li><a href="#step-8-create-the-chart">Step 8: Create the chart</a></li>
+<li><a href="#step-9-select-investigation-priorities">Step 9: Select investigation priorities</a></li>
+<li><a href="#step-10-implement-and-verify-corrective-action">Step 10: Implement and verify corrective action</a></li>
+</ul>
+</li>
+<li><a href="#8-maintenance-example-plc-cnc-robot-and-vfd">8. Maintenance Example: PLC, CNC, Robot, and VFD</a></li>
+<li><a href="#9-pareto-analysis-by-frequency-vs-downtime">9. Pareto Analysis by Frequency vs Downtime</a></li>
+<li><a href="#10-using-pareto-with-mtbf-and-mttr">10. Using Pareto with MTBF and MTTR</a></li>
+<li><a href="#11-excel-implementation">11. Excel Implementation</a><ul>
+<li><a href="#creating-the-chart">Creating the chart</a></li>
+</ul>
+</li>
+<li><a href="#12-power-bi-implementation">12. Power BI Implementation</a></li>
+<li><a href="#13-interpreting-the-80-threshold">13. Interpreting the 80% Threshold</a></li>
+<li><a href="#14-limitations-of-pareto-analysis">14. Limitations of Pareto Analysis</a></li>
+<li><a href="#15-before-and-after-improvement-verification">15. Before-and-After Improvement Verification</a></li>
+<li><a href="#16-practical-maintenance-review-checklist">16. Practical Maintenance Review Checklist</a></li>
+<li><a href="#17-interview-questions-and-answers">17. Interview Questions and Answers</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\34_Maint_Metrics\02_Analysis_Tools\02_Pareto_Analysis - Pareto analysis</code></p>
+<h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>Pareto analysis is a prioritization technique used to identify which categories contribute the largest share of a measured problem. In maintenance, it helps determine which machines, failure modes, components, or causes contribute most to breakdown frequency, downtime, repair cost, or production loss.</p>
+<p>The technique is commonly associated with the 80/20 principle: a relatively small number of causes may account for a large proportion of the total effect. This is a useful hypothesis, not a guaranteed mathematical rule. Actual distributions may follow very different patterns.</p>
+<p>The objective is to direct engineering effort toward the highest-impact losses instead of spreading resources equally across every problem.</p>
+<p>Applications in industrial maintenance include:</p>
+<ul>
+<li>Identifying machines responsible for the most downtime.</li>
+<li>Ranking recurring PLC, CNC, robot, servo, and VFD failures.</li>
+<li>Finding components responsible for high maintenance expenditure.</li>
+<li>Prioritizing corrective and preventive actions.</li>
+<li>Identifying major sources of quality defects.</li>
+<li>Supporting critical-equipment decisions.</li>
+<li>Measuring whether improvement actions reduce the largest losses.</li>
+</ul>
+<h2 id="2-the-pareto-principle">2. The Pareto Principle</h2>
+<p>The Pareto principle suggests that a minority of contributing factors can account for a majority of observed results.</p>
+<p>For example, a production line might experience 500 minutes of downtime in a month. A few failure categories may contribute 350 minutes, while many other categories account for the remaining 150 minutes.</p>
+<p>The important question is not whether the split is exactly 80/20. It is:</p>
+<p>Which causes contribute most to the problem being measured, and which of them can be effectively controlled?</p>
+<p>A Pareto analysis should identify the biggest contributors using actual data, not assume that a particular percentage distribution must exist.</p>
+<h2 id="3-pareto-chart-structure">3. Pareto Chart Structure</h2>
+<p>A standard Pareto chart combines two types of information:</p>
+<ul>
+<li>Bars: Categories arranged from largest to smallest according to the selected measure.</li>
+<li>Cumulative percentage line: The running total of each category's contribution, expressed as a percentage of the overall total.</li>
+</ul>
+<p>The horizontal axis contains categories such as failure modes or machines. The primary vertical axis shows the measure, such as downtime minutes. The secondary vertical axis shows cumulative percentage from 0% to 100%.</p>
+<p>Example structure:</p>
+<pre><code>Categories ranked by downtime
+        ↓
+VFD failures → Sensor failures → Network faults → Other
+        ↓
+Descending bars represent individual contributions
+        ↓
+Cumulative line shows the percentage of total downtime covered
+        ↓
+Select high-impact categories for investigation
+</code></pre>
+<p>A Pareto chart is most useful when categories are clearly defined, the measured quantity is meaningful, and the data covers a representative period.</p>
+<h2 id="4-types-of-maintenance-pareto-analysis">4. Types of Maintenance Pareto Analysis</h2>
+<p>The measure chosen determines what the chart can tell you.</p>
+<table>
+<thead>
+<tr>
+<th>Pareto type</th>
+<th>Measure</th>
+<th>Main question</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Downtime Pareto</td>
+<td>Total downtime minutes</td>
+<td>Which categories cause the greatest time loss?</td>
+</tr>
+<tr>
+<td>Breakdown-frequency Pareto</td>
+<td>Number of breakdown events</td>
+<td>Which categories fail most often?</td>
+</tr>
+<tr>
+<td>Maintenance-cost Pareto</td>
+<td>Repair and maintenance cost</td>
+<td>Which categories consume the most money?</td>
+</tr>
+<tr>
+<td>Repeat-breakdown Pareto</td>
+<td>Repeat event count or repeat downtime</td>
+<td>Which recurring problems deserve attention?</td>
+</tr>
+<tr>
+<td>Quality Pareto</td>
+<td>Defect count or rejection cost</td>
+<td>Which causes contribute most to quality losses?</td>
+</tr>
+<tr>
+<td>Spare-parts Pareto</td>
+<td>Consumption value or quantity</td>
+<td>Which components drive spare-parts usage?</td>
+</tr>
+<tr>
+<td>MTTR-related analysis</td>
+<td>Total repair time or average repair duration</td>
+<td>Which failures take the longest to restore?</td>
+</tr>
+<tr>
+<td>Production-loss Pareto</td>
+<td>Lost production units or production time</td>
+<td>Which causes have the greatest production impact?</td>
+</tr>
+</tbody>
+</table>
+<p>Do not combine incompatible measures into one ranking without a defined weighting method. A component that fails frequently may cause little downtime, while a rare failure may stop an entire line for hours.</p>
+<h2 id="5-pareto-analysis-calculations">5. Pareto Analysis Calculations</h2>
+<p>Assume the following illustrative monthly downtime data.</p>
+<table>
+<thead>
+<tr>
+<th>Failure category</th>
+<th>Downtime in minutes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VFD failures</td>
+<td>180</td>
+</tr>
+<tr>
+<td>Sensor failures</td>
+<td>120</td>
+</tr>
+<tr>
+<td>Network failures</td>
+<td>90</td>
+</tr>
+<tr>
+<td>Mechanical jams</td>
+<td>60</td>
+</tr>
+<tr>
+<td>Other faults</td>
+<td>50</td>
+</tr>
+<tr>
+<td>Total</td>
+<td>500</td>
+</tr>
+</tbody>
+</table>
+<p>The categories are already sorted from highest to lowest downtime.</p>
+<h3 id="51-total-downtime">5.1 Total downtime</h3>
+<div class="math-display">\[ T\_{\text{total}}=\sum\_{i=1}^{n}T_i \]</div>
+<p>For the example:</p>
+<div class="math-display">\[ T\_{\text{total}}=180+120+90+60+50=500\text{ minutes} \]</div>
+<h3 id="52-individual-percentage-contribution">5.2 Individual percentage contribution</h3>
+<div class="math-display">\[ P_i=\frac{T_i}{T\_{\text{total}}}\times100 \]</div>
+<p>For VFD failures:</p>
+<div class="math-display">\[ P\_{\text{VFD}}=\frac{180}{500}\times100=36\\% \]</div>
+<p>VFD failures account for 36% of the recorded downtime.</p>
+<h3 id="53-cumulative-downtime">5.3 Cumulative downtime</h3>
+<p>Cumulative downtime is the running sum of the categories in descending order.</p>
+<div class="math-display">\[ C_k=\sum\_{i=1}^{k}T_i \]</div>
+<p>After adding VFD failures and sensor failures:</p>
+<div class="math-display">\[ C_2=180+120=300\text{ minutes} \]</div>
+<h3 id="54-cumulative-percentage">5.4 Cumulative percentage</h3>
+<div class="math-display">\[ CP_k=\frac{C_k}{T\_{\text{total}}}\times100 \]</div>
+<p>For the first two categories:</p>
+<div class="math-display">\[ CP_2=\frac{300}{500}\times100=60\\% \]</div>
+<p>The two highest categories account for 60% of total downtime.</p>
+<h2 id="6-completed-pareto-table">6. Completed Pareto Table</h2>
+<table>
+<thead>
+<tr>
+<th>Failure category</th>
+<th>Downtime</th>
+<th>Individual share</th>
+<th>Cumulative downtime</th>
+<th>Cumulative share</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VFD failures</td>
+<td>180 min</td>
+<td>36%</td>
+<td>180 min</td>
+<td>36%</td>
+</tr>
+<tr>
+<td>Sensor failures</td>
+<td>120 min</td>
+<td>24%</td>
+<td>300 min</td>
+<td>60%</td>
+</tr>
+<tr>
+<td>Network failures</td>
+<td>90 min</td>
+<td>18%</td>
+<td>390 min</td>
+<td>78%</td>
+</tr>
+<tr>
+<td>Mechanical jams</td>
+<td>60 min</td>
+<td>12%</td>
+<td>450 min</td>
+<td>90%</td>
+</tr>
+<tr>
+<td>Other faults</td>
+<td>50 min</td>
+<td>10%</td>
+<td>500 min</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>Total</td>
+<td>500 min</td>
+<td>100%</td>
+<td>500 min</td>
+<td>100%</td>
+</tr>
+</tbody>
+</table>
+<p>Interpretation:</p>
+<ul>
+<li>VFD failures are the largest individual contributor at 36%.</li>
+<li>VFD and sensor failures together account for 60% of downtime.</li>
+<li>The first three categories account for 78%.</li>
+<li>The first four categories account for 90%.</li>
+</ul>
+<p>A team seeking to reduce downtime should investigate the highest-impact categories first, then validate the causes within each category.</p>
+<h2 id="7-how-to-conduct-pareto-analysis">7. How to Conduct Pareto Analysis</h2>
+<h3 id="step-1-define-the-problem">Step 1: Define the problem</h3>
+<p>State exactly what is being analyzed.</p>
+<p>Examples:</p>
+<ul>
+<li>Total unplanned downtime on a production line.</li>
+<li>Breakdown count for CNC machines.</li>
+<li>Repeat downtime caused by industrial networks.</li>
+<li>Maintenance expenditure for test benches.</li>
+</ul>
+<p>Avoid vague objectives such as "analyze machine problems." A clear objective determines which records and measures are relevant.</p>
+<h3 id="step-2-select-the-measurement-period">Step 2: Select the measurement period</h3>
+<p>Choose a period that represents the operating conditions being investigated.</p>
+<p>Possible periods include:</p>
+<ul>
+<li>One week for a short-term issue.</li>
+<li>One month for routine maintenance review.</li>
+<li>Three to six months for recurring patterns.</li>
+<li>One year for seasonal or long-term trends.</li>
+</ul>
+<p>A short period may be distorted by an unusual incident, shutdown, or production mix. A long period may hide recent improvements or changes in equipment configuration.</p>
+<h3 id="step-3-collect-and-validate-data">Step 3: Collect and validate data</h3>
+<p>Collect the relevant records from sources such as:</p>
+<ul>
+<li>SAP PM notifications and work orders.</li>
+<li>Breakdown registers.</li>
+<li>PLC and CNC alarm histories.</li>
+<li>SCADA or production monitoring systems.</li>
+<li>Quality records.</li>
+<li>Spare-parts and maintenance-cost records.</li>
+</ul>
+<p>Check timestamps, asset identifiers, failure categories, duplicate notifications, and incomplete records.</p>
+<h3 id="step-4-group-records-into-categories">Step 4: Group records into categories</h3>
+<p>Use consistent categories that are detailed enough to support action.</p>
+<p>For example, "VFD failures" may be appropriate for an initial overview. A deeper analysis could divide this category into:</p>
+<ul>
+<li>Overtemperature.</li>
+<li>Overcurrent.</li>
+<li>DC bus undervoltage.</li>
+<li>Communication loss.</li>
+<li>Drive hardware failure.</li>
+<li>Motor or load-related faults.</li>
+</ul>
+<p>Do not split categories so narrowly that the chart becomes unreadable, or combine them so broadly that actionable causes disappear.</p>
+<h3 id="step-5-aggregate-the-selected-measure">Step 5: Aggregate the selected measure</h3>
+<p>Calculate total downtime, event count, cost, or another defined quantity for each category.</p>
+<p>Ensure each record is counted according to the same rules. If one breakdown has several related notifications, confirm whether these represent separate failures or multiple records for one event.</p>
+<h3 id="step-6-sort-categories-in-descending-order">Step 6: Sort categories in descending order</h3>
+<p>Rank the categories from the largest measured value to the smallest.</p>
+<p>The descending order is essential for a conventional Pareto chart.</p>
+<h3 id="step-7-calculate-individual-and-cumulative-percentages">Step 7: Calculate individual and cumulative percentages</h3>
+<p>Calculate each category's share and the running cumulative share. Verify that the cumulative percentage reaches 100%, allowing for rounding.</p>
+<h3 id="step-8-create-the-chart">Step 8: Create the chart</h3>
+<p>Display descending bars and a cumulative percentage line. Label both axes clearly and use a readable category order.</p>
+<h3 id="step-9-select-investigation-priorities">Step 9: Select investigation priorities</h3>
+<p>Identify the largest contributors and evaluate:</p>
+<ul>
+<li>Technical feasibility of improvement.</li>
+<li>Safety and quality risks.</li>
+<li>Recurrence and downtime severity.</li>
+<li>Cost and resources required.</li>
+<li>Expected reduction in loss.</li>
+<li>Dependency on suppliers or production conditions.</li>
+</ul>
+<h3 id="step-10-implement-and-verify-corrective-action">Step 10: Implement and verify corrective action</h3>
+<p>Record the action, responsible owner, target date, and acceptance criteria. Recalculate the Pareto chart after implementation to determine whether the targeted loss decreased.</p>
+<h2 id="8-maintenance-example-plc-cnc-robot-and-vfd">8. Maintenance Example: PLC, CNC, Robot, and VFD</h2>
+<p>Consider an illustrative production line with the following downtime distribution.</p>
+<table>
+<thead>
+<tr>
+<th>Equipment category</th>
+<th>Downtime</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CNC stations</td>
+<td>240 min</td>
+</tr>
+<tr>
+<td>Robot cells</td>
+<td>180 min</td>
+</tr>
+<tr>
+<td>VFD-controlled conveyors</td>
+<td>150 min</td>
+</tr>
+<tr>
+<td>PLC and remote I/O</td>
+<td>90 min</td>
+</tr>
+<tr>
+<td>Sensors and field devices</td>
+<td>60 min</td>
+</tr>
+<tr>
+<td>Total</td>
+<td>720 min</td>
+</tr>
+</tbody>
+</table>
+<p>The first three categories account for:</p>
+<div class="math-display">\[ T_3=240+180+150=570\text{ minutes} \]</div>
+<div class="math-display">\[ CP_3=\frac{570}{720}\times100\approx79.17\\% \]</div>
+<p>These categories contribute approximately 79.17% of the recorded downtime.</p>
+<p>A sensible next step is to investigate the CNC, robot, and conveyor losses. However, the categories still need deeper analysis before choosing corrective actions.</p>
+<p>For example, "CNC downtime" is an equipment-level category, not a root cause. It might contain spindle faults, tool-changer problems, hydraulic issues, or program-related stoppages. Each requires different technical actions.</p>
+<h2 id="9-pareto-analysis-by-frequency-vs-downtime">9. Pareto Analysis by Frequency vs Downtime</h2>
+<p>A common mistake is to assume that the most frequent failure is automatically the most important failure.</p>
+<p>Consider the following data:</p>
+<table>
+<thead>
+<tr>
+<th>Failure mode</th>
+<th>Events</th>
+<th>Total downtime</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sensor faults</td>
+<td>20</td>
+<td>100 min</td>
+</tr>
+<tr>
+<td>Network failures</td>
+<td>5</td>
+<td>250 min</td>
+</tr>
+<tr>
+<td>Mechanical jams</td>
+<td>10</td>
+<td>150 min</td>
+</tr>
+<tr>
+<td>Drive failures</td>
+<td>4</td>
+<td>200 min</td>
+</tr>
+</tbody>
+</table>
+<p>The frequency ranking is:</p>
+<ol>
+<li>Sensor faults: 20 events.</li>
+<li>Mechanical jams: 10 events.</li>
+<li>Network failures: 5 events.</li>
+<li>Drive failures: 4 events.</li>
+</ol>
+<p>The downtime ranking is different:</p>
+<ol>
+<li>Network failures: 250 minutes.</li>
+<li>Drive failures: 200 minutes.</li>
+<li>Mechanical jams: 150 minutes.</li>
+<li>Sensor faults: 100 minutes.</li>
+</ol>
+<p>Sensor faults occur most frequently, but network failures create the largest time loss.</p>
+<p>The correct priority depends on the objective. For reducing technician workload and nuisance stops, event frequency may matter most. For increasing production availability, downtime may be the more relevant measure. In safety- or quality-critical applications, risk can override either ranking.</p>
+<h2 id="10-using-pareto-with-mtbf-and-mttr">10. Using Pareto with MTBF and MTTR</h2>
+<p>Pareto analysis complements reliability and maintainability metrics.</p>
+<ul>
+<li>MTBF helps evaluate how frequently qualifying failures occur relative to operating time.</li>
+<li>MTTR helps evaluate average repair duration under the chosen definition.</li>
+<li>Pareto analysis identifies which categories contribute most to the selected loss.</li>
+</ul>
+<p>A category with high failure frequency and low repair duration may require a different strategy from one with rare but extremely long repairs.</p>
+<p>Example:</p>
+<table>
+<thead>
+<tr>
+<th>Failure category</th>
+<th>Events</th>
+<th>Total repair time</th>
+<th>Average repair time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sensor faults</td>
+<td>12</td>
+<td>120 min</td>
+<td>10 min</td>
+</tr>
+<tr>
+<td>Network failures</td>
+<td>3</td>
+<td>180 min</td>
+<td>60 min</td>
+</tr>
+<tr>
+<td>Drive failures</td>
+<td>4</td>
+<td>240 min</td>
+<td>60 min</td>
+</tr>
+</tbody>
+</table>
+<p>Sensor faults may benefit from improving component reliability or eliminating nuisance triggers. Network and drive failures may require better diagnostics, spares, specialist support, or improved restoration procedures.</p>
+<p>Average repair time in this table is total repair time divided by event count. It should not automatically be called MTTR unless its start, end, and included delays match the site's MTTR definition.</p>
+<h2 id="11-excel-implementation">11. Excel Implementation</h2>
+<p>Assume the dataset has:</p>
+<ul>
+<li>Column A: Failure category.</li>
+<li>Column B: Downtime minutes.</li>
+</ul>
+<p>Start with one row per category and sort downtime in descending order.</p>
+<p>Suggested layout:</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Field</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>Failure category</td>
+</tr>
+<tr>
+<td>B</td>
+<td>Downtime minutes</td>
+</tr>
+<tr>
+<td>C</td>
+<td>Individual share</td>
+</tr>
+<tr>
+<td>D</td>
+<td>Cumulative downtime</td>
+</tr>
+<tr>
+<td>E</td>
+<td>Cumulative share</td>
+</tr>
+</tbody>
+</table>
+<p>If the first data row is 2 and the last is 6:</p>
+<p>Individual percentage in <code>C2</code>:</p>
+<pre><code>=IFERROR(B2/SUM($B$2:$B$6),0)
+</code></pre>
+<p>Cumulative downtime in <code>D2</code>:</p>
+<pre><code>=SUM($B$2:B2)
+</code></pre>
+<p>Cumulative percentage in <code>E2</code>:</p>
+<pre><code>=IFERROR(D2/SUM($B$2:$B$6),0)
+</code></pre>
+<p>Copy the formulas down to the remaining rows and format columns C and E as percentages.</p>
+<p>For a robust workbook, make the source data an Excel Table and use structured references so new records can be incorporated without manually adjusting every range. If the source contains individual event records rather than summarized categories, use a PivotTable to aggregate the selected measure first.</p>
+<h3 id="creating-the-chart">Creating the chart</h3>
+<ol>
+<li>Select the category, downtime, and cumulative-percentage columns.</li>
+<li>Insert a combination chart.</li>
+<li>Display downtime as clustered columns.</li>
+<li>Display cumulative percentage as a line on the secondary axis.</li>
+<li>Set the secondary axis to a range of 0% to 100%.</li>
+<li>Sort the categories by downtime in descending order.</li>
+<li>Add a meaningful title, reporting period, and unit.</li>
+</ol>
+<p>The cumulative percentage line should rise from the first category toward 100%. If it does not, check sorting, formulas, missing values, and denominator consistency.</p>
+<h2 id="12-power-bi-implementation">12. Power BI Implementation</h2>
+<p>Power BI can automate Pareto reporting from maintenance and production data.</p>
+<p>A typical data structure includes:</p>
+<ul>
+<li>Breakdown event table.</li>
+<li>Equipment master table.</li>
+<li>Failure-mode and cause-code table.</li>
+<li>Date or calendar table.</li>
+<li>Maintenance order table.</li>
+<li>Production schedule and operating-time data.</li>
+</ul>
+<p>Useful slicers include:</p>
+<ul>
+<li>Plant and production line.</li>
+<li>Equipment ID.</li>
+<li>Subsystem and failure mode.</li>
+<li>Date range.</li>
+<li>Shift.</li>
+<li>Planned or unplanned classification.</li>
+<li>Repeat breakdown status.</li>
+</ul>
+<p>Recommended visuals include:</p>
+<ul>
+<li>Downtime Pareto.</li>
+<li>Breakdown-frequency Pareto.</li>
+<li>Repeat-breakdown Pareto.</li>
+<li>Monthly downtime trend.</li>
+<li>MTBF and MTTR trends.</li>
+<li>Corrective-action status.</li>
+</ul>
+<p>Ensure relationships between equipment, events, and dates do not duplicate downtime when several records reference the same event.</p>
+<p>A Pareto measure should use the selected denominator and event scope. It should also respond predictably to slicers. For example, filtering to one production line should recalculate the category contributions using that line's total, rather than retaining an unrelated plant-wide denominator.</p>
+<h2 id="13-interpreting-the-80-threshold">13. Interpreting the 80% Threshold</h2>
+<p>A common practice is to investigate enough top-ranked categories to cover approximately 80% of the measured loss.</p>
+<p>This is a prioritization aid, not a mandatory engineering threshold.</p>
+<p>For example, the cumulative percentages might be 36%, 60%, 78%, 90%, and 100%. The first three categories cover 78%, which is close to the 80% target.</p>
+<p>There is no need to force the chart to reach exactly 80%. The number of categories selected should also consider:</p>
+<ul>
+<li>Whether one category contains several unrelated causes.</li>
+<li>Safety or regulatory risks.</li>
+<li>Whether the category can be practically improved.</li>
+<li>Whether small categories are individually severe.</li>
+<li>Whether the data is sufficiently reliable.</li>
+<li>Whether the proposed improvement has a reasonable expected benefit.</li>
+</ul>
+<p>A low-frequency event with catastrophic consequences may require immediate action even if it contributes very little to total downtime.</p>
+<h2 id="14-limitations-of-pareto-analysis">14. Limitations of Pareto Analysis</h2>
+<p>Pareto analysis is powerful for prioritization but has important limitations.</p>
+<ul>
+<li>It shows contribution, not root cause.</li>
+<li>Results depend on category definitions and data quality.</li>
+<li>A short reporting period can distort rankings.</li>
+<li>Large categories may contain several unrelated failure mechanisms.</li>
+<li>Historical contribution does not guarantee future contribution.</li>
+<li>The chart does not directly represent safety risk or technical feasibility.</li>
+<li>Improvements in one category may shift losses to another.</li>
+<li>Incorrect event aggregation can inflate or reduce category totals.</li>
+</ul>
+<p>Use Pareto analysis alongside technical investigation, risk assessment, reliability metrics, and corrective-action verification.</p>
+<h2 id="15-before-and-after-improvement-verification">15. Before-and-After Improvement Verification</h2>
+<p>Suppose a VFD-related failure category contributes 180 minutes of downtime before corrective action and 60 minutes afterward.</p>
+<p>The absolute reduction is:</p>
+<div class="math-display">\[ \Delta T=180-60=120\text{ minutes} \]</div>
+<p>The percentage reduction is:</p>
+<div class="math-display">\[ \\%\text{Reduction}=\frac{180-60}{180}\times100=66.67\\% \]</div>
+<p>The category's recorded downtime has fallen by 66.67%.</p>
+<p>However, a valid conclusion requires comparable periods and operating exposure. If production hours were lower after the intervention, the reduction in raw downtime may not represent a true improvement in the failure rate.</p>
+<p>Where practical, compare downtime per operating hour, failures per cycle, or another normalized measure alongside absolute downtime.</p>
+<h2 id="16-practical-maintenance-review-checklist">16. Practical Maintenance Review Checklist</h2>
+<ul>
+<li>Define the problem and selected measure.</li>
+<li>Choose a representative reporting period.</li>
+<li>Validate event records and timestamps.</li>
+<li>Remove duplicate or incorrectly linked events.</li>
+<li>Use consistent failure categories.</li>
+<li>Aggregate the chosen measure.</li>
+<li>Sort categories from largest to smallest.</li>
+<li>Calculate individual and cumulative percentages.</li>
+<li>Verify the total and cumulative percentage.</li>
+<li>Build and label the Pareto chart correctly.</li>
+<li>Identify high-impact categories.</li>
+<li>Review safety and quality risks independently.</li>
+<li>Investigate root causes within priority categories.</li>
+<li>Assign corrective actions with measurable acceptance criteria.</li>
+<li>Recalculate the analysis after implementation.</li>
+<li>Verify improvement using comparable operating exposure.</li>
+<li>Preserve definitions and historical records for audit.</li>
+</ul>
+<h2 id="17-interview-questions-and-answers">17. Interview Questions and Answers</h2>
+<p>Q1. What is Pareto analysis?</p>
+<p>A prioritization method that ranks categories by their contribution to a selected measure, helping identify the largest contributors to a problem.</p>
+<p>Q2. What is the 80/20 principle?</p>
+<p>The observation that a minority of causes may account for a majority of effects. The exact distribution is not guaranteed.</p>
+<p>Q3. Why is a Pareto chart used in maintenance?</p>
+<p>To identify the equipment, failure modes, or causes responsible for the largest share of downtime, breakdowns, cost, or other losses.</p>
+<p>Q4. What is cumulative percentage?</p>
+<p>The running total of category contributions divided by the overall total, expressed as a percentage.</p>
+<p>Q5. Why must Pareto categories be sorted in descending order?</p>
+<p>Descending order makes the largest contributors immediately visible and allows the cumulative percentage to show how quickly the leading categories cover the total.</p>
+<p>Q6. Is the most frequent failure always the highest priority?</p>
+<p>No. A less frequent failure may create greater downtime, quality loss, cost, or safety risk. The ranking measure must match the objective, and serious risks must be evaluated independently.</p>
+<p>Q7. What is the difference between Pareto analysis and root cause analysis?</p>
+<p>Pareto analysis identifies where the largest contribution to a selected problem comes from. Root cause analysis investigates why a specific problem occurs.</p>
+<p>Q8. How can Pareto analysis support preventive maintenance?</p>
+<p>It identifies high-impact failure categories that may justify changes to inspection tasks, maintenance intervals, component selection, monitoring, or operating procedures.</p>
+<p>Q9. What is the main limitation of Pareto analysis?</p>
+<p>It ranks observed losses but does not prove their underlying causes or automatically identify the best corrective action.</p>
+<p>Q10. How do you confirm that an improvement worked?</p>
+<p>Compare the same loss measure before and after the action using consistent definitions, comparable operating exposure, and a suitable observation period.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\34_Maint_Metrics\02_Analysis_Tools\03_Critical_Equipment_List - Critical equipment list</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

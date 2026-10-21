@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mechanical Positioning During Site Execution</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Mechanical Positioning During Site Execution</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-of-mechanical-positioning">1. Definition of Mechanical Positioning</a></li>
+<li><a href="#2-positioning-vs-leveling-vs-alignment">2. Positioning vs Leveling vs Alignment</a></li>
+<li><a href="#3-why-accurate-positioning-matters">3. Why Accurate Positioning Matters</a><ul>
+<li><a href="#31-production-line-geometry">3.1 Production-Line Geometry</a></li>
+<li><a href="#32-equipment-performance">3.2 Equipment Performance</a></li>
+</ul>
+</li>
+<li><a href="#4-reference-systems-used-for-positioning">4. Reference Systems Used for Positioning</a><ul>
+<li><a href="#41-plant-grid-and-building-grid">4.1 Plant Grid and Building Grid</a></li>
+<li><a href="#42-datum">4.2 Datum</a></li>
+<li><a href="#43-machine-coordinates">4.3 Machine Coordinates</a></li>
+<li><a href="#44-orientation">4.4 Orientation</a></li>
+</ul>
+</li>
+<li><a href="#5-equipment-and-tools-used-for-positioning">5. Equipment and Tools Used for Positioning</a></li>
+<li><a href="#6-mechanical-positioning-procedure">6. Mechanical Positioning Procedure</a></li>
+<li><a href="#7-step-by-step-positioning-method">7. Step-by-Step Positioning Method</a><ul>
+<li><a href="#71-review-the-approved-drawings">7.1 Review the Approved Drawings</a></li>
+<li><a href="#72-verify-site-readiness">7.2 Verify Site Readiness</a></li>
+<li><a href="#73-establish-reference-points">7.3 Establish Reference Points</a></li>
+<li><a href="#74-move-and-place-the-equipment">7.4 Move and Place the Equipment</a></li>
+<li><a href="#75-measure-position-and-orientation">7.5 Measure Position and Orientation</a></li>
+<li><a href="#76-adjust-and-recheck">7.6 Adjust and Recheck</a></li>
+</ul>
+</li>
+<li><a href="#8-positioning-calculations-and-measurement-examples">8. Positioning Calculations and Measurement Examples</a><ul>
+<li><a href="#81-horizontal-position-error">8.1 Horizontal Position Error</a></li>
+<li><a href="#82-two-dimensional-position-error">8.2 Two-Dimensional Position Error</a></li>
+<li><a href="#83-angular-position-error">8.3 Angular Position Error</a></li>
+<li><a href="#84-positioning-tolerance">8.4 Positioning Tolerance</a></li>
+</ul>
+</li>
+<li><a href="#9-positioning-different-types-of-industrial-equipment">9. Positioning Different Types of Industrial Equipment</a></li>
+<li><a href="#10-common-positioning-errors-and-their-consequences">10. Common Positioning Errors and Their Consequences</a></li>
+<li><a href="#11-positioning-inspection-record">11. Positioning Inspection Record</a></li>
+<li><a href="#12-safety-and-quality-requirements">12. Safety and Quality Requirements</a></li>
+<li><a href="#13-practical-site-example">13. Practical Site Example</a></li>
+<li><a href="#14-key-takeaways">14. Key Takeaways</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\12_Site_Exec\01_Mechanical\01_Positioning</code></p>
+<h2 id="1-definition-of-mechanical-positioning">1. Definition of Mechanical Positioning</h2>
+<p>Mechanical positioning is the process of placing a machine, equipment assembly, fixture, conveyor, robot base, test bench, or other mechanical component at its specified location and orientation within an industrial facility.</p>
+<p>The objective is to ensure that the equipment occupies the correct coordinates, maintains the required orientation, aligns with connected equipment, and provides the necessary clearances for operation, maintenance, and safety.</p>
+<p>Positioning is a critical site-execution activity because the physical location of equipment directly affects:</p>
+<ul>
+<li>Mechanical alignment and coupling.</li>
+<li>Conveyor transfer points and production-line continuity.</li>
+<li>Robot reach, fixture location, and process accuracy.</li>
+<li>Pipe, cable, and utility routing.</li>
+<li>Access for operators and maintenance personnel.</li>
+<li>Foundation loading and anchoring arrangements.</li>
+<li>Equipment leveling and subsequent commissioning.</li>
+<li>Overall production-line geometry and cycle performance.</li>
+</ul>
+<p>Key distinction: Positioning establishes where the equipment is and how it is oriented. Leveling establishes whether the equipment is horizontal or at its specified inclination. Alignment establishes the required geometric relationship between connected components or reference axes.</p>
+<p>These activities are related, but they are not interchangeable.</p>
+<h2 id="2-positioning-vs-leveling-vs-alignment">2. Positioning vs Leveling vs Alignment</h2>
+<table>
+<thead>
+<tr>
+<th>Activity</th>
+<th>Main objective</th>
+<th>Typical reference</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Positioning</td>
+<td>Establish location and orientation</td>
+<td>Plant grid, coordinates, datum, approved layout</td>
+<td>Placing a CNC machine at its designated foundation</td>
+</tr>
+<tr>
+<td>Leveling</td>
+<td>Establish the required horizontal condition or specified inclination</td>
+<td>Precision level, inclinometer, designated reference surfaces</td>
+<td>Leveling a machine bed</td>
+</tr>
+<tr>
+<td>Alignment</td>
+<td>Establish the required relationship between components or axes</td>
+<td>Centerlines, shaft axes, optical or laser references</td>
+<td>Aligning a motor shaft with a pump shaft</td>
+</tr>
+<tr>
+<td>Squaring</td>
+<td>Establish the required perpendicular relationship</td>
+<td>Machine axes, reference edges, precision measurement tools</td>
+<td>Squaring a machine axis to its reference edge</td>
+</tr>
+<tr>
+<td>Anchoring</td>
+<td>Secure the equipment in its approved position</td>
+<td>Foundation and anchor-bolt layout</td>
+<td>Fixing a machine base to the foundation</td>
+</tr>
+</tbody>
+</table>
+<p>A machine can be correctly positioned but not level. It can be level but incorrectly aligned with an adjacent conveyor. It can also be positioned and aligned correctly but remain unsecured.</p>
+<p>The installation procedure must therefore define the required sequence and acceptance criteria for each activity.</p>
+<h2 id="3-why-accurate-positioning-matters">3. Why Accurate Positioning Matters</h2>
+<h3 id="31-production-line-geometry">3.1 Production-Line Geometry</h3>
+<p>In an automated production line, equipment locations determine transfer distances, robot reach, conveyor interfaces, and the relationship between successive workstations.</p>
+<p>If a station is shifted from its approved location, even slightly, the consequences can include:</p>
+<ul>
+<li>A part failing to enter a locating fixture correctly.</li>
+<li>Conveyor transfers becoming unreliable.</li>
+<li>Robot programs reaching their limits or approaching fixtures incorrectly.</li>
+<li>Pneumatic cylinders or mechanical stops failing to engage as designed.</li>
+<li>Safety scanner coverage or guarding clearances becoming unsuitable.</li>
+<li>Increased wear caused by incorrect mechanical interfaces.</li>
+</ul>
+<p>The permitted deviation depends on the equipment, interface design, and approved installation drawing. There is no universal positioning tolerance for all industrial machinery.</p>
+<h3 id="32-equipment-performance">3.2 Equipment Performance</h3>
+<p>Positioning errors can affect equipment accuracy, repeatability, and stability.</p>
+<p>Examples include:</p>
+<ul>
+<li>A CNC machine installed at an incorrect coordinate relative to the production layout.</li>
+<li>A robot pedestal positioned outside its approved mounting coordinates.</li>
+<li>A test bench placed so that connecting shafts or couplings cannot meet their specified geometry.</li>
+<li>A conveyor positioned too high or too low relative to the adjoining station.</li>
+<li>A press installed with incorrect orientation relative to its material-feed system.</li>
+</ul>
+<p>Some errors can be corrected through mechanical adjustment. Others require repositioning the entire machine or modifying the foundation interface. The earlier the error is detected, the less expensive the correction usually becomes.</p>
+<h2 id="4-reference-systems-used-for-positioning">4. Reference Systems Used for Positioning</h2>
+<p>Positioning must be based on approved engineering references rather than visual judgment or measurements taken from convenient but unreliable building features.</p>
+<h3 id="41-plant-grid-and-building-grid">4.1 Plant Grid and Building Grid</h3>
+<p>Industrial buildings commonly use a grid system to define columns, structural references, equipment zones, and installation coordinates.</p>
+<p>A machine layout may specify its location relative to building gridlines, structural columns, or established survey control points.</p>
+<p>For example, an approved layout may identify a machine centerline at a specified offset from gridline B and gridline 5. The site team must use the documented coordinate convention and survey references.</p>
+<h3 id="42-datum">4.2 Datum</h3>
+<p>A datum is a defined reference point, line, plane, or coordinate system from which measurements are established.</p>
+<p>Typical examples include:</p>
+<ul>
+<li>A surveyed plant benchmark.</li>
+<li>A foundation reference line.</li>
+<li>A machine base reference surface.</li>
+<li>A shaft centerline.</li>
+<li>A fixture locating surface.</li>
+<li>A designated machine origin.</li>
+</ul>
+<p>A datum prevents different teams from measuring the same installation from different starting points and obtaining incompatible results.</p>
+<h3 id="43-machine-coordinates">4.3 Machine Coordinates</h3>
+<p>Equipment layouts can specify the location of a machine reference point using three-dimensional coordinates.</p>
+<div class="math-display">\[ P=(X,Y,Z) \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(X\)</span> represents position along one horizontal axis.</li>
+<li><span class="math-inline">\(Y\)</span> represents position along the perpendicular horizontal axis.</li>
+<li><span class="math-inline">\(Z\)</span> represents elevation.</li>
+</ul>
+<p>The coordinate origin, axis directions, units, and sign conventions must be defined by the approved drawing or survey system.</p>
+<h3 id="44-orientation">4.4 Orientation</h3>
+<p>Positioning also includes the angular orientation of the equipment.</p>
+<p>A machine can have the correct center coordinates but still be rotated incorrectly relative to the production line.</p>
+<p>Orientation may be defined using:</p>
+<ul>
+<li>A machine centerline.</li>
+<li>A specified front or operator side.</li>
+<li>An angular reference from a plant gridline.</li>
+<li>A transfer direction.</li>
+<li>A reference edge or mounting-hole pattern.</li>
+</ul>
+<p>For large machines, the positioning survey should verify both the location and the orientation of the relevant reference points.</p>
+<h2 id="5-equipment-and-tools-used-for-positioning">5. Equipment and Tools Used for Positioning</h2>
+<table>
+<thead>
+<tr>
+<th>Tool or equipment</th>
+<th>Purpose</th>
+<th>Important limitation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Total station</td>
+<td>Surveying equipment coordinates and orientation</td>
+<td>Requires correct setup, control points, and measurement procedure</td>
+</tr>
+<tr>
+<td>Laser tracker</td>
+<td>High-accuracy three-dimensional measurement and geometric verification</td>
+<td>Requires suitable equipment, targets, calibration, and trained operators</td>
+</tr>
+<tr>
+<td>Theodolite</td>
+<td>Measuring horizontal and vertical angles</td>
+<td>Coordinate determination requires an appropriate survey method</td>
+</tr>
+<tr>
+<td>Steel measuring tape</td>
+<td>General dimensional measurements and offsets</td>
+<td>Accuracy depends on technique, calibration, length, and environmental effects</td>
+</tr>
+<tr>
+<td>Laser distance meter</td>
+<td>Measuring distances and offsets</td>
+<td>Not a substitute for precision surveying in every application</td>
+</tr>
+<tr>
+<td>Plumb line or plumb laser</td>
+<td>Establishing vertical references</td>
+<td>Accuracy is affected by setup and environmental conditions</td>
+</tr>
+<tr>
+<td>Precision straightedge</td>
+<td>Checking straightness and reference edges</td>
+<td>Requires suitable contact surfaces and measurement methods</td>
+</tr>
+<tr>
+<td>Feeler gauges</td>
+<td>Measuring small gaps</td>
+<td>Do not independently establish machine position</td>
+</tr>
+<tr>
+<td>Dial indicator</td>
+<td>Measuring displacement and geometric variation</td>
+<td>Requires a suitable fixture and measurement reference</td>
+</tr>
+<tr>
+<td>Manufacturer's positioning jig</td>
+<td>Locating equipment relative to designated interfaces</td>
+<td>Must be used according to the manufacturer's procedure</td>
+</tr>
+</tbody>
+</table>
+<p>Tool selection depends on the required tolerance, equipment size, installation environment, and acceptance criteria. High-precision machinery may require a qualified surveyor or specialist alignment service.</p>
+<h2 id="6-mechanical-positioning-procedure">6. Mechanical Positioning Procedure</h2>
+<p>The following sequence describes a typical positioning workflow. The approved equipment-specific installation procedure takes precedence because some machines require positioning, leveling, alignment, and anchoring in a different sequence.</p>
+<pre><code>Review Approved Layout and Installation Drawings
+                    ↓
+Verify Site Readiness and Foundation
+                    ↓
+Establish Survey Control Points and Datums
+                    ↓
+Inspect Machine Base and Mounting Interfaces
+                    ↓
+Mark Machine Centerlines and Position Coordinates
+                    ↓
+Move Equipment to the Installation Area
+                    ↓
+Place Equipment on Approved Supports or Foundation
+                    ↓
+Measure Position and Orientation
+                    ↓
+Adjust Location Within Permitted Tolerances
+                    ↓
+Verify Position and Record Measurements
+                    ↓
+Proceed with Leveling and Alignment as Specified
+                    ↓
+Complete Anchoring and Final Verification
+</code></pre>
+<p>Positioning measurements may need to be repeated after leveling, tightening anchor bolts, grouting, or applying the specified foundation loads. These activities can alter the equipment's location or geometry.</p>
+<h2 id="7-step-by-step-positioning-method">7. Step-by-Step Positioning Method</h2>
+<h3 id="71-review-the-approved-drawings">7.1 Review the Approved Drawings</h3>
+<p>Before moving the machine, review the latest approved documents.</p>
+<ul>
+<li>General arrangement drawing.</li>
+<li>Equipment foundation drawing.</li>
+<li>Plant layout and coordinate plan.</li>
+<li>Anchor-bolt layout.</li>
+<li>Machine installation manual.</li>
+<li>Utility connection layout.</li>
+<li>Maintenance and operator clearance requirements.</li>
+<li>Specified positioning tolerances and measurement references.</li>
+</ul>
+<p>Identify the machine's designated reference points and distinguish dimensions that are measured from centerlines, edges, mounting holes, or foundation references.</p>
+<p>Do not scale a drawing to estimate critical coordinates when the required dimensions are available in the approved documentation.</p>
+<h3 id="72-verify-site-readiness">7.2 Verify Site Readiness</h3>
+<p>Check that the installation area is ready to receive the equipment.</p>
+<ul>
+<li>Confirm the foundation is complete and released for installation.</li>
+<li>Verify foundation dimensions, elevation, anchor locations, and relevant concrete requirements.</li>
+<li>Confirm floor loading capacity and equipment support requirements.</li>
+<li>Check that the transport route and lifting arrangement are suitable.</li>
+<li>Verify that required access and maintenance clearances are available.</li>
+<li>Confirm that lifting, isolation, and work-area safety controls are established.</li>
+</ul>
+<p>A machine should not be placed merely because the foundation looks finished. Foundation release and dimensional verification are separate requirements.</p>
+<h3 id="73-establish-reference-points">7.3 Establish Reference Points</h3>
+<p>Surveyors or authorized installation personnel establish the reference system using approved control points.</p>
+<p>Mark the required machine centerlines, mounting positions, and orientation references on the foundation or other approved measurement surfaces.</p>
+<p>Protect these marks against removal or damage during installation. If a reference mark is disturbed, re-establish it from a verified control point rather than estimating its former position.</p>
+<h3 id="74-move-and-place-the-equipment">7.4 Move and Place the Equipment</h3>
+<p>Use an approved lifting and movement plan appropriate to the machine's mass, center of gravity, lifting points, and transport constraints.</p>
+<ul>
+<li>Inspect the designated lifting points and lifting equipment.</li>
+<li>Use the specified lifting method and approved accessories.</li>
+<li>Control the equipment during movement to prevent swinging or impact.</li>
+<li>Avoid loading unsupported foundation areas or damaging mounting surfaces.</li>
+<li>Place the equipment on the specified support arrangement, such as approved shims, leveling elements, or temporary supports.</li>
+</ul>
+<p>Personnel must remain clear of suspended loads and potential crush zones. Positioning adjustments should only be made when the equipment is stable and the relevant movement hazards are controlled.</p>
+<h3 id="75-measure-position-and-orientation">7.5 Measure Position and Orientation</h3>
+<p>Measure the machine's reference points against the approved coordinates or centerlines.</p>
+<p>For a machine with multiple mounting points, verify more than one point so that translation and rotation can be distinguished.</p>
+<p>Record:</p>
+<ul>
+<li>Target coordinates or dimensions.</li>
+<li>Actual measured coordinates or dimensions.</li>
+<li>Horizontal and vertical offsets, where applicable.</li>
+<li>Orientation deviation.</li>
+<li>Measurement instrument and identification.</li>
+<li>Measurement conditions and applicable tolerance.</li>
+<li>Date, responsible person, and verification status.</li>
+</ul>
+<p>A single measurement at one corner cannot establish that an entire large machine is correctly positioned and oriented.</p>
+<h3 id="76-adjust-and-recheck">7.6 Adjust and Recheck</h3>
+<p>If the measured position is outside tolerance, use the approved adjustment method to correct it.</p>
+<p>Depending on the installation, adjustments may involve:</p>
+<ul>
+<li>Moving the machine horizontally.</li>
+<li>Adjusting approved positioning screws or jacking points.</li>
+<li>Changing permitted shim arrangements.</li>
+<li>Correcting the orientation.</li>
+<li>Resolving foundation or anchor-pattern discrepancies through an approved engineering disposition.</li>
+</ul>
+<p>Do not enlarge holes, cut anchors, modify the foundation, or force mounting components into place without authorization and an approved engineering method.</p>
+<p>Repeat the measurements after adjustment. Record the final result rather than retaining only the original or intermediate readings.</p>
+<h2 id="8-positioning-calculations-and-measurement-examples">8. Positioning Calculations and Measurement Examples</h2>
+<h3 id="81-horizontal-position-error">8.1 Horizontal Position Error</h3>
+<p>If the target coordinate is <span class="math-inline">\(X_t\)</span> and the measured coordinate is <span class="math-inline">\(X_m\)</span>, the positioning error is:</p>
+<div class="math-display">\[ e_X=X_m-X_t \]</div>
+<p>Suppose the specified X-coordinate is 2,500 mm and the measured coordinate is 2,503 mm.</p>
+<div class="math-display">\[ e_X=2503-2500=+3\text{ mm} \]</div>
+<p>The equipment is 3 mm beyond the target coordinate in the positive X direction. Whether this is acceptable depends on the permitted tolerance.</p>
+<h3 id="82-two-dimensional-position-error">8.2 Two-Dimensional Position Error</h3>
+<p>For target coordinates <span class="math-inline">\((X_t,Y_t)\)</span> and measured coordinates <span class="math-inline">\((X_m,Y_m)\)</span>, the horizontal position error magnitude is:</p>
+<div class="math-display">\[ e=\sqrt{(X_m-X_t)^2+(Y_m-Y_t)^2} \]</div>
+<p>Suppose the machine is offset by 3 mm along X and 4 mm along Y.</p>
+<div class="math-display">\[ e=\sqrt{3^2+4^2}=5\text{ mm} \]</div>
+<p>The horizontal displacement magnitude is 5 mm.</p>
+<p>Important: A resultant error of 5 mm does not automatically mean the machine passes or fails. The acceptance specification may impose separate X and Y tolerances, an overall positional tolerance, or both.</p>
+<h3 id="83-angular-position-error">8.3 Angular Position Error</h3>
+<p>If a machine centerline is intended to be parallel to a plant reference line, measure the angular deviation using an appropriate survey method.</p>
+<p>For a small angular error, the approximate lateral deviation over a known length is:</p>
+<div class="math-display">\[ d\approx L\theta \]</div>
+<p>Where <span class="math-inline">\(d\)</span> is the lateral deviation, <span class="math-inline">\(L\)</span> is the measurement length, and <span class="math-inline">\(\theta\)</span> is the angular deviation in radians.</p>
+<p>For example, if the angular deviation is 0.5 mrad over 4 m:</p>
+<div class="math-display">\[ d\approx4000\times0.0005=2\text{ mm} \]</div>
+<p>A small angular error can therefore create a meaningful displacement at the far end of a long machine.</p>
+<h3 id="84-positioning-tolerance">8.4 Positioning Tolerance</h3>
+<p>A tolerance defines the permitted deviation from a specified value or geometric relationship.</p>
+<p>Suppose a coordinate has a target value of 2,500 mm with a permitted deviation of ±2 mm.</p>
+<p>The acceptable range is:</p>
+<div class="math-display">\[ 2498\text{ mm}\leq X\leq2502\text{ mm} \]</div>
+<p>A measured value of 2,503 mm falls outside this range and requires correction or an authorized engineering disposition.</p>
+<p>Always use the tolerance stated in the applicable drawing or specification. Tolerance values from another machine or installation must not be copied merely because the equipment appears similar.</p>
+<h2 id="9-positioning-different-types-of-industrial-equipment">9. Positioning Different Types of Industrial Equipment</h2>
+<table>
+<thead>
+<tr>
+<th>Equipment</th>
+<th>Main positioning concerns</th>
+<th>Typical verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CNC machine</td>
+<td>Foundation location, machine reference coordinates, orientation, service access</td>
+<td>Survey of designated reference points</td>
+</tr>
+<tr>
+<td>Industrial robot</td>
+<td>Pedestal coordinates, orientation, reach, fixture relationship, safety clearances</td>
+<td>Survey and manufacturer-defined mounting checks</td>
+</tr>
+<tr>
+<td>Conveyor</td>
+<td>Transfer-point coordinates, elevation interfaces, direction, adjoining-station relationship</td>
+<td>Centerline and interface measurements</td>
+</tr>
+<tr>
+<td>Welding fixture</td>
+<td>Locating-pin coordinates, fixture orientation, relationship to robot and workpiece</td>
+<td>Datum-based geometric inspection</td>
+</tr>
+<tr>
+<td>Motor-pump assembly</td>
+<td>Foundation location and shaft relationship to the driven equipment</td>
+<td>Position survey followed by shaft alignment</td>
+</tr>
+<tr>
+<td>Engine test bench</td>
+<td>Bench location, foundation interfaces, test equipment geometry, access and utilities</td>
+<td>Dimensional survey and interface verification</td>
+</tr>
+<tr>
+<td>Press machine</td>
+<td>Foundation layout, feed direction, tooling interfaces, access and structural requirements</td>
+<td>Survey against approved installation drawings</td>
+</tr>
+<tr>
+<td>Automated assembly station</td>
+<td>Workpiece transfer location, station pitch, sensor and actuator interfaces</td>
+<td>Coordinate and interface verification</td>
+</tr>
+</tbody>
+</table>
+<p>The specific reference points differ by equipment type. A robot may be positioned relative to a defined mounting frame, while a CNC machine may require manufacturer-specified geometric reference points.</p>
+<h2 id="10-common-positioning-errors-and-their-consequences">10. Common Positioning Errors and Their Consequences</h2>
+<table>
+<thead>
+<tr>
+<th>Error</th>
+<th>Possible cause</th>
+<th>Potential consequence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Incorrect machine coordinates</td>
+<td>Wrong datum or misread drawing</td>
+<td>Layout mismatch and interface problems</td>
+</tr>
+<tr>
+<td>Incorrect orientation</td>
+<td>Center point correct but angle wrong</td>
+<td>Transfer, reach, or alignment problems</td>
+</tr>
+<tr>
+<td>Incorrect anchor locations</td>
+<td>Foundation layout error</td>
+<td>Installation delays or mounting incompatibility</td>
+</tr>
+<tr>
+<td>Position changes during tightening</td>
+<td>Inadequate adjustment or support control</td>
+<td>Final position outside tolerance</td>
+</tr>
+<tr>
+<td>Incorrect reference points</td>
+<td>Measuring from an unapproved edge</td>
+<td>Incorrect reported coordinates</td>
+</tr>
+<tr>
+<td>Insufficient maintenance clearance</td>
+<td>Layout review incomplete</td>
+<td>Unsafe or difficult maintenance</td>
+</tr>
+<tr>
+<td>Position checked at only one point</td>
+<td>Inadequate measurement plan</td>
+<td>Rotation or geometric errors remain undetected</td>
+</tr>
+<tr>
+<td>Equipment moved after verification</td>
+<td>Subsequent lifting or installation activity</td>
+<td>Previous measurement records no longer represent the final installation</td>
+</tr>
+<tr>
+<td>Unapproved modification to mounting interfaces</td>
+<td>Attempt to force fit</td>
+<td>Structural, alignment, or warranty concerns</td>
+</tr>
+<tr>
+<td>No recorded measurement evidence</td>
+<td>Informal installation practice</td>
+<td>Acceptance and traceability problems</td>
+</tr>
+</tbody>
+</table>
+<h2 id="11-positioning-inspection-record">11. Positioning Inspection Record</h2>
+<p>A positioning inspection record should provide enough information for another engineer to verify the installation independently.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Example or requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Project and equipment ID</td>
+<td>Unique project and machine identification</td>
+</tr>
+<tr>
+<td>Drawing number and revision</td>
+<td>Latest approved layout or installation drawing</td>
+</tr>
+<tr>
+<td>Measurement datum</td>
+<td>Verified survey control point or designated reference</td>
+</tr>
+<tr>
+<td>Target coordinates</td>
+<td>Specified X, Y, and Z values</td>
+</tr>
+<tr>
+<td>Actual coordinates</td>
+<td>Measured X, Y, and Z values</td>
+</tr>
+<tr>
+<td>Orientation</td>
+<td>Target and actual orientation, as applicable</td>
+</tr>
+<tr>
+<td>Tolerance</td>
+<td>Approved coordinate and angular tolerances</td>
+</tr>
+<tr>
+<td>Instrument</td>
+<td>Instrument type and unique identification</td>
+</tr>
+<tr>
+<td>Calibration status</td>
+<td>Valid status where calibration is required</td>
+</tr>
+<tr>
+<td>Initial result</td>
+<td>Recorded before adjustment</td>
+</tr>
+<tr>
+<td>Final result</td>
+<td>Recorded after adjustment and relevant installation activities</td>
+</tr>
+<tr>
+<td>Disposition</td>
+<td>Accepted, corrected, or referred for engineering approval</td>
+</tr>
+<tr>
+<td>Verification</td>
+<td>Responsible personnel and approval records</td>
+</tr>
+</tbody>
+</table>
+<p>For high-accuracy installations, measurement uncertainty must also be considered. If the instrument's uncertainty is significant compared with the permitted tolerance, a measurement that appears to pass may not provide sufficient confidence in compliance.</p>
+<h2 id="12-safety-and-quality-requirements">12. Safety and Quality Requirements</h2>
+<p>Positioning involves lifting operations, heavy equipment, stored energy, pinch points, and work around foundations and other machinery.</p>
+<ul>
+<li>Follow the approved lifting plan and equipment-specific handling instructions.</li>
+<li>Use appropriate lifting equipment with adequate rated capacity and valid inspection status.</li>
+<li>Establish exclusion zones around suspended loads and equipment being moved.</li>
+<li>Apply the required isolation and energy-control procedures before adjustment work.</li>
+<li>Prevent unintended movement using approved support and restraint methods.</li>
+<li>Protect nearby personnel and equipment during movement.</li>
+<li>Verify the final location before drilling, grouting, or permanently anchoring the machine.</li>
+<li>Obtain approval before making changes to foundations, anchors, or structural interfaces.</li>
+<li>Preserve measurement records and approved drawing revisions for commissioning and handover.</li>
+</ul>
+<p>Quality principle: Positioning is complete only when the equipment has been measured against the approved references, its location and orientation meet the specified criteria, and the required records have been accepted.</p>
+<h2 id="13-practical-site-example">13. Practical Site Example</h2>
+<p>An automated assembly line contains three stations connected by conveyors. The middle station must be positioned at its specified plant coordinates so that workpieces transfer correctly from the upstream conveyor into a locating fixture and then move to the downstream conveyor.</p>
+<p>During installation, the team finds that the station's center point is 4 mm away from its target X-coordinate and 3 mm away from its target Y-coordinate.</p>
+<p>The resultant horizontal displacement is:</p>
+<div class="math-display">\[ e=\sqrt{4^2+3^2}=5\text{ mm} \]</div>
+<p>The team then checks the separate coordinate tolerances, the station's angular orientation, foundation interfaces, and conveyor transfer geometry. If any required criterion is outside tolerance, the position is corrected using the approved adjustment method and measured again.</p>
+<p>After positioning is accepted, the team completes leveling, alignment, anchoring, and subsequent verification in the sequence specified by the manufacturer and installation procedure.</p>
+<p>The final checks confirm that the station remains in the required position after the relevant installation operations. The team records the actual measurements and releases the station for the next commissioning activity.</p>
+<p>This example illustrates why positioning is a measured engineering activity, not simply moving equipment until it looks centered.</p>
+<h2 id="14-key-takeaways">14. Key Takeaways</h2>
+<ul>
+<li>Positioning establishes the equipment's specified location and orientation.</li>
+<li>Datum and reference control ensure that all measurements use a consistent, approved starting point.</li>
+<li>Coordinates and tolerances determine whether the installed equipment meets its location requirements.</li>
+<li>Measurement at multiple reference points helps detect both positional and angular errors.</li>
+<li>Leveling and alignment are separate activities that follow their own specified requirements.</li>
+<li>Anchoring, grouting, and tightening can affect the final geometry, so verification may need to be repeated afterward.</li>
+<li>Recorded measurements and authorized approval provide objective evidence that positioning requirements have been satisfied.</li>
+<li>The manufacturer’s installation procedure and approved project drawings take precedence over generic installation practices.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\12_Site_Exec\01_Mechanical\02_Leveling - Leveling</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

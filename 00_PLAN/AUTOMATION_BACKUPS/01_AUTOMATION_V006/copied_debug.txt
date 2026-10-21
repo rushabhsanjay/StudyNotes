@@ -1,0 +1,616 @@
+# 02_PLAN_WISE_2026\02_INDUSTRY3_0\03_Comms\05_Industrial_Ethernet\03_Managed_Switches - Managed switches
+
+## 1. Definition and purpose
+
+A managed Ethernet switch is a network switch that forwards Ethernet frames and provides configurable features for monitoring, controlling, diagnosing, and securing network traffic.
+
+In industrial automation, managed switches connect PLCs, remote I/O, HMIs, VFDs, CNC machines, robot controllers, SCADA servers, industrial PCs, and other Ethernet devices.
+
+Unlike a basic unmanaged switch, a managed switch typically provides a management interface through a web interface, command-line interface (CLI), SNMP, or vendor software. Exact features depend on the model, firmware, and license.
+
+Common industrial uses include:
+
+- Monitoring link status, traffic, errors, and port utilization.
+- Creating VLANs to separate network segments.
+- Configuring Quality of Service (QoS) for traffic prioritization.
+- Supporting network redundancy and rapid recovery after a link failure.
+- Detecting network loops and controlling broadcast storms.
+- Configuring port security, access controls, and management services.
+- Diagnosing communication faults without relying only on PLC alarms.
+
+A managed switch is not automatically a router or firewall. Most industrial switches primarily forward frames at Layer 2, although some models also support Layer 3 routing and advanced security features.
+
+## 2. Where a managed switch fits in industrial Ethernet
+
+```
+PLC ───────┐
+HMI ───────┤
+Remote I/O ┤
+Robot ─────┼── Industrial managed switch
+CNC ───────┤             │
+VFD ───────┘             ├── Other switches
+                          ├── Router / firewall
+                          └── SCADA / engineering network
+```
+
+The switch receives Ethernet frames on one port and forwards them through the appropriate outgoing port based on its forwarding table, VLAN configuration, and other applicable rules.
+
+The switch does not normally interpret PLC ladder logic or determine whether a machine sequence is correct. It transports network traffic. Some advanced switches provide industrial protocol awareness or diagnostics, but that depends on the model.
+
+## 3. Unmanaged versus managed switches
+
+| Feature                           | Unmanaged switch                | Managed switch                                              |
+| --------------------------------- | ------------------------------- | ----------------------------------------------------------- |
+| Basic Ethernet forwarding         | Yes                             | Yes                                                         |
+| Configuration interface           | Usually none                    | Usually web, CLI, SNMP, or vendor tool                      |
+| VLAN configuration                | Usually unavailable             | Commonly supported                                          |
+| Port statistics and diagnostics   | Limited                         | More detailed                                               |
+| QoS configuration                 | Usually unavailable             | Commonly supported                                          |
+| Redundancy protocols              | Usually limited or unavailable  | May support RSTP, MRP, or vendor-specific protocols         |
+| Port security and access controls | Limited                         | Model-dependent                                             |
+| Remote monitoring                 | Usually limited                 | Often supported                                             |
+| Complexity                        | Low                             | Higher                                                      |
+| Typical application               | Simple isolated machine network | Networks requiring diagnostics, segmentation, or redundancy |
+
+A managed switch is not always the best choice for every small machine. The correct selection depends on network size, criticality, topology, support requirements, and the capabilities needed.
+
+## 4. Industrial switch hardware
+
+A managed industrial switch may include the following components.
+
+### 4.1 Ethernet ports
+
+Ports connect to PLCs, HMIs, other switches, routers, servers, and other network devices.
+
+Port types can include:
+
+- Copper Ethernet ports using RJ45 connectors.
+- Fiber-optic ports using supported optical transceivers.
+- SFP or SFP+ slots, where supported.
+- Ports with different negotiated or fixed link speeds, depending on the hardware.
+
+Common Ethernet speeds include 10 Mbps, 100 Mbps, 1 Gbps, and higher speeds on suitable hardware. The speed used by a connection depends on the capabilities and configuration of both ends and the link medium.
+
+### 4.2 Power supply
+
+Industrial switches may support 24 V DC input, redundant power inputs, or other specified industrial supply arrangements.
+
+Check the manufacturer's requirements for voltage range, polarity, grounding, protection, and permitted redundancy arrangements. Two power inputs do not guarantee power redundancy unless the power sources and wiring are independently arranged as intended.
+
+### 4.3 Status LEDs
+
+LEDs may indicate:
+
+- Power status.
+- Port link and activity.
+- Link speed.
+- Redundancy role or ring status.
+- Fault or alarm status.
+
+LED meanings vary by manufacturer. Use the exact model's manual rather than assuming every switch uses the same color scheme.
+
+### 4.4 DIN-rail or panel mounting
+
+Industrial switches commonly use DIN-rail mounting, panel mounting, or rack mounting. Installation must account for ambient temperature, vibration, enclosure protection, airflow, grounding, and electromagnetic compatibility.
+
+### 4.5 Console and management interfaces
+
+Some switches provide a serial console, USB console, dedicated management port, or out-of-band management interface. Others use the regular Ethernet ports for in-band management.
+
+Do not assume a dedicated management port behaves like a normal switched port. Its purpose and addressing behavior depend on the model.
+
+## 5. How an Ethernet switch forwards frames
+
+An Ethernet switch learns which MAC addresses are reachable through its ports.
+
+For example:
+
+```
+PLC MAC address ── Port 1
+HMI MAC address ── Port 2
+Robot MAC address ─ Port 3
+SCADA PC MAC ───── Port 4
+```
+
+When a frame arrives, the switch typically:
+
+1. Reads the source MAC address and learns that it is reachable through the ingress port, subject to VLAN and learning rules.
+2. Examines the destination MAC address.
+3. Looks up the destination in its forwarding database.
+4. Forwards the frame through the appropriate port if the destination is known and forwarding is permitted.
+5. Floods certain unknown-unicast or broadcast frames to eligible ports within the relevant VLAN, according to switch behavior and configuration.
+
+The forwarding database is often called a MAC address table, forwarding database (FDB), or CAM table.
+
+### 5.1 MAC address learning example
+
+Suppose the PLC sends a frame to the HMI, but the switch has not yet learned the HMI's MAC address.
+
+The switch may flood the frame within the appropriate VLAN. When the HMI responds, the switch learns the HMI's source MAC address and ingress port. Later frames to that destination can usually be forwarded directly.
+
+This is normal Ethernet switching behavior, not necessarily a fault.
+
+### 5.2 What a switch does not prove
+
+A port showing link and activity does not prove that:
+
+- The device has the correct IP address.
+- The PLC application is running correctly.
+- The required TCP or UDP service is available.
+- An industrial I/O connection is established.
+- The communication data is valid.
+
+Physical link, Ethernet forwarding, IP connectivity, transport connectivity, and application-level operation are different diagnostic layers.
+
+## 6. Managed switch configuration and management access
+
+A managed switch requires a deliberate configuration strategy. The exact menus and commands vary by vendor, but the core concepts are broadly similar.
+
+### 6.1 Management IP address
+
+The management IP address is used to access the switch for configuration and diagnostics. It is not necessarily the address used by the switch to forward ordinary Layer 2 frames.
+
+A typical management configuration includes:
+
+- Management IP address.
+- Subnet mask or prefix.
+- Default gateway, if remote management across subnets is required.
+- Management VLAN, where supported.
+- Administrator credentials and approved authentication settings.
+- Permitted management protocols and source networks.
+
+Example:
+
+| Setting         | Example value                            |
+| --------------- | ---------------------------------------- |
+| Switch name     | `CELL_A_SW01`                            |
+| Management IP   | `192.168.50.11`                          |
+| Subnet mask     | `255.255.255.0`                          |
+| Default gateway | `192.168.50.1`                           |
+| Management VLAN | VLAN 50                                  |
+| Time source     | Approved plant NTP server                |
+| Monitoring      | SNMP, syslog, or supported vendor system |
+
+These values are illustrative. Use the plant's approved addressing and management plan.
+
+A switch can forward traffic even when its management IP is incorrectly configured, provided the data-plane configuration is otherwise valid. However, remote administration and monitoring may fail.
+
+### 6.2 In-band and out-of-band management
+
+In-band management uses the same physical network infrastructure that carries operational traffic.
+
+Out-of-band management uses a separate management path or interface, where the hardware supports it.
+
+Out-of-band access can improve maintainability because a fault in the production traffic path may not remove administrative access. It still requires appropriate power, connectivity, and access controls.
+
+### 6.3 Configuration access methods
+
+| Method                     | Typical purpose                                        | Important consideration                                        |
+| -------------------------- | ------------------------------------------------------ | -------------------------------------------------------------- |
+| Web interface              | Configuration and status monitoring                    | Protect access with secure protocols and strong authentication |
+| CLI                        | Detailed configuration and troubleshooting             | Commands and syntax are vendor-specific                        |
+| SNMP                       | Monitoring and, in some configurations, management     | Use secure versions and restrict access                        |
+| Vendor management software | Device discovery, configuration, topology, diagnostics | Confirm compatibility and backup behavior                      |
+| Console interface          | Initial setup or recovery                              | Requires the correct cable, interface, and settings            |
+| Configuration file         | Backup, restore, and standardization                   | Restore only compatible and verified configurations            |
+
+For routine maintenance, retain a known-good configuration backup and document the exact switch model, firmware version, and configuration revision.
+
+## 7. Essential managed switch features
+
+### 7.1 VLAN support
+
+A Virtual LAN (VLAN) divides a switch's Layer 2 network into separate logical broadcast domains.
+
+For example, a switch may carry traffic for a machine-control VLAN and a monitoring VLAN over the same physical hardware. VLAN configuration and inter-VLAN routing will be covered in the next topic.
+
+### 7.2 Quality of Service
+
+Quality of Service (QoS) classifies traffic and can prioritize certain traffic classes during congestion.
+
+Industrial uses may include prioritizing time-sensitive control traffic over lower-priority monitoring or file-transfer traffic.
+
+QoS does not automatically make an overloaded network deterministic. End-to-end performance depends on the entire path, traffic classification, queue configuration, device capabilities, and the communication protocol.
+
+### 7.3 Redundancy
+
+Managed switches may support mechanisms such as:
+
+- Rapid Spanning Tree Protocol (RSTP).
+- Multiple Spanning Tree Protocol (MSTP).
+- Media Redundancy Protocol (MRP), on supported industrial networks.
+- Vendor-specific ring redundancy mechanisms.
+- Link aggregation, where supported and correctly configured.
+
+Redundancy mechanisms differ in topology, compatibility, and recovery behavior. Do not enable multiple overlapping redundancy protocols without understanding their interaction.
+
+### 7.4 Port mirroring
+
+Port mirroring copies selected traffic from one or more source ports or VLANs to a monitoring port.
+
+A maintenance engineer can connect an approved packet-capture workstation to the monitoring port and inspect traffic using suitable diagnostic software.
+
+Limitations include:
+
+- The mirrored traffic may exceed the monitoring port's capacity.
+- Some packets may be dropped during heavy traffic.
+- The capture point may not include traffic outside the selected ports or VLANs.
+- Captured data may contain sensitive operational information.
+
+Use packet capture in accordance with plant authorization and security requirements.
+
+### 7.5 Port statistics and error counters
+
+Managed switches commonly report:
+
+- Received and transmitted packets.
+- Broadcast and multicast counters.
+- CRC or FCS errors.
+- Input and output discards.
+- Interface utilization.
+- Link up/down events.
+- Negotiated speed and duplex.
+- Queue drops, where supported.
+
+These counters help distinguish physical-layer faults, congestion, configuration problems, and device-side communication failures.
+
+### 7.6 Access control and port security
+
+Depending on the model, features may include:
+
+- Limiting the number of learned MAC addresses on a port.
+- Restricting permitted management protocols.
+- Port-based authentication.
+- Access Control Lists (ACLs).
+- DHCP snooping or related protections.
+- Storm control for broadcast, multicast, or unknown-unicast traffic.
+
+Use such features carefully. A PLC, robot, or HMI replacement may present a new MAC address and trigger a port-security violation if the switch is configured to allow only a previously learned or explicitly authorized address.
+
+## 8. Network loops and broadcast storms
+
+An Ethernet loop occurs when redundant Layer 2 paths create a forwarding cycle that is not controlled by a suitable loop-prevention or redundancy mechanism.
+
+```
+Switch A ───── Switch B
+   │               │
+   │               │
+   └──── Switch C ─┘
+```
+
+The diagram represents a possible physical loop. A loop is not automatically faulty if the topology and switches are configured for a compatible redundancy mechanism. Without appropriate control, however, Ethernet frames can circulate repeatedly and multiply.
+
+Possible symptoms include:
+
+- High broadcast or multicast traffic.
+- Heavy switch CPU or port utilization.
+- Widespread communication loss.
+- Rapidly changing MAC address table entries.
+- Repeated link events or network instability.
+- Multiple PLCs and HMIs becoming unreachable at the same time.
+
+Do not connect spare switch ports together as an improvised redundancy measure. Confirm the approved topology and loop-control configuration first.
+
+### 8.1 Storm control
+
+Storm control can limit selected types of traffic on supported switches. It is a containment feature, not a substitute for a correct topology or loop-prevention design.
+
+Overly restrictive thresholds can also suppress legitimate traffic. Configure thresholds according to the network design and validate them under representative operating conditions.
+
+## 9. Spanning Tree and industrial redundancy
+
+### 9.1 STP and RSTP
+
+Spanning Tree Protocol (STP) and Rapid Spanning Tree Protocol (RSTP) prevent Layer 2 forwarding loops by placing selected redundant paths into a non-forwarding state and recalculating the topology when necessary.
+
+RSTP generally converges faster than classic STP, but actual recovery time depends on topology, implementation, configuration, and device behavior.
+
+### 9.2 MRP and industrial ring networks
+
+Media Redundancy Protocol (MRP) is used in supported industrial Ethernet ring designs. It manages a ring topology so that a link or node failure can be handled while avoiding an uncontrolled Layer 2 loop.
+
+The manager role, client behavior, ring ports, and recovery characteristics must follow the supported design and device documentation.
+
+### 9.3 Redundancy design checklist
+
+- Confirm that every switch supports the selected redundancy protocol.
+- Verify that the protocol and roles are compatible across all ring or redundant-path devices.
+- Document the intended physical topology and port assignments.
+- Confirm that the active and backup paths behave as designed.
+- Test recovery during an approved maintenance window.
+- Observe the impact on PLC connections, I/O traffic, HMIs, and SCADA.
+- Record measured recovery behavior and any alarms.
+- Keep a rollback plan and known-good configuration backups.
+
+A redundant cable alone is not a complete redundancy system. The switching behavior must be designed, configured, and tested.
+
+## 10. Managed switch diagnostics for maintenance engineers
+
+A managed switch is valuable because it exposes network evidence that is unavailable from many basic switches.
+
+### 10.1 Port status
+
+Check:
+
+- Is the port administratively enabled?
+- Is the physical link up?
+- What speed and duplex have been negotiated?
+- Is the port repeatedly going up and down?
+- Is the expected device connected to the correct port?
+- Is the port assigned to the correct VLAN?
+- Is a port-security or access-control rule blocking traffic?
+
+An administratively disabled port will not operate normally even if the cable and connected device are healthy.
+
+### 10.2 CRC and FCS errors
+
+Cyclic Redundancy Check (CRC) and Frame Check Sequence (FCS) errors indicate that received Ethernet frames failed an integrity check.
+
+Possible causes include:
+
+- Damaged or poorly terminated copper cabling.
+- Electrical interference or unsuitable cable routing.
+- Faulty connectors or ports.
+- Problems with a fiber link or optical transceiver.
+- Hardware faults.
+
+Check whether the errors increase over time. A historical nonzero counter is less informative than a counter that continuously increases during the fault.
+
+### 10.3 Discards and congestion
+
+A discard counter may increase when frames are dropped because of queue congestion, buffer limitations, policy rules, or other implementation-specific conditions.
+
+If discards increase while the link is heavily loaded, examine utilization, traffic patterns, QoS configuration, and the capacity of the outgoing port.
+
+Do not assume every discard indicates a faulty cable. CRC/FCS errors and congestion-related discards point toward different classes of possible causes.
+
+### 10.4 Link flapping
+
+Link flapping means that a port repeatedly transitions between link-up and link-down states.
+
+Investigate:
+
+- Cable movement, damage, and connector seating.
+- Device power stability.
+- Port and device logs.
+- Negotiated speed and duplex.
+- Environmental conditions, including vibration and temperature.
+- Firmware or hardware faults.
+- The possibility of a faulty remote interface.
+
+A port event log with timestamps is particularly useful when the fault is intermittent.
+
+### 10.5 MAC address table
+
+The MAC address table can help identify the switch port on which a device is currently learned.
+
+If a MAC address repeatedly appears on different ports, possible causes include a topology change, a redundant path event, device movement, a loop, or duplicate use of the same MAC address.
+
+Interpret this evidence alongside topology and event logs. MAC movement alone does not prove a loop.
+
+## 11. Troubleshooting scenarios
+
+| Symptom                                           | Possible cause                                                                  | Diagnostic action                                                          |
+| ------------------------------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| PLC port LED is off                               | Cable, power, disabled port, or failed interface                                | Check both endpoints, port status, and cable                               |
+| Port LED is on, but PLC is unreachable            | Incorrect IP, VLAN mismatch, duplicate IP, or application issue                 | Verify addressing, VLAN, ARP, and application connectivity                 |
+| Several devices fail together                     | Uplink fault, switch failure, loop, or power issue                              | Check common switch, uplink, power, and event logs                         |
+| Communication drops intermittently                | Link flapping, errors, congestion, or redundancy events                         | Examine counters and logs over the fault period                            |
+| Errors increase on one port                       | Cabling, connector, transceiver, or interface problem                           | Inspect the physical path and compare counters                             |
+| PLC works but HMI does not                        | HMI configuration, VLAN, access rule, or protocol issue                         | Compare endpoint settings and port configuration                           |
+| Devices in different VLANs cannot communicate     | Missing routing or policy configuration                                         | Verify Layer 3 interfaces, routes, and firewall rules                      |
+| New device cannot connect after replacement       | Port security, VLAN, or IP mismatch                                             | Validate device identity and approved port configuration                   |
+| Entire cell becomes unstable after a cable change | Loop or redundancy misconfiguration                                             | Inspect topology and redundancy status                                     |
+| Management interface is inaccessible              | Wrong management IP/VLAN, disabled service, route issue, or credentials problem | Check local access, configuration records, and approved recovery procedure |
+
+## 12. Industrial switch cybersecurity
+
+Managed switches are network infrastructure, so their configuration is part of the plant's cybersecurity boundary.
+
+Recommended practices include:
+
+- Change default credentials and use unique, approved administrator credentials.
+- Restrict management access to authorized workstations and networks.
+- Use secure management protocols supported by the device, such as HTTPS and SSH.
+- Disable unused services and ports where appropriate.
+- Use SNMPv3 where supported and required for secure monitoring.
+- Restrict SNMP write access and other configuration interfaces.
+- Keep firmware at an approved, validated version.
+- Back up configurations and protect the backups.
+- Record configuration changes and administrator activity where available.
+- Use VLANs, ACLs, firewalls, and network segmentation according to the approved architecture.
+- Avoid connecting industrial management interfaces directly to untrusted networks.
+- Verify compatibility and operational risk before changing firmware or security settings.
+
+Security hardening can interrupt production if applied without checking dependencies. For example, disabling a service may break an existing monitoring tool, while changing VLAN settings can disconnect a PLC or engineering workstation.
+
+## 13. Commissioning a managed industrial switch
+
+Use a controlled procedure when installing or replacing a managed switch.
+
+### Before installation
+
+- Confirm the exact manufacturer, model, hardware revision, and firmware.
+- Check power requirements, temperature ratings, mounting, grounding, and environmental suitability.
+- Obtain the approved network topology and port allocation.
+- Identify the management IP address and VLAN.
+- Determine required VLANs, redundancy protocols, QoS, and security settings.
+- Obtain a known-good configuration if the switch is replacing an existing unit.
+
+### During configuration
+
+- Assign the approved switch name and management address.
+- Configure administrator access and permitted management services.
+- Configure port descriptions to identify connected equipment.
+- Apply VLAN and port settings according to the design.
+- Configure redundancy only as specified by the topology.
+- Configure monitoring and time synchronization where supported.
+- Save the configuration using the device's required procedure.
+
+### After installation
+
+- Verify all expected links and negotiated speeds.
+- Confirm VLAN membership and port status.
+- Confirm that redundancy is healthy, if used.
+- Check error counters and event logs.
+- Verify required PLC, HMI, robot, CNC, and SCADA communications.
+- Test recovery behavior only under an approved test plan.
+- Save a final configuration backup.
+- Update port maps, network diagrams, asset records, and maintenance documentation.
+
+Do not disconnect production uplinks or force redundancy failover merely to see what happens. Planned tests need an approved maintenance window and a recovery plan.
+
+## 14. Preventive maintenance and lifecycle management
+
+Managed switches should be included in the plant's maintenance and asset-management system.
+
+| Maintenance item      | What to check                                        | Why it matters                           |
+| --------------------- | ---------------------------------------------------- | ---------------------------------------- |
+| Power and environment | Supply condition, temperature, ventilation, mounting | Prevents power and thermal faults        |
+| Port status           | Unexpected down ports and link flapping              | Identifies intermittent connections      |
+| Error counters        | CRC/FCS errors and discards                          | Detects physical faults and congestion   |
+| Network utilization   | Port load, broadcasts, and queue drops               | Helps identify capacity problems         |
+| Configuration backup  | Current saved configuration and recovery procedure   | Reduces replacement and restoration time |
+| Firmware inventory    | Version, vendor support, approved update status      | Supports reliability and security        |
+| Redundancy status     | Ring state, blocked ports, protocol alarms           | Helps maintain resilience                |
+| Security settings     | Credentials, permitted services, access rules        | Reduces unauthorized access risk         |
+| Asset documentation   | Model, serial number, location, port map             | Supports repair and replacement          |
+| Event logs            | Link changes, reboots, faults, configuration events  | Helps identify recurring failures        |
+
+A switch that has been operating without visible faults may still have increasing error counters, a failed redundancy path, outdated firmware, or an undocumented configuration change. Trend data is often more useful than a one-time status check.
+
+## 15. Replacing a managed switch without losing the network configuration
+
+A switch replacement is not always a simple plug-and-play operation. Even if the replacement has the same number of ports, its default settings may differ from the original.
+
+Before replacement, capture:
+
+- Full configuration backup.
+- Management IP address, mask, gateway, and management VLAN.
+- Port-to-device mapping.
+- VLAN IDs and tagged/untagged port assignments.
+- Port speed and duplex settings, if manually configured.
+- Redundancy roles and protocol settings.
+- QoS, ACL, and port-security settings.
+- Firmware version and hardware model.
+- Relevant diagnostics and event logs.
+
+During replacement:
+
+1. Verify the replacement model supports the required features and protocols.
+2. Restore or rebuild the configuration using the manufacturer's supported method.
+3. Confirm port numbering and interface naming. Similar-looking models may map ports differently.
+4. Verify VLAN and redundancy configuration before reconnecting all network paths.
+5. Confirm that the switch's management address does not conflict with another device.
+6. Test the required machine communications and inspect switch diagnostics.
+7. Store the final configuration and record the replacement in the asset register.
+
+Do not assume that copying a configuration file between different models or firmware versions is safe. Validate compatibility first.
+
+## 16. Practical exercises
+
+### Exercise 1: Identify a port fault
+
+A PLC port shows link-up, but the PLC cannot communicate with the HMI. The switch shows no CRC errors.
+
+List at least five checks you would perform before replacing the switch.
+
+### Exercise 2: Diagnose a physical-layer problem
+
+A switch port's CRC counter increases continuously while a machine is running. Other ports show no corresponding increase.
+
+Explain the most likely fault category and describe how you would narrow down the cause.
+
+### Exercise 3: Understand a network loop
+
+After a technician connects an additional Ethernet cable between two switches, several PLCs become unreachable and broadcast traffic rises sharply.
+
+Explain the likely mechanism, the switch features that may help prevent it, and the safe troubleshooting approach.
+
+### Exercise 4: Plan a switch replacement
+
+An existing managed switch connects a PLC, HMI, robot controller, remote I/O adapter, and an uplink to another switch. The network uses VLANs and ring redundancy.
+
+Prepare a replacement checklist covering configuration, physical connections, redundancy, validation, and documentation.
+
+### Exercise 5: Interpret switch counters
+
+A port shows increasing output discards but no increasing CRC errors.
+
+Explain why congestion or queue behavior should be investigated before assuming a cable fault. Identify the additional counters and traffic information that would help.
+
+## 17. Interview questions and answers
+
+Q1. What is a managed switch?
+
+An Ethernet switch that supports configurable network functions and provides management, monitoring, and diagnostic capabilities.
+
+Q2. What is the difference between a managed and an unmanaged switch?
+
+A managed switch offers configurable features such as VLANs, diagnostics, QoS, and possibly redundancy and security controls. An unmanaged switch generally forwards Ethernet traffic with little or no user configuration.
+
+Q3. What is a MAC address table?
+
+A forwarding database that associates learned MAC addresses with switch ports and relevant VLAN context.
+
+Q4. What is a VLAN?
+
+A logical Layer 2 broadcast domain. It allows a physical switching infrastructure to carry multiple logically separated Ethernet networks.
+
+Q5. What is port mirroring?
+
+A feature that copies selected traffic to a monitoring port for packet capture and diagnosis.
+
+Q6. What are CRC errors?
+
+Errors indicating that received Ethernet frames failed their frame integrity check. They can point to cabling, connectors, transceivers, ports, or other physical-path problems.
+
+Q7. What is link flapping?
+
+Repeated transitions between link-up and link-down states on a network interface.
+
+Q8. Why are RSTP and MRP used?
+
+They support loop prevention or controlled recovery in their respective network designs. Their exact behavior and compatibility depend on the topology and equipment.
+
+Q9. Does a managed switch route between IP subnets?
+
+Not necessarily. Many managed industrial switches provide Layer 2 switching only. Inter-subnet routing requires a router or a switch with appropriate Layer 3 capabilities and configuration.
+
+Q10. Can a PLC communicate through a switch even if the switch's management IP is incorrect?
+
+Potentially, yes. The management address is separate from ordinary Layer 2 forwarding, although VLAN, routing, security, and other configuration errors can still prevent communication.
+
+Q11. Why should switch configurations be backed up?
+
+A verified backup reduces restoration time after a failure or replacement and helps preserve VLAN, redundancy, security, and port configurations.
+
+Q12. Why is a link LED insufficient for diagnosing communication?
+
+It confirms only limited physical-link information. It does not prove correct IP addressing, protocol connectivity, or application-level communication.
+
+## 18. Final mental model
+
+```
+Physical ports and cables
+          ↓
+Ethernet link and frame reception
+          ↓
+MAC learning and frame forwarding
+          ↓
+VLAN membership and traffic controls
+          ↓
+QoS, redundancy, security, and monitoring
+          ↓
+IP network and application communication
+          ↓
+PLC / HMI / robot / CNC / SCADA operation
+```
+
+The key maintenance principle is to use the managed switch as a source of evidence. Port status, MAC tables, VLAN configuration, error counters, traffic utilization, redundancy status, and event logs can help isolate faults before replacing hardware or changing PLC configurations.
+
+A switch can be electrically healthy and still be misconfigured. Conversely, a correctly configured switch cannot compensate for damaged cabling, incorrect endpoint settings, or a failed application service.
+
+## NEXT TOPIC
+
+`02_PLAN_WISE_2026\02_INDUSTRY3_0\03_Comms\05_Industrial_Ethernet\04_VLAN_Basics - VLAN basics`

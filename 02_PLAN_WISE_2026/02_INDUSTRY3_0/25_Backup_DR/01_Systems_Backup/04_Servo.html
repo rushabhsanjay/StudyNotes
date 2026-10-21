@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Servo Backup and Disaster Recovery</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Servo Backup and Disaster Recovery</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and scope</a></li>
+<li><a href="#2-servo-system-architecture">2. Servo system architecture</a></li>
+<li><a href="#3-essential-terminology">3. Essential terminology</a></li>
+<li><a href="#4-what-must-be-backed-up">4. What must be backed up?</a></li>
+<li><a href="#5-servo-backup-methods">5. Servo backup methods</a><ul>
+<li><a href="#51-engineering-software-backup">5.1 Engineering software backup</a></li>
+<li><a href="#52-parameter-transfer-using-a-keypad-or-memory-device">5.2 Parameter transfer using a keypad or memory device</a></li>
+<li><a href="#53-controller-and-motion-project-backup">5.3 Controller and motion-project backup</a></li>
+<li><a href="#54-manual-parameter-recording">5.4 Manual parameter recording</a></li>
+</ul>
+</li>
+<li><a href="#6-critical-servo-parameters">6. Critical servo parameters</a></li>
+<li><a href="#7-feedback-and-encoder-recovery">7. Feedback and encoder recovery</a><ul>
+<li><a href="#71-incremental-and-absolute-feedback">7.1 Incremental and absolute feedback</a></li>
+<li><a href="#72-encoder-replacement">7.2 Encoder replacement</a></li>
+</ul>
+</li>
+<li><a href="#8-mechanical-scaling-and-position-reference">8. Mechanical scaling and position reference</a><ul>
+<li><a href="#example">Example</a></li>
+<li><a href="#position-related-records">Position-related records</a></li>
+</ul>
+</li>
+<li><a href="#9-servo-tuning-and-motion-behavior">9. Servo tuning and motion behavior</a><ul>
+<li><a href="#91-important-tuning-concepts">9.1 Important tuning concepts</a></li>
+<li><a href="#92-when-tuning-must-be-reviewed">9.2 When tuning must be reviewed</a></li>
+</ul>
+</li>
+<li><a href="#10-servo-backup-frequency-and-triggers">10. Servo backup frequency and triggers</a></li>
+<li><a href="#11-servo-restoration-procedure">11. Servo restoration procedure</a><ul>
+<li><a href="#111-pre-restoration-checklist">11.1 Pre-restoration checklist</a></li>
+<li><a href="#112-restoration-sequence">11.2 Restoration sequence</a></li>
+<li><a href="#113-special-precautions-for-vertical-axes">11.3 Special precautions for vertical axes</a></li>
+</ul>
+</li>
+<li><a href="#12-post-restoration-verification">12. Post-restoration verification</a><ul>
+<li><a href="#121-functional-test-checklist">12.1 Functional test checklist</a></li>
+</ul>
+</li>
+<li><a href="#13-common-servo-disaster-recovery-scenarios">13. Common servo disaster-recovery scenarios</a><ul>
+<li><a href="#131-servo-drive-failure">13.1 Servo drive failure</a></li>
+<li><a href="#132-servo-motor-replacement">13.2 Servo motor replacement</a></li>
+<li><a href="#133-position-loss-or-homing-failure">13.3 Position loss or homing failure</a></li>
+<li><a href="#134-following-error-or-vibration-after-restoration">13.4 Following error or vibration after restoration</a></li>
+<li><a href="#135-plc-or-motion-controller-replacement">13.5 PLC or motion-controller replacement</a></li>
+<li><a href="#136-servo-obsolescence-migration">13.6 Servo obsolescence migration</a></li>
+</ul>
+</li>
+<li><a href="#14-troubleshooting-reference">14. Troubleshooting reference</a></li>
+<li><a href="#15-practical-maintenance-implementation">15. Practical maintenance implementation</a><ul>
+<li><a href="#151-servo-backup-register">15.1 Servo backup register</a></li>
+<li><a href="#152-suggested-folder-structure">15.2 Suggested folder structure</a></li>
+<li><a href="#153-work-order-integration">15.3 Work-order integration</a></li>
+</ul>
+</li>
+<li><a href="#16-recovery-drills-and-audit">16. Recovery drills and audit</a><ul>
+<li><a href="#161-recovery-drill">16.1 Recovery drill</a></li>
+<li><a href="#162-audit-checklist">16.2 Audit checklist</a></li>
+</ul>
+</li>
+<li><a href="#17-servo-backup-management-kpis">17. Servo backup management KPIs</a></li>
+<li><a href="#18-interview-questions-and-technical-answers">18. Interview questions and technical answers</a></li>
+<li><a href="#19-final-engineering-principles">19. Final engineering principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-and-scope">1. Purpose and scope</h2>
+<p>A servo system provides precise control of position, speed, torque, and motion. It typically consists of a servo drive, servo motor, feedback device, motion controller or PLC, communication network, and mechanical transmission.</p>
+<p>Servo backup and disaster recovery preserve the configuration and supporting information needed to restore the system after drive failure, motor replacement, encoder replacement, parameter corruption, controller replacement, or equipment migration.</p>
+<p>Servo recovery is more complex than restoring a basic VFD because the system may depend on encoder feedback, electronic gearing, motion profiles, homing sequences, mechanical reference positions, and coordinated axes.</p>
+<p>The objectives are to:</p>
+<ul>
+<li>Preserve approved servo-drive and motion-controller configurations.</li>
+<li>Reduce downtime after a drive, motor, encoder, or controller failure.</li>
+<li>Restore communication between the drive, PLC, and motion system.</li>
+<li>Preserve axis scaling, travel limits, homing behavior, and motion parameters.</li>
+<li>Prevent unexpected movement during commissioning.</li>
+<li>Maintain traceable configuration revisions and recovery procedures.</li>
+<li>Support servo replacement, obsolescence migration, and engineering changes.</li>
+</ul>
+<p>Core principle: A servo backup must preserve the relationship between the drive, motor, feedback device, controller, and machine mechanics. A parameter file alone may not be sufficient.</p>
+<h2 id="2-servo-system-architecture">2. Servo system architecture</h2>
+<pre><code>PLC / Motion Controller / CNC
+        ↓
+Motion command and feedback interface
+        ↓
+Servo Drive
+        ↓
+Power conversion and current control
+        ↓
+Servo Motor
+        ↓
+Coupling / Gearbox / Ball Screw / Conveyor
+        ↓
+Machine Axis and Mechanical Load
+
+Servo Motor or Axis Feedback
+        ↓
+Servo Drive / Motion Controller
+        ↓
+Position, speed, and following-error monitoring
+</code></pre>
+<p>The exact architecture depends on the equipment. Feedback may connect directly to the servo drive, while additional position feedback may be connected to the controller or CNC.</p>
+<h2 id="3-essential-terminology">3. Essential terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+<th>Industrial example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Servo drive</td>
+<td>Electronic unit that regulates motor current, speed, and position according to its control architecture</td>
+<td>Mitsubishi MR-J series drive</td>
+</tr>
+<tr>
+<td>Servo motor</td>
+<td>Motor designed for controlled motion and dynamic response</td>
+<td>Motor driving a ball screw</td>
+</tr>
+<tr>
+<td>Encoder</td>
+<td>Device that measures angular position or movement</td>
+<td>Incremental or absolute encoder</td>
+</tr>
+<tr>
+<td>Resolver</td>
+<td>Electromagnetic position-feedback device</td>
+<td>Feedback device used in a supported servo system</td>
+</tr>
+<tr>
+<td>Motion controller</td>
+<td>Controller that generates or coordinates motion commands</td>
+<td>PLC motion module or dedicated controller</td>
+</tr>
+<tr>
+<td>Axis</td>
+<td>Controlled mechanical degree of freedom</td>
+<td>Robot joint or CNC linear axis</td>
+</tr>
+<tr>
+<td>Electronic gearing</td>
+<td>Software-defined motion ratio between axes</td>
+<td>Slave axis follows a master axis</td>
+</tr>
+<tr>
+<td>Electronic camming</td>
+<td>Coordinated motion based on a defined relationship between master and slave positions</td>
+<td>Synchronized transfer mechanism</td>
+</tr>
+<tr>
+<td>Homing</td>
+<td>Procedure used to establish a machine reference position</td>
+<td>Moving an axis to a home switch</td>
+</tr>
+<tr>
+<td>Absolute position</td>
+<td>Position represented relative to a defined reference without requiring the same incremental count sequence as an incremental system</td>
+<td>Absolute encoder position</td>
+</tr>
+<tr>
+<td>Incremental position</td>
+<td>Position calculated from incremental feedback counts and a reference established by the system</td>
+<td>Encoder counts accumulated after homing</td>
+</tr>
+<tr>
+<td>Following error</td>
+<td>Difference between commanded and actual position</td>
+<td>Axis cannot follow the commanded movement</td>
+</tr>
+<tr>
+<td>Gain tuning</td>
+<td>Adjustment of control-loop response</td>
+<td>Position-loop gain adjustment</td>
+</tr>
+<tr>
+<td>Inertia ratio</td>
+<td>Relationship between reflected load inertia and motor inertia</td>
+<td>Servo sizing and tuning consideration</td>
+</tr>
+<tr>
+<td>Servo parameter set</td>
+<td>Configuration controlling the drive's operation</td>
+<td>Torque limits, gains, and input assignments</td>
+</tr>
+<tr>
+<td>Motion project</td>
+<td>Controller-side configuration for axes, motion instructions, scaling, and coordination</td>
+<td>PLC motion project</td>
+</tr>
+<tr>
+<td>Absolute encoder battery</td>
+<td>Battery used by certain encoder systems to preserve position information while power is removed</td>
+<td>Battery-backed absolute-position retention</td>
+</tr>
+<tr>
+<td>Safety configuration</td>
+<td>Configuration of supported safety-related motion functions</td>
+<td>Safe Torque Off or other supported functions</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-what-must-be-backed-up">4. What must be backed up?</h2>
+<p>A complete recovery package may require separate backups for the servo drive, motion controller, CNC or robot controller, network configuration, and machine reference information.</p>
+<table>
+<thead>
+<tr>
+<th>Backup item</th>
+<th>Typical contents</th>
+<th>Recovery significance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Drive identity</td>
+<td>Manufacturer, series, model, capacity, serial number, and firmware</td>
+<td>Confirms equipment compatibility</td>
+</tr>
+<tr>
+<td>Servo parameters</td>
+<td>Gains, torque limits, speed limits, filters, and control settings</td>
+<td>Restores drive behavior</td>
+</tr>
+<tr>
+<td>Motor data</td>
+<td>Model, rated current, rated speed, rated torque, and other supported nameplate data</td>
+<td>Supports correct motor operation</td>
+</tr>
+<tr>
+<td>Feedback configuration</td>
+<td>Encoder type, resolution, feedback assignment, and supported interface settings</td>
+<td>Restores position measurement</td>
+</tr>
+<tr>
+<td>Motion-controller project</td>
+<td>Axis definitions, motion instructions, scaling, and coordination logic</td>
+<td>Restores controller-side behavior</td>
+</tr>
+<tr>
+<td>Axis configuration</td>
+<td>Travel limits, velocity, acceleration, deceleration, and positioning settings</td>
+<td>Restores axis operating limits</td>
+</tr>
+<tr>
+<td>Homing configuration</td>
+<td>Reference method, direction, offset, and sequence settings</td>
+<td>Restores machine referencing</td>
+</tr>
+<tr>
+<td>Mechanical scaling</td>
+<td>Gear ratio, screw pitch, pulley ratio, and units conversion</td>
+<td>Preserves command-to-motion relationship</td>
+</tr>
+<tr>
+<td>Network settings</td>
+<td>Supported bus, node address, device name, and communication mapping</td>
+<td>Restores controller communication</td>
+</tr>
+<tr>
+<td>Safety-related configuration</td>
+<td>Supported safety settings and required validation records</td>
+<td>Supports safety-system recovery</td>
+</tr>
+<tr>
+<td>Tuning records</td>
+<td>Gain values, test conditions, and stability observations</td>
+<td>Supports controlled recommissioning</td>
+</tr>
+<tr>
+<td>Position data</td>
+<td>Approved machine reference data and applicable position offsets</td>
+<td>Prevents incorrect machine coordinates</td>
+</tr>
+<tr>
+<td>Engineering files</td>
+<td>Native drive, PLC, CNC, or motion-controller project files</td>
+<td>Supports restoration and comparison</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Electrical drawings, feedback wiring, axis diagrams, and manuals</td>
+<td>Supports troubleshooting</td>
+</tr>
+<tr>
+<td>Test records</td>
+<td>Homing, positioning, following-error, and functional results</td>
+<td>Establishes acceptance criteria</td>
+</tr>
+</tbody>
+</table>
+<p>Some values may be stored in different devices. For example, servo parameters may reside in the drive while axis scaling and motion sequences reside in the PLC. Backing up only one device can leave the recovery package incomplete.</p>
+<h2 id="5-servo-backup-methods">5. Servo backup methods</h2>
+<h3 id="51-engineering-software-backup">5.1 Engineering software backup</h3>
+<p>Use the manufacturer's supported engineering software to retrieve and save the servo configuration.</p>
+<p>Typical procedure:</p>
+<ol>
+<li>Identify the exact drive series, motor model, feedback type, firmware, and engineering software version.</li>
+<li>Establish a supported communication connection.</li>
+<li>Upload the supported parameters from the installed drive.</li>
+<li>Save the native project or parameter archive.</li>
+<li>Export a readable parameter report when supported.</li>
+<li>Back up the PLC, motion controller, CNC, or robot project separately as required.</li>
+<li>Record mechanical scaling, homing settings, and position-reference information.</li>
+<li>Compare the retrieved configuration with the approved baseline.</li>
+<li>Verify the saved files can be reopened.</li>
+<li>Store the archive under controlled revision and access rules.</li>
+</ol>
+<p>Examples of engineering environments include Mitsubishi MR Configurator2 for supported MR-J drives, Siemens Startdrive for supported SINAMICS drives, Rockwell Automation Studio 5000 and applicable drive tools for supported servo systems, and Omron Sysmac Studio for compatible motion systems.</p>
+<p>The software and procedure must match the specific product generation. Do not assume that a tool supporting one servo series supports every drive from that manufacturer.</p>
+<h3 id="52-parameter-transfer-using-a-keypad-or-memory-device">5.2 Parameter transfer using a keypad or memory device</h3>
+<p>Some servo systems support parameter transfer using an operator panel, memory module, or other manufacturer-specific method.</p>
+<p>Before using this method, verify:</p>
+<ul>
+<li>Supported source and target drive models.</li>
+<li>Firmware and hardware compatibility.</li>
+<li>Whether all required parameters are copied.</li>
+<li>Whether feedback, safety, and communication settings require separate configuration.</li>
+<li>Whether machine-specific offsets or tuning values need additional records.</li>
+</ul>
+<p>A copied parameter set is not proof that the replacement drive, motor, and feedback device are compatible.</p>
+<h3 id="53-controller-and-motion-project-backup">5.3 Controller and motion-project backup</h3>
+<p>The servo drive's parameters are only one part of the motion system. Back up the controller project using the supported method.</p>
+<p>Include, as applicable:</p>
+<ul>
+<li>PLC program and motion configuration.</li>
+<li>Axis definitions and axis-to-drive assignments.</li>
+<li>Electronic gearing and camming data.</li>
+<li>Position scaling and engineering units.</li>
+<li>Homing sequences and offsets.</li>
+<li>Motion profiles and positioning recipes.</li>
+<li>Network and device configuration.</li>
+<li>Alarm handling and fault recovery logic.</li>
+<li>Safety-controller configuration and validation records.</li>
+<li>Required libraries, firmware information, and software versions.</li>
+</ul>
+<p>Record the controller's actual installed program revision. A development project that was never downloaded to the running machine must not be mistaken for the active production program.</p>
+<h3 id="54-manual-parameter-recording">5.4 Manual parameter recording</h3>
+<p>Manual records are useful as supporting documentation, especially for legacy equipment, but they are less reliable than validated electronic archives.</p>
+<p>Record at least:</p>
+<ul>
+<li>Drive and motor model.</li>
+<li>Firmware and software version.</li>
+<li>Encoder type and resolution.</li>
+<li>Control mode and command source.</li>
+<li>Position, speed, and torque limits.</li>
+<li>Gains and tuning-related settings.</li>
+<li>Acceleration and deceleration limits.</li>
+<li>Homing method and offset.</li>
+<li>Gear ratio and mechanical scaling.</li>
+<li>Communication configuration.</li>
+<li>Relevant alarm history.</li>
+<li>Safety-related configuration and validation status.</li>
+</ul>
+<h2 id="6-critical-servo-parameters">6. Critical servo parameters</h2>
+<p>Parameter numbers and meanings vary between manufacturers and product families. Use the correct manual and engineering software for the installed model.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter group</th>
+<th>Typical settings</th>
+<th>Consequence if incorrect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Motor identification</td>
+<td>Motor model and supported electrical data</td>
+<td>Incorrect motor operation or incompatible configuration</td>
+</tr>
+<tr>
+<td>Encoder configuration</td>
+<td>Feedback type, resolution, and interface</td>
+<td>Feedback errors or incorrect position measurement</td>
+</tr>
+<tr>
+<td>Position-loop settings</td>
+<td>Position gain and related control settings</td>
+<td>Poor tracking, oscillation, or excessive following error</td>
+</tr>
+<tr>
+<td>Speed-loop settings</td>
+<td>Speed gain and integral behavior</td>
+<td>Instability or sluggish response</td>
+</tr>
+<tr>
+<td>Current/torque loop</td>
+<td>Supported current-loop and torque-related settings</td>
+<td>Poor torque response or drive faults</td>
+</tr>
+<tr>
+<td>Torque limits</td>
+<td>Positive and negative torque limits</td>
+<td>Insufficient force or excessive mechanical stress</td>
+</tr>
+<tr>
+<td>Speed limits</td>
+<td>Maximum speed and related limits</td>
+<td>Overspeed risk or restricted motion</td>
+</tr>
+<tr>
+<td>Acceleration/deceleration</td>
+<td>Motion ramp and limit settings</td>
+<td>Mechanical shock or following errors</td>
+</tr>
+<tr>
+<td>Filtering</td>
+<td>Notch, low-pass, and resonance suppression settings</td>
+<td>Excessive vibration or poor dynamic response</td>
+</tr>
+<tr>
+<td>Command source</td>
+<td>Pulse train, fieldbus, controller, or other supported source</td>
+<td>No motion command or incorrect control</td>
+</tr>
+<tr>
+<td>Position scaling</td>
+<td>Counts per unit, gear ratio, and units conversion</td>
+<td>Incorrect travel distance</td>
+</tr>
+<tr>
+<td>Homing</td>
+<td>Home input, direction, sequence, and offset</td>
+<td>Incorrect machine reference</td>
+</tr>
+<tr>
+<td>Travel limits</td>
+<td>Software limits and supported hardware-limit configuration</td>
+<td>Axis overtravel or reduced usable travel</td>
+</tr>
+<tr>
+<td>Electronic gearing</td>
+<td>Master/slave ratio and synchronization configuration</td>
+<td>Incorrect coordinated movement</td>
+</tr>
+<tr>
+<td>Electronic camming</td>
+<td>Cam profile and synchronization parameters</td>
+<td>Incorrect timing or machine coordination</td>
+</tr>
+<tr>
+<td>Brake control</td>
+<td>Motor brake release and engagement settings where supported</td>
+<td>Dropped or uncontrolled vertical load</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>Bus configuration, address, and data mapping</td>
+<td>Loss of controller communication</td>
+</tr>
+<tr>
+<td>Fault handling</td>
+<td>Alarm response and reset behavior</td>
+<td>Inadequate fault recovery</td>
+</tr>
+<tr>
+<td>Safety-related functions</td>
+<td>Supported safety settings and configuration dependencies</td>
+<td>Safety requirements may not be met</td>
+</tr>
+</tbody>
+</table>
+<h2 id="7-feedback-and-encoder-recovery">7. Feedback and encoder recovery</h2>
+<p>Feedback configuration is one of the most important parts of servo recovery because the drive uses feedback to determine actual motion.</p>
+<h3 id="71-incremental-and-absolute-feedback">7.1 Incremental and absolute feedback</h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Incremental feedback</th>
+<th>Absolute feedback</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Position representation</td>
+<td>Relative movement from a reference</td>
+<td>Encoded position within the supported range</td>
+</tr>
+<tr>
+<td>Reference requirement</td>
+<td>Usually requires a valid reference or homing after position is lost</td>
+<td>May retain position through power loss if the system supports it</td>
+</tr>
+<tr>
+<td>Power-loss behavior</td>
+<td>Depends on system design and retained counts</td>
+<td>Depends on encoder type, battery or energy storage, and system configuration</td>
+</tr>
+<tr>
+<td>Recovery concern</td>
+<td>Re-establish the reference before coordinate-dependent motion</td>
+<td>Verify retained position, encoder status, and coordinate consistency</td>
+</tr>
+<tr>
+<td>Replacement concern</td>
+<td>Check feedback wiring, scaling, and homing behavior</td>
+<td>Check encoder compatibility, position retention, and required initialization</td>
+</tr>
+</tbody>
+</table>
+<p>Absolute feedback does not automatically guarantee that the machine's physical position is known. If the motor, coupling, gearbox, or load moved while unpowered, the stored motor position may not match the machine's actual mechanical position.</p>
+<h3 id="72-encoder-replacement">7.2 Encoder replacement</h3>
+<p>Before replacing an encoder or motor containing an encoder:</p>
+<ol>
+<li>Identify the exact feedback model and supported interface.</li>
+<li>Record the existing alarm state and relevant position information.</li>
+<li>Preserve required machine-reference and configuration records.</li>
+<li>Follow the manufacturer's procedure for safe removal and installation.</li>
+<li>Verify connector type, wiring, shielding, and feedback compatibility.</li>
+<li>Complete any required encoder initialization or position setup.</li>
+<li>Re-establish the machine reference where required.</li>
+<li>Verify direction and position scaling using an approved controlled test.</li>
+<li>Check following error and feedback stability.</li>
+<li>Release the axis only after the required verification.</li>
+</ol>
+<p>Never assume that two encoders are interchangeable merely because their connectors fit.</p>
+<h2 id="8-mechanical-scaling-and-position-reference">8. Mechanical scaling and position reference</h2>
+<p>Servo recovery must preserve the relationship between commanded motor rotation and actual machine travel.</p>
+<p>For a simple direct-drive ball screw, the theoretical linear movement is:</p>
+<div class="math-display">\[ x = \frac{N}{C}\times P \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(x\)</span> is linear travel.</li>
+<li><span class="math-inline">\(N\)</span> is the measured incremental count change.</li>
+<li><span class="math-inline">\(C\)</span> is the effective encoder counts per motor revolution as interpreted by the control system.</li>
+<li><span class="math-inline">\(P\)</span> is the ball-screw travel per revolution.</li>
+</ul>
+<p>For a system with a gearbox or belt transmission, the mechanical ratio must also be included. The actual equation depends on the controller's scaling convention, encoder interpretation, and transmission arrangement.</p>
+<h3 id="example">Example</h3>
+<p>A servo directly drives a ball screw with a lead of 10 mm per revolution. The controller interprets 20,000 counts per revolution. A movement of 10,000 counts theoretically corresponds to:</p>
+<div class="math-display">\[ x = \frac{10000}{20000}\times10 = 5\text{ mm} \]</div>
+<p>If the controller's effective count scaling is accidentally changed to 10,000 counts per revolution, the same commanded count change would represent a different physical movement. Such errors can cause positioning inaccuracies and collisions.</p>
+<h3 id="position-related-records">Position-related records</h3>
+<p>Preserve and verify:</p>
+<ul>
+<li>Encoder resolution and count interpretation.</li>
+<li>Motor-to-load gear ratio.</li>
+<li>Ball-screw lead or equivalent mechanical conversion.</li>
+<li>Engineering units.</li>
+<li>Machine home reference.</li>
+<li>Home offset and reference direction.</li>
+<li>Software travel limits.</li>
+<li>Relevant tool, fixture, or machine-coordinate offsets.</li>
+<li>Any separately stored CNC or robot coordinate data.</li>
+</ul>
+<p>Do not restore position offsets blindly if the machine mechanics or reference conditions have changed.</p>
+<h2 id="9-servo-tuning-and-motion-behavior">9. Servo tuning and motion behavior</h2>
+<p>Servo tuning determines how the drive responds to commanded movement and disturbances. Incorrect tuning may cause vibration, overshoot, poor positioning, or following errors.</p>
+<h3 id="91-important-tuning-concepts">9.1 Important tuning concepts</h3>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>Meaning</th>
+<th>Recovery consideration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Position-loop gain</td>
+<td>Influences how strongly position error is corrected</td>
+<td>Incorrect settings can cause sluggish response or oscillation</td>
+</tr>
+<tr>
+<td>Speed-loop gain</td>
+<td>Influences speed correction response</td>
+<td>Incorrect settings can reduce stability or tracking</td>
+</tr>
+<tr>
+<td>Integral action</td>
+<td>Corrects sustained speed error where supported</td>
+<td>Excessive or unsuitable settings can cause overshoot or instability</td>
+</tr>
+<tr>
+<td>Inertia ratio</td>
+<td>Relates reflected load inertia to motor inertia</td>
+<td>Incorrect estimates can affect tuning quality</td>
+</tr>
+<tr>
+<td>Resonance suppression</td>
+<td>Reduces response at identified mechanical resonance frequencies</td>
+<td>Old values may not suit changed mechanics</td>
+</tr>
+<tr>
+<td>Following-error threshold</td>
+<td>Defines an allowable command-to-feedback position difference</td>
+<td>Incorrect thresholds can cause nuisance trips or insufficient fault detection</td>
+</tr>
+<tr>
+<td>Torque limit</td>
+<td>Limits available motor torque</td>
+<td>Must suit the mechanical load and machine design</td>
+</tr>
+<tr>
+<td>Acceleration limit</td>
+<td>Limits the rate of commanded speed change</td>
+<td>Affects tracking, mechanical stress, and cycle time</td>
+</tr>
+</tbody>
+</table>
+<h3 id="92-when-tuning-must-be-reviewed">9.2 When tuning must be reviewed</h3>
+<p>Review tuning after:</p>
+<ul>
+<li>Servo motor or drive replacement.</li>
+<li>Encoder or feedback-device replacement.</li>
+<li>Gearbox, coupling, belt, screw, or load modification.</li>
+<li>Significant change in machine inertia.</li>
+<li>Persistent vibration or oscillation.</li>
+<li>Repeated following errors.</li>
+<li>Firmware or control-mode migration.</li>
+<li>Replacement of an obsolete servo family with a different product generation.</li>
+</ul>
+<p>A restored parameter set may provide a useful starting point, but it does not guarantee stable behavior after mechanical changes. Use the manufacturer's approved tuning method and validate the resulting motion.</p>
+<h2 id="10-servo-backup-frequency-and-triggers">10. Servo backup frequency and triggers</h2>
+<table>
+<thead>
+<tr>
+<th>Trigger</th>
+<th>Required action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Initial commissioning</td>
+<td>Create an approved drive and controller baseline</td>
+</tr>
+<tr>
+<td>Parameter change</td>
+<td>Preserve pre-change and released post-change configurations</td>
+</tr>
+<tr>
+<td>Servo-drive replacement</td>
+<td>Restore compatible settings and verify the complete axis</td>
+</tr>
+<tr>
+<td>Motor replacement</td>
+<td>Verify motor and feedback data and review tuning</td>
+</tr>
+<tr>
+<td>Encoder replacement</td>
+<td>Verify feedback configuration and machine reference</td>
+</tr>
+<tr>
+<td>Mechanical modification</td>
+<td>Review scaling, limits, inertia assumptions, and tuning</td>
+</tr>
+<tr>
+<td>PLC or motion-controller update</td>
+<td>Back up the active project and validate axis configuration</td>
+</tr>
+<tr>
+<td>Firmware update</td>
+<td>Preserve the pre-update state and verify the target configuration</td>
+</tr>
+<tr>
+<td>Safety-related modification</td>
+<td>Follow required safety change control and validation</td>
+</tr>
+<tr>
+<td>Obsolescence migration</td>
+<td>Preserve source configuration and separately release target configuration</td>
+</tr>
+<tr>
+<td>Periodic audit</td>
+<td>Verify archive currency, integrity, and restoration readiness</td>
+</tr>
+</tbody>
+</table>
+<p>For critical motion axes, back up after each approved configuration change. Set periodic verification and recovery-test intervals according to equipment criticality and plant policy.</p>
+<h2 id="11-servo-restoration-procedure">11. Servo restoration procedure</h2>
+<h3 id="111-pre-restoration-checklist">11.1 Pre-restoration checklist</h3>
+<ul>
+<li>Identify the affected axis, drive, motor, feedback device, and controller.</li>
+<li>Record original model numbers, firmware, and relevant hardware options.</li>
+<li>Confirm compatibility of the replacement equipment.</li>
+<li>Retrieve the latest approved drive and controller archives.</li>
+<li>Verify archive integrity and revision.</li>
+<li>Check motor nameplate data and feedback compatibility.</li>
+<li>Confirm scaling, travel limits, homing method, and offsets.</li>
+<li>Identify brakes, gearboxes, couplings, and load-retention requirements.</li>
+<li>Confirm required engineering software and libraries.</li>
+<li>Review electrical isolation and machine safety requirements.</li>
+<li>Establish an approved test plan and controlled machine state.</li>
+</ul>
+<h3 id="112-restoration-sequence">11.2 Restoration sequence</h3>
+<ol>
+<li>Diagnose the failure and determine which component or configuration is affected.</li>
+<li>Isolate hazardous energy and secure the machine against unexpected movement.</li>
+<li>Verify that the replacement drive, motor, encoder, and required accessories are compatible.</li>
+<li>Retrieve the approved parameter set and associated controller project.</li>
+<li>Install the replacement equipment according to manufacturer instructions.</li>
+<li>Verify power wiring, feedback connections, protective grounding, brake wiring, and communication.</li>
+<li>Restore the drive parameters using the supported engineering method.</li>
+<li>Restore the controller or motion project if it has changed or been lost.</li>
+<li>Review motor identification, feedback, scaling, limits, homing, and tuning.</li>
+<li>Confirm that safety-related functions have the required configuration and validation.</li>
+<li>Verify that the machine is in the approved state for commissioning.</li>
+<li>Conduct controlled tests according to the approved procedure.</li>
+<li>Check movement direction, reference position, speed, positioning accuracy, and fault handling.</li>
+<li>Verify coordination with other axes and the PLC or CNC.</li>
+<li>Save the verified final configuration and complete the release records.</li>
+</ol>
+<h3 id="113-special-precautions-for-vertical-axes">11.3 Special precautions for vertical axes</h3>
+<p>Vertical axes may drop when motor torque is lost or the brake is released. Recovery must account for gravity, stored mechanical energy, counterbalance systems, and brake behavior.</p>
+<ul>
+<li>Secure the load using the approved mechanical or safety method before removing the motor or drive.</li>
+<li>Follow the manufacturer's procedure for motor-brake control.</li>
+<li>Do not assume that the motor brake is designed to stop a moving load dynamically.</li>
+<li>Verify brake release and engagement behavior before returning the axis to service.</li>
+<li>Confirm that relevant safety functions and load-retention measures work as designed.</li>
+</ul>
+<p>Never perform an uncontrolled motion test to determine whether a vertical axis is configured correctly.</p>
+<h2 id="12-post-restoration-verification">12. Post-restoration verification</h2>
+<h3 id="121-functional-test-checklist">12.1 Functional test checklist</h3>
+<ul>
+<li>Drive, motor, and encoder identification verified.</li>
+<li>Motor and feedback configuration verified.</li>
+<li>Position scaling and mechanical ratio verified.</li>
+<li>Command source and communication verified.</li>
+<li>Homing sequence and reference offset verified.</li>
+<li>Direction of movement verified.</li>
+<li>Speed and torque limits verified.</li>
+<li>Acceleration and deceleration behavior verified.</li>
+<li>Following error and feedback stability checked.</li>
+<li>Positioning accuracy verified against approved tolerances.</li>
+<li>Software and applicable hardware travel limits verified.</li>
+<li>Brake operation checked where applicable.</li>
+<li>Electronic gearing or camming verified where used.</li>
+<li>Multi-axis coordination verified where applicable.</li>
+<li>Fault detection and recovery behavior checked.</li>
+<li>PLC, CNC, robot, and HMI status signals verified as applicable.</li>
+<li>Required safety functions tested and validated.</li>
+<li>Required loaded operation completed under controlled conditions.</li>
+<li>Final approved configuration archived.</li>
+</ul>
+<p>The test method and acceptance limits must come from the machine specification, manufacturer instructions, and approved commissioning procedure. Do not invent generic tolerances for positioning accuracy or following error.</p>
+<h2 id="13-common-servo-disaster-recovery-scenarios">13. Common servo disaster-recovery scenarios</h2>
+<h3 id="131-servo-drive-failure">13.1 Servo drive failure</h3>
+<p>Situation: A servo drive has failed and must be replaced.</p>
+<ul>
+<li>Confirm the cause of failure and check for motor, feedback, wiring, power-supply, or mechanical faults.</li>
+<li>Verify the replacement drive's model, capacity, firmware, and supported motor.</li>
+<li>Restore the approved drive parameters.</li>
+<li>Verify the controller's axis configuration and communication.</li>
+<li>Confirm the encoder and motor-brake arrangements.</li>
+<li>Check scaling, limits, homing, and tuning.</li>
+<li>Complete controlled motion tests and save the verified configuration.</li>
+</ul>
+<p>Replacing the drive without identifying the original fault may lead to repeated failures.</p>
+<h3 id="132-servo-motor-replacement">13.2 Servo motor replacement</h3>
+<p>Situation: A motor has failed, but the original drive remains installed.</p>
+<ul>
+<li>Verify the replacement motor model and electrical compatibility.</li>
+<li>Confirm the encoder or feedback type.</li>
+<li>Check the motor brake, connectors, and mechanical mounting.</li>
+<li>Review motor parameters and supported tuning requirements.</li>
+<li>Verify mechanical alignment and coupling.</li>
+<li>Re-establish the machine reference if required.</li>
+<li>Test direction, speed, torque response, and positioning accuracy.</li>
+</ul>
+<p>A replacement motor with a different encoder or inertia characteristic may require more than copying the old motor's settings.</p>
+<h3 id="133-position-loss-or-homing-failure">13.3 Position loss or homing failure</h3>
+<p>Situation: An axis reports an incorrect position after power loss or component replacement.</p>
+<p>Potential causes include:</p>
+<ul>
+<li>Lost incremental counts.</li>
+<li>Absolute encoder or battery problems.</li>
+<li>Mechanical movement while power was removed.</li>
+<li>Incorrect homing input or direction.</li>
+<li>Changed scaling or gear ratio.</li>
+<li>Incorrect home offset.</li>
+<li>Incorrect controller coordinate state.</li>
+</ul>
+<p>Recovery requires verifying the actual mechanical position, feedback status, reference method, and coordinate configuration before allowing normal automatic movement.</p>
+<h3 id="134-following-error-or-vibration-after-restoration">13.4 Following error or vibration after restoration</h3>
+<p>Situation: The drive powers up but the axis oscillates or trips during movement.</p>
+<p>Investigate:</p>
+<ul>
+<li>Motor and encoder compatibility.</li>
+<li>Incorrect feedback direction or scaling.</li>
+<li>Changed mechanical load or inertia.</li>
+<li>Incorrect tuning values.</li>
+<li>Loose coupling, damaged transmission, or mechanical binding.</li>
+<li>Excessive acceleration or deceleration.</li>
+<li>Communication delays or motion-command discontinuities where relevant.</li>
+<li>Incorrect torque or following-error limits.</li>
+</ul>
+<p>Do not simply increase the following-error threshold to suppress an alarm. First determine why the actual motion differs from the commanded motion.</p>
+<h3 id="135-plc-or-motion-controller-replacement">13.5 PLC or motion-controller replacement</h3>
+<p>Situation: The drive is healthy, but the axis no longer operates correctly after controller replacement.</p>
+<p>Verify:</p>
+<ul>
+<li>Active controller program and revision.</li>
+<li>Axis-to-drive assignment.</li>
+<li>Motion task and axis configuration.</li>
+<li>Communication network and device identity.</li>
+<li>Position units and scaling.</li>
+<li>Homing logic and limits.</li>
+<li>Motion profiles and coordination relationships.</li>
+<li>Fault and interlock handling.</li>
+</ul>
+<p>A controller project may require compatible firmware, libraries, hardware configuration, or engineering-software versions before it can be restored.</p>
+<h3 id="136-servo-obsolescence-migration">13.6 Servo obsolescence migration</h3>
+<p>Situation: An obsolete servo drive must be replaced by a newer product family.</p>
+<ol>
+<li>Preserve the source drive parameters and controller project.</li>
+<li>Record the original motor, encoder, brake, and network details.</li>
+<li>Check the manufacturer's migration guidance.</li>
+<li>Verify drive, motor, feedback, and controller compatibility.</li>
+<li>Map old parameters to the target configuration.</li>
+<li>Identify unsupported features and changed parameter meanings.</li>
+<li>Review axis scaling, tuning, limits, and safety functions.</li>
+<li>Test the new configuration in a controlled commissioning process.</li>
+<li>Record differences between the original and replacement system.</li>
+<li>Retain the source archive and the released target configuration separately.</li>
+</ol>
+<p>A newer servo system may use different control algorithms or feedback interfaces. Parameter-by-parameter copying alone is not a valid migration strategy.</p>
+<h2 id="14-troubleshooting-reference">14. Troubleshooting reference</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Corrective action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Parameter upload fails</td>
+<td>Incompatible software, interface, or access level</td>
+<td>Verify supported software and connection</td>
+</tr>
+<tr>
+<td>Parameter download is rejected</td>
+<td>Drive or firmware mismatch</td>
+<td>Check the target model and compatibility requirements</td>
+</tr>
+<tr>
+<td>Encoder alarm occurs</td>
+<td>Incorrect feedback type, wiring, or device</td>
+<td>Verify the encoder and supported interface</td>
+</tr>
+<tr>
+<td>Axis moves the wrong distance</td>
+<td>Incorrect scaling or gear ratio</td>
+<td>Check encoder interpretation and mechanical conversion</td>
+</tr>
+<tr>
+<td>Homing fails</td>
+<td>Incorrect input, direction, sequence, or sensor condition</td>
+<td>Verify the homing configuration and hardware</td>
+</tr>
+<tr>
+<td>Servo oscillates</td>
+<td>Unsuitable tuning, mechanical resonance, or feedback issue</td>
+<td>Diagnose the cause and perform approved tuning</td>
+</tr>
+<tr>
+<td>Following error increases</td>
+<td>Mechanical binding, overload, incorrect scaling, or poor tracking</td>
+<td>Check mechanics, commands, feedback, and limits</td>
+</tr>
+<tr>
+<td>Axis loses position</td>
+<td>Reference loss, encoder issue, or mechanical movement</td>
+<td>Verify actual position and re-establish the reference as required</td>
+</tr>
+<tr>
+<td>Vertical axis drops or drifts</td>
+<td>Brake, load-retention, or control problem</td>
+<td>Secure the load and investigate the brake and safety system</td>
+</tr>
+<tr>
+<td>PLC reports axis unavailable</td>
+<td>Network, axis configuration, or controller-project issue</td>
+<td>Verify communication and controller configuration</td>
+</tr>
+<tr>
+<td>Multi-axis motion is unsynchronized</td>
+<td>Electronic gearing, camming, or timing configuration differs</td>
+<td>Compare the approved coordination configuration</td>
+</tr>
+<tr>
+<td>Replacement axis behaves differently</td>
+<td>Changed motor, encoder, firmware, mechanics, or tuning</td>
+<td>Review compatibility and recommission the axis</td>
+</tr>
+</tbody>
+</table>
+<h2 id="15-practical-maintenance-implementation">15. Practical maintenance implementation</h2>
+<h3 id="151-servo-backup-register">15.1 Servo backup register</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine ID</td>
+<td>Plant-approved equipment identifier</td>
+</tr>
+<tr>
+<td>Axis tag</td>
+<td>Unique axis identification</td>
+</tr>
+<tr>
+<td>Drive model</td>
+<td>Exact manufacturer and drive series</td>
+</tr>
+<tr>
+<td>Motor model</td>
+<td>Exact servo motor model</td>
+</tr>
+<tr>
+<td>Feedback model</td>
+<td>Encoder or resolver identification</td>
+</tr>
+<tr>
+<td>Firmware</td>
+<td>Installed drive and controller revisions</td>
+</tr>
+<tr>
+<td>Controller project</td>
+<td>Approved PLC, motion, CNC, or robot project revision</td>
+</tr>
+<tr>
+<td>Mechanical ratio</td>
+<td>Gear ratio, screw lead, or relevant transmission data</td>
+</tr>
+<tr>
+<td>Position scaling</td>
+<td>Counts and engineering units conversion</td>
+</tr>
+<tr>
+<td>Homing</td>
+<td>Reference method, direction, and offset</td>
+</tr>
+<tr>
+<td>Tuning record</td>
+<td>Approved gains and test conditions</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>Network, address, and axis mapping</td>
+</tr>
+<tr>
+<td>Backup revision</td>
+<td>Released configuration revision</td>
+</tr>
+<tr>
+<td>Backup date</td>
+<td>Actual completed date</td>
+</tr>
+<tr>
+<td>Restore-test date</td>
+<td>Actual completed test date</td>
+</tr>
+<tr>
+<td>Storage location</td>
+<td>Controlled repository location</td>
+</tr>
+<tr>
+<td>Recovery target</td>
+<td>Approved RTO and RPO</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Current, overdue, failed, or under review</td>
+</tr>
+<tr>
+<td>Responsible owner</td>
+<td>Assigned maintenance or engineering role</td>
+</tr>
+</tbody>
+</table>
+<h3 id="152-suggested-folder-structure">15.2 Suggested folder structure</h3>
+<pre><code>SERVO_BACKUP_SYSTEM/
+    01_ASSET_REGISTER/
+    02_APPROVED_BACKUPS/
+        MACHINE_1059/
+            AXIS_01/
+                DRIVE_PARAMETERS/
+                CONTROLLER_PROJECT/
+                MOTOR_AND_ENCODER/
+                MECHANICAL_SCALING/
+                HOMING_AND_OFFSETS/
+                TUNING_RECORDS/
+                NETWORK_CONFIGURATION/
+                SAFETY_VALIDATION/
+                COMMISSIONING_RESULTS/
+                CHANGE_HISTORY/
+                RECOVERY_PROCEDURE/
+    03_INDEPENDENT_RECOVERY_COPIES/
+    04_RESTORE_TEST_RECORDS/
+    05_ENGINEERING_SOFTWARE/
+    06_MIGRATION_RECORDS/
+</code></pre>
+<p>Use approved asset tags and revision conventions. Protect controller projects and safety-related files with suitable access controls.</p>
+<h3 id="153-work-order-integration">15.3 Work-order integration</h3>
+<p>For servo breakdowns, replacements, or configuration changes:</p>
+<ol>
+<li>Identify the axis and affected components.</li>
+<li>Record the original fault and relevant diagnostic information.</li>
+<li>Preserve the current configuration before making changes where practical.</li>
+<li>Complete the authorized repair or migration.</li>
+<li>Verify feedback, scaling, homing, and limits.</li>
+<li>Perform the required motion and safety checks.</li>
+<li>Archive the approved final configuration.</li>
+<li>Update the asset register and work-order record.</li>
+<li>Record any unresolved obsolescence or recovery risks.</li>
+</ol>
+<h2 id="16-recovery-drills-and-audit">16. Recovery drills and audit</h2>
+<h3 id="161-recovery-drill">16.1 Recovery drill</h3>
+<p>A recovery drill verifies that the saved files and documented process are sufficient to recover the servo system.</p>
+<ol>
+<li>Select a suitable test setup, spare axis, or approved nonproduction environment.</li>
+<li>Retrieve the released drive and controller archives.</li>
+<li>Verify their integrity, revisions, and compatibility.</li>
+<li>Confirm the required engineering software and hardware.</li>
+<li>Restore the configuration using the documented procedure.</li>
+<li>Verify the motor, feedback, axis scaling, homing, and limits.</li>
+<li>Complete the approved functional checks.</li>
+<li>Record restoration time and any missing dependencies.</li>
+<li>Correct the recovery package and repeat the test if required.</li>
+</ol>
+<p>Do not test restoration on a production axis without the required authorization, safeguards, and controlled test plan.</p>
+<h3 id="162-audit-checklist">16.2 Audit checklist</h3>
+<ul>
+<li>Critical servo axes are recorded in the installed-base register.</li>
+<li>Required drive and controller backups exist.</li>
+<li>Motor and feedback details are documented.</li>
+<li>Firmware and software dependencies are recorded.</li>
+<li>Mechanical scaling and homing information are preserved.</li>
+<li>Tuning records and relevant acceptance criteria are available.</li>
+<li>Independent recovery copies are maintained.</li>
+<li>Backup integrity and revision currency are checked.</li>
+<li>Restoration procedures are documented.</li>
+<li>Restore tests are completed at the required interval.</li>
+<li>Safety-related configuration and validation records are controlled.</li>
+<li>Obsolete servo systems have migration plans.</li>
+<li>Parameter changes trigger required backup updates.</li>
+<li>Recovery times are compared against approved targets.</li>
+</ul>
+<h2 id="17-servo-backup-management-kpis">17. Servo backup management KPIs</h2>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Calculation</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backup coverage</td>
+<td>Axes with required backups divided by axes requiring backups, multiplied by 100%</td>
+<td>Measures backup availability</td>
+</tr>
+<tr>
+<td>Backup currency</td>
+<td>Axes with current approved backups divided by axes requiring backups, multiplied by 100%</td>
+<td>Measures revision accuracy</td>
+</tr>
+<tr>
+<td>Restore-test success</td>
+<td>Successful restore tests divided by completed restore tests, multiplied by 100%</td>
+<td>Measures demonstrated recoverability</td>
+</tr>
+<tr>
+<td>Recovery time</td>
+<td>Total measured restoration time divided by recovery events</td>
+<td>Measures recovery performance</td>
+</tr>
+<tr>
+<td>Missing-dependency rate</td>
+<td>Packages missing required dependencies divided by packages audited, multiplied by 100%</td>
+<td>Identifies incomplete recovery packages</td>
+</tr>
+<tr>
+<td>Configuration compliance</td>
+<td>Axes matching the approved configuration divided by axes inspected, multiplied by 100%</td>
+<td>Measures configuration control</td>
+</tr>
+</tbody>
+</table>
+<p>For example, if 18 of 20 critical axes have current approved backups:</p>
+<div class="math-display">\[ \text{Backup coverage}=\frac{18}{20}\times100=90\\% \]</div>
+<p>This indicates backup availability, not proven restoration success. Recovery testing is needed to establish whether the configuration can actually be restored and verified.</p>
+<h2 id="18-interview-questions-and-technical-answers">18. Interview questions and technical answers</h2>
+<p>1. Why is servo backup more complex than a basic VFD backup?</p>
+<p>A servo system depends on coordinated drive, motor, feedback, motion-controller, scaling, homing, tuning, and sometimes multi-axis configuration.</p>
+<p>2. Does backing up the servo drive preserve the complete motion system?</p>
+<p>Not necessarily. The PLC or motion-controller project, axis configuration, scaling, homing data, and other dependencies may need separate backups.</p>
+<p>3. What is the difference between incremental and absolute feedback?</p>
+<p>Incremental feedback measures relative movement from a reference. Absolute feedback represents position within its supported range, but retained position must still be verified against the machine's actual physical state.</p>
+<p>4. Why is encoder compatibility important?</p>
+<p>The drive must support the encoder's electrical interface, feedback protocol, resolution, and relevant configuration. An incompatible encoder may cause alarms or incorrect motion measurement.</p>
+<p>5. Why can a servo axis vibrate after parameter restoration?</p>
+<p>The motor, mechanics, load inertia, firmware, or control configuration may differ. Tuning values that worked previously may no longer provide stable operation.</p>
+<p>6. Why must scaling be verified after servo replacement?</p>
+<p>Scaling determines how controller commands translate into physical movement. Incorrect scaling can cause inaccurate positioning or excessive travel.</p>
+<p>7. What is the purpose of homing?</p>
+<p>Homing establishes a machine reference according to the configured method. It helps the controller relate measured axis position to the machine's coordinate system.</p>
+<p>8. Why is a vertical servo axis especially critical during recovery?</p>
+<p>Gravity can cause the load to move if torque or brake control is lost. The load must be secured and the brake and safety systems verified.</p>
+<p>9. Why should the controller project be backed up separately?</p>
+<p>Drive parameters do not necessarily include PLC logic, axis definitions, motion profiles, homing sequences, electronic gearing, or machine-coordinate settings.</p>
+<p>10. Does a successful servo power-up prove that the axis is ready for production?</p>
+<p>No. Feedback, scaling, homing, motion accuracy, limits, coordination, braking, fault response, and applicable safety functions must be verified before release.</p>
+<h2 id="19-final-engineering-principles">19. Final engineering principles</h2>
+<ul>
+<li>Back up the drive and the complete motion-control configuration.</li>
+<li>Record exact motor, encoder, firmware, and hardware details.</li>
+<li>Preserve mechanical scaling, reference positions, and homing procedures.</li>
+<li>Validate parameter compatibility before transferring settings.</li>
+<li>Reassess tuning after changes to the motor, load, mechanics, or drive family.</li>
+<li>Secure vertical and gravity-loaded axes during maintenance and commissioning.</li>
+<li>Test restoration in a controlled and approved environment.</li>
+<li>Verify safety-related functions through the required validation process.</li>
+<li>Maintain independent recovery copies and revision-controlled records.</li>
+<li>Release the servo system only after the required commissioning checks.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\25_Backup_DR\01_Systems_Backup\05_CNC - CNC</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

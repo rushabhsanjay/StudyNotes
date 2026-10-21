@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parameter Change Management</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Parameter Change Management</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and Scope</a></li>
+<li><a href="#2-essential-terminology">2. Essential Terminology</a></li>
+<li><a href="#3-why-parameter-changes-need-control">3. Why Parameter Changes Need Control</a><ul>
+<li><a href="#31-safety">3.1 Safety</a></li>
+<li><a href="#32-product-quality">3.2 Product quality</a></li>
+<li><a href="#33-machine-reliability">3.3 Machine reliability</a></li>
+<li><a href="#34-process-performance">3.4 Process performance</a></li>
+<li><a href="#35-diagnostic-accuracy">3.5 Diagnostic accuracy</a></li>
+<li><a href="#36-traceability">3.6 Traceability</a></li>
+</ul>
+</li>
+<li><a href="#4-common-parameter-change-triggers">4. Common Parameter Change Triggers</a></li>
+<li><a href="#5-types-of-industrial-parameters">5. Types of Industrial Parameters</a><ul>
+<li><a href="#51-process-parameters">5.1 Process parameters</a></li>
+<li><a href="#52-motion-parameters">5.2 Motion parameters</a></li>
+<li><a href="#53-control-loop-parameters">5.3 Control-loop parameters</a></li>
+<li><a href="#54-protection-parameters">5.4 Protection parameters</a></li>
+<li><a href="#55-measurement-and-scaling-parameters">5.5 Measurement and scaling parameters</a></li>
+<li><a href="#56-communication-parameters">5.6 Communication parameters</a></li>
+<li><a href="#57-diagnostic-and-alarm-parameters">5.7 Diagnostic and alarm parameters</a></li>
+<li><a href="#58-recipe-and-production-parameters">5.8 Recipe and production parameters</a></li>
+</ul>
+</li>
+<li><a href="#6-parameter-change-management-workflow">6. Parameter Change Management Workflow</a></li>
+<li><a href="#7-parameter-identification-and-classification">7. Parameter Identification and Classification</a><ul>
+<li><a href="#example-parameter-record">Example parameter record</a></li>
+</ul>
+</li>
+<li><a href="#8-parameter-baselines-and-backups">8. Parameter Baselines and Backups</a><ul>
+<li><a href="#81-what-a-good-baseline-contains">8.1 What a good baseline contains</a></li>
+<li><a href="#82-why-device-identity-matters">8.2 Why device identity matters</a></li>
+<li><a href="#83-backup-best-practices">8.3 Backup best practices</a></li>
+</ul>
+</li>
+<li><a href="#9-online-and-offline-parameter-differences">9. Online and Offline Parameter Differences</a></li>
+<li><a href="#10-parameter-changes-in-plc-systems">10. Parameter Changes in PLC Systems</a><ul>
+<li><a href="#101-examples">10.1 Examples</a></li>
+<li><a href="#102-assessment-points">10.2 Assessment points</a></li>
+<li><a href="#103-example-plc-timer-preset">10.3 Example: PLC timer preset</a></li>
+</ul>
+</li>
+<li><a href="#11-vfd-parameter-management">11. VFD Parameter Management</a><ul>
+<li><a href="#111-common-parameter-groups">11.1 Common parameter groups</a></li>
+<li><a href="#112-before-changing-vfd-parameters">11.2 Before changing VFD parameters</a></li>
+<li><a href="#113-example-acceleration-time">11.3 Example: acceleration time</a></li>
+</ul>
+</li>
+<li><a href="#12-servo-and-motion-parameters">12. Servo and Motion Parameters</a><ul>
+<li><a href="#121-why-changes-are-sensitive">12.1 Why changes are sensitive</a></li>
+<li><a href="#122-tuning-discipline">12.2 Tuning discipline</a></li>
+</ul>
+</li>
+<li><a href="#13-cnc-and-robot-parameters">13. CNC and Robot Parameters</a><ul>
+<li><a href="#131-cnc-parameters-and-offsets">13.1 CNC parameters and offsets</a></li>
+<li><a href="#132-robot-parameters">13.2 Robot parameters</a></li>
+</ul>
+</li>
+<li><a href="#14-sensors-measurement-and-scaling-parameters">14. Sensors, Measurement, and Scaling Parameters</a><ul>
+<li><a href="#example">Example</a></li>
+<li><a href="#verification-points">Verification points</a></li>
+</ul>
+</li>
+<li><a href="#15-pid-and-process-control-tuning">15. PID and Process-Control Tuning</a><ul>
+<li><a href="#common-symptoms">Common symptoms</a></li>
+</ul>
+</li>
+<li><a href="#16-alarm-trip-and-protection-parameters">16. Alarm, Trip, and Protection Parameters</a></li>
+<li><a href="#17-parameter-validation-and-testing">17. Parameter Validation and Testing</a><ul>
+<li><a href="#171-define-acceptance-criteria">17.1 Define acceptance criteria</a></li>
+<li><a href="#172-test-evidence">17.2 Test evidence</a></li>
+</ul>
+</li>
+<li><a href="#18-parameter-restoration-and-rollback">18. Parameter Restoration and Rollback</a><ul>
+<li><a href="#181-rollback-procedure">18.1 Rollback procedure</a></li>
+<li><a href="#182-common-restoration-mistakes">18.2 Common restoration mistakes</a></li>
+</ul>
+</li>
+<li><a href="#19-parameter-governance-and-access-control">19. Parameter Governance and Access Control</a><ul>
+<li><a href="#good-access-control-practices">Good access-control practices</a></li>
+</ul>
+</li>
+<li><a href="#20-parameter-registers-and-documentation">20. Parameter Registers and Documentation</a></li>
+<li><a href="#21-practical-industrial-example-vfd-acceleration-change">21. Practical Industrial Example: VFD Acceleration Change</a></li>
+<li><a href="#22-practical-industrial-example-test-bed-pressure-scaling">22. Practical Industrial Example: Test-Bed Pressure Scaling</a></li>
+<li><a href="#23-practical-industrial-example-recipe-parameter-change">23. Practical Industrial Example: Recipe Parameter Change</a></li>
+<li><a href="#24-common-parameter-change-failures">24. Common Parameter Change Failures</a></li>
+<li><a href="#25-practical-parameter-change-checklist">25. Practical Parameter Change Checklist</a><ul>
+<li><a href="#before-the-change">Before the change</a></li>
+<li><a href="#during-the-change">During the change</a></li>
+<li><a href="#after-the-change">After the change</a></li>
+</ul>
+</li>
+<li><a href="#26-interview-questions-and-answers">26. Interview Questions and Answers</a><ul>
+<li><a href="#q1-what-is-parameter-change-management">Q1. What is parameter change management?</a></li>
+<li><a href="#q2-what-is-the-difference-between-a-parameter-and-program-logic">Q2. What is the difference between a parameter and program logic?</a></li>
+<li><a href="#q3-what-is-a-parameter-baseline">Q3. What is a parameter baseline?</a></li>
+<li><a href="#q4-why-should-the-actual-device-configuration-be-captured-before-a-change">Q4. Why should the actual device configuration be captured before a change?</a></li>
+<li><a href="#q5-what-is-the-difference-between-a-setpoint-and-a-limit">Q5. What is the difference between a setpoint and a limit?</a></li>
+<li><a href="#q6-why-should-maintenance-not-increase-a-vfd-acceleration-time-immediately-after-a-trip">Q6. Why should maintenance not increase a VFD acceleration time immediately after a trip?</a></li>
+<li><a href="#q7-what-is-parameter-drift">Q7. What is parameter drift?</a></li>
+<li><a href="#q8-why-are-servo-parameters-particularly-sensitive">Q8. Why are servo parameters particularly sensitive?</a></li>
+<li><a href="#q9-is-a-parameter-backup-sufficient-evidence-of-approval">Q9. Is a parameter backup sufficient evidence of approval?</a></li>
+<li><a href="#q10-what-should-be-verified-after-a-parameter-change">Q10. What should be verified after a parameter change?</a></li>
+<li><a href="#q11-why-must-sensor-scaling-be-verified-across-a-range">Q11. Why must sensor scaling be verified across a range?</a></li>
+<li><a href="#q12-what-is-the-difference-between-a-process-alarm-and-a-safety-function">Q12. What is the difference between a process alarm and a safety function?</a></li>
+<li><a href="#q13-when-should-a-parameter-change-be-rolled-back">Q13. When should a parameter change be rolled back?</a></li>
+<li><a href="#q14-when-is-a-parameter-change-complete">Q14. When is a parameter change complete?</a></li>
+</ul>
+</li>
+<li><a href="#27-key-principles-to-remember">27. Key Principles to Remember</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-and-scope">1. Purpose and Scope</h2>
+<p>Parameter change management is the controlled process of identifying, assessing, authorizing, modifying, verifying, documenting, and maintaining parameters that determine how industrial equipment and software operate.</p>
+<p>A parameter is a configurable value, setting, limit, mode, or option that influences a system's behavior without necessarily changing its underlying program logic.</p>
+<p>In industrial maintenance and automation, parameters exist in PLCs, VFDs, servo drives, CNC controllers, robots, test-bench software, HMIs, sensors, safety devices, SCADA systems, and industrial communication equipment.</p>
+<p>Examples include:</p>
+<ul>
+<li>VFD acceleration and deceleration times.</li>
+<li>Servo speed, torque, and position limits.</li>
+<li>CNC tool offsets and machining settings.</li>
+<li>PLC timer presets and process setpoints.</li>
+<li>Robot speed, payload, and motion configuration.</li>
+<li>Pressure, temperature, and torque acceptance limits.</li>
+<li>Sensor scaling and analog input ranges.</li>
+<li>Communication timeouts and retry counts.</li>
+<li>Alarm thresholds and control-loop tuning values.</li>
+</ul>
+<p>The key principle is that a parameter change can alter machine behavior even when no program code changes. Changing a value from <code>5.0</code> to <code>8.0</code> may look trivial on a screen, but its real-world effect depends on the parameter's meaning, units, operating conditions, and protective limits.</p>
+<h2 id="2-essential-terminology">2. Essential Terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Parameter</td>
+<td>Configurable value or option affecting system behavior</td>
+</tr>
+<tr>
+<td>Setpoint</td>
+<td>Desired operating value for a controlled variable</td>
+</tr>
+<tr>
+<td>Limit</td>
+<td>Boundary that a value or operation is expected not to exceed</td>
+</tr>
+<tr>
+<td>Threshold</td>
+<td>Value that triggers an alarm, event, or action</td>
+</tr>
+<tr>
+<td>Tuning parameter</td>
+<td>Setting used to adjust system response or control behavior</td>
+</tr>
+<tr>
+<td>Configuration</td>
+<td>Collection of settings defining how a device or application operates</td>
+</tr>
+<tr>
+<td>Parameter baseline</td>
+<td>Approved reference set of parameter values</td>
+</tr>
+<tr>
+<td>Parameter backup</td>
+<td>Saved representation of device settings</td>
+</tr>
+<tr>
+<td>Parameter upload</td>
+<td>Transfer of settings from a device to an engineering tool or computer</td>
+</tr>
+<tr>
+<td>Parameter download</td>
+<td>Transfer of settings from an engineering tool or computer to a device</td>
+</tr>
+<tr>
+<td>Online parameter</td>
+<td>Value currently active or readable in the operating device</td>
+</tr>
+<tr>
+<td>Offline parameter</td>
+<td>Value stored in an engineering project or file</td>
+</tr>
+<tr>
+<td>Default value</td>
+<td>Manufacturer-supplied initial or standard value</td>
+</tr>
+<tr>
+<td>Actual value</td>
+<td>Value currently measured or reported by the system</td>
+</tr>
+<tr>
+<td>Target value</td>
+<td>Value intended to be achieved</td>
+</tr>
+<tr>
+<td>Tolerance</td>
+<td>Permitted deviation from a specified value</td>
+</tr>
+<tr>
+<td>Parameter drift</td>
+<td>Unintended change from an approved parameter value</td>
+</tr>
+<tr>
+<td>Restore</td>
+<td>Reapply a saved parameter configuration</td>
+</tr>
+<tr>
+<td>Validation</td>
+<td>Evidence that a configuration meets its specified requirements</td>
+</tr>
+<tr>
+<td>Parameter ownership</td>
+<td>Responsibility for defining, approving, and maintaining a parameter</td>
+</tr>
+</tbody>
+</table>
+<p>A setpoint, an actual value, and a limit are not interchangeable. For example, a temperature controller may have a setpoint of <span class="math-inline">\(180^\circ C\)</span>, an actual temperature of <span class="math-inline">\(176^\circ C\)</span>, and a high-high trip threshold of <span class="math-inline">\(200^\circ C\)</span>. Each serves a different purpose.</p>
+<h2 id="3-why-parameter-changes-need-control">3. Why Parameter Changes Need Control</h2>
+<h3 id="31-safety">3.1 Safety</h3>
+<p>Incorrect parameters can affect speed, torque, stopping behavior, pressure, temperature, motion limits, or protective functions.</p>
+<p>A parameter must never be altered merely to suppress a fault if doing so could weaken a required protective function.</p>
+<h3 id="32-product-quality">3.2 Product quality</h3>
+<p>Changing a torque threshold, pressure setpoint, measurement scaling value, or CNC offset can affect product quality and test acceptance.</p>
+<h3 id="33-machine-reliability">3.3 Machine reliability</h3>
+<p>Incorrect acceleration, deceleration, current limits, servo tuning, or mechanical compensation values may cause trips, vibration, overheating, or excessive mechanical stress.</p>
+<h3 id="34-process-performance">3.4 Process performance</h3>
+<p>Parameters influence cycle time, repeatability, energy consumption, throughput, and process stability.</p>
+<h3 id="35-diagnostic-accuracy">3.5 Diagnostic accuracy</h3>
+<p>Incorrect sensor scaling or engineering units can make a healthy process appear faulty or make a real fault appear normal.</p>
+<h3 id="36-traceability">3.6 Traceability</h3>
+<p>Without controlled records, maintenance may not know whether a changed setting was approved, who changed it, why it changed, or how to restore the previous configuration.</p>
+<h2 id="4-common-parameter-change-triggers">4. Common Parameter Change Triggers</h2>
+<table>
+<thead>
+<tr>
+<th>Trigger</th>
+<th>Example</th>
+<th>Required assessment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Process requirement</td>
+<td>Adjusting a pressure setpoint</td>
+<td>Confirm process need and approved operating range</td>
+</tr>
+<tr>
+<td>Repeated fault</td>
+<td>VFD trips during acceleration</td>
+<td>Diagnose cause before changing settings</td>
+</tr>
+<tr>
+<td>Quality issue</td>
+<td>Torque results fail acceptance limits</td>
+<td>Review measurement system and approved quality criteria</td>
+</tr>
+<tr>
+<td>Hardware replacement</td>
+<td>Replacing a servo drive</td>
+<td>Confirm parameter compatibility and restoration requirements</td>
+</tr>
+<tr>
+<td>Mechanical modification</td>
+<td>Changing a gearbox or motor</td>
+<td>Reassess speed, torque, inertia, and motion settings</td>
+</tr>
+<tr>
+<td>Sensor replacement</td>
+<td>Replacing a pressure transmitter</td>
+<td>Verify range, units, scaling, and calibration</td>
+</tr>
+<tr>
+<td>Product variant</td>
+<td>Introducing a new recipe</td>
+<td>Verify recipe-specific limits and access controls</td>
+</tr>
+<tr>
+<td>Performance improvement</td>
+<td>Reducing machine cycle time</td>
+<td>Assess safety, quality, reliability, and process impact</td>
+</tr>
+<tr>
+<td>Firmware migration</td>
+<td>Upgrading a controller</td>
+<td>Review changed parameter behavior and defaults</td>
+</tr>
+<tr>
+<td>Calibration</td>
+<td>Correcting a measurement offset</td>
+<td>Use the approved calibration procedure</td>
+</tr>
+<tr>
+<td>Standardization</td>
+<td>Aligning settings across similar machines</td>
+<td>Confirm that the machines are genuinely equivalent</td>
+</tr>
+<tr>
+<td>Obsolescence</td>
+<td>Migrating to a replacement device</td>
+<td>Validate parameter mapping and functionality</td>
+</tr>
+<tr>
+<td>Cybersecurity or access review</td>
+<td>Restricting parameter write access</td>
+<td>Assess engineering access and operational requirements</td>
+</tr>
+</tbody>
+</table>
+<p>A trigger starts the review. It does not automatically justify the proposed value.</p>
+<h2 id="5-types-of-industrial-parameters">5. Types of Industrial Parameters</h2>
+<h3 id="51-process-parameters">5.1 Process parameters</h3>
+<p>Values defining the intended operating conditions.</p>
+<p>Examples:</p>
+<ul>
+<li>Pressure setpoint.</li>
+<li>Temperature setpoint.</li>
+<li>Flow-rate target.</li>
+<li>Clamping force.</li>
+<li>Lubrication pressure.</li>
+</ul>
+<h3 id="52-motion-parameters">5.2 Motion parameters</h3>
+<p>Values governing motion behavior.</p>
+<p>Examples:</p>
+<ul>
+<li>Maximum speed.</li>
+<li>Acceleration and deceleration.</li>
+<li>Position limits.</li>
+<li>Homing speed.</li>
+<li>Torque limits.</li>
+<li>Electronic gearing ratios.</li>
+</ul>
+<h3 id="53-control-loop-parameters">5.3 Control-loop parameters</h3>
+<p>Values used to tune closed-loop control systems.</p>
+<p>Examples:</p>
+<ul>
+<li>Proportional gain.</li>
+<li>Integral time or gain.</li>
+<li>Derivative time or gain.</li>
+<li>Feedforward values.</li>
+<li>Deadband.</li>
+</ul>
+<p>Changes can affect overshoot, settling time, stability, and response to disturbances.</p>
+<h3 id="54-protection-parameters">5.4 Protection parameters</h3>
+<p>Values associated with fault detection and equipment protection.</p>
+<p>Examples:</p>
+<ul>
+<li>Overload thresholds.</li>
+<li>Thermal protection settings.</li>
+<li>Following-error limits.</li>
+<li>Pressure trips.</li>
+<li>Temperature alarms and trips.</li>
+</ul>
+<p>Protection parameters require particular care because incorrect values may undermine equipment protection or a safety function.</p>
+<h3 id="55-measurement-and-scaling-parameters">5.5 Measurement and scaling parameters</h3>
+<p>Values defining how raw signals are converted into engineering units.</p>
+<p>Examples:</p>
+<ul>
+<li>Analog input range.</li>
+<li>Sensor zero and span.</li>
+<li>Engineering-unit conversion.</li>
+<li>Calibration offset.</li>
+<li>Filter time constant.</li>
+</ul>
+<h3 id="56-communication-parameters">5.6 Communication parameters</h3>
+<p>Values affecting communication behavior.</p>
+<p>Examples:</p>
+<ul>
+<li>IP address.</li>
+<li>Port number.</li>
+<li>Node address.</li>
+<li>Baud rate.</li>
+<li>Communication timeout.</li>
+<li>Retry count.</li>
+<li>Update interval.</li>
+</ul>
+<h3 id="57-diagnostic-and-alarm-parameters">5.7 Diagnostic and alarm parameters</h3>
+<p>Values defining when the system reports an abnormal condition.</p>
+<p>Examples:</p>
+<ul>
+<li>High and low alarm thresholds.</li>
+<li>Alarm delay.</li>
+<li>Debounce time.</li>
+<li>Stale-data timeout.</li>
+<li>Warning thresholds.</li>
+</ul>
+<h3 id="58-recipe-and-production-parameters">5.8 Recipe and production parameters</h3>
+<p>Values that vary by product or operation.</p>
+<p>Examples:</p>
+<ul>
+<li>Torque target by product variant.</li>
+<li>Pressing depth.</li>
+<li>Test limits.</li>
+<li>Machining feed rate.</li>
+<li>Robot approach position.</li>
+</ul>
+<p>Recipe parameters must be managed so that the correct approved set is associated with the correct product and operation.</p>
+<h2 id="6-parameter-change-management-workflow">6. Parameter Change Management Workflow</h2>
+<pre><code>Parameter change trigger
+    ↓
+Identify parameter and affected asset
+    ↓
+Read and record current active value
+    ↓
+Verify approved baseline and requirement
+    ↓
+Assess technical, safety, quality, and process impact
+    ↓
+Define proposed value and acceptance criteria
+    ↓
+Obtain required authorization
+    ↓
+Back up current configuration
+    ↓
+Apply change using the approved procedure
+    ↓
+Verify active value and device response
+    ↓
+Perform required functional and safety checks
+    ↓
+Update baseline and change records
+    ↓
+Monitor and close the change
+</code></pre>
+<p>The depth of assessment depends on risk. A routine display preference is not equivalent to a servo travel-limit change or a pressure trip adjustment.</p>
+<h2 id="7-parameter-identification-and-classification">7. Parameter Identification and Classification</h2>
+<p>Before changing a parameter, establish exactly what it means.</p>
+<p>Record:</p>
+<ul>
+<li>Parameter name and identifier.</li>
+<li>Device or software application.</li>
+<li>Machine and asset ID.</li>
+<li>Parameter group or menu.</li>
+<li>Current value.</li>
+<li>Unit and data type.</li>
+<li>Proposed value.</li>
+<li>Permitted range.</li>
+<li>Source of the approved range.</li>
+<li>Whether the value is active, stored, or pending activation.</li>
+<li>Whether the change requires a restart or recommissioning.</li>
+</ul>
+<h3 id="example-parameter-record">Example parameter record</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Asset</td>
+<td>H7 test-bed drive</td>
+</tr>
+<tr>
+<td>Parameter</td>
+<td>Acceleration time</td>
+</tr>
+<tr>
+<td>Parameter ID</td>
+<td>Manufacturer-specific identifier</td>
+</tr>
+<tr>
+<td>Current value</td>
+<td>2.0 s</td>
+</tr>
+<tr>
+<td>Proposed value</td>
+<td>3.0 s</td>
+</tr>
+<tr>
+<td>Unit</td>
+<td>Seconds</td>
+</tr>
+<tr>
+<td>Trigger</td>
+<td>Investigate acceleration-related trips</td>
+</tr>
+<tr>
+<td>Risk</td>
+<td>Process timing and motion behavior may change</td>
+</tr>
+<tr>
+<td>Verification</td>
+<td>Approved acceleration test and fault review</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Proposed, pending authorization</td>
+</tr>
+</tbody>
+</table>
+<p>The parameter identifier above is deliberately manufacturer-specific rather than invented. Parameter numbers differ by device family and firmware version.</p>
+<h2 id="8-parameter-baselines-and-backups">8. Parameter Baselines and Backups</h2>
+<p>A parameter baseline is the approved reference configuration for a defined device, machine, or operating condition.</p>
+<h3 id="81-what-a-good-baseline-contains">8.1 What a good baseline contains</h3>
+<ul>
+<li>Asset ID and device identification.</li>
+<li>Manufacturer and model.</li>
+<li>Hardware revision.</li>
+<li>Firmware version.</li>
+<li>Parameter identifiers and values.</li>
+<li>Units and relevant scaling information.</li>
+<li>Applicable operating mode or recipe.</li>
+<li>Date captured.</li>
+<li>Source device or project.</li>
+<li>Approval status.</li>
+<li>Change history.</li>
+<li>Backup location.</li>
+<li>Compatibility and restoration notes.</li>
+</ul>
+<h3 id="82-why-device-identity-matters">8.2 Why device identity matters</h3>
+<p>A configuration from one device may not be valid for another, even when the devices look similar.</p>
+<p>Differences can include:</p>
+<ul>
+<li>Firmware revision.</li>
+<li>Motor or encoder type.</li>
+<li>Mechanical ratio.</li>
+<li>Rated current or power.</li>
+<li>Sensor range.</li>
+<li>Application-specific configuration.</li>
+<li>Safety options.</li>
+<li>Communication hardware.</li>
+</ul>
+<h3 id="83-backup-best-practices">8.3 Backup best practices</h3>
+<ol>
+<li>Identify the correct asset and device.</li>
+<li>Retrieve the active configuration using the supported method.</li>
+<li>Confirm whether the saved file represents actual device values or only an offline project.</li>
+<li>Record the capture date and device identity.</li>
+<li>Preserve the original backup unchanged.</li>
+<li>Store the approved baseline in a controlled location.</li>
+<li>Verify that restoration is possible and compatible.</li>
+<li>Protect the backup against unauthorized modification.</li>
+</ol>
+<p>A backup is useful only if it belongs to the correct device and can be restored under the required conditions.</p>
+<h2 id="9-online-and-offline-parameter-differences">9. Online and Offline Parameter Differences</h2>
+<p>Online and offline values can differ.</p>
+<ul>
+<li>Online value: The value currently active in the device, subject to the device's operating and storage behavior.</li>
+<li>Offline value: The value stored in an engineering project or configuration file.</li>
+<li>Stored value: A value saved in non-volatile memory for retention across power cycles.</li>
+<li>Pending value: A value entered but not yet activated or committed.</li>
+</ul>
+<p>Different manufacturers use different terms and activation rules.</p>
+<p>Before making a change, determine whether the device requires a save command, restart, download, mode transition, or commissioning operation.</p>
+<p>After changing parameters, verify the actual device state rather than assuming that the engineering screen and physical device are synchronized.</p>
+<h2 id="10-parameter-changes-in-plc-systems">10. Parameter Changes in PLC Systems</h2>
+<p>PLC parameters may exist as constants, retained values, recipes, HMI-entered setpoints, timer presets, controller tuning values, and device configuration settings.</p>
+<h3 id="101-examples">10.1 Examples</h3>
+<ul>
+<li>Conveyor speed reference.</li>
+<li>Pressure control setpoint.</li>
+<li>Timer preset.</li>
+<li>Temperature alarm threshold.</li>
+<li>Analog scaling range.</li>
+<li>Communication timeout.</li>
+<li>Recipe-specific process target.</li>
+</ul>
+<h3 id="102-assessment-points">10.2 Assessment points</h3>
+<ul>
+<li>Does the parameter affect only display behavior or actual control?</li>
+<li>Is it used by multiple routines?</li>
+<li>Can the operator change it during production?</li>
+<li>Is the value retained after power loss?</li>
+<li>Is the parameter shared across product variants?</li>
+<li>Are units and scaling correct?</li>
+<li>Is there a validated operating range?</li>
+<li>Are alarms or trips dependent on the value?</li>
+<li>Does changing it affect cycle time or sequence timing?</li>
+<li>Is the parameter associated with a safety-related function?</li>
+</ul>
+<h3 id="103-example-plc-timer-preset">10.3 Example: PLC timer preset</h3>
+<p>Suppose a sequence waits for a component-present sensor before generating a fault.</p>
+<p>Increasing the timeout may reduce nuisance alarms, but it may also hide a failing sensor, slow cycle recovery, or permit an unacceptable process delay.</p>
+<p>A sound approach is to measure actual response times, investigate the cause of the delay, define an approved operating range, and test normal and fault conditions before release.</p>
+<h2 id="11-vfd-parameter-management">11. VFD Parameter Management</h2>
+<p>Variable-frequency drives contain parameters that influence motor operation, protection, control, and communication.</p>
+<h3 id="111-common-parameter-groups">11.1 Common parameter groups</h3>
+<table>
+<thead>
+<tr>
+<th>Parameter group</th>
+<th>Examples</th>
+<th>Main concern</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Motor data</td>
+<td>Rated voltage, current, frequency, speed</td>
+<td>Correct motor identification</td>
+</tr>
+<tr>
+<td>Speed reference</td>
+<td>Minimum and maximum frequency</td>
+<td>Operating range</td>
+</tr>
+<tr>
+<td>Ramp settings</td>
+<td>Acceleration and deceleration times</td>
+<td>Mechanical and process stress</td>
+</tr>
+<tr>
+<td>Control mode</td>
+<td>V/f, vector control, supported modes</td>
+<td>Motor behavior and compatibility</td>
+</tr>
+<tr>
+<td>Protection</td>
+<td>Current, thermal, stall-related settings</td>
+<td>Equipment protection</td>
+</tr>
+<tr>
+<td>Braking</td>
+<td>DC injection or braking configuration</td>
+<td>Thermal and stopping behavior</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>Address, protocol, timeout</td>
+<td>PLC-drive communication</td>
+</tr>
+<tr>
+<td>Input/output</td>
+<td>Terminal assignment and scaling</td>
+<td>Correct command and feedback behavior</td>
+</tr>
+<tr>
+<td>Autotuning</td>
+<td>Motor identification and tuning data</td>
+<td>Commissioning requirements</td>
+</tr>
+</tbody>
+</table>
+<h3 id="112-before-changing-vfd-parameters">11.2 Before changing VFD parameters</h3>
+<ul>
+<li>Verify drive and motor nameplates.</li>
+<li>Confirm the actual motor and load.</li>
+<li>Check the manufacturer's operating limits.</li>
+<li>Review the fault history.</li>
+<li>Check mechanical binding, bearings, couplings, and load conditions.</li>
+<li>Verify supply quality and installation condition.</li>
+<li>Assess the impact on stopping, starting, and cycle timing.</li>
+<li>Confirm any required isolation and commissioning controls.</li>
+</ul>
+<h3 id="113-example-acceleration-time">11.3 Example: acceleration time</h3>
+<p>If a conveyor trips during acceleration, simply increasing the acceleration time may help if the demand is genuinely too aggressive. However, the fault could also be caused by mechanical drag, a damaged bearing, incorrect motor data, voltage problems, or an unsuitable control mode.</p>
+<p>The change should follow diagnosis and a controlled trial, with motor current, acceleration behavior, process timing, and fault recurrence checked against approved criteria.</p>
+<h2 id="12-servo-and-motion-parameters">12. Servo and Motion Parameters</h2>
+<p>Servo parameters can have immediate consequences for machine movement and positioning accuracy.</p>
+<p>Common parameters include:</p>
+<ul>
+<li>Position and velocity limits.</li>
+<li>Torque or current limits.</li>
+<li>Acceleration and deceleration.</li>
+<li>Homing method and speed.</li>
+<li>Electronic gear ratio.</li>
+<li>Encoder resolution or feedback configuration.</li>
+<li>Positioning tolerance.</li>
+<li>Following-error limit.</li>
+<li>Control-loop gains.</li>
+<li>Brake control settings.</li>
+</ul>
+<h3 id="121-why-changes-are-sensitive">12.1 Why changes are sensitive</h3>
+<p>Incorrect settings can cause:</p>
+<ul>
+<li>Oscillation or unstable motion.</li>
+<li>Excessive vibration.</li>
+<li>Overshoot.</li>
+<li>Unexpected stopping.</li>
+<li>Positioning errors.</li>
+<li>Mechanical collision.</li>
+<li>Motor or drive overload.</li>
+</ul>
+<h3 id="122-tuning-discipline">12.2 Tuning discipline</h3>
+<ol>
+<li>Identify the axis, drive, motor, and mechanical load.</li>
+<li>Retrieve the approved parameter set.</li>
+<li>Review the manufacturer's tuning procedure.</li>
+<li>Check mechanical and feedback conditions.</li>
+<li>Define acceptable motion behavior.</li>
+<li>Apply changes under controlled commissioning conditions.</li>
+<li>Verify response, stability, positioning accuracy, and relevant fault behavior.</li>
+<li>Save and document the approved result.</li>
+</ol>
+<p>Do not copy tuning values from a similar machine without checking inertia, gearing, motor characteristics, mechanics, and control architecture.</p>
+<h2 id="13-cnc-and-robot-parameters">13. CNC and Robot Parameters</h2>
+<h3 id="131-cnc-parameters-and-offsets">13.1 CNC parameters and offsets</h3>
+<p>CNC systems may include:</p>
+<ul>
+<li>Tool geometry and wear offsets.</li>
+<li>Work-coordinate offsets.</li>
+<li>Machine parameters.</li>
+<li>Feed and speed settings.</li>
+<li>Compensation values.</li>
+<li>Macro variables.</li>
+<li>Axis limits.</li>
+<li>Tool-change and machine-builder settings.</li>
+</ul>
+<p>Tool offsets and machine parameters are not the same thing. Tool offsets compensate for tool geometry or wear, while machine parameters can define deeper controller or machine behavior. Both require the correct procedure and authorization.</p>
+<p>Before modifying CNC settings, confirm the correct machine, workpiece, tool, coordinate system, program revision, and applicable limits. Use the machine-builder and controller documentation for parameter-specific actions.</p>
+<h3 id="132-robot-parameters">13.2 Robot parameters</h3>
+<p>Robot configuration can include:</p>
+<ul>
+<li>Tool center point (TCP).</li>
+<li>Tool and work frames.</li>
+<li>Payload and center of gravity.</li>
+<li>Speed and acceleration.</li>
+<li>Axis limits.</li>
+<li>Positioning tolerances.</li>
+<li>Motion blending.</li>
+<li>External-axis configuration.</li>
+</ul>
+<p>Incorrect TCP or payload data can create positioning errors and unsafe motion. Validate changes using the approved robot commissioning procedure and appropriate safety controls.</p>
+<h2 id="14-sensors-measurement-and-scaling-parameters">14. Sensors, Measurement, and Scaling Parameters</h2>
+<p>Measurement parameters convert raw electrical signals into meaningful process values.</p>
+<p>For a linear scaling relationship, if the input spans from <span class="math-inline">\(x\_{\min}\)</span> to <span class="math-inline">\(x\_{\max}\)</span> and the engineering range spans from <span class="math-inline">\(y\_{\min}\)</span> to <span class="math-inline">\(y\_{\max}\)</span>, the engineering value is:</p>
+<div class="math-display">\[ y = y\_{\min} + \frac{x-x\_{\min}}{x\_{\max}-x\_{\min}}(y\_{\max}-y\_{\min}) \]</div>
+<p>This formula applies only when the sensor relationship is intended to be linear and the input range is valid.</p>
+<h3 id="example">Example</h3>
+<p>A pressure transmitter produces a 4–20 mA signal corresponding to 0–10 bar.</p>
+<p>At 12 mA:</p>
+<div class="math-display">\[ P = \frac{12-4}{20-4}\times 10 = 5\text{ bar} \]</div>
+<p>If the PLC is mistakenly configured for 0–20 mA scaling, the displayed value will be wrong. Changing the scaling parameter without checking the transmitter specification can make the display appear correct at one point while remaining inaccurate across the range.</p>
+<h3 id="verification-points">Verification points</h3>
+<ul>
+<li>Sensor model and calibrated range.</li>
+<li>Signal type and electrical range.</li>
+<li>Input module configuration.</li>
+<li>Raw input value.</li>
+<li>Engineering-unit conversion.</li>
+<li>Zero and span.</li>
+<li>Filter settings.</li>
+<li>Wire-break or fault detection.</li>
+<li>Calibration status.</li>
+<li>Independent reference measurement where required.</li>
+</ul>
+<p>Never use a scaling adjustment to conceal a faulty sensor or an incorrect electrical connection.</p>
+<h2 id="15-pid-and-process-control-tuning">15. PID and Process-Control Tuning</h2>
+<p>PID control parameters influence how a process responds to errors between its setpoint and measured value.</p>
+<p>A common idealized representation is:</p>
+<div class="math-display">\[ u(t)=K_p e(t)+K_i\int e(t)\\,dt+K_d\frac{de(t)}{dt} \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(u(t)\)</span> is the controller output.</li>
+<li><span class="math-inline">\(e(t)\)</span> is the difference between setpoint and measured value.</li>
+<li><span class="math-inline">\(K_p\)</span> is proportional gain.</li>
+<li><span class="math-inline">\(K_i\)</span> is integral gain.</li>
+<li><span class="math-inline">\(K_d\)</span> is derivative gain.</li>
+</ul>
+<p>Manufacturers may instead use integral time, derivative time, normalized gains, or different internal algorithms. Parameter names and numerical values must therefore be interpreted using the specific controller's documentation.</p>
+<h3 id="common-symptoms">Common symptoms</h3>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible causes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Slow response</td>
+<td>Conservative tuning, actuator limitation, or process constraints</td>
+</tr>
+<tr>
+<td>Overshoot</td>
+<td>Aggressive tuning, delay, or stored process energy</td>
+</tr>
+<tr>
+<td>Oscillation</td>
+<td>Excessive gain, delay, interaction, or mechanical issues</td>
+</tr>
+<tr>
+<td>Persistent steady-state error</td>
+<td>Integral action, output limits, or process limitations</td>
+</tr>
+<tr>
+<td>Noisy output</td>
+<td>Noisy feedback, excessive derivative action, or poor signal quality</td>
+</tr>
+<tr>
+<td>Output saturation</td>
+<td>Insufficient actuator capacity, unsuitable setpoint, or tuning issue</td>
+</tr>
+</tbody>
+</table>
+<p>These symptoms do not uniquely identify a cause. Verify the process, sensor, actuator, control mode, and tuning method before changing gains.</p>
+<h2 id="16-alarm-trip-and-protection-parameters">16. Alarm, Trip, and Protection Parameters</h2>
+<p>Alarm and trip parameters must be distinguished carefully.</p>
+<ul>
+<li>Warning: Indicates a condition requiring attention.</li>
+<li>Alarm: Notifies an operator or system of an abnormal condition.</li>
+<li>Trip: Causes a defined protective or shutdown action.</li>
+<li>Safety function: A function intended to reduce risk and requiring the appropriate safety design, validation, and lifecycle controls.</li>
+</ul>
+<p>The exact meaning depends on the machine design and applicable standards.</p>
+<p>Changing an ordinary process alarm threshold may be permissible through a controlled procedure. Changing a safety-related trip threshold may require a formal safety engineering process and validation.</p>
+<p>Never assume that all alarm or limit values are ordinary editable process parameters.</p>
+<h2 id="17-parameter-validation-and-testing">17. Parameter Validation and Testing</h2>
+<p>Parameter validation confirms that the new value is correct, authorized, compatible, and suitable for the intended operating conditions.</p>
+<h3 id="171-define-acceptance-criteria">17.1 Define acceptance criteria</h3>
+<p>Examples:</p>
+<ul>
+<li>The drive accelerates within the approved time range.</li>
+<li>Motor current remains within specified operating limits.</li>
+<li>The pressure value agrees with an independent reference within the permitted tolerance.</li>
+<li>The controller maintains stable process response.</li>
+<li>The alarm activates at the specified threshold.</li>
+<li>The correct recipe is applied to the intended product.</li>
+<li>The machine continues to meet its required cycle-time and quality criteria.</li>
+</ul>
+<h3 id="172-test-evidence">17.2 Test evidence</h3>
+<p>Record:</p>
+<ul>
+<li>Parameter identifier and description.</li>
+<li>Previous and new values.</li>
+<li>Units and device identity.</li>
+<li>Test conditions.</li>
+<li>Expected behavior.</li>
+<li>Actual measured results.</li>
+<li>Acceptance status.</li>
+<li>Tester and reviewer.</li>
+<li>Related change reference.</li>
+</ul>
+<p>Where a change affects a protective function, testing must follow the applicable safety validation procedure. Ordinary functional testing is not a substitute.</p>
+<h2 id="18-parameter-restoration-and-rollback">18. Parameter Restoration and Rollback</h2>
+<p>Rollback means returning to a known, approved parameter configuration when a change fails or produces unacceptable results.</p>
+<h3 id="181-rollback-procedure">18.1 Rollback procedure</h3>
+<ol>
+<li>Identify the reason rollback is required.</li>
+<li>Put the machine into the required safe condition.</li>
+<li>Confirm the correct previous baseline and target device.</li>
+<li>Verify compatibility with the installed hardware and firmware.</li>
+<li>Restore the previous configuration using the supported method.</li>
+<li>Verify the active values and required stored values.</li>
+<li>Test relevant machine functions.</li>
+<li>Record the restoration and its results.</li>
+<li>Investigate the failed change before attempting it again.</li>
+</ol>
+<h3 id="182-common-restoration-mistakes">18.2 Common restoration mistakes</h3>
+<ul>
+<li>Loading a configuration from another machine.</li>
+<li>Restoring parameters from incompatible firmware.</li>
+<li>Assuming that every parameter is included in a backup.</li>
+<li>Ignoring values stored in a separate module.</li>
+<li>Forgetting calibration or device-specific commissioning data.</li>
+<li>Failing to verify values after restoration.</li>
+</ul>
+<p>A rollback should restore a known safe state, not simply recreate the oldest available configuration.</p>
+<h2 id="19-parameter-governance-and-access-control">19. Parameter Governance and Access Control</h2>
+<p>Parameter access should reflect the potential consequences of the change.</p>
+<p>Typical roles may include:</p>
+<ul>
+<li>Operator: permitted routine operating adjustments.</li>
+<li>Maintenance technician: approved troubleshooting and maintenance settings.</li>
+<li>Controls engineer: application configuration and engineering changes.</li>
+<li>Process or quality engineer: process limits and acceptance criteria.</li>
+<li>Safety specialist: review and validation of relevant safety-related changes.</li>
+<li>Approver or asset owner: authorization according to the organization's procedure.</li>
+</ul>
+<p>These are example responsibilities, not universal job titles.</p>
+<h3 id="good-access-control-practices">Good access-control practices</h3>
+<ul>
+<li>Use individual accounts where supported.</li>
+<li>Avoid shared engineering passwords.</li>
+<li>Restrict write access to authorized personnel.</li>
+<li>Protect safety-related configuration.</li>
+<li>Log significant parameter changes.</li>
+<li>Control remote engineering access.</li>
+<li>Review permissions periodically.</li>
+<li>Preserve emergency-access arrangements under the applicable procedure.</li>
+</ul>
+<p>Access control helps prevent unauthorized changes, but it does not replace technical validation or physical safety controls.</p>
+<h2 id="20-parameter-registers-and-documentation">20. Parameter Registers and Documentation</h2>
+<p>A parameter register helps maintenance understand the approved operating configuration and the reason for each important setting.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Asset ID</td>
+<td>Identifies the machine or system</td>
+</tr>
+<tr>
+<td>Device</td>
+<td>Identifies PLC, drive, sensor, controller, or application</td>
+</tr>
+<tr>
+<td>Parameter ID</td>
+<td>Manufacturer or application identifier</td>
+</tr>
+<tr>
+<td>Parameter description</td>
+<td>Explains the setting</td>
+</tr>
+<tr>
+<td>Approved value</td>
+<td>Current authorized value</td>
+</tr>
+<tr>
+<td>Unit</td>
+<td>Defines the engineering unit</td>
+</tr>
+<tr>
+<td>Allowed range</td>
+<td>Defines the permitted range and its basis</td>
+</tr>
+<tr>
+<td>Source</td>
+<td>Identifies the specification or approved procedure</td>
+</tr>
+<tr>
+<td>Previous value</td>
+<td>Supports change traceability</td>
+</tr>
+<tr>
+<td>Change ID</td>
+<td>Links the change to its authorization and evidence</td>
+</tr>
+<tr>
+<td>Effective date</td>
+<td>Identifies when the new value became active</td>
+</tr>
+<tr>
+<td>Firmware or software version</td>
+<td>Helps establish compatibility</td>
+</tr>
+<tr>
+<td>Verification status</td>
+<td>Records the verification result</td>
+</tr>
+<tr>
+<td>Owner</td>
+<td>Identifies the responsible function</td>
+</tr>
+</tbody>
+</table>
+<p>Not every parameter needs to be manually tracked in a spreadsheet. The register should focus on settings that are important for safety, quality, reliability, process performance, or recovery.</p>
+<h2 id="21-practical-industrial-example-vfd-acceleration-change">21. Practical Industrial Example: VFD Acceleration Change</h2>
+<p>Problem: A conveyor drive trips intermittently while starting.</p>
+<p>Incorrect approach: Increase the acceleration time immediately and declare victory if the drive starts once.</p>
+<p>Controlled approach:</p>
+<ol>
+<li>Record the fault code, drive status, and operating conditions.</li>
+<li>Inspect the conveyor for binding, overload, or mechanical deterioration.</li>
+<li>Review motor data, current behavior, and the existing acceleration setting.</li>
+<li>Check supply conditions and relevant drive diagnostics.</li>
+<li>Establish whether acceleration demand is genuinely contributing to the trip.</li>
+<li>Define a proposed setting within manufacturer and process limits.</li>
+<li>Obtain the required approval.</li>
+<li>Back up the existing configuration.</li>
+<li>Apply the change using the approved procedure.</li>
+<li>Test repeated starts under representative loading.</li>
+<li>Verify current, start behavior, cycle timing, and fault recurrence.</li>
+<li>Record the actual value, evidence, and approved baseline.</li>
+</ol>
+<p>Result: The change is accepted only when evidence demonstrates that the fault has been addressed without introducing unacceptable side effects.</p>
+<h2 id="22-practical-industrial-example-test-bed-pressure-scaling">22. Practical Industrial Example: Test-Bed Pressure Scaling</h2>
+<p>Problem: A test-bed HMI displays a pressure value that differs from a reference gauge.</p>
+<p>Potential causes include:</p>
+<ul>
+<li>Incorrect transmitter range.</li>
+<li>Wrong analog input configuration.</li>
+<li>Incorrect scaling.</li>
+<li>Wiring or grounding problems.</li>
+<li>Sensor calibration drift.</li>
+<li>Incorrect engineering units.</li>
+<li>Signal noise or filtering.</li>
+</ul>
+<p>A controlled investigation should compare the raw input, configured range, calculated engineering value, transmitter specification, and reference measurement.</p>
+<p>If the scaling is incorrect, the correction must be validated across the required operating range. Checking only one pressure point may fail to reveal a zero offset, nonlinear behavior, or an incorrect span.</p>
+<h2 id="23-practical-industrial-example-recipe-parameter-change">23. Practical Industrial Example: Recipe Parameter Change</h2>
+<p>Problem: A new product variant requires a different torque target.</p>
+<p>A controlled process should establish:</p>
+<ul>
+<li>The correct product and operation.</li>
+<li>The approved torque specification.</li>
+<li>The appropriate tool or tightening program.</li>
+<li>The correct recipe identification.</li>
+<li>Permitted tolerances.</li>
+<li>Operator permissions.</li>
+<li>Traceability requirements.</li>
+<li>Test and verification requirements.</li>
+</ul>
+<p>After deployment, verify that the new recipe is selected correctly, the target reaches the intended equipment, the measured result is evaluated against the approved limits, and the result is recorded against the correct product identity.</p>
+<p>A valid parameter value applied to the wrong product is still a process failure. Computers are very good at repeating that sort of mistake consistently.</p>
+<h2 id="24-common-parameter-change-failures">24. Common Parameter Change Failures</h2>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Possible consequence</th>
+<th>Control</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Changing values without diagnosis</td>
+<td>Original fault remains</td>
+<td>Investigate the cause first</td>
+</tr>
+<tr>
+<td>Incorrect units</td>
+<td>Wrong operating value</td>
+<td>Verify units and scaling</td>
+</tr>
+<tr>
+<td>Copying settings from a similar machine</td>
+<td>Compatibility or performance problem</td>
+<td>Confirm device and application equivalence</td>
+</tr>
+<tr>
+<td>Failing to back up existing settings</td>
+<td>Recovery becomes difficult</td>
+<td>Capture the active baseline</td>
+</tr>
+<tr>
+<td>Editing offline values only</td>
+<td>Device remains unchanged</td>
+<td>Verify actual active values</td>
+</tr>
+<tr>
+<td>Changing protection thresholds casually</td>
+<td>Equipment damage or increased risk</td>
+<td>Apply the required engineering and safety review</td>
+</tr>
+<tr>
+<td>Ignoring product variants</td>
+<td>Wrong process settings applied</td>
+<td>Control recipe identity and selection</td>
+</tr>
+<tr>
+<td>Failing to test across the range</td>
+<td>Errors remain undetected</td>
+<td>Define appropriate test coverage</td>
+</tr>
+<tr>
+<td>Restoring an incompatible backup</td>
+<td>Device behavior may be incorrect</td>
+<td>Check hardware and firmware compatibility</td>
+</tr>
+<tr>
+<td>Not updating the register</td>
+<td>Future maintenance uses stale information</td>
+<td>Update controlled records</td>
+</tr>
+<tr>
+<td>Leaving temporary values in place</td>
+<td>Persistent process instability</td>
+<td>Define expiry, restoration, and closure conditions</td>
+</tr>
+<tr>
+<td>Changing multiple parameters at once</td>
+<td>Root cause becomes difficult to isolate</td>
+<td>Use a planned test strategy</td>
+</tr>
+</tbody>
+</table>
+<h2 id="25-practical-parameter-change-checklist">25. Practical Parameter Change Checklist</h2>
+<h3 id="before-the-change">Before the change</h3>
+<ul>
+<li>Correct asset and device identified.</li>
+<li>Parameter ID, meaning, and units verified.</li>
+<li>Actual active value recorded.</li>
+<li>Approved baseline retrieved.</li>
+<li>Change trigger and requirement documented.</li>
+<li>Root cause investigated where applicable.</li>
+<li>Technical, safety, quality, and process impacts assessed.</li>
+<li>Proposed value justified by an approved source.</li>
+<li>Acceptance criteria defined.</li>
+<li>Required authorization obtained.</li>
+<li>Backup and recovery method verified.</li>
+</ul>
+<h3 id="during-the-change">During the change</h3>
+<ul>
+<li>Correct device and operating condition confirmed.</li>
+<li>Required isolation or commissioning controls established.</li>
+<li>Approved change method followed.</li>
+<li>Only authorized settings modified.</li>
+<li>Actual applied values checked.</li>
+<li>Required save, activation, or restart procedure completed.</li>
+<li>Unexpected behavior addressed before returning to service.</li>
+</ul>
+<h3 id="after-the-change">After the change</h3>
+<ul>
+<li>Active values verified.</li>
+<li>Required functional tests completed.</li>
+<li>Safety validation completed where applicable.</li>
+<li>Quality and process results checked.</li>
+<li>Relevant alarms and fault conditions verified.</li>
+<li>Approved baseline updated.</li>
+<li>Parameter register and change log updated.</li>
+<li>Actual deployed configuration backed up.</li>
+<li>Operators and maintenance personnel informed where necessary.</li>
+<li>Change closed with the required evidence.</li>
+</ul>
+<h2 id="26-interview-questions-and-answers">26. Interview Questions and Answers</h2>
+<h3 id="q1-what-is-parameter-change-management">Q1. What is parameter change management?</h3>
+<p>It is the controlled process of assessing, approving, applying, verifying, and documenting changes to values and settings that influence system behavior.</p>
+<h3 id="q2-what-is-the-difference-between-a-parameter-and-program-logic">Q2. What is the difference between a parameter and program logic?</h3>
+<p>A parameter is a configurable value or setting. Program logic defines the instructions and decision-making behavior of the application. A parameter change can still substantially alter that behavior.</p>
+<h3 id="q3-what-is-a-parameter-baseline">Q3. What is a parameter baseline?</h3>
+<p>It is the approved reference set of parameter values for a defined device, application, or operating condition.</p>
+<h3 id="q4-why-should-the-actual-device-configuration-be-captured-before-a-change">Q4. Why should the actual device configuration be captured before a change?</h3>
+<p>It establishes the current state, provides a comparison point, supports diagnosis, and enables recovery if the change fails.</p>
+<h3 id="q5-what-is-the-difference-between-a-setpoint-and-a-limit">Q5. What is the difference between a setpoint and a limit?</h3>
+<p>A setpoint is the desired operating value. A limit defines a boundary used for control, acceptance, warning, or protection, depending on its purpose.</p>
+<h3 id="q6-why-should-maintenance-not-increase-a-vfd-acceleration-time-immediately-after-a-trip">Q6. Why should maintenance not increase a VFD acceleration time immediately after a trip?</h3>
+<p>The trip may result from mechanical loading, incorrect motor data, electrical supply problems, or other faults. Changing the ramp time without diagnosis can hide the actual problem.</p>
+<h3 id="q7-what-is-parameter-drift">Q7. What is parameter drift?</h3>
+<p>It is an unintended deviation between the actual parameter values and the approved baseline.</p>
+<h3 id="q8-why-are-servo-parameters-particularly-sensitive">Q8. Why are servo parameters particularly sensitive?</h3>
+<p>They can directly affect motion stability, positioning accuracy, torque, travel limits, and collision risk.</p>
+<h3 id="q9-is-a-parameter-backup-sufficient-evidence-of-approval">Q9. Is a parameter backup sufficient evidence of approval?</h3>
+<p>No. A backup preserves configuration data. Approval requires the appropriate authorization and supporting records.</p>
+<h3 id="q10-what-should-be-verified-after-a-parameter-change">Q10. What should be verified after a parameter change?</h3>
+<p>The actual active values, correct device identity, required functional behavior, relevant protection and fault behavior, acceptance criteria, and updated records.</p>
+<h3 id="q11-why-must-sensor-scaling-be-verified-across-a-range">Q11. Why must sensor scaling be verified across a range?</h3>
+<p>A single-point check may not reveal incorrect span, offset, units, or other scaling errors across the operating range.</p>
+<h3 id="q12-what-is-the-difference-between-a-process-alarm-and-a-safety-function">Q12. What is the difference between a process alarm and a safety function?</h3>
+<p>A process alarm primarily communicates an abnormal condition, while a safety function is designed to reduce risk and requires the applicable safety engineering and validation controls. The exact distinction depends on the system design.</p>
+<h3 id="q13-when-should-a-parameter-change-be-rolled-back">Q13. When should a parameter change be rolled back?</h3>
+<p>When the change causes unacceptable behavior, fails its acceptance criteria, introduces an uncontrolled risk, or cannot be validated as required. Restoration must use a compatible and approved configuration.</p>
+<h3 id="q14-when-is-a-parameter-change-complete">Q14. When is a parameter change complete?</h3>
+<p>When the approved value is applied and verified, required testing is satisfactory, records are updated, and the change meets its closure criteria.</p>
+<h2 id="27-key-principles-to-remember">27. Key Principles to Remember</h2>
+<ul>
+<li>Identify the parameter and its actual function before changing it.</li>
+<li>Record the active configuration before modification.</li>
+<li>Verify units, scaling, device identity, and firmware compatibility.</li>
+<li>Diagnose faults before changing settings to suppress symptoms.</li>
+<li>Assess the effect on safety, quality, reliability, and process performance.</li>
+<li>Use approved values and documented acceptance criteria.</li>
+<li>Treat protection and safety-related settings with the appropriate additional controls.</li>
+<li>Verify the active device state after modification.</li>
+<li>Maintain traceable baselines, change records, and recovery arrangements.</li>
+<li>Update the documentation so future maintenance knows what changed and why.</li>
+</ul>
+<p>The practical maintenance principle: A parameter is not merely a number on an engineering screen. It is an input to machine behavior, and changing it requires understanding what the number controls.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\31_Change_Mgmt\01_Triggers\04_Network - Network</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

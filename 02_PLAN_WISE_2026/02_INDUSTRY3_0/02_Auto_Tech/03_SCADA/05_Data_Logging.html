@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>05_Data_Logging: Store Production and Fault Data</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">05_Data_Logging: Store Production and Fault Data</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-why-data-logging-is-required">2. Why Data Logging Is Required</a><ul>
+<li><a href="#21-production-monitoring">2.1 Production monitoring</a></li>
+<li><a href="#22-fault-investigation">2.2 Fault investigation</a></li>
+<li><a href="#23-maintenance-improvement">2.3 Maintenance improvement</a></li>
+<li><a href="#24-quality-traceability">2.4 Quality traceability</a></li>
+<li><a href="#25-performance-analysis">2.5 Performance analysis</a></li>
+<li><a href="#26-energy-monitoring">2.6 Energy monitoring</a></li>
+<li><a href="#27-audit-and-reporting">2.7 Audit and reporting</a></li>
+</ul>
+</li>
+<li><a href="#3-what-data-should-be-logged">3. What Data Should Be Logged?</a></li>
+<li><a href="#4-types-of-data-logging">4. Types of Data Logging</a><ul>
+<li><a href="#41-periodic-logging">4.1 Periodic logging</a></li>
+<li><a href="#42-event-based-logging">4.2 Event-based logging</a></li>
+<li><a href="#43-change-based-logging">4.3 Change-based logging</a></li>
+<li><a href="#44-transaction-or-cycle-based-logging">4.4 Transaction or cycle-based logging</a></li>
+<li><a href="#45-audit-logging">4.5 Audit logging</a></li>
+</ul>
+</li>
+<li><a href="#5-the-data-logging-architecture">5. The Data Logging Architecture</a><ul>
+<li><a href="#layer-responsibilities">Layer responsibilities</a></li>
+</ul>
+</li>
+<li><a href="#6-scada-database-versus-historian">6. SCADA Database Versus Historian</a></li>
+<li><a href="#7-designing-a-useful-logging-record">7. Designing a Useful Logging Record</a></li>
+<li><a href="#8-production-data-logging">8. Production Data Logging</a><ul>
+<li><a href="#common-production-metrics">Common production metrics</a></li>
+<li><a href="#example-cycle-record">Example: cycle record</a></li>
+</ul>
+</li>
+<li><a href="#9-fault-and-downtime-logging">9. Fault and Downtime Logging</a><ul>
+<li><a href="#example-fault-history">Example fault history</a></li>
+<li><a href="#fault-logging-versus-downtime-logging">Fault logging versus downtime logging</a></li>
+</ul>
+</li>
+<li><a href="#10-data-quality-and-validation">10. Data Quality and Validation</a><ul>
+<li><a href="#recommended-validation-rules">Recommended validation rules</a></li>
+</ul>
+</li>
+<li><a href="#11-database-design-for-scada-logging">11. Database Design for SCADA Logging</a><ul>
+<li><a href="#111-process-samples">11.1 Process samples</a></li>
+<li><a href="#112-production-cycles">11.2 Production cycles</a></li>
+<li><a href="#113-fault-events">11.3 Fault events</a></li>
+<li><a href="#114-equipment-master">11.4 Equipment master</a></li>
+</ul>
+</li>
+<li><a href="#12-example-sql-table-design">12. Example SQL Table Design</a></li>
+<li><a href="#13-sampling-frequency-and-storage-requirements">13. Sampling Frequency and Storage Requirements</a><ul>
+<li><a href="#practical-logging-strategy">Practical logging strategy</a></li>
+</ul>
+</li>
+<li><a href="#14-data-buffering-and-communication-failure">14. Data Buffering and Communication Failure</a><ul>
+<li><a href="#example-architecture">Example architecture</a></li>
+<li><a href="#important-considerations">Important considerations</a></li>
+</ul>
+</li>
+<li><a href="#15-using-logged-data-for-maintenance-analysis">15. Using Logged Data for Maintenance Analysis</a><ul>
+<li><a href="#example-recurring-station-downtime">Example: recurring station downtime</a></li>
+<li><a href="#important-distinction-fault-duration-versus-repair-time">Important distinction: fault duration versus repair time</a></li>
+</ul>
+</li>
+<li><a href="#16-common-data-logging-problems">16. Common Data Logging Problems</a></li>
+<li><a href="#17-interview-questions-and-answers">17. Interview Questions and Answers</a></li>
+<li><a href="#18-practical-exercises">18. Practical Exercises</a></li>
+<li><a href="#19-final-mental-model">19. Final Mental Model</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>SCADA data logging is the process of collecting, timestamping, and storing industrial data so it can be reviewed, analyzed, reported, and used for troubleshooting after the original event has passed.</p>
+<p>A SCADA screen shows what is happening now. Data logging preserves information about what happened earlier.</p>
+<p>In an automotive manufacturing line, useful logged data may include:</p>
+<ul>
+<li>Production counts and completed cycles.</li>
+<li>Machine cycle times.</li>
+<li>Station downtime and fault occurrences.</li>
+<li>PLC, robot, CNC, and drive status.</li>
+<li>Pressure, temperature, current, and other process values.</li>
+<li>Quality measurements and rejection results.</li>
+<li>Operator actions and approved parameter changes.</li>
+<li>Communication failures and equipment diagnostic events.</li>
+<li>Energy consumption and equipment utilization.</li>
+</ul>
+<p>For example, if a robotic station repeatedly stops during a fixture-clamping operation, logged data can help establish when the stoppages occurred, how long they lasted, whether pressure dropped, and whether the fault recurred after maintenance.</p>
+<p>Without reliable historical records, troubleshooting becomes a reconstruction exercise based on memory, which is a fairly unreliable industrial data-storage technology.</p>
+<h2 id="2-why-data-logging-is-required">2. Why Data Logging Is Required</h2>
+<p>Data logging serves several purposes.</p>
+<h3 id="21-production-monitoring">2.1 Production monitoring</h3>
+<p>Records production counts, cycle times, throughput, and rejected parts.</p>
+<h3 id="22-fault-investigation">2.2 Fault investigation</h3>
+<p>Preserves relevant values and events around a breakdown.</p>
+<h3 id="23-maintenance-improvement">2.3 Maintenance improvement</h3>
+<p>Helps identify frequently failing devices, recurring stoppages, and deterioration over time.</p>
+<h3 id="24-quality-traceability">2.4 Quality traceability</h3>
+<p>Connects production results with the relevant process measurements, timestamps, station, or product identifier where required.</p>
+<h3 id="25-performance-analysis">2.5 Performance analysis</h3>
+<p>Supports analysis of downtime, availability, cycle-time variation, and bottlenecks.</p>
+<h3 id="26-energy-monitoring">2.6 Energy monitoring</h3>
+<p>Stores energy measurements for comparison by shift, machine, production quantity, or operating condition.</p>
+<h3 id="27-audit-and-reporting">2.7 Audit and reporting</h3>
+<p>Provides records for operational reviews, internal audits, quality investigations, and other applicable requirements.</p>
+<p>The required records and retention periods depend on the organization's process, quality system, legal obligations, and data-governance rules.</p>
+<h2 id="3-what-data-should-be-logged">3. What Data Should Be Logged?</h2>
+<p>Not every PLC tag needs to be stored at the same frequency. First identify what each record is intended to support.</p>
+<table>
+<thead>
+<tr>
+<th>Data category</th>
+<th>Examples</th>
+<th>Typical logging method</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Production</td>
+<td>Good count, rejected count, completed cycles</td>
+<td>Event-based or periodic</td>
+</tr>
+<tr>
+<td>Machine state</td>
+<td>Running, stopped, idle, faulted</td>
+<td>State-change events</td>
+</tr>
+<tr>
+<td>Fault information</td>
+<td>Fault code, station, activation time</td>
+<td>Event-based</td>
+</tr>
+<tr>
+<td>Process values</td>
+<td>Pressure, temperature, current</td>
+<td>Periodic or change-based</td>
+</tr>
+<tr>
+<td>Cycle information</td>
+<td>Start time, end time, duration</td>
+<td>Cycle event records</td>
+</tr>
+<tr>
+<td>Quality results</td>
+<td>Measurement, pass/fail, product identifier</td>
+<td>Per part or inspection</td>
+</tr>
+<tr>
+<td>Operator actions</td>
+<td>Recipe changes, authorized commands</td>
+<td>Audit/event records</td>
+</tr>
+<tr>
+<td>Communication health</td>
+<td>Connection loss and restoration</td>
+<td>Event-based</td>
+</tr>
+<tr>
+<td>Energy</td>
+<td>Power, energy counter, consumption</td>
+<td>Periodic or meter events</td>
+</tr>
+<tr>
+<td>Maintenance</td>
+<td>Repair start/end, component replacement</td>
+<td>Maintenance-system records or integrated events</td>
+</tr>
+</tbody>
+</table>
+<p>The logging method should match the data's purpose.</p>
+<p>For example, a production counter may need to be recorded after each completed cycle, while a slowly changing temperature might be recorded every few seconds or minutes.</p>
+<h2 id="4-types-of-data-logging">4. Types of Data Logging</h2>
+<h3 id="41-periodic-logging">4.1 Periodic logging</h3>
+<p>Data is recorded at a configured interval.</p>
+<p>Example:</p>
+<pre><code>10:00:00  Pressure = 5.8 bar
+10:00:05  Pressure = 5.7 bar
+10:00:10  Pressure = 5.6 bar
+10:00:15  Pressure = 5.8 bar
+</code></pre>
+<p>Useful for:</p>
+<ul>
+<li>Process monitoring.</li>
+<li>Historical trends.</li>
+<li>Energy and utility monitoring.</li>
+<li>Slowly changing values.</li>
+</ul>
+<p>The interval must be short enough to capture the behavior of interest. A five-second interval cannot reliably preserve a transient that lasts only 100 milliseconds.</p>
+<h3 id="42-event-based-logging">4.2 Event-based logging</h3>
+<p>A record is created when a defined event occurs.</p>
+<p>Examples:</p>
+<ul>
+<li>Station enters the running state.</li>
+<li>Robot fault activates.</li>
+<li>Cycle completes.</li>
+<li>Operator changes a setpoint.</li>
+<li>PLC communication is lost.</li>
+</ul>
+<p>Event-based logging is useful when the occurrence and timing of a change matter more than continuously recording the same state.</p>
+<h3 id="43-change-based-logging">4.3 Change-based logging</h3>
+<p>A value is recorded when it changes sufficiently according to the configured acquisition rule.</p>
+<p>For example, pressure might be logged when it changes by more than a defined amount.</p>
+<p>This can reduce unnecessary records, but the deadband must be selected carefully. A deadband that is too large can hide meaningful process changes.</p>
+<h3 id="44-transaction-or-cycle-based-logging">4.4 Transaction or cycle-based logging</h3>
+<p>A record is created for each production cycle, part, batch, or inspection.</p>
+<p>Example fields:</p>
+<ul>
+<li>Part or cycle identifier.</li>
+<li>Station identifier.</li>
+<li>Cycle start timestamp.</li>
+<li>Cycle completion timestamp.</li>
+<li>Cycle duration.</li>
+<li>Process result.</li>
+<li>Quality result.</li>
+<li>Fault or rejection reason, where applicable.</li>
+</ul>
+<p>This method is especially useful for automotive production traceability and cycle-time analysis.</p>
+<h3 id="45-audit-logging">4.5 Audit logging</h3>
+<p>Records important user or configuration actions.</p>
+<p>Examples:</p>
+<ul>
+<li>User logged in or out.</li>
+<li>Recipe or setpoint changed.</li>
+<li>A command was requested.</li>
+<li>A configuration was modified.</li>
+<li>A maintenance action was recorded.</li>
+</ul>
+<p>Audit records may require stricter access control, retention, and integrity protection than ordinary operational data.</p>
+<h2 id="5-the-data-logging-architecture">5. The Data Logging Architecture</h2>
+<p>A typical architecture separates data acquisition, processing, storage, and reporting.</p>
+<pre><code>Sensors / Drives / Robots
+           |
+           v
+          PLC
+           |
+           v
+  SCADA Driver / OPC
+           |
+           v
+    SCADA / Node-RED
+           |
+           v
+   Logging / Validation
+           |
+           v
+      SQL Database
+           |
+           +------------------+
+           |                  |
+           v                  v
+    Reports / Power BI    Grafana / Trends
+</code></pre>
+<p>This is a conceptual architecture. Actual deployments may log directly from SCADA to a historian, use an OPC server, use an edge gateway, or send data to another approved storage platform.</p>
+<h3 id="layer-responsibilities">Layer responsibilities</h3>
+<p>PLC: Executes control logic and provides process data.</p>
+<p>Communication driver or OPC interface: Transfers data between the controller and the acquiring application.</p>
+<p>SCADA or edge application: Collects values, identifies events, validates data, and prepares records.</p>
+<p>Database or historian: Stores records for retrieval and analysis.</p>
+<p>Reporting and visualization tools: Query the stored data and present trends, summaries, and metrics.</p>
+<p>The database should not be treated as the control system. A temporary SQL failure should not compromise the PLC's ability to execute its required control and safety functions.</p>
+<h2 id="6-scada-database-versus-historian">6. SCADA Database Versus Historian</h2>
+<p>Both databases and historians store data, but they are often designed for different workloads.</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>General-purpose SQL database</th>
+<th>Industrial historian</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Typical data</td>
+<td>Production records, faults, quality results, transactions</td>
+<td>High-volume time-series process data</td>
+</tr>
+<tr>
+<td>Data model</td>
+<td>Tables, rows, relationships</td>
+<td>Time-series or tag-oriented storage</td>
+</tr>
+<tr>
+<td>Common queries</td>
+<td>Production reports, joins, counts, downtime</td>
+<td>Trends, time windows, signal history</td>
+</tr>
+<tr>
+<td>Data compression</td>
+<td>Depends on schema and database design</td>
+<td>Often optimized for historical time-series data</td>
+</tr>
+<tr>
+<td>Event storage</td>
+<td>Suitable with a good event schema</td>
+<td>Supported by some platforms, often alongside process values</td>
+</tr>
+<tr>
+<td>Flexibility</td>
+<td>High for structured business data</td>
+<td>High for continuous industrial history</td>
+</tr>
+<tr>
+<td>Best fit</td>
+<td>Transactional and relational records</td>
+<td>Large volumes of timestamped process measurements</td>
+</tr>
+</tbody>
+</table>
+<p>These are general distinctions, not absolute limitations. SQL databases can store time-series data, and historians may support event and production records.</p>
+<p>The choice depends on data volume, query patterns, retention, performance, reliability, integration requirements, and existing infrastructure.</p>
+<h2 id="7-designing-a-useful-logging-record">7. Designing a Useful Logging Record</h2>
+<p>Every record should contain enough information to interpret it later.</p>
+<p>A typical record may include:</p>
+<ul>
+<li>Equipment or station identifier.</li>
+<li>Tag or event name.</li>
+<li>Value or event details.</li>
+<li>Timestamp.</li>
+<li>Data type or unit, where needed.</li>
+<li>Data quality or validity information.</li>
+<li>Production cycle or part identifier, when applicable.</li>
+<li>Source system.</li>
+<li>Relevant fault code or result.</li>
+</ul>
+<p>For example:</p>
+<table>
+<thead>
+<tr>
+<th>Timestamp</th>
+<th>Station</th>
+<th>Signal</th>
+<th>Value</th>
+<th>Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10:00:00</td>
+<td>FR1010</td>
+<td>Pressure actual</td>
+<td>5.8</td>
+<td>bar</td>
+</tr>
+<tr>
+<td>10:00:05</td>
+<td>FR1010</td>
+<td>Pressure actual</td>
+<td>5.7</td>
+<td>bar</td>
+</tr>
+<tr>
+<td>10:00:10</td>
+<td>FR1010</td>
+<td>Pressure actual</td>
+<td>5.6</td>
+<td>bar</td>
+</tr>
+</tbody>
+</table>
+<p>The timestamps and measurements are illustrative.</p>
+<p>For meaningful comparisons, store timestamps consistently and document whether they represent source acquisition time, server receipt time, or database insertion time.</p>
+<h2 id="8-production-data-logging">8. Production Data Logging</h2>
+<p>Production logging records the events and measurements required to understand manufacturing output.</p>
+<h3 id="common-production-metrics">Common production metrics</h3>
+<p>Total cycles: Number of recorded production cycles.</p>
+<p>Good parts: Parts accepted by the defined quality process.</p>
+<p>Rejected parts: Parts classified as rejected under the applicable quality rules.</p>
+<p>Cycle time: Time taken by a defined production cycle.</p>
+<p>Throughput: Quantity produced per unit of time.</p>
+<p>Downtime: Time during which equipment is unavailable for its intended production function, according to the agreed definition.</p>
+<p>These metrics need clear definitions. A station cycle count, a line output count, and the number of completed vehicle bodies are not necessarily equivalent.</p>
+<h3 id="example-cycle-record">Example: cycle record</h3>
+<p>Suppose station FR1010 starts a cycle at 10:15:00 and completes it at 10:15:42.</p>
+<pre><code>Station:       FR1010
+Cycle start:   10:15:00
+Cycle end:     10:15:42
+Cycle duration: 42 seconds
+Result:        Pass
+</code></pre>
+<p>The cycle duration is calculated as:</p>
+<div class="math-display">\[ \text{Cycle duration}=\text{End time}-\text{Start time} \]</div>
+<p>A practical production table might contain:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Cycle_ID</code></td>
+<td>Unique cycle record identifier</td>
+</tr>
+<tr>
+<td><code>Station_ID</code></td>
+<td>Identifies the station</td>
+</tr>
+<tr>
+<td><code>Start_Time</code></td>
+<td>Cycle start timestamp</td>
+</tr>
+<tr>
+<td><code>End_Time</code></td>
+<td>Cycle end timestamp</td>
+</tr>
+<tr>
+<td><code>Cycle_Time_S</code></td>
+<td>Recorded or calculated duration</td>
+</tr>
+<tr>
+<td><code>Result</code></td>
+<td>Pass, reject, or another defined result</td>
+</tr>
+<tr>
+<td><code>Part_ID</code></td>
+<td>Product identifier, where available and required</td>
+</tr>
+</tbody>
+</table>
+<p>A unique record identifier helps prevent duplicate records from being mistaken for additional production.</p>
+<h2 id="9-fault-and-downtime-logging">9. Fault and Downtime Logging</h2>
+<p>Fault logging should capture more than the alarm message.</p>
+<p>A useful fault record may include:</p>
+<ul>
+<li>Unique event identifier.</li>
+<li>Station or device.</li>
+<li>Fault code.</li>
+<li>Fault description.</li>
+<li>Activation timestamp.</li>
+<li>Clear timestamp.</li>
+<li>Duration.</li>
+<li>Acknowledgement details, if available and required.</li>
+<li>Relevant operating mode.</li>
+<li>Production cycle identifier, if available.</li>
+<li>Corrective action or maintenance reference, where recorded.</li>
+</ul>
+<h3 id="example-fault-history">Example fault history</h3>
+<table>
+<thead>
+<tr>
+<th>Station</th>
+<th>Fault</th>
+<th>Start</th>
+<th>Clear</th>
+<th>Duration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FR1040</td>
+<td>Clamp feedback timeout</td>
+<td>10:14:32</td>
+<td>10:16:05</td>
+<td>93 s</td>
+</tr>
+<tr>
+<td>FR1010</td>
+<td>Robot fault</td>
+<td>10:32:10</td>
+<td>10:35:40</td>
+<td>210 s</td>
+</tr>
+</tbody>
+</table>
+<p>The example records are hypothetical.</p>
+<p>Fault duration is calculated as:</p>
+<div class="math-display">\[ \text{Fault duration}=\text{Clear time}-\text{Start time} \]</div>
+<p>This calculation is valid only if the timestamps represent the same event and the same time basis.</p>
+<p>If a fault remains active, its clear time is not yet known. A report may show it as active rather than incorrectly assigning a zero or fabricated duration.</p>
+<h3 id="fault-logging-versus-downtime-logging">Fault logging versus downtime logging</h3>
+<p>A fault and a downtime interval are related, but not identical.</p>
+<p>A fault may occur without stopping production. Conversely, production may stop because a station is starved, blocked, waiting for a downstream process, or intentionally paused.</p>
+<p>A robust system defines how downtime begins and ends, which states count as downtime, and how overlapping faults are handled.</p>
+<h2 id="10-data-quality-and-validation">10. Data Quality and Validation</h2>
+<p>Historical data is useful only when its meaning and validity are understood.</p>
+<p>Common data-quality problems include:</p>
+<ul>
+<li>Missing samples.</li>
+<li>Duplicate cycle records.</li>
+<li>Incorrect timestamps.</li>
+<li>Incorrect units or scaling.</li>
+<li>Stale values recorded as current.</li>
+<li>Invalid data recorded without a quality indication.</li>
+<li>Counter resets or rollover.</li>
+<li>Lost events during communication interruptions.</li>
+<li>Records from the wrong station or controller.</li>
+</ul>
+<h3 id="recommended-validation-rules">Recommended validation rules</h3>
+<ol>
+<li>Confirm the source and meaning of each signal.</li>
+<li>Validate data type, units, and range.</li>
+<li>Record appropriate timestamps and source identity.</li>
+<li>Detect duplicates using a suitable unique key or event identifier.</li>
+<li>Identify missing or stale data where possible.</li>
+<li>Preserve invalid-data indicators rather than silently converting invalid values into plausible measurements.</li>
+<li>Handle controller restarts, counter resets, and communication recovery explicitly.</li>
+</ol>
+<p>For example, if a PLC counter resets after a controller restart, a simple difference between consecutive values may appear negative. The logging application needs a defined method to detect resets or use a more reliable cycle-event source.</p>
+<h2 id="11-database-design-for-scada-logging">11. Database Design for SCADA Logging</h2>
+<p>A useful database separates different kinds of records instead of placing every possible field into one enormous table.</p>
+<p>A simple design might include:</p>
+<pre><code>SCADA Database
+      |
+      +---- Process_Samples
+      |
+      +---- Production_Cycles
+      |
+      +---- Fault_Events
+      |
+      +---- Equipment_Master
+      |
+      +---- Data_Quality_Events
+</code></pre>
+<h3 id="111-process-samples">11.1 Process samples</h3>
+<p>Stores timestamped measurements.</p>
+<p>Typical columns:</p>
+<ul>
+<li><code>Sample_ID</code></li>
+<li><code>Timestamp</code></li>
+<li><code>Equipment_ID</code></li>
+<li><code>Tag_Name</code></li>
+<li><code>Value</code></li>
+<li><code>Quality</code></li>
+</ul>
+<p>A production-grade schema may use separate typed columns or a normalized tag model rather than storing every value as a generic floating-point number.</p>
+<h3 id="112-production-cycles">11.2 Production cycles</h3>
+<p>Stores cycle-level records and results.</p>
+<p>Typical columns:</p>
+<ul>
+<li><code>Cycle_ID</code></li>
+<li><code>Station_ID</code></li>
+<li><code>Start_Time</code></li>
+<li><code>End_Time</code></li>
+<li><code>Cycle_Time_S</code></li>
+<li><code>Result</code></li>
+<li><code>Part_ID</code></li>
+</ul>
+<h3 id="113-fault-events">11.3 Fault events</h3>
+<p>Stores alarm or fault lifecycle records.</p>
+<p>Typical columns:</p>
+<ul>
+<li><code>Event_ID</code></li>
+<li><code>Station_ID</code></li>
+<li><code>Fault_Code</code></li>
+<li><code>Fault_Message</code></li>
+<li><code>Start_Time</code></li>
+<li><code>Clear_Time</code></li>
+<li><code>Acknowledged_Time</code></li>
+<li><code>Status</code></li>
+</ul>
+<p>If the system must preserve every activation, acknowledgement, and clear transition, an event-history table may be preferable to overwriting a single current-state record.</p>
+<h3 id="114-equipment-master">11.4 Equipment master</h3>
+<p>Stores equipment reference information, such as:</p>
+<ul>
+<li>Equipment identifier.</li>
+<li>Station name.</li>
+<li>PLC or controller reference.</li>
+<li>Line or area.</li>
+<li>Equipment type.</li>
+<li>Relevant configuration version.</li>
+</ul>
+<p>This helps maintain consistent equipment identity across production and fault records.</p>
+<h2 id="12-example-sql-table-design">12. Example SQL Table Design</h2>
+<p>The following is an illustrative SQL Server schema for a basic fault-event table.</p>
+<pre><code>CREATE TABLE dbo.Fault_Events
+(
+    Event_ID BIGINT IDENTITY(1,1) PRIMARY KEY,
+    Station_ID VARCHAR(30) NOT NULL,
+    Fault_Code VARCHAR(50) NOT NULL,
+    Fault_Message VARCHAR(250) NOT NULL,
+    Start_Time DATETIME2(3) NOT NULL,
+    Clear_Time DATETIME2(3) NULL,
+    Status VARCHAR(20) NOT NULL
+);
+</code></pre>
+<p>This table stores one record per fault occurrence, with a nullable clear time for a fault that has not yet cleared.</p>
+<p>Example query to retrieve recent fault records:</p>
+<pre><code>SELECT
+    Event_ID,
+    Station_ID,
+    Fault_Code,
+    Fault_Message,
+    Start_Time,
+    Clear_Time,
+    Status
+FROM dbo.Fault_Events
+WHERE Start_Time &gt;= DATEADD(DAY, -1, SYSDATETIME())
+ORDER BY Start_Time DESC;
+</code></pre>
+<p>This query uses the SQL Server's local system time. In a multi-system production environment, define a consistent timestamp convention, preferably using an agreed time basis, and adjust query boundaries accordingly.</p>
+<p>A real implementation should also validate status values, define duplicate-event handling, establish indexes appropriate to its queries, and define retention and access policies.</p>
+<h2 id="13-sampling-frequency-and-storage-requirements">13. Sampling Frequency and Storage Requirements</h2>
+<p>The logging interval has a direct effect on storage usage.</p>
+<p>Suppose 100 tags are logged every second.</p>
+<div class="math-display">\[ 100 \times 60 \times 60 \times 24 =8{,}640{,}000 \]</div>
+<p>That produces 8.64 million samples per day, assuming all 100 tags are recorded once per second without gaps.</p>
+<p>Over 30 days:</p>
+<div class="math-display">\[ 8{,}640{,}000 \times 30 =259{,}200{,}000 \]</div>
+<p>That is approximately 259.2 million sample records in 30 days, before accounting for indexes, metadata, backups, and database overhead.</p>
+<p>A useful design must consider:</p>
+<ul>
+<li>Number of tags.</li>
+<li>Acquisition interval.</li>
+<li>Event frequency.</li>
+<li>Record size.</li>
+<li>Indexes and database overhead.</li>
+<li>Retention duration.</li>
+<li>Query workload.</li>
+<li>Backup and recovery requirements.</li>
+</ul>
+<h3 id="practical-logging-strategy">Practical logging strategy</h3>
+<ul>
+<li>Record important discrete state transitions as events.</li>
+<li>Record cycle results at the cycle level.</li>
+<li>Use appropriate intervals for analog process values.</li>
+<li>Avoid recording duplicate values unnecessarily when change-based logging is suitable.</li>
+<li>Retain high-resolution data where required for fault analysis.</li>
+<li>Archive or purge records according to an approved retention policy.</li>
+</ul>
+<p>Do not reduce logging resolution blindly just to save disk space. If the data is too coarse to explain the fault, the storage saving may simply purchase a more expensive troubleshooting exercise later.</p>
+<h2 id="14-data-buffering-and-communication-failure">14. Data Buffering and Communication Failure</h2>
+<p>A logging system may temporarily lose connectivity to the database or upstream data source.</p>
+<p>A robust design considers what happens during the interruption.</p>
+<h3 id="example-architecture">Example architecture</h3>
+<pre><code>PLC
+ |
+ v
+SCADA / Edge Application
+ |
+ +---- Database connection healthy
+ |              |
+ |              v
+ |          Store record
+ |
+ +---- Database unavailable
+                |
+                v
+          Local buffer
+                |
+                v
+       Connection restored
+                |
+                v
+       Retry / replay records
+</code></pre>
+<p>This behavior must be explicitly supported and configured. A local buffer should not be assumed to exist merely because the application can connect to a database.</p>
+<h3 id="important-considerations">Important considerations</h3>
+<ul>
+<li>How long can data be buffered locally?</li>
+<li>What happens when the buffer is full?</li>
+<li>Are timestamps assigned at acquisition or later?</li>
+<li>How are duplicates prevented during replay?</li>
+<li>Are records replayed in the correct order?</li>
+<li>How are unrecoverable records reported?</li>
+<li>Does the logging failure generate a diagnostic event?</li>
+<li>Can the PLC continue operating safely and normally if the logging service is unavailable?</li>
+</ul>
+<p>A database outage should not automatically cause production control to fail. The architecture should separate process control from noncritical reporting and historical storage.</p>
+<h2 id="15-using-logged-data-for-maintenance-analysis">15. Using Logged Data for Maintenance Analysis</h2>
+<p>Data logging becomes particularly valuable when different records can be correlated.</p>
+<h3 id="example-recurring-station-downtime">Example: recurring station downtime</h3>
+<p>Suppose FR1040 experiences repeated stoppages over a week.</p>
+<p>A maintenance engineer can analyze:</p>
+<ul>
+<li>Fault occurrences by code.</li>
+<li>Total time spent in each fault condition.</li>
+<li>Average time between failures, where the data supports that calculation.</li>
+<li>Repair duration.</li>
+<li>Pressure and process values before faults.</li>
+<li>Cycle time before and after maintenance.</li>
+<li>Whether the same fault recurs after a component replacement.</li>
+</ul>
+<p>This can help prioritize improvement work.</p>
+<h3 id="important-distinction-fault-duration-versus-repair-time">Important distinction: fault duration versus repair time</h3>
+<p>Fault duration measures how long the defined fault condition remains active.</p>
+<p>Repair time measures the time spent performing the defined maintenance activity, according to the organization's measurement rules.</p>
+<p>Downtime measures production unavailability under the agreed downtime definition.</p>
+<p>These may differ substantially.</p>
+<p>For example, a fault may stop production for 15 minutes, but maintenance may spend only 6 minutes actively repairing the equipment. The remaining time may include diagnosis, waiting for access, recovery, or verification.</p>
+<p>The metric definitions must be consistent before comparing stations or shifts.</p>
+<h2 id="16-common-data-logging-problems">16. Common Data Logging Problems</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>First diagnostic step</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No records are being stored</td>
+<td>Logging disabled, failed connection, or database error</td>
+<td>Check logging status and database connectivity</td>
+</tr>
+<tr>
+<td>Duplicate production cycles</td>
+<td>Retry behavior, missing unique key, or duplicate event delivery</td>
+<td>Check event identity and duplicate handling</td>
+</tr>
+<tr>
+<td>Gaps in process history</td>
+<td>Acquisition failure, buffer overflow, or source communication loss</td>
+<td>Inspect data quality and logging diagnostics</td>
+</tr>
+<tr>
+<td>Fault duration is incorrect</td>
+<td>Missing transition, inconsistent timestamps, or wrong calculation</td>
+<td>Verify start and clear events</td>
+</tr>
+<tr>
+<td>Cycle time is negative</td>
+<td>Incorrect time source, ordering, or counter reset</td>
+<td>Check timestamps and event sequencing</td>
+</tr>
+<tr>
+<td>Database grows too quickly</td>
+<td>Excessive sampling or retention, or large record/index overhead</td>
+<td>Measure record volume and review the logging strategy</td>
+</tr>
+<tr>
+<td>Records appear out of order</td>
+<td>Clock differences or delayed buffering and replay</td>
+<td>Check timestamp source and replay behavior</td>
+</tr>
+<tr>
+<td>Stored value differs from the PLC</td>
+<td>Wrong mapping, scaling, conversion, or acquisition time</td>
+<td>Compare source data and recorded value</td>
+</tr>
+<tr>
+<td>Reports disagree with production counts</td>
+<td>Different counting definitions, resets, duplicates, or incomplete events</td>
+<td>Reconcile source and reporting rules</td>
+</tr>
+<tr>
+<td>Logging stops after database failure</td>
+<td>No persistent buffer or retry/recovery mechanism</td>
+<td>Verify outage handling and recovery behavior</td>
+</tr>
+</tbody>
+</table>
+<h2 id="17-interview-questions-and-answers">17. Interview Questions and Answers</h2>
+<p>Q1. What is SCADA data logging?</p>
+<p>The collection and storage of timestamped industrial data for historical review, troubleshooting, production reporting, and analysis.</p>
+<p>Q2. What is the difference between periodic and event-based logging?</p>
+<p>Periodic logging stores values at configured intervals. Event-based logging stores records when defined events occur.</p>
+<p>Q3. What is the difference between a SCADA database and a historian?</p>
+<p>A general-purpose database commonly stores structured operational and transactional records. A historian is typically optimized for high-volume historical process data. The actual capabilities depend on the platform.</p>
+<p>Q4. Why should timestamps be stored with process data?</p>
+<p>They establish when a value or event occurred and allow it to be correlated with other equipment and production records.</p>
+<p>Q5. Why are cycle-level records useful?</p>
+<p>They allow cycle duration, production results, and relevant process conditions to be analyzed for individual production cycles.</p>
+<p>Q6. What is the difference between fault duration and downtime?</p>
+<p>Fault duration measures the period of a defined fault condition. Downtime measures production unavailability according to the agreed operational definition.</p>
+<p>Q7. Why might database records be duplicated?</p>
+<p>Retries, repeated event delivery, missing unique identifiers, or incorrect replay behavior can cause duplicate records.</p>
+<p>Q8. How can excessive data logging affect a system?</p>
+<p>It can increase database storage, write load, network traffic, backup duration, and query latency.</p>
+<p>Q9. Why is data buffering useful?</p>
+<p>It can temporarily retain records during a database or network interruption so that data may be delivered after connectivity returns, provided the application supports the required behavior.</p>
+<p>Q10. Why should data quality be recorded?</p>
+<p>It helps distinguish valid current measurements from missing, stale, uncertain, or otherwise invalid values.</p>
+<p>Q11. How can logged data help prevent recurring faults?</p>
+<p>It reveals recurring patterns, operating conditions, fault frequencies, and changes before or after failures, supporting evidence-based maintenance improvements.</p>
+<p>Q12. Should a PLC depend on SQL Server to execute its control logic?</p>
+<p>Normally, no. Essential control and safety functions should remain in the appropriate controller architecture. Historical storage and reporting should be designed so that their failure does not compromise required machine control.</p>
+<h2 id="18-practical-exercises">18. Practical Exercises</h2>
+<p>Use a development system or an approved test environment.</p>
+<ol>
+<li>Define the data required to monitor a four-station robotic line.</li>
+<li>Separate the requirements into process samples, production cycles, fault events, and audit records.</li>
+<li>Design a production-cycle table with start time, end time, duration, result, and station identifier.</li>
+<li>Design a fault-event table with activation and clear timestamps.</li>
+<li>Calculate the daily sample volume for 250 tags logged every two seconds.</li>
+<li>Define a retention policy for high-resolution process data and production records.</li>
+<li>Investigate a hypothetical duplicate cycle record and propose a prevention mechanism.</li>
+<li>Design a method to detect missing or stale process samples.</li>
+<li>Document how the logging system should behave during a database outage.</li>
+<li>Correlate a fault record with pressure and clamp-feedback history.</li>
+<li>Define the difference between fault duration, repair time, and production downtime for a maintenance report.</li>
+<li>Prepare a SQL query that retrieves all fault events for a selected station during a defined period.</li>
+</ol>
+<h2 id="19-final-mental-model">19. Final Mental Model</h2>
+<pre><code>Industrial Process
+        |
+        v
+Data Acquisition
+        |
+        v
+Validation + Timestamping
+        |
+        v
+Logging / Buffering
+        |
+        v
+Database or Historian
+        |
+        +-------------------+
+        |                   |
+        v                   v
+Production Reports     Fault Analysis
+        |                   |
+        v                   v
+Performance Review     Maintenance Improvement
+</code></pre>
+<p>For every logged record, be able to answer these questions:</p>
+<ol>
+<li>What does the record represent?</li>
+<li>Which device or system produced the data?</li>
+<li>When was the value acquired or event detected?</li>
+<li>Is the record valid, complete, and correctly interpreted?</li>
+<li>How will the record be stored, retrieved, and retained?</li>
+<li>What decision or analysis will use it?</li>
+</ol>
+<p>Topic covered: <code>05_Data_Logging - Data logging: Store production and fault data</code></p>
+<p>Next topic: <code>06_Redundancy - Redundancy: Server and network failover</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

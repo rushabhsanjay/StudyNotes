@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vision System Backup and Disaster Recovery</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Vision System Backup and Disaster Recovery</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and scope</a></li>
+<li><a href="#2-vision-system-architecture">2. Vision system architecture</a></li>
+<li><a href="#3-essential-terminology">3. Essential terminology</a></li>
+<li><a href="#4-what-must-be-backed-up">4. What must be backed up?</a></li>
+<li><a href="#5-vision-backup-types-and-methods">5. Vision backup types and methods</a><ul>
+<li><a href="#51-complete-device-or-controller-backup">5.1 Complete device or controller backup</a></li>
+<li><a href="#52-job-and-recipe-export">5.2 Job and recipe export</a></li>
+<li><a href="#53-pc-image-and-software-backup">5.3 PC image and software backup</a></li>
+<li><a href="#54-calibration-backup">5.4 Calibration backup</a></li>
+<li><a href="#55-reference-images-and-datasets">5.5 Reference images and datasets</a></li>
+</ul>
+</li>
+<li><a href="#6-manufacturer-specific-backup-considerations">6. Manufacturer-specific backup considerations</a></li>
+<li><a href="#7-calibration-and-measurement-integrity">7. Calibration and measurement integrity</a><ul>
+<li><a href="#71-pixel-to-world-calibration">7.1 Pixel-to-world calibration</a></li>
+<li><a href="#72-intrinsic-and-extrinsic-calibration">7.2 Intrinsic and extrinsic calibration</a></li>
+<li><a href="#73-calibration-change-triggers">7.3 Calibration change triggers</a></li>
+<li><a href="#74-calibration-verification">7.4 Calibration verification</a></li>
+</ul>
+</li>
+<li><a href="#8-inspection-jobs-recipes-and-decision-logic">8. Inspection jobs, recipes, and decision logic</a><ul>
+<li><a href="#81-job-configuration">8.1 Job configuration</a></li>
+<li><a href="#82-recipe-management">8.2 Recipe management</a></li>
+<li><a href="#83-thresholds-and-tolerance-limits">8.3 Thresholds and tolerance limits</a></li>
+<li><a href="#84-golden-sample-validation">8.4 Golden-sample validation</a></li>
+</ul>
+</li>
+<li><a href="#9-lighting-optics-and-image-acquisition">9. Lighting, optics, and image acquisition</a><ul>
+<li><a href="#91-lighting-configuration">9.1 Lighting configuration</a></li>
+<li><a href="#92-camera-and-acquisition-settings">9.2 Camera and acquisition settings</a></li>
+<li><a href="#93-physical-setup-verification">9.3 Physical setup verification</a></li>
+</ul>
+</li>
+<li><a href="#10-communication-and-production-integration">10. Communication and production integration</a><ul>
+<li><a href="#101-plc-handshake">10.1 PLC handshake</a></li>
+<li><a href="#102-network-and-fieldbus-configuration">10.2 Network and fieldbus configuration</a></li>
+<li><a href="#103-robot-and-vision-integration">10.3 Robot and vision integration</a></li>
+</ul>
+</li>
+<li><a href="#11-vision-disaster-recovery-procedure">11. Vision disaster-recovery procedure</a><ul>
+<li><a href="#111-pre-restoration-checklist">11.1 Pre-restoration checklist</a></li>
+<li><a href="#112-restoration-sequence">11.2 Restoration sequence</a></li>
+<li><a href="#113-post-restoration-validation-checklist">11.3 Post-restoration validation checklist</a></li>
+</ul>
+</li>
+<li><a href="#12-common-vision-disaster-recovery-scenarios">12. Common vision disaster-recovery scenarios</a><ul>
+<li><a href="#121-vision-controller-failure">12.1 Vision controller failure</a></li>
+<li><a href="#122-job-corruption-or-accidental-modification">12.2 Job corruption or accidental modification</a></li>
+<li><a href="#123-camera-replacement">12.3 Camera replacement</a></li>
+<li><a href="#124-false-rejects-increase-after-recovery">12.4 False rejects increase after recovery</a></li>
+<li><a href="#125-defective-parts-are-accepted">12.5 Defective parts are accepted</a></li>
+<li><a href="#126-incorrect-dimensional-measurements">12.6 Incorrect dimensional measurements</a></li>
+<li><a href="#127-plc-or-robot-integration-failure">12.7 PLC or robot integration failure</a></li>
+<li><a href="#128-software-or-obsolescence-migration">12.8 Software or obsolescence migration</a></li>
+</ul>
+</li>
+<li><a href="#13-vision-backup-troubleshooting">13. Vision backup troubleshooting</a></li>
+<li><a href="#14-practical-maintenance-implementation">14. Practical maintenance implementation</a><ul>
+<li><a href="#141-vision-backup-register">14.1 Vision backup register</a></li>
+<li><a href="#142-suggested-folder-structure">14.2 Suggested folder structure</a></li>
+<li><a href="#143-maintenance-work-order-integration">14.3 Maintenance work-order integration</a></li>
+</ul>
+</li>
+<li><a href="#15-recovery-drills-and-audit">15. Recovery drills and audit</a><ul>
+<li><a href="#151-recovery-drill">15.1 Recovery drill</a></li>
+<li><a href="#152-audit-checklist">15.2 Audit checklist</a></li>
+</ul>
+</li>
+<li><a href="#16-vision-backup-management-kpis">16. Vision backup management KPIs</a></li>
+<li><a href="#17-interview-questions-and-technical-answers">17. Interview questions and technical answers</a></li>
+<li><a href="#18-final-engineering-principles">18. Final engineering principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-and-scope">1. Purpose and scope</h2>
+<p>Industrial machine vision systems inspect parts, identify features, read codes, verify assembly, guide robots, measure dimensions, and make pass/fail decisions. Their correct operation depends on more than the camera itself. A complete vision system may include cameras, lenses, lighting, controllers, image-processing jobs, calibration data, inspection recipes, communication interfaces, and integration with PLCs, robots, databases, and production networks.</p>
+<p>Vision backup and disaster recovery preserve the approved configuration needed to restore inspection accuracy and production functionality after controller failure, storage corruption, accidental deletion, incorrect parameter changes, hardware replacement, software upgrades, or obsolescence migration.</p>
+<p>A vision system can power up and acquire images while still producing incorrect inspection results because its exposure settings, lighting, calibration, regions of interest, measurement tools, thresholds, or job revision are wrong. Recovery must therefore include configuration restoration and verification against known-good parts and approved acceptance criteria.</p>
+<p>The objectives are to:</p>
+<ul>
+<li>Preserve inspection jobs, image-processing tools, and approved recipes.</li>
+<li>Protect camera, lens, exposure, lighting, and acquisition settings.</li>
+<li>Preserve calibration data and measurement references.</li>
+<li>Restore PLC, robot, and production-network communication.</li>
+<li>Maintain inspection limits, tolerances, and pass/fail logic.</li>
+<li>Preserve OCR, barcode, pattern-matching, and defect-detection configuration.</li>
+<li>Verify traceability, result handling, and reject mechanisms.</li>
+<li>Support controller replacement, software migration, and obsolescence planning.</li>
+<li>Reduce downtime without releasing an unverified inspection system into production.</li>
+</ul>
+<p>Core principle: Restoring a vision job is not enough. The complete optical, calibration, processing, communication, and inspection environment must be verified.</p>
+<h2 id="2-vision-system-architecture">2. Vision system architecture</h2>
+<pre><code>Part / Workpiece / Inspection Target
+                  ↓
+        Lens and Illumination
+                  ↓
+          Camera / Image Sensor
+                  ↓
+       Vision Controller or PC
+                  ├── Image Acquisition Settings
+                  ├── Inspection Jobs and Recipes
+                  ├── Calibration and Coordinate Data
+                  ├── Image-Processing Tools
+                  ├── Pass/Fail Logic and Thresholds
+                  └── Result and Diagnostic Records
+                            ↓
+                 PLC / Robot / HMI
+                            ↓
+             Reject Mechanism / Process Control
+
+Supporting systems:
+Engineering software, industrial network, image storage,
+recipe database, license files, calibration targets,
+backup repository, manuals, and recovery procedures
+</code></pre>
+<p>A smart camera may combine image acquisition, processing, communication, and job storage in one device. A PC-based system may distribute these functions across multiple devices and software applications. Backup requirements must reflect the actual installed architecture.</p>
+<h2 id="3-essential-terminology">3. Essential terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+<th>Industrial example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine vision</td>
+<td>Use of image acquisition and processing for inspection or control</td>
+<td>Checking component presence</td>
+</tr>
+<tr>
+<td>Smart camera</td>
+<td>Camera with integrated processing and communication</td>
+<td>Compact inspection camera</td>
+</tr>
+<tr>
+<td>Vision controller</td>
+<td>Device or computer executing vision jobs</td>
+<td>Industrial vision processor</td>
+</tr>
+<tr>
+<td>Inspection job</td>
+<td>Program defining image acquisition and inspection operations</td>
+<td>Checking connector pin positions</td>
+</tr>
+<tr>
+<td>Recipe</td>
+<td>Set of parameters for a specific product or variant</td>
+<td>Different inspection limits for two models</td>
+</tr>
+<tr>
+<td>Image acquisition</td>
+<td>Process of capturing an image from a sensor</td>
+<td>Triggered image capture</td>
+</tr>
+<tr>
+<td>Exposure time</td>
+<td>Duration for which the image sensor collects light</td>
+<td>Short exposure for a moving part</td>
+</tr>
+<tr>
+<td>Gain</td>
+<td>Electronic amplification of the image signal</td>
+<td>Increasing image brightness</td>
+</tr>
+<tr>
+<td>Region of interest (ROI)</td>
+<td>Defined image area used by an inspection tool</td>
+<td>Inspecting one connector cavity</td>
+</tr>
+<tr>
+<td>Calibration</td>
+<td>Mapping between image coordinates and physical coordinates or measurements</td>
+<td>Pixel-to-millimetre calibration</td>
+</tr>
+<tr>
+<td>Intrinsic calibration</td>
+<td>Estimation of camera properties such as focal parameters and distortion</td>
+<td>Correcting lens-related geometric effects</td>
+</tr>
+<tr>
+<td>Extrinsic calibration</td>
+<td>Determination of a camera's pose relative to another coordinate system</td>
+<td>Camera-to-robot transformation</td>
+</tr>
+<tr>
+<td>Lighting configuration</td>
+<td>Arrangement and settings of illumination</td>
+<td>Backlight for edge measurement</td>
+</tr>
+<tr>
+<td>Pattern matching</td>
+<td>Locating an object or feature using a stored reference pattern</td>
+<td>Locating a component before measurement</td>
+</tr>
+<tr>
+<td>OCR</td>
+<td>Optical character recognition</td>
+<td>Reading a stamped part number</td>
+</tr>
+<tr>
+<td>OCV</td>
+<td>Optical character verification</td>
+<td>Checking printed characters against expected text</td>
+</tr>
+<tr>
+<td>Threshold</td>
+<td>Decision boundary used to classify an image feature</td>
+<td>Rejecting a dimension outside tolerance</td>
+</tr>
+<tr>
+<td>Calibration target</td>
+<td>Reference object with known geometry used for calibration</td>
+<td>Grid or dot calibration plate</td>
+</tr>
+<tr>
+<td>Job revision</td>
+<td>Controlled version of an inspection configuration</td>
+<td>Released inspection job revision</td>
+</tr>
+<tr>
+<td>Golden sample</td>
+<td>Approved reference part used for verification</td>
+<td>Known-good connector</td>
+</tr>
+<tr>
+<td>False accept</td>
+<td>Defective part incorrectly accepted</td>
+<td>Missing pin passes inspection</td>
+</tr>
+<tr>
+<td>False reject</td>
+<td>Good part incorrectly rejected</td>
+<td>Correct part fails because of lighting variation</td>
+</tr>
+<tr>
+<td>Traceability</td>
+<td>Ability to associate results with relevant production information</td>
+<td>Linking inspection result to a serial number</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-what-must-be-backed-up">4. What must be backed up?</h2>
+<p>The backup scope depends on whether the system uses a smart camera, dedicated vision controller, PC-based software, or multiple coordinated vision devices.</p>
+<table>
+<thead>
+<tr>
+<th>Backup item</th>
+<th>Typical contents</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Inspection jobs</td>
+<td>Processing sequence, tools, and inspection logic</td>
+<td>Preserves inspection functionality</td>
+</tr>
+<tr>
+<td>Product recipes</td>
+<td>Product-specific parameters and limits</td>
+<td>Supports product variants</td>
+</tr>
+<tr>
+<td>Camera settings</td>
+<td>Resolution, exposure, gain, trigger, and acquisition configuration</td>
+<td>Preserves image capture behavior</td>
+</tr>
+<tr>
+<td>Lens configuration</td>
+<td>Relevant optical settings and lens identification</td>
+<td>Supports repeatable image geometry</td>
+</tr>
+<tr>
+<td>Lighting settings</td>
+<td>Light channels, intensity, timing, and strobe configuration</td>
+<td>Maintains feature visibility</td>
+</tr>
+<tr>
+<td>Calibration data</td>
+<td>Calibration matrices, scales, distortion corrections, and reference data</td>
+<td>Preserves measurement accuracy</td>
+</tr>
+<tr>
+<td>Camera-to-robot data</td>
+<td>Coordinate transformations and calibration records</td>
+<td>Supports vision-guided motion</td>
+</tr>
+<tr>
+<td>Image-processing parameters</td>
+<td>Filters, thresholds, tools, ROIs, and matching settings</td>
+<td>Preserves defect detection</td>
+</tr>
+<tr>
+<td>OCR and barcode settings</td>
+<td>Fonts, character constraints, code readers, and grading parameters</td>
+<td>Preserves identification</td>
+</tr>
+<tr>
+<td>Pass/fail logic</td>
+<td>Limits, tolerance bands, decision rules, and output mapping</td>
+<td>Maintains inspection decisions</td>
+</tr>
+<tr>
+<td>Communication settings</td>
+<td>IP addressing, industrial protocols, device mapping, and network configuration</td>
+<td>Restores system integration</td>
+</tr>
+<tr>
+<td>PLC interface</td>
+<td>Trigger, busy, complete, pass, fail, and fault signal definitions</td>
+<td>Restores production sequence</td>
+</tr>
+<tr>
+<td>Robot interface</td>
+<td>Result handshakes, coordinate outputs, and job-selection logic</td>
+<td>Restores robotic applications</td>
+</tr>
+<tr>
+<td>Software and licenses</td>
+<td>Vision software version, runtime packages, options, and license information</td>
+<td>Supports compatible restoration</td>
+</tr>
+<tr>
+<td>Device configuration</td>
+<td>Camera identity, firmware, controller settings, and supported device files</td>
+<td>Supports hardware replacement</td>
+</tr>
+<tr>
+<td>Reference images</td>
+<td>Approved good and defective image examples where appropriate</td>
+<td>Supports verification and troubleshooting</td>
+</tr>
+<tr>
+<td>Diagnostic records</td>
+<td>Alarms, error logs, and relevant performance history</td>
+<td>Helps investigate failure causes</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Wiring diagrams, optical layout, setup instructions, and manuals</td>
+<td>Supports physical recovery</td>
+</tr>
+<tr>
+<td>Validation records</td>
+<td>Measurement checks, golden-sample results, and approved test records</td>
+<td>Establishes acceptance evidence</td>
+</tr>
+</tbody>
+</table>
+<p>Some systems store jobs and recipes on the camera, others on a controller or engineering PC, and others in a database or network share. Identify each storage location before designing the backup plan.</p>
+<h2 id="5-vision-backup-types-and-methods">5. Vision backup types and methods</h2>
+<h3 id="51-complete-device-or-controller-backup">5.1 Complete device or controller backup</h3>
+<p>A complete supported device backup preserves the broadest available set of configuration and application data for the vision controller or smart camera.</p>
+<p>Depending on the product, it may include:</p>
+<ul>
+<li>Inspection jobs and recipes.</li>
+<li>Camera and acquisition settings.</li>
+<li>Device and communication configuration.</li>
+<li>Calibration information.</li>
+<li>Application-specific parameters.</li>
+<li>Supported runtime configuration.</li>
+</ul>
+<p>A complete backup does not necessarily include the PC operating system, external database, license server, camera calibration certificates, or all device-specific settings. Confirm the actual backup scope.</p>
+<p>Recommended procedure:</p>
+<ol>
+<li>Identify the camera, controller, software version, and installed options.</li>
+<li>Determine the manufacturer-supported backup method.</li>
+<li>Identify separately stored jobs, recipes, licenses, and calibration files.</li>
+<li>Export the supported device configuration and application data.</li>
+<li>Review any warnings or excluded files.</li>
+<li>Verify that the exported data can be read by the relevant software.</li>
+<li>Store the backup with a clear asset ID, revision, and date.</li>
+<li>Document the supported restore method and dependencies.</li>
+</ol>
+<h3 id="52-job-and-recipe-export">5.2 Job and recipe export</h3>
+<p>Job and recipe exports preserve inspection logic and product-specific settings.</p>
+<p>They may include:</p>
+<ul>
+<li>Image-processing tools.</li>
+<li>ROIs and search regions.</li>
+<li>Pattern references.</li>
+<li>Measurement tools and limits.</li>
+<li>OCR or barcode configuration.</li>
+<li>Product-specific inspection parameters.</li>
+<li>Pass/fail logic and result assignments.</li>
+</ul>
+<p>A job export may not include every camera setting, device network setting, external database, calibration record, or software dependency. Verify the export scope before relying on it for recovery.</p>
+<h3 id="53-pc-image-and-software-backup">5.3 PC image and software backup</h3>
+<p>PC-based vision systems may depend on the operating system, vision runtime, drivers, acquisition libraries, application software, licenses, and communication packages.</p>
+<p>A recovery package may require:</p>
+<ul>
+<li>Supported PC or system image.</li>
+<li>Operating system version and configuration.</li>
+<li>Vision software installation media.</li>
+<li>Required runtime versions and drivers.</li>
+<li>Camera interface and frame-grabber drivers.</li>
+<li>Application project files.</li>
+<li>License activation and recovery instructions.</li>
+<li>Network and database configuration.</li>
+<li>Required configuration files and environment settings.</li>
+</ul>
+<p>Do not assume that copying the application folder creates a recoverable PC image. Follow the approved imaging and licensing procedure.</p>
+<h3 id="54-calibration-backup">5.4 Calibration backup</h3>
+<p>Calibration records are particularly important for dimensional measurement and vision-guided robotics.</p>
+<p>Preserve, where applicable:</p>
+<ul>
+<li>Calibration results and parameters.</li>
+<li>Calibration target identification and geometry.</li>
+<li>Camera and lens identification.</li>
+<li>Working distance and optical setup.</li>
+<li>Camera-to-robot transformation.</li>
+<li>Relevant fixture or coordinate-frame information.</li>
+<li>Calibration date and validation results.</li>
+<li>Approved reference measurements.</li>
+</ul>
+<p>A saved calibration file does not guarantee that the physical setup remains unchanged. Replacing the camera, lens, mount, fixture, or working distance can invalidate the previous calibration.</p>
+<h3 id="55-reference-images-and-datasets">5.5 Reference images and datasets</h3>
+<p>Reference images can support recovery testing and fault diagnosis.</p>
+<p>Useful datasets may include:</p>
+<ul>
+<li>Known-good parts.</li>
+<li>Known-defective parts.</li>
+<li>Borderline or near-tolerance parts.</li>
+<li>Different product variants.</li>
+<li>Images captured under approved operating conditions.</li>
+<li>Cases associated with known inspection failures.</li>
+</ul>
+<p>Record the conditions under which each image was captured. Differences in exposure, focus, lighting, orientation, or working distance can make comparisons misleading.</p>
+<p>Reference images supplement physical testing. They do not replace production validation with representative parts.</p>
+<h2 id="6-manufacturer-specific-backup-considerations">6. Manufacturer-specific backup considerations</h2>
+<p>Vision products differ in storage architecture, software, export formats, and restoration requirements.</p>
+<table>
+<thead>
+<tr>
+<th>Manufacturer or platform</th>
+<th>Common environment</th>
+<th>Backup considerations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cognex</td>
+<td>In-Sight, VisionPro, and supported vision platforms</td>
+<td>Preserve supported jobs, device settings, calibration, recipes, and required software dependencies</td>
+</tr>
+<tr>
+<td>Keyence</td>
+<td>CV-X, XG-X, IV, and related vision systems</td>
+<td>Preserve supported programs, settings, calibration information, and product-specific configurations</td>
+</tr>
+<tr>
+<td>Omron</td>
+<td>FH, FHV7, and supported vision platforms</td>
+<td>Preserve inspection data, settings, calibration, and communication configuration</td>
+</tr>
+<tr>
+<td>SICK</td>
+<td>Inspector and related vision products</td>
+<td>Preserve supported applications, device configuration, and calibration records</td>
+</tr>
+<tr>
+<td>Basler</td>
+<td>Industrial cameras and PC-based vision software</td>
+<td>Preserve camera parameters, application projects, drivers, and relevant calibration data</td>
+</tr>
+<tr>
+<td>Teledyne FLIR</td>
+<td>Industrial cameras and machine-vision software</td>
+<td>Preserve camera configuration, application files, interface settings, and software dependencies</td>
+</tr>
+<tr>
+<td>MVTec HALCON</td>
+<td>PC-based machine-vision development environment</td>
+<td>Preserve application source, models, parameter files, runtime dependencies, and licenses</td>
+</tr>
+<tr>
+<td>National Instruments</td>
+<td>LabVIEW and supported vision applications</td>
+<td>Preserve projects, libraries, acquisition configuration, drivers, and required runtime dependencies</td>
+</tr>
+</tbody>
+</table>
+<p>These are general platform examples, not guarantees that every product supports the same backup method. Verify the exact model, software release, and manufacturer documentation.</p>
+<h2 id="7-calibration-and-measurement-integrity">7. Calibration and measurement integrity</h2>
+<h3 id="71-pixel-to-world-calibration">7.1 Pixel-to-world calibration</h3>
+<p>A vision system often measures distances in pixels before converting them into physical units. Calibration establishes the relationship between image coordinates and real-world measurements.</p>
+<p>For a simple system with a verified constant scale:</p>
+<div class="math-display">\[ \text{Physical distance}=\text{Pixel distance}\times\text{Scale factor} \]</div>
+<p>If the calibrated scale factor is <span class="math-inline">\(0.05\text{ mm/pixel}\)</span> and a feature spans 120 pixels:</p>
+<div class="math-display">\[ 120\times0.05=6.0\text{ mm} \]</div>
+<p>This calculation is valid only when the scale model is appropriate for the optical arrangement and measurement region. Perspective, lens distortion, tilted surfaces, and changes in working distance can require more advanced calibration.</p>
+<p>Do not assume a single scale factor is valid across the entire image merely because it works for one measurement location.</p>
+<h3 id="72-intrinsic-and-extrinsic-calibration">7.2 Intrinsic and extrinsic calibration</h3>
+<p>Intrinsic calibration characterizes camera imaging properties, such as focal parameters and lens distortion. Extrinsic calibration establishes the camera's position and orientation relative to another coordinate system.</p>
+<p>Examples include:</p>
+<ul>
+<li>Camera-to-robot calibration for locating parts and generating robot targets.</li>
+<li>Camera-to-fixture calibration for measuring component positions.</li>
+<li>Multi-camera calibration for combining measurements from several views.</li>
+<li>Camera-to-conveyor calibration for tracking moving parts.</li>
+</ul>
+<p>After restoration, verify that the saved calibration corresponds to the installed camera, lens, mounting, and relevant coordinate frames.</p>
+<h3 id="73-calibration-change-triggers">7.3 Calibration change triggers</h3>
+<p>Review calibration validity after:</p>
+<ul>
+<li>Camera replacement.</li>
+<li>Lens replacement or adjustment.</li>
+<li>Camera or fixture mounting changes.</li>
+<li>Working-distance changes.</li>
+<li>Robot mastering or relevant mechanical changes.</li>
+<li>Conveyor or fixture repositioning.</li>
+<li>Changes to image resolution or acquisition configuration that affect measurement.</li>
+<li>Software or algorithm changes affecting measurement results.</li>
+<li>A failed calibration verification or unexplained measurement drift.</li>
+</ul>
+<p>Not every change requires full recalibration. Follow the validated process and determine whether the change affects the existing calibration.</p>
+<h3 id="74-calibration-verification">7.4 Calibration verification</h3>
+<p>Use the approved calibration target or measurement artifact to check that the system produces results within its specified limits.</p>
+<p>Record:</p>
+<ul>
+<li>Reference artifact identification.</li>
+<li>Certified or approved reference dimensions.</li>
+<li>Measured values.</li>
+<li>Measurement errors.</li>
+<li>Applicable acceptance limits.</li>
+<li>Camera and lens identification.</li>
+<li>Calibration revision and date.</li>
+<li>Verification result and responsible person.</li>
+</ul>
+<p>A calibration result should be traceable to the actual equipment and procedure used.</p>
+<h2 id="8-inspection-jobs-recipes-and-decision-logic">8. Inspection jobs, recipes, and decision logic</h2>
+<h3 id="81-job-configuration">8.1 Job configuration</h3>
+<p>An inspection job may define:</p>
+<ul>
+<li>Image acquisition and triggering.</li>
+<li>Image preprocessing.</li>
+<li>Feature localization.</li>
+<li>Edge or dimensional measurements.</li>
+<li>Pattern matching.</li>
+<li>Presence or absence checks.</li>
+<li>OCR, OCV, and barcode reading.</li>
+<li>Defect detection.</li>
+<li>Tolerance comparisons.</li>
+<li>Pass/fail decisions.</li>
+<li>Result outputs and diagnostic handling.</li>
+</ul>
+<p>Preserve both the approved application file and the information needed to interpret and validate it.</p>
+<h3 id="82-recipe-management">8.2 Recipe management</h3>
+<p>A recipe is a controlled group of parameters for a particular product, variant, or inspection condition.</p>
+<p>Examples include:</p>
+<ul>
+<li>Different connector models.</li>
+<li>Different part dimensions.</li>
+<li>Different printed characters.</li>
+<li>Different component positions.</li>
+<li>Different defect thresholds.</li>
+<li>Different inspection sequences.</li>
+</ul>
+<p>Each recipe should have an approved identifier, revision, effective status, and associated product or part number. If recipes are selected automatically by a PLC or MES, preserve the selection logic and mapping.</p>
+<h3 id="83-thresholds-and-tolerance-limits">8.3 Thresholds and tolerance limits</h3>
+<p>Thresholds affect classification and measurement decisions. A small parameter change can increase false rejects or allow defective products to pass.</p>
+<p>For dimensional inspection, a result may be accepted when:</p>
+<div class="math-display">\[ L\leq x\leq U \]</div>
+<p>where <span class="math-inline">\(x\)</span> is the measured value, <span class="math-inline">\(L\)</span> is the lower limit, and <span class="math-inline">\(U\)</span> is the upper limit.</p>
+<p>After restoration, verify the limits, units, inclusive or exclusive boundary behavior, and handling of invalid or missing measurements. Also verify that the PLC interprets the returned result correctly.</p>
+<h3 id="84-golden-sample-validation">8.4 Golden-sample validation</h3>
+<p>Use approved reference parts to verify inspection performance after restoration.</p>
+<p>Where applicable, include:</p>
+<ul>
+<li>Known-good samples.</li>
+<li>Known-defective samples.</li>
+<li>Samples near upper and lower limits.</li>
+<li>Relevant product variants.</li>
+<li>Known failure modes.</li>
+<li>Representative lighting and positioning conditions.</li>
+</ul>
+<p>Record expected results and actual results. Do not adjust thresholds simply to make the golden sample pass. Investigate differences and follow the approved engineering change process.</p>
+<h2 id="9-lighting-optics-and-image-acquisition">9. Lighting, optics, and image acquisition</h2>
+<p>A vision job can be restored correctly while inspection performance remains poor because the physical imaging conditions have changed.</p>
+<h3 id="91-lighting-configuration">9.1 Lighting configuration</h3>
+<p>Preserve and document:</p>
+<ul>
+<li>Light type and manufacturer.</li>
+<li>Light position and orientation.</li>
+<li>Intensity and channel settings.</li>
+<li>Strobe timing and trigger relationship.</li>
+<li>Diffuser, polarizer, and filter arrangement.</li>
+<li>Lighting controller configuration.</li>
+<li>Relevant ambient-light controls.</li>
+</ul>
+<p>Lighting geometry is often as important as brightness. Backlighting can improve silhouette measurements, while diffuse illumination may reduce reflections on shiny surfaces.</p>
+<h3 id="92-camera-and-acquisition-settings">9.2 Camera and acquisition settings</h3>
+<p>Record the relevant settings for the installed device:</p>
+<ul>
+<li>Resolution and acquisition format.</li>
+<li>Exposure time.</li>
+<li>Gain.</li>
+<li>Trigger source and trigger delay.</li>
+<li>Acquisition mode.</li>
+<li>Frame rate.</li>
+<li>Image region or sensor configuration.</li>
+<li>Pixel format and relevant camera parameters.</li>
+<li>Focus and lens aperture where adjustable.</li>
+<li>Relevant image-processing settings.</li>
+</ul>
+<p>The exact parameter set depends on the camera. Some settings are stored in the job, some in the camera, and some in external configuration files.</p>
+<h3 id="93-physical-setup-verification">9.3 Physical setup verification</h3>
+<p>After restoration, inspect:</p>
+<ul>
+<li>Camera and lens mounting.</li>
+<li>Focus and working distance.</li>
+<li>Field of view.</li>
+<li>Part positioning and orientation.</li>
+<li>Lighting alignment.</li>
+<li>Lens cleanliness and protective covers.</li>
+<li>Cable condition and connectors.</li>
+<li>Vibration and ambient-light conditions.</li>
+<li>Presence of the intended fixture and tooling.</li>
+</ul>
+<p>A saved configuration cannot compensate for a physically displaced camera or damaged lens.</p>
+<h2 id="10-communication-and-production-integration">10. Communication and production integration</h2>
+<h3 id="101-plc-handshake">10.1 PLC handshake</h3>
+<p>Vision systems commonly exchange status and results with a PLC.</p>
+<p>Typical signals include:</p>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Typical purpose</th>
+<th>Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Trigger</td>
+<td>Requests an inspection</td>
+<td>Confirm trigger source and timing</td>
+</tr>
+<tr>
+<td>Busy</td>
+<td>Indicates image processing is active</td>
+<td>Confirm status behavior</td>
+</tr>
+<tr>
+<td>Complete</td>
+<td>Indicates the inspection has finished</td>
+<td>Confirm sequence and reset behavior</td>
+</tr>
+<tr>
+<td>Pass</td>
+<td>Reports an accepted result</td>
+<td>Test with approved good samples</td>
+</tr>
+<tr>
+<td>Fail</td>
+<td>Reports a rejected result</td>
+<td>Test with approved defective samples</td>
+</tr>
+<tr>
+<td>Fault</td>
+<td>Reports a system or processing fault</td>
+<td>Verify fault handling</td>
+</tr>
+<tr>
+<td>Ready</td>
+<td>Indicates the system can accept a request</td>
+<td>Verify initialization conditions</td>
+</tr>
+<tr>
+<td>Job select</td>
+<td>Selects a recipe or inspection job</td>
+<td>Verify PLC mapping and job identification</td>
+</tr>
+<tr>
+<td>Result valid</td>
+<td>Indicates output data is valid</td>
+<td>Confirm data-valid timing</td>
+</tr>
+<tr>
+<td>Reset or acknowledge</td>
+<td>Clears or acknowledges a condition</td>
+<td>Verify approved reset behavior</td>
+</tr>
+</tbody>
+</table>
+<p>Signal names and timing differ by system. Confirm the actual I/O map and interface specification rather than relying on generic names.</p>
+<h3 id="102-network-and-fieldbus-configuration">10.2 Network and fieldbus configuration</h3>
+<p>Preserve relevant settings for Ethernet/IP, PROFINET, EtherCAT, TCP/IP, serial communication, or the protocol used by the installed system.</p>
+<p>Check:</p>
+<ul>
+<li>Device identity and network address.</li>
+<li>PLC and vision device mapping.</li>
+<li>Communication parameters and data layout.</li>
+<li>Job-selection and result-handling logic.</li>
+<li>Trigger and completion timing.</li>
+<li>Timeout and fault behavior.</li>
+<li>Network switches and relevant port configuration.</li>
+<li>Communication with external databases or supervisory systems.</li>
+</ul>
+<p>A successful network connection does not prove that the PLC and vision system agree on signal mapping, data type, units, or sequence timing.</p>
+<h3 id="103-robot-and-vision-integration">10.3 Robot and vision integration</h3>
+<p>For vision-guided robots, preserve the relevant coordinate transformation, result format, and handshake configuration.</p>
+<p>Verify:</p>
+<ul>
+<li>Camera-to-robot calibration.</li>
+<li>Coordinate system and unit conventions.</li>
+<li>Position and orientation data format.</li>
+<li>Result validity and timeout handling.</li>
+<li>Robot job selection and sequence logic.</li>
+<li>Robot and camera reference frames.</li>
+<li>PLC or robot handling of invalid results.</li>
+<li>Recovery behavior when image acquisition fails.</li>
+</ul>
+<p>A correct image result can still generate an incorrect robot target if coordinate transformation or unit interpretation is wrong.</p>
+<h2 id="11-vision-disaster-recovery-procedure">11. Vision disaster-recovery procedure</h2>
+<h3 id="111-pre-restoration-checklist">11.1 Pre-restoration checklist</h3>
+<ul>
+<li>Identify camera, controller, lens, and relevant hardware.</li>
+<li>Record software, firmware, runtime, and license versions.</li>
+<li>Retrieve the latest approved backup.</li>
+<li>Confirm the backup includes jobs, recipes, and required configuration.</li>
+<li>Locate calibration and validation records.</li>
+<li>Identify external files, databases, and application dependencies.</li>
+<li>Confirm hardware and software compatibility.</li>
+<li>Preserve the current state where practical.</li>
+<li>Identify the expected inspection limits and golden-sample results.</li>
+<li>Review PLC, robot, and network dependencies.</li>
+<li>Confirm the safe state of the production machine.</li>
+<li>Define the restoration and acceptance-test plan.</li>
+</ul>
+<h3 id="112-restoration-sequence">11.2 Restoration sequence</h3>
+<ol>
+<li>Diagnose the failure and determine the required recovery scope.</li>
+<li>Secure the machine and prevent unintended production or reject actions.</li>
+<li>Identify the replacement device or restored controller.</li>
+<li>Confirm compatible firmware, software, drivers, and licenses.</li>
+<li>Restore the supported device configuration or system image if required.</li>
+<li>Restore inspection jobs, recipes, and application files.</li>
+<li>Restore camera acquisition and relevant lighting-controller settings.</li>
+<li>Restore calibration data and coordinate transformations where still valid.</li>
+<li>Restore network, PLC, robot, and database integration.</li>
+<li>Verify product selection, inspection limits, and result mapping.</li>
+<li>Check the physical camera, lens, mounting, fixture, and lighting.</li>
+<li>Run approved known-good and known-defective samples.</li>
+<li>Verify measurement accuracy and relevant acceptance criteria.</li>
+<li>Test PLC handshakes, faults, timeouts, and reject handling.</li>
+<li>Record results and obtain the required production-release approval.</li>
+<li>Archive the final verified configuration and update the backup register.</li>
+</ol>
+<p>The exact procedure depends on the platform and application. A controller replacement, camera replacement, or calibration change may require additional manufacturer-specific steps.</p>
+<h3 id="113-post-restoration-validation-checklist">11.3 Post-restoration validation checklist</h3>
+<ul>
+<li>The correct job and recipe are loaded.</li>
+<li>Camera identity and acquisition settings are correct.</li>
+<li>Focus, field of view, and lighting are acceptable.</li>
+<li>Calibration is valid for the installed setup.</li>
+<li>Measurement units and tolerance limits are correct.</li>
+<li>Good reference samples produce expected results.</li>
+<li>Defective reference samples produce expected results.</li>
+<li>Borderline samples behave according to the approved criteria.</li>
+<li>PLC trigger, busy, complete, pass, fail, and fault signals work correctly.</li>
+<li>Robot coordinates and data formats are verified where applicable.</li>
+<li>Reject mechanisms operate correctly.</li>
+<li>Traceability and result logging work as required.</li>
+<li>Fault and timeout handling is tested.</li>
+<li>Final configuration is archived and revision-controlled.</li>
+</ul>
+<h2 id="12-common-vision-disaster-recovery-scenarios">12. Common vision disaster-recovery scenarios</h2>
+<h3 id="121-vision-controller-failure">12.1 Vision controller failure</h3>
+<p>Situation: The controller fails or its internal storage becomes inaccessible.</p>
+<ul>
+<li>Identify the exact controller and software version.</li>
+<li>Retrieve the approved controller backup and job exports.</li>
+<li>Confirm replacement hardware and software compatibility.</li>
+<li>Restore the supported configuration and application data.</li>
+<li>Reconnect the camera, lighting, PLC, and network interfaces.</li>
+<li>Verify calibration validity and the physical imaging setup.</li>
+<li>Run the approved inspection validation plan.</li>
+</ul>
+<h3 id="122-job-corruption-or-accidental-modification">12.2 Job corruption or accidental modification</h3>
+<p>Situation: The vision job is missing or produces different results after an edit.</p>
+<ul>
+<li>Retrieve the last approved job revision.</li>
+<li>Confirm the product and device identity.</li>
+<li>Compare the restored job with the released version.</li>
+<li>Verify the relevant recipes, thresholds, and ROIs.</li>
+<li>Check that the associated camera and lighting settings match.</li>
+<li>Validate using known-good and known-defective samples.</li>
+<li>Document the restored revision.</li>
+</ul>
+<p>Do not assume that the newest job file is the approved one. The newest file may simply be the most recent mistake.</p>
+<h3 id="123-camera-replacement">12.3 Camera replacement</h3>
+<p>Situation: A failed camera is replaced with another unit.</p>
+<p>Check:</p>
+<ul>
+<li>Resolution and sensor format.</li>
+<li>Lens mount and optical compatibility.</li>
+<li>Field of view and working distance.</li>
+<li>Exposure and acquisition capabilities.</li>
+<li>Device identity and communication settings.</li>
+<li>Calibration requirements.</li>
+<li>Image orientation and coordinate conventions.</li>
+<li>Trigger timing and frame acquisition behavior.</li>
+</ul>
+<p>Even a nominally equivalent camera may require revalidation or recalibration because of differences in mounting, sensor characteristics, optics, or configuration.</p>
+<h3 id="124-false-rejects-increase-after-recovery">12.4 False rejects increase after recovery</h3>
+<p>Possible causes:</p>
+<ul>
+<li>Exposure or gain changed.</li>
+<li>Lighting intensity or alignment changed.</li>
+<li>Focus or working distance changed.</li>
+<li>Incorrect recipe or threshold loaded.</li>
+<li>Camera or lens replaced.</li>
+<li>ROI or pattern reference changed.</li>
+<li>Part presentation changed.</li>
+<li>Calibration or image-processing settings changed.</li>
+</ul>
+<p>Corrective approach: Compare the approved configuration, capture representative images under controlled conditions, identify the source of variation, and verify corrective changes using the approved acceptance criteria.</p>
+<h3 id="125-defective-parts-are-accepted">12.5 Defective parts are accepted</h3>
+<p>This is a high-priority quality problem because the inspection system may no longer be providing the required defect protection.</p>
+<ul>
+<li>Follow the plant's containment and escalation process.</li>
+<li>Identify the affected production window and product population.</li>
+<li>Preserve relevant images, results, and system logs.</li>
+<li>Verify the inspection job, recipe, thresholds, and result mapping.</li>
+<li>Test known-defective samples representing the relevant failure mode.</li>
+<li>Investigate any changes to optics, calibration, software, or physical setup.</li>
+<li>Release production only after the required quality and engineering approval.</li>
+</ul>
+<p>Do not treat a restored system as proven simply because it returns pass/fail signals.</p>
+<h3 id="126-incorrect-dimensional-measurements">12.6 Incorrect dimensional measurements</h3>
+<p>Potential causes include:</p>
+<ul>
+<li>Invalid pixel-to-world calibration.</li>
+<li>Camera movement or changed working distance.</li>
+<li>Lens distortion or focus changes.</li>
+<li>Incorrect measurement units.</li>
+<li>Wrong reference frame.</li>
+<li>Fixture or part-position variation.</li>
+<li>Different image resolution or acquisition settings.</li>
+<li>Incorrect measurement-tool parameters.</li>
+</ul>
+<p>Verify calibration against the approved reference artifact and compare measurements with a suitable independent measurement method.</p>
+<h3 id="127-plc-or-robot-integration-failure">12.7 PLC or robot integration failure</h3>
+<p>If images are processed correctly but production does not continue, investigate the trigger, ready, complete, pass/fail, fault, and result-valid sequence. Confirm job selection, data layout, timeout handling, network configuration, and controller revisions.</p>
+<p>Test the complete sequence with the machine in the approved commissioning state. Avoid forcing signals or bypassing interlocks to make the sequence appear functional.</p>
+<h3 id="128-software-or-obsolescence-migration">12.8 Software or obsolescence migration</h3>
+<p>Before migrating a vision system:</p>
+<ol>
+<li>Preserve the original job, recipes, calibration, and configuration.</li>
+<li>Record camera, lens, controller, software, firmware, and license details.</li>
+<li>Identify unsupported tools, libraries, and hardware dependencies.</li>
+<li>Convert or recreate the application using the supported migration method.</li>
+<li>Compare the original and migrated inspection logic.</li>
+<li>Review differences in image-processing algorithms and measurement behavior.</li>
+<li>Verify coordinate transformations and calibration.</li>
+<li>Test representative good, defective, and borderline samples.</li>
+<li>Verify PLC, robot, database, and traceability interfaces.</li>
+<li>Archive the approved target configuration separately from the original.</li>
+</ol>
+<p>A migrated job is not automatically equivalent to its source. Differences in algorithms, numerical precision, camera behavior, and runtime versions can affect inspection results.</p>
+<h2 id="13-vision-backup-troubleshooting">13. Vision backup troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Corrective action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backup export fails</td>
+<td>Access issue, storage error, or unsupported export method</td>
+<td>Verify permissions, media, and supported procedure</td>
+</tr>
+<tr>
+<td>Job will not open</td>
+<td>Software version or file-format mismatch</td>
+<td>Restore using compatible software</td>
+</tr>
+<tr>
+<td>Camera connects but no image appears</td>
+<td>Trigger, acquisition, cable, or device configuration problem</td>
+<td>Verify acquisition path and trigger conditions</td>
+</tr>
+<tr>
+<td>Images appear darker or brighter</td>
+<td>Exposure, gain, lighting, or aperture changed</td>
+<td>Compare approved acquisition settings</td>
+</tr>
+<tr>
+<td>Measurement results differ</td>
+<td>Calibration, optics, resolution, or ROI changed</td>
+<td>Verify physical setup and calibration</td>
+</tr>
+<tr>
+<td>False rejects increase</td>
+<td>Lighting, thresholds, focus, or part presentation changed</td>
+<td>Compare images and validate the inspection job</td>
+</tr>
+<tr>
+<td>Defective parts pass</td>
+<td>Incorrect thresholds, missing tools, or result-logic error</td>
+<td>Contain affected production and validate the defect-detection logic</td>
+</tr>
+<tr>
+<td>Wrong product recipe loads</td>
+<td>PLC mapping or recipe-selection logic is incorrect</td>
+<td>Verify product identification and job-selection sequence</td>
+</tr>
+<tr>
+<td>Robot target is incorrect</td>
+<td>Coordinate transformation or unit mismatch</td>
+<td>Verify camera-to-robot calibration and coordinate conventions</td>
+</tr>
+<tr>
+<td>PLC does not receive results</td>
+<td>Network, I/O mapping, or handshake problem</td>
+<td>Check device mapping, signal sequence, and communication status</td>
+</tr>
+<tr>
+<td>Calibration file is available but measurements are wrong</td>
+<td>Physical camera or fixture setup changed</td>
+<td>Verify the installed geometry and recalibrate if required</td>
+</tr>
+<tr>
+<td>Software starts in evaluation mode</td>
+<td>License or activation dependency is missing</td>
+<td>Restore licensing through the approved procedure</td>
+</tr>
+<tr>
+<td>Images are missing from records</td>
+<td>Storage path, permissions, or retention configuration changed</td>
+<td>Verify storage access and logging configuration</td>
+</tr>
+<tr>
+<td>Recovery works but quality validation fails</td>
+<td>Configuration restored without correct physical setup or process validation</td>
+<td>Investigate the mismatch and repeat approved acceptance tests</td>
+</tr>
+</tbody>
+</table>
+<h2 id="14-practical-maintenance-implementation">14. Practical maintenance implementation</h2>
+<h3 id="141-vision-backup-register">14.1 Vision backup register</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Asset ID</td>
+<td>Plant-approved vision system identifier</td>
+</tr>
+<tr>
+<td>Application</td>
+<td>Inspection, measurement, OCR, robot guidance, or other purpose</td>
+</tr>
+<tr>
+<td>Manufacturer and model</td>
+<td>Camera and controller identification</td>
+</tr>
+<tr>
+<td>Serial number</td>
+<td>Device-specific identification</td>
+</tr>
+<tr>
+<td>Software version</td>
+<td>Engineering software, runtime, and firmware versions</td>
+</tr>
+<tr>
+<td>Job revision</td>
+<td>Approved inspection-job revision</td>
+</tr>
+<tr>
+<td>Recipe revision</td>
+<td>Approved product-recipe revision</td>
+</tr>
+<tr>
+<td>Calibration status</td>
+<td>Current calibration and verification status</td>
+</tr>
+<tr>
+<td>Optical setup</td>
+<td>Camera, lens, working distance, and lighting identification</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>PLC, robot, network, and protocol details</td>
+</tr>
+<tr>
+<td>Backup scope</td>
+<td>Device configuration, jobs, recipes, and related files</td>
+</tr>
+<tr>
+<td>Backup date</td>
+<td>Actual backup completion date</td>
+</tr>
+<tr>
+<td>Storage location</td>
+<td>Controlled repository path</td>
+</tr>
+<tr>
+<td>Restore-test date</td>
+<td>Date of the latest successful recovery test</td>
+</tr>
+<tr>
+<td>Validation result</td>
+<td>Inspection and measurement acceptance status</td>
+</tr>
+<tr>
+<td>Responsible owner</td>
+<td>Assigned engineering or maintenance role</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Current, overdue, failed, or under review</td>
+</tr>
+</tbody>
+</table>
+<h3 id="142-suggested-folder-structure">14.2 Suggested folder structure</h3>
+<pre><code>VISION_BACKUP_SYSTEM/
+    01_ASSET_REGISTER/
+    02_APPROVED_BACKUPS/
+        VISION_1059/
+            DEVICE_CONFIGURATION/
+            INSPECTION_JOBS/
+            PRODUCT_RECIPES/
+            CAMERA_SETTINGS/
+            LIGHTING_CONFIGURATION/
+            CALIBRATION_RECORDS/
+            ROBOT_COORDINATE_DATA/
+            PLC_AND_NETWORK_CONFIGURATION/
+            LICENSES_AND_SOFTWARE/
+            REFERENCE_IMAGES/
+            VALIDATION_RESULTS/
+            DIAGNOSTICS/
+            CHANGE_HISTORY/
+            RECOVERY_PROCEDURE/
+    03_INDEPENDENT_RECOVERY_COPIES/
+    04_RESTORE_TEST_RECORDS/
+    05_MIGRATION_RECORDS/
+</code></pre>
+<p>The structure is illustrative. Use the plant's actual asset IDs, approved access controls, and manufacturer-supported formats. Restrict access to production-critical inspection logic and calibration data.</p>
+<h3 id="143-maintenance-work-order-integration">14.3 Maintenance work-order integration</h3>
+<p>For vision-related breakdowns or configuration changes:</p>
+<ol>
+<li>Record the asset ID, symptoms, fault messages, and affected inspection.</li>
+<li>Preserve relevant images and diagnostics where possible.</li>
+<li>Retrieve the approved job, recipe, and configuration backup.</li>
+<li>Verify the hardware, software, and calibration dependencies.</li>
+<li>Restore or repair the system using the approved procedure.</li>
+<li>Test representative good and defective samples.</li>
+<li>Verify measurements, PLC communication, and reject handling.</li>
+<li>Obtain the required quality and engineering release.</li>
+<li>Save the verified final configuration.</li>
+<li>Update the backup register and work-order history.</li>
+</ol>
+<h2 id="15-recovery-drills-and-audit">15. Recovery drills and audit</h2>
+<h3 id="151-recovery-drill">15.1 Recovery drill</h3>
+<p>A recovery drill checks whether the saved files, software dependencies, and procedures are sufficient to recover the intended vision configuration.</p>
+<ol>
+<li>Select an approved test environment or controlled recovery exercise.</li>
+<li>Retrieve the released backup package.</li>
+<li>Verify file integrity, revision, and backup scope.</li>
+<li>Confirm software, firmware, drivers, and licenses.</li>
+<li>Restore the supported job and device configuration.</li>
+<li>Verify camera acquisition, recipes, and communication settings.</li>
+<li>Confirm calibration validity for the test setup.</li>
+<li>Test known-good and known-defective reference samples.</li>
+<li>Check measurement accuracy and result handling.</li>
+<li>Record recovery time, missing dependencies, and corrective actions.</li>
+</ol>
+<p>A software restoration drill does not prove measurement accuracy in the production cell. Physical calibration and production acceptance tests remain separate requirements.</p>
+<h3 id="152-audit-checklist">15.2 Audit checklist</h3>
+<ul>
+<li>Critical vision systems are listed in the asset register.</li>
+<li>Approved jobs and recipes are backed up.</li>
+<li>Camera and acquisition settings are preserved.</li>
+<li>Lighting and optical setup are documented.</li>
+<li>Calibration files and verification records are available.</li>
+<li>PLC, robot, and network dependencies are recorded.</li>
+<li>Software versions, drivers, and licensing dependencies are known.</li>
+<li>Reference images and sample-validation procedures are available where required.</li>
+<li>Independent recovery copies are maintained.</li>
+<li>Backup currency and integrity are checked.</li>
+<li>Restore tests are completed at the defined interval.</li>
+<li>Inspection limits and decision logic are revision-controlled.</li>
+<li>Post-restoration quality validation is documented.</li>
+<li>Obsolete systems have an approved migration plan.</li>
+<li>Configuration changes trigger required backup updates.</li>
+</ul>
+<h2 id="16-vision-backup-management-kpis">16. Vision backup management KPIs</h2>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Calculation</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backup coverage</td>
+<td>Systems with required backups divided by systems requiring backups, multiplied by 100%</td>
+<td>Measures backup availability</td>
+</tr>
+<tr>
+<td>Backup currency</td>
+<td>Systems with current approved backups divided by systems requiring backups, multiplied by 100%</td>
+<td>Measures revision accuracy</td>
+</tr>
+<tr>
+<td>Restore-test success</td>
+<td>Successful restoration tests divided by completed restoration tests, multiplied by 100%</td>
+<td>Measures demonstrated recoverability</td>
+</tr>
+<tr>
+<td>Calibration-record coverage</td>
+<td>Systems with current required calibration records divided by systems requiring those records, multiplied by 100%</td>
+<td>Measures calibration documentation</td>
+</tr>
+<tr>
+<td>Validation pass rate</td>
+<td>Systems passing required post-recovery validation divided by systems validated, multiplied by 100%</td>
+<td>Measures recovery quality</td>
+</tr>
+<tr>
+<td>Recovery time</td>
+<td>Elapsed time from recovery start to approved functional restoration</td>
+<td>Measures recovery performance</td>
+</tr>
+<tr>
+<td>Missing-dependency rate</td>
+<td>Audited recovery packages missing required dependencies divided by packages audited, multiplied by 100%</td>
+<td>Identifies incomplete recovery packages</td>
+</tr>
+<tr>
+<td>False-reject rate</td>
+<td>Good parts incorrectly rejected divided by good parts inspected, multiplied by 100%</td>
+<td>Measures inspection efficiency</td>
+</tr>
+<tr>
+<td>False-accept rate</td>
+<td>Defective parts incorrectly accepted divided by defective parts inspected, multiplied by 100%</td>
+<td>Measures defect-detection effectiveness</td>
+</tr>
+</tbody>
+</table>
+<p>False-accept and false-reject rates should be evaluated using a defined and representative validation dataset. The results depend on sample selection, defect types, and the operating conditions under which testing is performed.</p>
+<p>For example, if 18 of 20 critical vision systems have current approved backups:</p>
+<div class="math-display">\[ \text{Backup currency}=\frac{18}{20}\times100=90\\% \]</div>
+<p>This measures backup currency, not inspection accuracy or proven recovery capability. Those require separate restoration, calibration, and functional validation.</p>
+<h2 id="17-interview-questions-and-technical-answers">17. Interview questions and technical answers</h2>
+<p>1. Why is vision-system backup more than job backup?</p>
+<p>The system also depends on camera settings, lighting, calibration, recipes, communication, software versions, licenses, and physical optical conditions.</p>
+<p>2. Why is calibration data important?</p>
+<p>It relates image coordinates to physical measurements or external coordinate systems. Incorrect or invalid calibration can produce inaccurate measurements and robot targets.</p>
+<p>3. Does restoring a calibration file guarantee correct measurements?</p>
+<p>No. The physical camera, lens, mounting, working distance, fixture, and relevant configuration must still match the conditions for which the calibration is valid.</p>
+<p>4. What is the difference between a false accept and a false reject?</p>
+<p>A false accept occurs when a defective part is accepted. A false reject occurs when a good part is rejected.</p>
+<p>5. What should be checked after replacing a vision camera?</p>
+<p>Verify hardware and optical compatibility, image acquisition, field of view, lighting, calibration, communication, and inspection results.</p>
+<p>6. Why should good and defective samples both be tested?</p>
+<p>Good samples help verify that acceptable parts pass, while defective samples help verify that the system detects the relevant failure conditions.</p>
+<p>7. Why might a vision system work offline but fail in production?</p>
+<p>The PLC handshake, recipe selection, network configuration, timing, robot interface, or reject mechanism may not be restored correctly.</p>
+<p>8. Why can changing exposure affect inspection quality?</p>
+<p>Exposure changes image brightness and may affect contrast, edge detection, pattern matching, and defect visibility.</p>
+<p>9. Is a successful backup export proof of recoverability?</p>
+<p>No. The backup must be compatible, complete enough for the intended recovery, and validated through restoration testing.</p>
+<p>10. What is the most important check after vision-system recovery?</p>
+<p>Verify the complete approved inspection function, including calibration where applicable, representative good and defective samples, communication, and required quality acceptance criteria.</p>
+<h2 id="18-final-engineering-principles">18. Final engineering principles</h2>
+<ul>
+<li>Preserve jobs, recipes, device settings, calibration data, and external dependencies.</li>
+<li>Treat optical setup and calibration as part of the recovery system.</li>
+<li>Maintain approved versions of inspection thresholds and decision logic.</li>
+<li>Verify PLC, robot, and network interfaces after restoration.</li>
+<li>Use representative reference parts to validate inspection performance.</li>
+<li>Investigate false accepts as a potential quality escape, not merely a software fault.</li>
+<li>Maintain independent, revision-controlled recovery copies.</li>
+<li>Test restoration and document the result.</li>
+<li>Revalidate after changes that can affect measurement accuracy or defect detection.</li>
+<li>Archive the final verified configuration after every approved recovery or major change.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\25_Backup_DR\01_Systems_Backup\08_Scanner - Scanner</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

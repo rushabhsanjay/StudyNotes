@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CPU and Module Health in PLC Maintenance</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">CPU and Module Health in PLC Maintenance</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-objectives-of-cpu-and-module-health-monitoring">2. Objectives of CPU and Module Health Monitoring</a></li>
+<li><a href="#3-basic-plc-hardware-architecture">3. Basic PLC Hardware Architecture</a></li>
+<li><a href="#4-plc-cpu-health">4. PLC CPU Health</a><ul>
+<li><a href="#41-cpu-operating-states">4.1 CPU operating states</a></li>
+<li><a href="#42-cpu-diagnostic-indicators">4.2 CPU diagnostic indicators</a></li>
+<li><a href="#43-cpu-fault-conditions">4.3 CPU fault conditions</a></li>
+</ul>
+</li>
+<li><a href="#5-cpu-scan-cycle-and-execution-health">5. CPU Scan Cycle and Execution Health</a><ul>
+<li><a href="#51-scan-time">5.1 Scan time</a></li>
+<li><a href="#52-watchdog-monitoring">5.2 Watchdog monitoring</a></li>
+<li><a href="#53-cpu-load-and-resource-utilization">5.3 CPU load and resource utilization</a></li>
+</ul>
+</li>
+<li><a href="#6-cpu-memory-and-program-integrity">6. CPU Memory and Program Integrity</a><ul>
+<li><a href="#61-memory-related-checks">6.1 Memory-related checks</a></li>
+<li><a href="#62-backup-verification">6.2 Backup verification</a></li>
+</ul>
+</li>
+<li><a href="#7-plc-power-supply-health">7. PLC Power-Supply Health</a><ul>
+<li><a href="#71-typical-failure-indicators">7.1 Typical failure indicators</a></li>
+<li><a href="#72-inspection-points">7.2 Inspection points</a></li>
+<li><a href="#73-avoid-confusing-control-power-with-field-power">7.3 Avoid confusing control power with field power</a></li>
+</ul>
+</li>
+<li><a href="#8-rack-backplane-and-module-recognition">8. Rack, Backplane, and Module Recognition</a><ul>
+<li><a href="#81-typical-symptoms-of-rack-or-module-problems">8.1 Typical symptoms of rack or module problems</a></li>
+<li><a href="#82-maintenance-checks">8.2 Maintenance checks</a></li>
+</ul>
+</li>
+<li><a href="#9-digital-input-module-health">9. Digital Input Module Health</a><ul>
+<li><a href="#91-typical-symptoms">9.1 Typical symptoms</a></li>
+<li><a href="#92-diagnostic-sequence">9.2 Diagnostic sequence</a></li>
+<li><a href="#93-interpreting-observations">9.3 Interpreting observations</a></li>
+</ul>
+</li>
+<li><a href="#10-digital-output-module-health">10. Digital Output Module Health</a><ul>
+<li><a href="#101-typical-symptoms">10.1 Typical symptoms</a></li>
+<li><a href="#102-diagnostic-sequence">10.2 Diagnostic sequence</a></li>
+<li><a href="#103-important-distinction">10.3 Important distinction</a></li>
+</ul>
+</li>
+<li><a href="#11-analog-input-module-health">11. Analog Input Module Health</a><ul>
+<li><a href="#111-typical-symptoms">11.1 Typical symptoms</a></li>
+<li><a href="#112-diagnostic-checks">11.2 Diagnostic checks</a></li>
+<li><a href="#113-example-420-ma-signal">11.3 Example: 4–20 mA signal</a></li>
+</ul>
+</li>
+<li><a href="#12-analog-output-module-health">12. Analog Output Module Health</a><ul>
+<li><a href="#121-common-symptoms">12.1 Common symptoms</a></li>
+<li><a href="#122-diagnostic-sequence">12.2 Diagnostic sequence</a></li>
+</ul>
+</li>
+<li><a href="#13-communication-module-and-remote-io-health">13. Communication Module and Remote I/O Health</a><ul>
+<li><a href="#131-common-communication-faults">13.1 Common communication faults</a></li>
+<li><a href="#132-health-checks">13.2 Health checks</a></li>
+<li><a href="#133-communication-health-versus-process-health">13.3 Communication health versus process health</a></li>
+</ul>
+</li>
+<li><a href="#14-redundant-plc-and-power-supply-health">14. Redundant PLC and Power-Supply Health</a><ul>
+<li><a href="#141-redundancy-checks">14.1 Redundancy checks</a></li>
+<li><a href="#142-important-limitations">14.2 Important limitations</a></li>
+</ul>
+</li>
+<li><a href="#15-plc-health-monitoring-in-siemens-allen-bradley-and-mitsubishi-systems">15. PLC Health Monitoring in Siemens, Allen-Bradley, and Mitsubishi Systems</a><ul>
+<li><a href="#151-siemens-s7-1500-example">15.1 Siemens S7-1500 example</a></li>
+<li><a href="#152-allen-bradley-controllogix-example">15.2 Allen-Bradley ControlLogix example</a></li>
+<li><a href="#153-mitsubishi-melsec-example">15.3 Mitsubishi MELSEC example</a></li>
+</ul>
+</li>
+<li><a href="#16-preventive-maintenance-inspection-schedule">16. Preventive Maintenance Inspection Schedule</a></li>
+<li><a href="#17-plc-module-replacement-procedure">17. PLC Module Replacement Procedure</a><ul>
+<li><a href="#171-before-replacement">17.1 Before replacement</a></li>
+<li><a href="#172-during-replacement">17.2 During replacement</a></li>
+<li><a href="#173-after-replacement">17.3 After replacement</a></li>
+</ul>
+</li>
+<li><a href="#18-module-health-versus-process-health">18. Module Health Versus Process Health</a></li>
+<li><a href="#19-cpu-and-module-health-record">19. CPU and Module Health Record</a></li>
+<li><a href="#20-common-mistakes-in-cpu-and-module-health-checks">20. Common Mistakes in CPU and Module Health Checks</a></li>
+<li><a href="#21-practical-example-remote-io-module-fault-on-a-production-machine">21. Practical Example: Remote I/O Module Fault on a Production Machine</a><ul>
+<li><a href="#initial-observations">Initial observations</a></li>
+<li><a href="#investigation">Investigation</a></li>
+<li><a href="#corrective-action">Corrective action</a></li>
+<li><a href="#verification">Verification</a></li>
+</ul>
+</li>
+<li><a href="#22-standards-and-technical-references">22. Standards and Technical References</a></li>
+<li><a href="#23-final-cpu-and-module-health-checklist">23. Final CPU and Module Health Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>CPU and module health monitoring is the process of checking the operating condition, diagnostic status, communication status, and functional integrity of a PLC CPU and its associated modules to identify faults, degradation, or abnormal conditions before they cause production interruptions.</p>
+<p>A PLC system may continue running while some modules, communication paths, or diagnostic functions are degraded. Therefore, maintenance must evaluate the health of the complete control system rather than checking only whether the CPU is in RUN mode.</p>
+<p>CPU and module health monitoring is part of preventive maintenance (PM) because it helps identify developing faults, verify system availability, and reduce unexpected breakdowns.</p>
+<p>The topic applies to PLC systems such as Siemens SIMATIC, Allen-Bradley ControlLogix and CompactLogix, Mitsubishi MELSEC, and other industrial controllers.</p>
+<h2 id="2-objectives-of-cpu-and-module-health-monitoring">2. Objectives of CPU and Module Health Monitoring</h2>
+<ul>
+<li>Confirm that the CPU is operating in the expected state.</li>
+<li>Detect CPU faults, watchdog events, memory errors, and abnormal operating conditions.</li>
+<li>Verify the status of digital and analog I/O modules.</li>
+<li>Detect missing, failed, or incorrectly configured modules.</li>
+<li>Check remote I/O communication and network health.</li>
+<li>Identify power-supply, backplane, and rack-related problems.</li>
+<li>Verify module configuration against the approved hardware configuration.</li>
+<li>Identify recurring diagnostic events and intermittent faults.</li>
+<li>Reduce unplanned downtime through early fault detection.</li>
+<li>Maintain reliable diagnostic information for troubleshooting and maintenance planning.</li>
+<li>Confirm that critical control and safety functions remain within their approved operating conditions.</li>
+</ul>
+<h2 id="3-basic-plc-hardware-architecture">3. Basic PLC Hardware Architecture</h2>
+<p>A typical PLC control system contains several hardware elements.</p>
+<pre><code>Industrial Power Supply
+        ↓
+PLC Rack or Backplane
+        ↓
+CPU / Controller
+        ↓
+Local I/O Modules
+        ↓
+Sensors and Actuators
+
+CPU / Controller
+        ↓
+Communication Interface
+        ↓
+Industrial Network
+        ↓
+Remote I/O / Drives / HMI / Other Controllers
+</code></pre>
+<p>The exact arrangement depends on the PLC platform. Some controllers integrate the CPU and communication interfaces, while others use separate modules. Compact PLCs may have integrated I/O and no traditional rack backplane.</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Primary function</th>
+<th>Important health indicators</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CPU</td>
+<td>Executes the control program and manages controller functions</td>
+<td>RUN/STOP state, fault status, memory, watchdog, diagnostic events</td>
+</tr>
+<tr>
+<td>Power supply</td>
+<td>Provides operating power to the controller and associated modules</td>
+<td>Output status, voltage, temperature, overload indications</td>
+</tr>
+<tr>
+<td>Backplane or rack</td>
+<td>Provides module interconnection and communication</td>
+<td>Rack faults, module recognition, connection or bus errors</td>
+</tr>
+<tr>
+<td>Digital input module</td>
+<td>Reads discrete field signals</td>
+<td>Channel status, module fault, field-supply condition</td>
+</tr>
+<tr>
+<td>Digital output module</td>
+<td>Controls discrete field devices</td>
+<td>Output status, channel diagnostics, overload or short-circuit indication where supported</td>
+</tr>
+<tr>
+<td>Analog input module</td>
+<td>Measures analog signals</td>
+<td>Channel diagnostics, range status, configuration and conversion errors</td>
+</tr>
+<tr>
+<td>Analog output module</td>
+<td>Generates analog control signals</td>
+<td>Channel status, range diagnostics, output configuration</td>
+</tr>
+<tr>
+<td>Communication module</td>
+<td>Connects the PLC to industrial networks and devices</td>
+<td>Link status, connection faults, error counters, device availability</td>
+</tr>
+<tr>
+<td>Remote I/O adapter</td>
+<td>Connects remote I/O to the controller or network</td>
+<td>Adapter status, network connection, module faults</td>
+</tr>
+<tr>
+<td>Motion or technology module</td>
+<td>Performs specialized control functions</td>
+<td>Module status, configuration, synchronization, axis or technology faults</td>
+</tr>
+</tbody>
+</table>
+<p>Not every module provides every diagnostic indicator. Available diagnostics depend on the model, firmware, configuration, and engineering software.</p>
+<h2 id="4-plc-cpu-health">4. PLC CPU Health</h2>
+<p>The CPU is the central execution and coordination component of a PLC system. Its health must be checked against the manufacturer's diagnostic information and the machine's approved operating requirements.</p>
+<h3 id="41-cpu-operating-states">4.1 CPU operating states</h3>
+<p>Common controller states include:</p>
+<table>
+<thead>
+<tr>
+<th>State</th>
+<th>Meaning</th>
+<th>Maintenance interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RUN</td>
+<td>The controller is executing the application</td>
+<td>Confirm that no significant diagnostic faults or functional problems remain</td>
+</tr>
+<tr>
+<td>STOP</td>
+<td>The controller is not executing the normal application</td>
+<td>Determine whether the state is intentional, fault-induced, or part of maintenance</td>
+</tr>
+<tr>
+<td>Startup or initialization</td>
+<td>The controller is starting or initializing its system</td>
+<td>Check whether startup completes normally</td>
+</tr>
+<tr>
+<td>Faulted or major fault</td>
+<td>The controller has detected a serious condition</td>
+<td>Retrieve diagnostics and follow the platform-specific recovery procedure</td>
+</tr>
+<tr>
+<td>Redundant or standby state</td>
+<td>A redundant controller is operating in a designated role</td>
+<td>Verify the expected role, synchronization, and redundancy health</td>
+</tr>
+</tbody>
+</table>
+<p>These state names and their precise meanings vary by manufacturer and controller family.</p>
+<p>Important: RUN status does not prove that the entire machine is healthy. A controller may be executing its program while a remote I/O rack is unavailable, an analog input is invalid, or an output channel has failed.</p>
+<h3 id="42-cpu-diagnostic-indicators">4.2 CPU diagnostic indicators</h3>
+<p>Common indicators include:</p>
+<ul>
+<li>RUN indicator: Shows the controller's execution state.</li>
+<li>ERROR or FAULT indicator: Indicates a detected controller or system fault.</li>
+<li>MAINT or maintenance indicator: May indicate a maintenance requirement or diagnostic condition.</li>
+<li>BATTERY indicator: Present on platforms that use a battery for supported backup functions.</li>
+<li>COMM indicator: May indicate communication activity or status.</li>
+<li>MEMORY or storage indication: Available on some platforms for memory or storage-related status.</li>
+</ul>
+<p>The meaning of each LED must be checked in the exact hardware manual. LED colors and blink patterns are not universal across PLC families.</p>
+<h3 id="43-cpu-fault-conditions">4.3 CPU fault conditions</h3>
+<p>Typical conditions to investigate include:</p>
+<ul>
+<li>Application or configuration errors.</li>
+<li>Watchdog or execution-time faults.</li>
+<li>Memory or storage errors.</li>
+<li>Firmware-related faults.</li>
+<li>Internal hardware diagnostics.</li>
+<li>Power interruption or unstable supply.</li>
+<li>Communication-related faults.</li>
+<li>Incorrect hardware configuration.</li>
+<li>Startup failures.</li>
+<li>Excessive task execution time, where the platform monitors it.</li>
+</ul>
+<p>A fault message should be interpreted using the manufacturer's diagnostic information. Do not replace a CPU simply because a generic fault indicator is active.</p>
+<h2 id="5-cpu-scan-cycle-and-execution-health">5. CPU Scan Cycle and Execution Health</h2>
+<p>A PLC repeatedly executes its control logic according to its architecture and configured task model.</p>
+<p>For a typical cyclic PLC task, the simplified sequence is:</p>
+<pre><code>Read or Update Inputs
+        ↓
+Execute Control Logic
+        ↓
+Update Outputs
+        ↓
+Perform System and Communication Tasks
+        ↓
+Repeat
+</code></pre>
+<p>Modern PLCs may use cyclic, periodic, event-driven, interrupt-driven, and asynchronous tasks. Actual execution order and I/O update behavior vary by platform.</p>
+<h3 id="51-scan-time">5.1 Scan time</h3>
+<p>Scan time is the time required for a defined PLC execution cycle or task cycle.</p>
+<p>Abnormally high or variable execution time may indicate:</p>
+<ul>
+<li>Increased program complexity.</li>
+<li>Additional communication or data-processing load.</li>
+<li>Inefficient logic.</li>
+<li>Excessive diagnostic or data-handling activity.</li>
+<li>Interrupt or task scheduling effects.</li>
+<li>An application that has approached its configured execution limit.</li>
+</ul>
+<p>The exact meaning of scan time differs across platforms and task types.</p>
+<h3 id="52-watchdog-monitoring">5.2 Watchdog monitoring</h3>
+<p>A watchdog monitors whether execution or a specified task completes within its permitted time.</p>
+<p>If the applicable time limit is exceeded, the controller may generate a fault, stop execution, or take another configured action.</p>
+<p>Maintenance checks should include:</p>
+<ul>
+<li>Current and maximum execution times, where available.</li>
+<li>Configured task limits.</li>
+<li>Watchdog or execution-time events.</li>
+<li>Changes in application execution time over time.</li>
+<li>Recent software modifications.</li>
+</ul>
+<p>Do not increase a watchdog limit merely to suppress a fault. First determine why the execution requirement is not being met and verify the effect of any proposed change.</p>
+<h3 id="53-cpu-load-and-resource-utilization">5.3 CPU load and resource utilization</h3>
+<p>Depending on the PLC, useful indicators may include:</p>
+<ul>
+<li>CPU utilization.</li>
+<li>Task execution time.</li>
+<li>Memory usage.</li>
+<li>Communication load.</li>
+<li>Number of active connections.</li>
+<li>Diagnostic buffer capacity.</li>
+<li>Available storage or retained-data capacity.</li>
+</ul>
+<p>A CPU with high utilization is not necessarily faulty. The important question is whether the controller remains within its design limits while meeting the required control performance.</p>
+<h2 id="6-cpu-memory-and-program-integrity">6. CPU Memory and Program Integrity</h2>
+<p>CPU memory may contain the operating system, application program, data areas, configuration, retained variables, and other platform-specific information.</p>
+<h3 id="61-memory-related-checks">6.1 Memory-related checks</h3>
+<ul>
+<li>Confirm that the application is the approved version.</li>
+<li>Check available memory and resource limits.</li>
+<li>Review memory or storage diagnostic messages.</li>
+<li>Verify that required retained data behaves as designed.</li>
+<li>Confirm that the correct project and hardware configuration are available for recovery.</li>
+<li>Check whether removable storage or memory cards are present and healthy where required.</li>
+<li>Confirm that program changes follow the approved change-control process.</li>
+</ul>
+<h3 id="62-backup-verification">6.2 Backup verification</h3>
+<p>A backup is useful only if it is correct, accessible, and suitable for restoration.</p>
+<p>Verify:</p>
+<ul>
+<li>Correct machine and CPU identification.</li>
+<li>Project version and backup date.</li>
+<li>Hardware configuration.</li>
+<li>Firmware compatibility.</li>
+<li>Required device parameters.</li>
+<li>Relevant safety configuration and authorization controls.</li>
+<li>Availability of the engineering project and necessary software.</li>
+<li>Integrity of the backup file.</li>
+<li>A controlled restoration and validation procedure.</li>
+</ul>
+<p>For safety-related controllers, use the applicable approved safety-project management and verification process. A standard PLC backup procedure must not be assumed sufficient for a safety controller.</p>
+<h2 id="7-plc-power-supply-health">7. PLC Power-Supply Health</h2>
+<p>Power problems can produce symptoms that resemble CPU or module failures.</p>
+<h3 id="71-typical-failure-indicators">7.1 Typical failure indicators</h3>
+<ul>
+<li>CPU restarts unexpectedly.</li>
+<li>Several modules report faults at the same time.</li>
+<li>Remote I/O repeatedly disconnects.</li>
+<li>Module LEDs cycle during operation.</li>
+<li>Power-supply diagnostic alarms occur.</li>
+<li>Faults appear during high load or temperature.</li>
+<li>Output devices behave abnormally because field power is unavailable.</li>
+</ul>
+<h3 id="72-inspection-points">7.2 Inspection points</h3>
+<ul>
+<li>Check the supply's diagnostic indicators.</li>
+<li>Verify the input supply condition using approved procedures.</li>
+<li>Verify output voltage under appropriate operating conditions.</li>
+<li>Check terminal tightness according to the manufacturer's requirements and safe work procedures.</li>
+<li>Inspect for overheating, contamination, or physical damage.</li>
+<li>Check loading against the rated capacity.</li>
+<li>Review the condition of redundant supplies where fitted.</li>
+<li>Confirm that module and field power requirements are met.</li>
+</ul>
+<p>Never measure or inspect exposed energized circuits without the required authorization, competence, instruments, and electrical safety controls.</p>
+<h3 id="73-avoid-confusing-control-power-with-field-power">7.3 Avoid confusing control power with field power</h3>
+<p>A PLC may remain operational even when a sensor or actuator's field supply has failed.</p>
+<p>For example, the CPU may show RUN while several digital inputs remain OFF because the associated field supply is missing. This is not necessarily a CPU problem.</p>
+<p>Diagnosis must separate controller power, module electronics power, and field-device power.</p>
+<h2 id="8-rack-backplane-and-module-recognition">8. Rack, Backplane, and Module Recognition</h2>
+<p>The rack or backplane provides the physical and electrical interconnection between the CPU and installed modules on systems that use this architecture.</p>
+<h3 id="81-typical-symptoms-of-rack-or-module-problems">8.1 Typical symptoms of rack or module problems</h3>
+<ul>
+<li>A module is reported as missing.</li>
+<li>The CPU detects a hardware configuration mismatch.</li>
+<li>Multiple modules become unavailable.</li>
+<li>Rack or bus diagnostic messages appear.</li>
+<li>Module communication is intermittent.</li>
+<li>A module is not recognized after replacement.</li>
+<li>Faults occur after maintenance or rack modifications.</li>
+</ul>
+<h3 id="82-maintenance-checks">8.2 Maintenance checks</h3>
+<ul>
+<li>Compare the installed hardware with the approved configuration.</li>
+<li>Verify the module's exact part number and position.</li>
+<li>Check the manufacturer's module compatibility requirements.</li>
+<li>Inspect approved power and interconnection points under safe conditions.</li>
+<li>Review the CPU's hardware diagnostics.</li>
+<li>Confirm that any required configuration changes are approved.</li>
+<li>Check whether a module replacement requires configuration download or other commissioning steps.</li>
+</ul>
+<p>Do not remove or insert modules under power unless the exact hardware and procedure explicitly support that operation. Hot-swapping is platform-specific, not a universal PLC feature.</p>
+<h2 id="9-digital-input-module-health">9. Digital Input Module Health</h2>
+<p>Digital input modules receive discrete signals such as ON/OFF states from sensors, limit switches, pushbuttons, and auxiliary contacts.</p>
+<h3 id="91-typical-symptoms">9.1 Typical symptoms</h3>
+<ul>
+<li>An input remains OFF when the field device should be active.</li>
+<li>An input remains ON unexpectedly.</li>
+<li>Several channels fail together.</li>
+<li>The input LED disagrees with the PLC tag.</li>
+<li>The module reports a diagnostic fault.</li>
+<li>Input states change intermittently.</li>
+</ul>
+<h3 id="92-diagnostic-sequence">9.2 Diagnostic sequence</h3>
+<ol>
+<li>Confirm the expected physical condition of the sensor or switch.</li>
+<li>Compare the field-device indication with the module channel LED, where provided.</li>
+<li>Compare the module status with the PLC input tag.</li>
+<li>Check field power, common connections, and wiring according to the circuit design.</li>
+<li>Check module and channel diagnostics.</li>
+<li>Verify the input configuration and electrical compatibility.</li>
+<li>Investigate wiring, sensor, terminal, or module failure based on evidence.</li>
+</ol>
+<h3 id="93-interpreting-observations">9.3 Interpreting observations</h3>
+<table>
+<thead>
+<tr>
+<th>Observation</th>
+<th>Possible interpretation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sensor indicator OFF and PLC input OFF</td>
+<td>Sensor may not be actuated, or sensor power may be missing</td>
+</tr>
+<tr>
+<td>Sensor indicator ON but module channel LED OFF</td>
+<td>Possible wiring, field-supply, terminal, or module issue</td>
+</tr>
+<tr>
+<td>Module channel LED ON but PLC tag OFF</td>
+<td>Possible configuration, addressing, data mapping, or application issue</td>
+</tr>
+<tr>
+<td>Several inputs fail together</td>
+<td>Check common power, common wiring, module supply, or shared hardware</td>
+</tr>
+<tr>
+<td>Input changes intermittently</td>
+<td>Investigate loose connections, unstable sensor output, electrical noise, or mechanical actuation</td>
+</tr>
+</tbody>
+</table>
+<p>These are diagnostic clues rather than definitive conclusions. Input LED behavior and internal diagnostics depend on the module design.</p>
+<h2 id="10-digital-output-module-health">10. Digital Output Module Health</h2>
+<p>Digital output modules control devices such as contactor coils, solenoid valves, indicator lamps, and other discrete loads.</p>
+<h3 id="101-typical-symptoms">10.1 Typical symptoms</h3>
+<ul>
+<li>The PLC output command is ON but the device does not operate.</li>
+<li>The output command is OFF but the device remains energized.</li>
+<li>The module reports overload or short-circuit diagnostics.</li>
+<li>Several output channels fail together.</li>
+<li>Output operation is intermittent.</li>
+<li>The module's channel indication disagrees with the expected device condition.</li>
+</ul>
+<h3 id="102-diagnostic-sequence">10.2 Diagnostic sequence</h3>
+<ul>
+<li>Verify the PLC output command and relevant interlocks.</li>
+<li>Check the output channel status.</li>
+<li>Verify field power and the load circuit using approved procedures.</li>
+<li>Inspect protective devices and wiring under safe conditions.</li>
+<li>Check for an open circuit, short circuit, overloaded output, or failed load.</li>
+<li>Review module diagnostic messages and channel protection behavior.</li>
+<li>Confirm that the output type and load are compatible.</li>
+<li>Determine whether the fault lies in the program, module, wiring, power supply, or field device.</li>
+</ul>
+<h3 id="103-important-distinction">10.3 Important distinction</h3>
+<p>A PLC output command being ON does not guarantee that the physical output is delivering the expected voltage or current.</p>
+<p>Likewise, an output LED does not necessarily prove that the connected actuator has operated. Feedback from the field device may be required to confirm the physical result.</p>
+<p>Never force an output merely to test whether an actuator operates without checking machine state, interlocks, hazards, and the approved test procedure.</p>
+<h2 id="11-analog-input-module-health">11. Analog Input Module Health</h2>
+<p>Analog input modules measure signals such as:</p>
+<ul>
+<li>4–20 mA.</li>
+<li>0–20 mA.</li>
+<li>0–10 V.</li>
+<li>Other voltage or current ranges supported by the module.</li>
+<li>Temperature or resistance signals through compatible specialized modules.</li>
+</ul>
+<h3 id="111-typical-symptoms">11.1 Typical symptoms</h3>
+<ul>
+<li>Reading is fixed at zero.</li>
+<li>Reading is at full scale.</li>
+<li>Reading is outside the expected range.</li>
+<li>Value fluctuates excessively.</li>
+<li>Channel reports wire-break or range diagnostics.</li>
+<li>Multiple channels show similar abnormal values.</li>
+<li>HMI values disagree with independent measurements.</li>
+</ul>
+<h3 id="112-diagnostic-checks">11.2 Diagnostic checks</h3>
+<ul>
+<li>Verify the sensor's supply and operating condition.</li>
+<li>Confirm the configured input type and range.</li>
+<li>Check polarity, wiring, shielding, and grounding as appropriate.</li>
+<li>Review channel diagnostic status.</li>
+<li>Confirm scaling and engineering-unit conversion.</li>
+<li>Compare the raw input value with the scaled application value.</li>
+<li>Use a suitable calibrator or measurement instrument when authorized.</li>
+<li>Check whether the signal is outside the module's configured range.</li>
+</ul>
+<h3 id="113-example-420-ma-signal">11.3 Example: 4–20 mA signal</h3>
+<p>Suppose a pressure transmitter uses a 4–20 mA signal for a range of 0–10 bar.</p>
+<p>The ideal linear conversion is:</p>
+<div class="math-display">\[ P = \frac{I-4}{20-4}\times 10 \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(P\)</span> is pressure in bar.</li>
+<li><span class="math-inline">\(I\)</span> is the measured current in mA.</li>
+</ul>
+<p>At 12 mA:</p>
+<div class="math-display">\[ P = \frac{12-4}{16}\times 10 = 5\text{ bar} \]</div>
+<p>This assumes correct transmitter operation, wiring, channel configuration, and linear scaling.</p>
+<p>A reading of zero may indicate a real zero-scale value only if the signal and scaling support that interpretation. In a 4–20 mA system, a current near 0 mA can indicate a loop fault rather than zero pressure.</p>
+<p>The module's configured fault detection and transmitter specifications determine how such conditions should be interpreted.</p>
+<h2 id="12-analog-output-module-health">12. Analog Output Module Health</h2>
+<p>Analog outputs generate reference signals for devices such as VFDs, control valves, and proportional actuators.</p>
+<h3 id="121-common-symptoms">12.1 Common symptoms</h3>
+<ul>
+<li>Commanded output differs from the expected process response.</li>
+<li>Output remains at zero or full scale.</li>
+<li>Channel diagnostic fault appears.</li>
+<li>Output signal fluctuates.</li>
+<li>Connected device does not respond.</li>
+<li>Several channels show similar abnormalities.</li>
+</ul>
+<h3 id="122-diagnostic-sequence">12.2 Diagnostic sequence</h3>
+<ul>
+<li>Confirm the PLC's requested output value.</li>
+<li>Check application scaling and limits.</li>
+<li>Verify module configuration.</li>
+<li>Review channel diagnostics.</li>
+<li>Check field power and wiring according to the circuit design.</li>
+<li>Measure the signal using approved methods.</li>
+<li>Verify the connected device's input range and configuration.</li>
+<li>Confirm the resulting process response using suitable feedback.</li>
+</ul>
+<p>A correct PLC command does not prove that the output signal reaches the device. Similarly, a correct electrical signal does not prove that a VFD, valve, or actuator is operating correctly.</p>
+<h2 id="13-communication-module-and-remote-io-health">13. Communication Module and Remote I/O Health</h2>
+<p>Industrial PLC systems often rely on communication networks to exchange data with remote I/O, drives, HMIs, robots, and other controllers.</p>
+<h3 id="131-common-communication-faults">13.1 Common communication faults</h3>
+<ul>
+<li>Loss of communication with a remote I/O rack.</li>
+<li>Device connection timeout.</li>
+<li>Network link failure.</li>
+<li>Incorrect addressing or configuration.</li>
+<li>Device replacement without corresponding configuration updates.</li>
+<li>Intermittent network disconnection.</li>
+<li>Excessive communication errors.</li>
+<li>Duplicate or conflicting network addresses.</li>
+<li>Failed switch, cable, connector, or communication module.</li>
+</ul>
+<h3 id="132-health-checks">13.2 Health checks</h3>
+<ul>
+<li>Check the communication module's status.</li>
+<li>Verify the physical link and device availability.</li>
+<li>Review controller and network diagnostics.</li>
+<li>Check the expected device configuration.</li>
+<li>Identify whether one device or an entire network segment is affected.</li>
+<li>Review recent changes to cabling, switches, addresses, and device configuration.</li>
+<li>Check error counters and network performance indicators where available.</li>
+<li>Confirm that the application's response to communication loss is appropriate.</li>
+</ul>
+<h3 id="133-communication-health-versus-process-health">13.3 Communication health versus process health</h3>
+<p>A device may be reachable over the network but still have a process fault. Conversely, the remote device may be operating locally while the PLC cannot receive its data.</p>
+<p>Separate these conditions:</p>
+<ul>
+<li>Network health: Can devices communicate?</li>
+<li>Device health: Is the device functioning correctly?</li>
+<li>Data health: Is the information valid and current?</li>
+<li>Process health: Is the controlled process behaving correctly?</li>
+</ul>
+<p>This separation is essential when troubleshooting PLC, HMI, SCADA, and remote I/O problems.</p>
+<h2 id="14-redundant-plc-and-power-supply-health">14. Redundant PLC and Power-Supply Health</h2>
+<p>Some critical control systems use redundant CPUs, communication paths, or power supplies to improve availability.</p>
+<h3 id="141-redundancy-checks">14.1 Redundancy checks</h3>
+<ul>
+<li>Verify the active and standby controller states.</li>
+<li>Check synchronization status where applicable.</li>
+<li>Confirm that the standby system is ready to assume control.</li>
+<li>Review redundancy-related diagnostics.</li>
+<li>Verify the status of redundant communication paths.</li>
+<li>Check power-supply load sharing or redundancy indicators where provided.</li>
+<li>Review recent switchover events.</li>
+<li>Confirm that redundancy monitoring and alarms are functioning.</li>
+</ul>
+<h3 id="142-important-limitations">14.2 Important limitations</h3>
+<p>Redundancy does not eliminate all failure modes.</p>
+<p>Both systems may be affected by a shared power source, network, software defect, environmental condition, or incorrect configuration. Redundant hardware may also remain unavailable because of a failed synchronization or communication path.</p>
+<p>Do not initiate a redundancy switchover merely to test the system unless the test is authorized and the applicable procedure confirms that the process can tolerate it.</p>
+<h2 id="15-plc-health-monitoring-in-siemens-allen-bradley-and-mitsubishi-systems">15. PLC Health Monitoring in Siemens, Allen-Bradley, and Mitsubishi Systems</h2>
+<p>The diagnostic concepts are similar across manufacturers, but the terminology, tools, and recovery procedures differ.</p>
+<table>
+<thead>
+<tr>
+<th>Platform</th>
+<th>Typical engineering environment</th>
+<th>Relevant health checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Siemens S7-1200/S7-1500</td>
+<td>TIA Portal</td>
+<td>CPU operating state, diagnostic buffer, module diagnostics, online/offline comparison, communication status</td>
+</tr>
+<tr>
+<td>Siemens legacy S7 systems</td>
+<td>STEP 7, depending on generation</td>
+<td>CPU diagnostics, module information, diagnostic buffer, hardware configuration</td>
+</tr>
+<tr>
+<td>Allen-Bradley ControlLogix/CompactLogix</td>
+<td>Studio 5000 Logix Designer</td>
+<td>Controller status, module faults, I/O connection status, task execution, major/minor faults</td>
+</tr>
+<tr>
+<td>Mitsubishi MELSEC</td>
+<td>GX Works2 or GX Works3, depending on family</td>
+<td>CPU diagnostics, module diagnostics, error history, parameter configuration, communication status</td>
+</tr>
+</tbody>
+</table>
+<p>Exact diagnostic names and available functions depend on the controller family, firmware, module type, and software version.</p>
+<h3 id="151-siemens-s7-1500-example">15.1 Siemens S7-1500 example</h3>
+<p>Typical checks in TIA Portal may include:</p>
+<ul>
+<li>Online CPU operating state.</li>
+<li>Diagnostic buffer entries.</li>
+<li>Module and rack status.</li>
+<li>Hardware configuration consistency.</li>
+<li>Online device and communication diagnostics.</li>
+<li>Relevant task or cycle-time information.</li>
+<li>Firmware and module identification.</li>
+</ul>
+<p>A diagnostic entry should be interpreted using its event details and the corresponding Siemens documentation.</p>
+<h3 id="152-allen-bradley-controllogix-example">15.2 Allen-Bradley ControlLogix example</h3>
+<p>Typical checks in Studio 5000 may include:</p>
+<ul>
+<li>Controller status and fault information.</li>
+<li>Module properties and connection status.</li>
+<li>I/O tree diagnostics.</li>
+<li>Controller and task execution information.</li>
+<li>Major and minor fault details.</li>
+<li>Communication status and relevant module error codes.</li>
+</ul>
+<p>A module fault may originate from the module itself, its power, its network path, or a configuration mismatch. The fault details help separate these possibilities.</p>
+<h3 id="153-mitsubishi-melsec-example">15.3 Mitsubishi MELSEC example</h3>
+<p>Depending on the CPU and engineering software, useful checks may include:</p>
+<ul>
+<li>CPU diagnostics.</li>
+<li>Error history.</li>
+<li>Module diagnostics.</li>
+<li>Parameter and hardware configuration.</li>
+<li>Network and remote I/O status.</li>
+<li>Relevant scan and execution information.</li>
+</ul>
+<p>Always confirm the exact menu names and diagnostic functions for the installed Mitsubishi CPU and software version.</p>
+<h2 id="16-preventive-maintenance-inspection-schedule">16. Preventive Maintenance Inspection Schedule</h2>
+<p>The inspection interval should be based on equipment criticality, manufacturer recommendations, operating conditions, site history, and applicable procedures.</p>
+<table>
+<thead>
+<tr>
+<th>Frequency</th>
+<th>Typical activity</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Each shift or daily, where justified</td>
+<td>Review critical alarms, CPU state, and major communication faults</td>
+<td>Detect significant abnormalities early</td>
+</tr>
+<tr>
+<td>Weekly or monthly, depending on criticality</td>
+<td>Review recurring faults, module diagnostics, and network stability</td>
+<td>Identify developing or intermittent problems</td>
+</tr>
+<tr>
+<td>During scheduled PM</td>
+<td>Inspect approved physical conditions, ventilation, power indications, and mounting where safe</td>
+<td>Identify environmental or installation issues</td>
+</tr>
+<tr>
+<td>During planned maintenance</td>
+<td>Verify configuration, approved backups, hardware inventory, and recovery readiness</td>
+<td>Improve restoration capability</td>
+</tr>
+<tr>
+<td>After a module or CPU replacement</td>
+<td>Verify configuration, diagnostics, communication, and required functions</td>
+<td>Confirm correct installation and commissioning</td>
+</tr>
+<tr>
+<td>After a major fault</td>
+<td>Preserve evidence, review diagnostics, and perform appropriate follow-up</td>
+<td>Prevent recurrence</td>
+</tr>
+<tr>
+<td>During an approved system test</td>
+<td>Test specified redundancy or recovery functions</td>
+<td>Verify readiness without introducing uncontrolled risk</td>
+</tr>
+</tbody>
+</table>
+<p>Do not open energized panels or disturb PLC hardware solely because a calendar-based PM interval has arrived. Physical inspections must follow the appropriate electrical safety and equipment procedures.</p>
+<h2 id="17-plc-module-replacement-procedure">17. PLC Module Replacement Procedure</h2>
+<p>Module replacement is a controlled maintenance activity, not simply the act of pulling one component out and pushing another in.</p>
+<h3 id="171-before-replacement">17.1 Before replacement</h3>
+<ul>
+<li>Identify the exact failed module and slot.</li>
+<li>Record the CPU, rack, and module details.</li>
+<li>Capture diagnostic information.</li>
+<li>Verify the replacement part number and compatibility.</li>
+<li>Confirm whether the module supports hot-swapping.</li>
+<li>Review the approved replacement procedure.</li>
+<li>Confirm required isolation and production controls.</li>
+<li>Verify configuration and recovery requirements.</li>
+<li>Check whether any required parameter or calibration information must be preserved.</li>
+</ul>
+<h3 id="172-during-replacement">17.2 During replacement</h3>
+<ul>
+<li>Apply the required energy-control procedure.</li>
+<li>Confirm the correct module and physical position.</li>
+<li>Inspect connectors and terminals according to the procedure.</li>
+<li>Avoid electrostatic discharge damage.</li>
+<li>Use approved handling and installation methods.</li>
+<li>Verify that the module is seated and secured correctly.</li>
+</ul>
+<h3 id="173-after-replacement">17.3 After replacement</h3>
+<ul>
+<li>Confirm that the CPU recognizes the module.</li>
+<li>Check module and channel diagnostics.</li>
+<li>Verify configuration compatibility.</li>
+<li>Complete any required approved configuration or parameterization.</li>
+<li>Verify communication and relevant I/O states.</li>
+<li>Test affected functions under controlled conditions.</li>
+<li>Confirm that required interlocks and protective functions remain operational.</li>
+<li>Record the replacement and final status.</li>
+</ul>
+<p>A replacement module may require compatible firmware, parameterization, calibration, or hardware configuration. Physical compatibility alone does not guarantee correct operation.</p>
+<h2 id="18-module-health-versus-process-health">18. Module Health Versus Process Health</h2>
+<p>A critical principle in automation maintenance is that healthy hardware does not automatically mean a healthy process.</p>
+<table>
+<thead>
+<tr>
+<th>Hardware or diagnostic observation</th>
+<th>Possible process implication</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CPU in RUN</td>
+<td>The application is executing, but process conditions may still be abnormal</td>
+</tr>
+<tr>
+<td>Digital input module healthy</td>
+<td>Sensor wiring or mechanical actuation may still be incorrect</td>
+</tr>
+<tr>
+<td>Analog input channel healthy</td>
+<td>The transmitter may be calibrated incorrectly or measuring an abnormal process value</td>
+</tr>
+<tr>
+<td>Digital output module healthy</td>
+<td>The contactor, solenoid, or actuator may still have failed</td>
+</tr>
+<tr>
+<td>Analog output channel healthy</td>
+<td>The control valve or drive may not respond correctly</td>
+</tr>
+<tr>
+<td>Network connection healthy</td>
+<td>Data may be stale, incorrectly mapped, or invalid</td>
+</tr>
+<tr>
+<td>Redundant CPU available</td>
+<td>Shared infrastructure or common application defects may still affect both controllers</td>
+</tr>
+</tbody>
+</table>
+<p>A complete investigation combines controller diagnostics with field-device, process, and application checks.</p>
+<h2 id="19-cpu-and-module-health-record">19. CPU and Module Health Record</h2>
+<p>A useful PM record should identify the equipment and preserve enough evidence to compare its condition over time.</p>
+<p>Suggested fields include:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Information to record</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Equipment ID</td>
+<td>Machine or system identification</td>
+</tr>
+<tr>
+<td>PLC make and model</td>
+<td>Controller manufacturer and exact family</td>
+</tr>
+<tr>
+<td>CPU identification</td>
+<td>Part number, firmware, and configured role where relevant</td>
+</tr>
+<tr>
+<td>Rack or station</td>
+<td>Physical or logical location</td>
+</tr>
+<tr>
+<td>Module identification</td>
+<td>Module type, part number, and slot</td>
+</tr>
+<tr>
+<td>Operating state</td>
+<td>Expected and observed CPU state</td>
+</tr>
+<tr>
+<td>Diagnostic status</td>
+<td>Active faults and relevant diagnostic entries</td>
+</tr>
+<tr>
+<td>Communication status</td>
+<td>Network and remote I/O condition</td>
+</tr>
+<tr>
+<td>Scan or task data</td>
+<td>Relevant execution indicators where available</td>
+</tr>
+<tr>
+<td>Power condition</td>
+<td>Required supply status and measured values where applicable</td>
+</tr>
+<tr>
+<td>Backup status</td>
+<td>Approved project version and backup verification details</td>
+</tr>
+<tr>
+<td>Work performed</td>
+<td>Inspection, test, replacement, or corrective action</td>
+</tr>
+<tr>
+<td>Outstanding issues</td>
+<td>Defects, restrictions, or follow-up work</td>
+</tr>
+<tr>
+<td>Technician and date</td>
+<td>Responsible person and inspection date</td>
+</tr>
+</tbody>
+</table>
+<p>The record should contain actual observations, not generic statements such as "PLC OK" without supporting checks.</p>
+<h2 id="20-common-mistakes-in-cpu-and-module-health-checks">20. Common Mistakes in CPU and Module Health Checks</h2>
+<table>
+<thead>
+<tr>
+<th>Mistake</th>
+<th>Why it is a problem</th>
+<th>Correct approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Checking only the CPU RUN LED</td>
+<td>Misses module, field, and communication faults</td>
+<td>Review the complete diagnostic state</td>
+</tr>
+<tr>
+<td>Replacing the CPU first</td>
+<td>May not address power, wiring, network, or configuration faults</td>
+<td>Diagnose the system and confirm the failed component</td>
+</tr>
+<tr>
+<td>Ignoring intermittent faults</td>
+<td>The system may be approaching a recurring failure</td>
+<td>Review event history and operating conditions</td>
+</tr>
+<tr>
+<td>Clearing diagnostics before recording them</td>
+<td>Removes useful troubleshooting evidence</td>
+<td>Preserve relevant evidence before clearing</td>
+</tr>
+<tr>
+<td>Assuming an input LED proves sensor correctness</td>
+<td>Electrical indication does not establish process accuracy</td>
+<td>Compare the physical sensor, module, tag, and process</td>
+</tr>
+<tr>
+<td>Assuming an output command proves actuator operation</td>
+<td>The field circuit or actuator may be defective</td>
+<td>Verify the electrical output and physical response</td>
+</tr>
+<tr>
+<td>Using an incompatible replacement module</td>
+<td>Can cause configuration, firmware, or functional problems</td>
+<td>Verify exact compatibility</td>
+</tr>
+<tr>
+<td>Downloading a PLC project without authorization</td>
+<td>May stop or alter machine operation</td>
+<td>Follow change-control and recovery procedures</td>
+</tr>
+<tr>
+<td>Performing an unapproved hot-swap</td>
+<td>Can damage hardware or interrupt the process</td>
+<td>Verify platform-specific support and procedures</td>
+</tr>
+<tr>
+<td>Ignoring backup quality</td>
+<td>Recovery may be impossible or restore the wrong version</td>
+<td>Validate backup identity and usability</td>
+</tr>
+<tr>
+<td>Treating communication faults as CPU faults</td>
+<td>Leads to unnecessary replacement and downtime</td>
+<td>Separate CPU, network, device, and data health</td>
+</tr>
+</tbody>
+</table>
+<h2 id="21-practical-example-remote-io-module-fault-on-a-production-machine">21. Practical Example: Remote I/O Module Fault on a Production Machine</h2>
+<p>A machine's PLC remains in RUN, but several sensors connected to a remote I/O station appear unavailable.</p>
+<h3 id="initial-observations">Initial observations</h3>
+<ul>
+<li>CPU RUN indicator is active.</li>
+<li>The HMI shows multiple sensor-related alarms.</li>
+<li>Several PLC input tags remain OFF.</li>
+<li>The remote I/O station reports a communication or module diagnostic fault.</li>
+</ul>
+<h3 id="investigation">Investigation</h3>
+<ol>
+<li>Confirm the machine's safe state and production impact.</li>
+<li>Record the active CPU and remote I/O diagnostics.</li>
+<li>Determine whether the entire station or only selected channels are affected.</li>
+<li>Check the remote station's power and network status.</li>
+<li>Verify the hardware configuration and module identification.</li>
+<li>Inspect the relevant power and communication connections using approved procedures.</li>
+<li>Compare field-device indications, module LEDs, and PLC input values.</li>
+<li>Identify the failed component or connection using the evidence.</li>
+</ol>
+<h3 id="corrective-action">Corrective action</h3>
+<p>Suppose the investigation identifies a failed remote I/O power supply. The team replaces it with a compatible approved unit using the required isolation procedure.</p>
+<h3 id="verification">Verification</h3>
+<ul>
+<li>Confirm that the station is recognized.</li>
+<li>Verify that module diagnostics are clear or understood.</li>
+<li>Confirm communication stability.</li>
+<li>Check affected input channels.</li>
+<li>Verify the required machine sequence and protective functions.</li>
+<li>Conduct the required controlled functional test.</li>
+<li>Record the failure, replacement, and findings.</li>
+</ul>
+<p>The CPU itself did not need replacement. Checking only the RUN indicator would have missed the actual failure.</p>
+<h2 id="22-standards-and-technical-references">22. Standards and Technical References</h2>
+<p>The following standards and manufacturer resources may be relevant, depending on the application and jurisdiction:</p>
+<ul>
+<li>IEC 61131 series: PLC programming languages and programmable controller concepts.</li>
+<li>IEC 60204-1: Electrical equipment of machinery, including relevant electrical safety requirements.</li>
+<li>IEC 61508: Functional safety of electrical, electronic, and programmable electronic safety-related systems.</li>
+<li>IEC 62061: Functional safety of machinery control systems.</li>
+<li>IEC 62443 series: Industrial automation and control system cybersecurity.</li>
+<li>ISO 55000 series: Asset management principles and framework.</li>
+<li>Manufacturer hardware manuals, diagnostic references, firmware compatibility documents, and approved engineering procedures.</li>
+</ul>
+<p>These references serve different purposes. Not every standard applies to every PLC installation, and a general-purpose PLC must not be assumed suitable for a safety function simply because it supports diagnostics.</p>
+<h2 id="23-final-cpu-and-module-health-checklist">23. Final CPU and Module Health Checklist</h2>
+<ul>
+<li>CPU operating state is correct for the intended machine condition.</li>
+<li>Active CPU faults and diagnostic events have been reviewed.</li>
+<li>Relevant execution-time and resource indicators are within acceptable limits.</li>
+<li>Power-supply status is satisfactory.</li>
+<li>Rack, backplane, and installed-module configuration are consistent.</li>
+<li>Digital and analog I/O diagnostics have been checked.</li>
+<li>Communication modules and remote I/O stations are healthy.</li>
+<li>Critical field signals and output responses have been verified where required.</li>
+<li>Redundancy status has been checked where applicable.</li>
+<li>Approved program and configuration backups are available and verified.</li>
+<li>Any replacement hardware is compatible and correctly configured.</li>
+<li>Required functional tests have been completed after maintenance.</li>
+<li>Outstanding faults and restrictions have been documented.</li>
+<li>Follow-up actions have been assigned and tracked.</li>
+</ul>
+<p>Core principle: Monitor the CPU, modules, power supplies, communication paths, field signals, and application behavior as one control system. The objective is not merely to confirm that the PLC is running, but to establish that the system is operating within its required technical and functional limits.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\18_PM\01_PLC\02_Diagnostic_Buffers - Diagnostic buffers</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

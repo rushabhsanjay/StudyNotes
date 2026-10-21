@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fix and Verify: Repair, Test, Restart</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Fix and Verify: Repair, Test, Restart</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-where-fix-and-verify-fits-in-breakdown-troubleshooting">2. Where Fix and Verify Fits in Breakdown Troubleshooting</a></li>
+<li><a href="#3-repair-the-root-cause-not-just-the-symptom">3. Repair the Root Cause, Not Just the Symptom</a></li>
+<li><a href="#4-plan-the-repair-before-starting">4. Plan the Repair Before Starting</a><ul>
+<li><a href="#41-confirm-the-repair-scope">4.1 Confirm the repair scope</a></li>
+<li><a href="#42-preserve-the-existing-configuration">4.2 Preserve the existing configuration</a></li>
+<li><a href="#43-verify-the-replacement-component">4.3 Verify the replacement component</a></li>
+</ul>
+</li>
+<li><a href="#5-safe-repair-practices">5. Safe Repair Practices</a><ul>
+<li><a href="#51-isolate-hazardous-energy">5.1 Isolate hazardous energy</a></li>
+<li><a href="#52-protect-machine-safety-functions">5.2 Protect machine safety functions</a></li>
+<li><a href="#53-use-correct-workmanship">5.3 Use correct workmanship</a></li>
+</ul>
+</li>
+<li><a href="#6-testing-after-electrical-repairs">6. Testing After Electrical Repairs</a><ul>
+<li><a href="#61-typical-checks">6.1 Typical checks</a></li>
+<li><a href="#62-example-24-v-dc-sensor-replacement">6.2 Example: 24 V DC sensor replacement</a></li>
+</ul>
+</li>
+<li><a href="#7-testing-plc-and-automation-repairs">7. Testing PLC and Automation Repairs</a><ul>
+<li><a href="#71-plc-verification">7.1 PLC verification</a></li>
+<li><a href="#72-test-the-complete-signal-chain">7.2 Test the complete signal chain</a></li>
+<li><a href="#73-validate-sequence-behavior">7.3 Validate sequence behavior</a></li>
+</ul>
+</li>
+<li><a href="#8-testing-vfd-and-motor-repairs">8. Testing VFD and Motor Repairs</a><ul>
+<li><a href="#81-before-energization">8.1 Before energization</a></li>
+<li><a href="#82-controlled-functional-test">8.2 Controlled functional test</a></li>
+<li><a href="#83-example-vfd-overcurrent-fault">8.3 Example: VFD overcurrent fault</a></li>
+</ul>
+</li>
+<li><a href="#9-testing-servo-cnc-and-robot-repairs">9. Testing Servo, CNC, and Robot Repairs</a><ul>
+<li><a href="#91-servo-systems">9.1 Servo systems</a></li>
+<li><a href="#92-cnc-systems">9.2 CNC systems</a></li>
+<li><a href="#93-robot-systems">9.3 Robot systems</a></li>
+</ul>
+</li>
+<li><a href="#10-test-the-original-fault-and-related-functions">10. Test the Original Fault and Related Functions</a></li>
+<li><a href="#11-restart-procedure">11. Restart Procedure</a><ul>
+<li><a href="#111-before-restart">11.1 Before restart</a></li>
+<li><a href="#112-controlled-restart">11.2 Controlled restart</a></li>
+</ul>
+</li>
+<li><a href="#12-verification-must-include-safety-and-quality">12. Verification Must Include Safety and Quality</a><ul>
+<li><a href="#121-functional-verification">12.1 Functional verification</a></li>
+<li><a href="#122-safety-verification">12.2 Safety verification</a></li>
+<li><a href="#123-quality-verification">12.3 Quality verification</a></li>
+</ul>
+</li>
+<li><a href="#13-what-to-do-if-the-fault-returns">13. What to Do If the Fault Returns</a></li>
+<li><a href="#14-acceptance-criteria-for-returning-equipment-to-service">14. Acceptance Criteria for Returning Equipment to Service</a></li>
+<li><a href="#15-temporary-repairs-and-deviations">15. Temporary Repairs and Deviations</a></li>
+<li><a href="#16-repair-quality-and-continuous-improvement">16. Repair Quality and Continuous Improvement</a></li>
+<li><a href="#17-common-mistakes-during-fix-and-verify">17. Common Mistakes During Fix and Verify</a></li>
+<li><a href="#18-practical-breakdown-exercise">18. Practical Breakdown Exercise</a></li>
+<li><a href="#19-interview-questions-and-answers">19. Interview Questions and Answers</a><ul>
+<li><a href="#q1-what-is-the-difference-between-repair-and-verification">Q1. What is the difference between repair and verification?</a></li>
+<li><a href="#q2-why-is-replacing-the-failed-component-not-enough">Q2. Why is replacing the failed component not enough?</a></li>
+<li><a href="#q3-what-should-be-checked-before-restarting-a-machine">Q3. What should be checked before restarting a machine?</a></li>
+<li><a href="#q4-why-must-plc-and-vfd-configurations-be-backed-up-before-changes">Q4. Why must PLC and VFD configurations be backed up before changes?</a></li>
+<li><a href="#q5-how-should-a-technician-respond-when-the-same-fault-returns">Q5. How should a technician respond when the same fault returns?</a></li>
+<li><a href="#q6-what-is-a-functional-test">Q6. What is a functional test?</a></li>
+<li><a href="#q7-why-is-safety-verification-separate-from-functional-verification">Q7. Why is safety verification separate from functional verification?</a></li>
+<li><a href="#q8-what-should-be-done-after-a-repair-that-affects-product-quality">Q8. What should be done after a repair that affects product quality?</a></li>
+<li><a href="#q9-when-is-a-temporary-repair-acceptable">Q9. When is a temporary repair acceptable?</a></li>
+<li><a href="#q10-when-is-a-breakdown-considered-closed">Q10. When is a breakdown considered closed?</a></li>
+</ul>
+</li>
+<li><a href="#20-completion-criteria">20. Completion Criteria</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\19_Breakdown\01_Approach\05_Fix_Verify</code></p>
+<h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>Fix and verify is the stage of breakdown maintenance in which the technician corrects the identified fault, tests the repair, confirms that the machine operates safely and correctly, and returns the equipment to service through the approved restart procedure.</p>
+<p>A repair is not complete simply because an alarm disappears or a motor starts running. The original failure must be corrected, the relevant functions must be verified, and the equipment must be safe to hand back to production.</p>
+<p>The main objectives are to:</p>
+<ul>
+<li>Correct the verified root cause rather than merely suppress the symptom.</li>
+<li>Restore the equipment to its specified operating condition.</li>
+<li>Confirm that protective functions, interlocks, and safety devices remain effective.</li>
+<li>Test the repaired component and its interfaces with the rest of the machine.</li>
+<li>Prevent immediate recurrence of the breakdown.</li>
+<li>Return the machine to production through an authorized handover.</li>
+<li>Capture any remaining risks, temporary restrictions, and follow-up actions.</li>
+</ul>
+<h2 id="2-where-fix-and-verify-fits-in-breakdown-troubleshooting">2. Where Fix and Verify Fits in Breakdown Troubleshooting</h2>
+<p>The breakdown approach can be treated as a sequence of connected activities.</p>
+<pre><code>Safety First
+    ↓
+Ask and Observe
+    ↓
+Read Alarms
+    ↓
+Isolate the Faulty Section
+    ↓
+Identify and Verify the Root Cause
+    ↓
+Fix the Cause
+    ↓
+Test the Repair
+    ↓
+Restart Under Approved Conditions
+    ↓
+Confirm Stable Operation
+    ↓
+Record and Handover
+</code></pre>
+<p>The steps may need to be revisited if testing reveals that the original diagnosis was incomplete.</p>
+<p>For example, replacing a proximity sensor may clear the sensor diagnostic, but the machine may still fail because the sensor is incorrectly aligned or the PLC input address is wrong. In that situation, the technician must return to diagnosis rather than repeatedly replacing parts.</p>
+<h2 id="3-repair-the-root-cause-not-just-the-symptom">3. Repair the Root Cause, Not Just the Symptom</h2>
+<p>Before performing a repair, establish what actually failed and what evidence supports that conclusion.</p>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible root cause</th>
+<th>Appropriate corrective action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Motor does not start</td>
+<td>Contactor coil failure</td>
+<td>Verify the control circuit and replace the defective coil or contactor as appropriate</td>
+</tr>
+<tr>
+<td>VFD trips on overcurrent</td>
+<td>Mechanical jam, electrical fault, excessive acceleration demand, or another drive-specific cause</td>
+<td>Verify the cause and correct the mechanical, electrical, or configuration issue</td>
+</tr>
+<tr>
+<td>PLC input remains OFF</td>
+<td>Failed sensor, missing supply, damaged cable, channel fault, or incorrect mapping</td>
+<td>Trace the signal from the field device to the PLC and correct the verified fault</td>
+</tr>
+<tr>
+<td>CNC axis following error</td>
+<td>Mechanical obstruction, feedback fault, or motion-control issue</td>
+<td>Inspect the mechanical and feedback systems and follow the approved diagnostic procedure</td>
+</tr>
+<tr>
+<td>HMI displays communication fault</td>
+<td>Network cable, switch, power supply, configuration, or device failure</td>
+<td>Identify the affected communication path and repair the actual fault</td>
+</tr>
+<tr>
+<td>Pneumatic cylinder moves slowly</td>
+<td>Low pressure, leakage, restriction, valve problem, or mechanical binding</td>
+<td>Test the pneumatic supply, valve, cylinder, and mechanical load</td>
+</tr>
+<tr>
+<td>Robot fails to reach position</td>
+<td>Obstruction, incorrect position data, feedback issue, or program-related condition</td>
+<td>Diagnose the specific cause and validate the approved recovery procedure</td>
+</tr>
+</tbody>
+</table>
+<p>A component replacement is a corrective action, not proof of a root cause. If a fuse repeatedly blows, replacing the fuse without identifying the overcurrent condition does not constitute a completed repair.</p>
+<h2 id="4-plan-the-repair-before-starting">4. Plan the Repair Before Starting</h2>
+<p>A controlled repair begins with preparation.</p>
+<h3 id="41-confirm-the-repair-scope">4.1 Confirm the repair scope</h3>
+<p>Establish:</p>
+<ul>
+<li>The exact component, circuit, or subsystem requiring repair.</li>
+<li>The fault evidence and expected result of the repair.</li>
+<li>The correct part number and equipment compatibility.</li>
+<li>Required drawings, manuals, wiring diagrams, and software versions.</li>
+<li>Necessary tools, measuring instruments, and calibration status.</li>
+<li>Required spare parts and replacement specifications.</li>
+<li>The energy-isolation requirements.</li>
+<li>The people authorized to perform and verify the work.</li>
+<li>The test procedure and acceptance criteria.</li>
+</ul>
+<h3 id="42-preserve-the-existing-configuration">4.2 Preserve the existing configuration</h3>
+<p>Before replacing or modifying automation equipment, capture relevant configuration information where applicable.</p>
+<p>Examples include:</p>
+<ul>
+<li>PLC program and controller configuration backups.</li>
+<li>VFD and servo parameter backups.</li>
+<li>CNC and robot program backups.</li>
+<li>HMI application versions.</li>
+<li>Network addressing and communication settings.</li>
+<li>Drive motor data and feedback configuration.</li>
+<li>Safety-controller configuration and diagnostic information.</li>
+<li>Existing fault history and parameter values.</li>
+</ul>
+<p>Use approved backups and change-control procedures. Do not overwrite a known-good configuration with an unverified file simply because it is available.</p>
+<h3 id="43-verify-the-replacement-component">4.3 Verify the replacement component</h3>
+<p>Check that the replacement is suitable for the application.</p>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>What to verify</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Part number</td>
+<td>Exact part number or formally approved substitute</td>
+</tr>
+<tr>
+<td>Electrical rating</td>
+<td>Voltage, current, frequency, power, and switching capacity as applicable</td>
+</tr>
+<tr>
+<td>Signal compatibility</td>
+<td>NPN/PNP, voltage level, analog range, encoder type, or communication interface</td>
+</tr>
+<tr>
+<td>Mechanical fit</td>
+<td>Mounting dimensions, shaft, connector, orientation, and environmental suitability</td>
+</tr>
+<tr>
+<td>Firmware and configuration</td>
+<td>Compatibility with the controller and installed system</td>
+</tr>
+<tr>
+<td>Safety characteristics</td>
+<td>Required safety rating and approved use where relevant</td>
+</tr>
+<tr>
+<td>Parameterization</td>
+<td>Correct settings, addresses, motor data, and operating limits</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Updated replacement details and configuration records</td>
+</tr>
+</tbody>
+</table>
+<p>A component that physically fits may still be electrically or functionally incompatible.</p>
+<h2 id="5-safe-repair-practices">5. Safe Repair Practices</h2>
+<p>Safety requirements apply throughout repair, testing, and restart. Troubleshooting does not become safe merely because the fault has already been identified.</p>
+<h3 id="51-isolate-hazardous-energy">5.1 Isolate hazardous energy</h3>
+<p>Follow the site's lockout/tagout (LOTO) procedure and equipment-specific isolation instructions where required.</p>
+<p>Potential energy sources include:</p>
+<ul>
+<li>Electrical supply and stored DC bus energy.</li>
+<li>Pneumatic and hydraulic pressure.</li>
+<li>Gravity-loaded or suspended mechanisms.</li>
+<li>Springs and other stored mechanical energy.</li>
+<li>Rotating motors, flywheels, conveyors, and spindles.</li>
+<li>Robot axes and other servo-driven mechanisms.</li>
+<li>Thermal energy and hot surfaces.</li>
+<li>Unexpected movement initiated by remote commands or automatic sequences.</li>
+</ul>
+<p>Isolation must address all relevant energy sources. Verify the safe state using the approved procedure and suitable instruments.</p>
+<p>For electrical equipment, follow the prescribed test-for-dead method and verify the instrument before and after testing as required by site procedures. Observe the manufacturer's specified DC bus discharge time and verify the actual safe condition; waiting alone is not proof that stored energy has dissipated.</p>
+<h3 id="52-protect-machine-safety-functions">5.2 Protect machine safety functions</h3>
+<p>Never defeat safety functions to make a repair appear successful.</p>
+<p>Do not:</p>
+<ul>
+<li>Bridge an emergency-stop circuit to allow production.</li>
+<li>Bypass safety interlocks without an explicitly authorized and risk-assessed procedure.</li>
+<li>Force PLC inputs to simulate missing feedback during production operation.</li>
+<li>Disable drive STO functions to clear an alarm.</li>
+<li>Run a robot with protective devices defeated.</li>
+<li>Defeat guards or enter hazardous areas while equipment can move unexpectedly.</li>
+<li>Restore power before tools, people, and temporary connections are accounted for.</li>
+</ul>
+<p>Any authorized testing that requires an energized or otherwise altered operating condition must follow the applicable risk assessment, safety procedures, and designated operating mode.</p>
+<h3 id="53-use-correct-workmanship">5.3 Use correct workmanship</h3>
+<p>Repair quality includes more than restoring electrical continuity.</p>
+<p>Check for:</p>
+<ul>
+<li>Correct terminal tightening torque.</li>
+<li>Proper conductor size and insulation.</li>
+<li>Correct ferrules, lugs, connectors, and cable routing.</li>
+<li>Effective protective earth connections.</li>
+<li>Proper shield termination according to the design.</li>
+<li>Correct polarity and signal type.</li>
+<li>Correct pneumatic tubing and fittings.</li>
+<li>Correct alignment, lubrication, and mechanical fastening.</li>
+<li>Secure cable glands and environmental sealing.</li>
+<li>Removal of temporary jumpers, tools, and test leads.</li>
+</ul>
+<p>Poor workmanship can introduce a new failure that resembles the original one.</p>
+<h2 id="6-testing-after-electrical-repairs">6. Testing After Electrical Repairs</h2>
+<p>Electrical testing must be selected according to the circuit, equipment, manufacturer's requirements, and site procedure.</p>
+<h3 id="61-typical-checks">6.1 Typical checks</h3>
+<ul>
+<li>Visual inspection for damage, contamination, loose connections, and incorrect wiring.</li>
+<li>Continuity checks on isolated circuits where appropriate.</li>
+<li>Supply voltage and polarity verification.</li>
+<li>Fuse and protective-device checks.</li>
+<li>Control voltage and grounding checks.</li>
+<li>Input and output signal verification.</li>
+<li>Insulation-resistance testing only where suitable for the equipment and approved procedure.</li>
+<li>Protective earth and bonding checks where applicable.</li>
+<li>Functional testing under controlled conditions.</li>
+</ul>
+<p>Important: Do not apply an insulation-resistance tester indiscriminately to PLCs, electronic modules, VFDs, servo drives, encoders, or other sensitive electronics. Disconnect or protect equipment as required by the manufacturer's procedure.</p>
+<h3 id="62-example-24-v-dc-sensor-replacement">6.2 Example: 24 V DC sensor replacement</h3>
+<p>Suppose a failed sensor is replaced on an automated fixture.</p>
+<p>A suitable verification sequence is:</p>
+<ol>
+<li>Confirm the replacement sensor's part number and sensing characteristics.</li>
+<li>Verify wiring, polarity, connector condition, and mounting.</li>
+<li>Confirm the supply voltage using an approved method.</li>
+<li>Check the sensor's physical switching indication, if available.</li>
+<li>Verify the corresponding PLC input status.</li>
+<li>Confirm that the PLC logic interprets the signal correctly.</li>
+<li>Test the relevant sequence under authorized conditions.</li>
+<li>Confirm that the original alarm does not recur and that the sensor works across the required operating range.</li>
+</ol>
+<p>If the sensor switches physically but the PLC input remains OFF, investigate the signal path rather than declaring the repair complete.</p>
+<h2 id="7-testing-plc-and-automation-repairs">7. Testing PLC and Automation Repairs</h2>
+<p>Automation repairs require verification at several levels. A program downloading successfully does not prove that the machine sequence is correct.</p>
+<h3 id="71-plc-verification">7.1 PLC verification</h3>
+<p>Check the following where relevant:</p>
+<ul>
+<li>CPU and module health.</li>
+<li>Program and configuration integrity.</li>
+<li>Correct I/O mapping.</li>
+<li>Field input and output states.</li>
+<li>Communication with remote I/O and networked devices.</li>
+<li>Interlocks and permissive conditions.</li>
+<li>Sequence state and transition conditions.</li>
+<li>Timer and counter behavior.</li>
+<li>Alarm generation and recovery logic.</li>
+<li>Retentive values and startup behavior.</li>
+<li>Backup and change-control records.</li>
+</ul>
+<p>When a program modification is necessary, use the approved engineering change process. Validate the affected logic and its interactions with the wider machine.</p>
+<h3 id="72-test-the-complete-signal-chain">7.2 Test the complete signal chain</h3>
+<p>A typical sensor-to-actuator chain is:</p>
+<pre><code>Physical Condition
+    ↓
+Sensor
+    ↓
+Electrical Signal and Wiring
+    ↓
+PLC Input Channel
+    ↓
+PLC Logic and Interlocks
+    ↓
+PLC Output Command
+    ↓
+Output Module / Interface
+    ↓
+Actuator or Drive
+    ↓
+Physical Movement
+    ↓
+Feedback Confirmation
+</code></pre>
+<p>A repair is not fully verified merely because one point in this chain behaves correctly.</p>
+<p>For example, forcing an output and observing a valve move does not prove that the automatic sequence, interlocks, sensor feedback, and recovery behavior are correct.</p>
+<h3 id="73-validate-sequence-behavior">7.3 Validate sequence behavior</h3>
+<p>For an automated station, check:</p>
+<ul>
+<li>Correct initial or home state.</li>
+<li>Required permissives before movement.</li>
+<li>Correct order of operations.</li>
+<li>Expected actuator movement.</li>
+<li>Correct sensor confirmation.</li>
+<li>Correct handling of timeouts.</li>
+<li>Expected completion signal.</li>
+<li>Correct response to an abnormal condition.</li>
+<li>Correct return to a known safe state where specified.</li>
+<li>Correct behavior on the next cycle.</li>
+</ul>
+<p>Do not test by intentionally creating a hazardous condition or bypassing protective functions. Use approved test modes and test procedures.</p>
+<h2 id="8-testing-vfd-and-motor-repairs">8. Testing VFD and Motor Repairs</h2>
+<p>When a VFD or motor has been repaired, verify the cause of the original fault and the electrical and mechanical condition before restarting.</p>
+<h3 id="81-before-energization">8.1 Before energization</h3>
+<p>Check:</p>
+<ul>
+<li>Motor and drive ratings.</li>
+<li>Correct motor wiring and protective earth.</li>
+<li>Cable and terminal condition.</li>
+<li>Mechanical freedom of movement under the required isolation procedure.</li>
+<li>Drive configuration and approved parameter set.</li>
+<li>Control source and reference source.</li>
+<li>Direction of rotation requirements.</li>
+<li>Acceleration and deceleration settings.</li>
+<li>Relevant protection and interlock conditions.</li>
+<li>Braking circuit and regenerative components, where fitted.</li>
+</ul>
+<h3 id="82-controlled-functional-test">8.2 Controlled functional test</h3>
+<p>Where the approved procedure permits, begin with the specified low-risk test conditions and observe the drive and machine behavior.</p>
+<p>Record relevant values such as:</p>
+<ul>
+<li>Supply voltage.</li>
+<li>Output current.</li>
+<li>Output frequency and speed.</li>
+<li>Acceleration and deceleration behavior.</li>
+<li>Motor temperature or drive thermal estimate, if available.</li>
+<li>Vibration, noise, and abnormal mechanical behavior.</li>
+<li>Fault history and active diagnostic status.</li>
+</ul>
+<p>Confirm the required operating range, not just whether the motor rotates.</p>
+<h3 id="83-example-vfd-overcurrent-fault">8.3 Example: VFD overcurrent fault</h3>
+<p>A conveyor trips on overcurrent during acceleration. Inspection identifies a jammed roller caused by a seized bearing.</p>
+<p>A suitable corrective process is:</p>
+<ol>
+<li>Isolate and secure the conveyor.</li>
+<li>Verify the mechanical cause.</li>
+<li>Replace the defective bearing or perform the approved mechanical repair.</li>
+<li>Inspect related rollers, alignment, and conveyor loading.</li>
+<li>Check the motor and drive according to the applicable procedure.</li>
+<li>Restore guards and other protective devices.</li>
+<li>Perform the authorized controlled restart.</li>
+<li>Monitor acceleration, current, noise, and movement.</li>
+<li>Confirm that the conveyor completes the required cycle without the original fault.</li>
+<li>Record the verified cause and corrective action.</li>
+</ol>
+<p>Increasing the drive's current limit without investigating the jam would conceal a mechanical problem and could cause further damage.</p>
+<h2 id="9-testing-servo-cnc-and-robot-repairs">9. Testing Servo, CNC, and Robot Repairs</h2>
+<p>Motion-control systems require special attention because incorrect testing can cause unexpected movement, collisions, or equipment damage.</p>
+<h3 id="91-servo-systems">9.1 Servo systems</h3>
+<p>Verify as appropriate:</p>
+<ul>
+<li>Correct motor and drive pairing.</li>
+<li>Feedback and encoder connections.</li>
+<li>Parameter configuration.</li>
+<li>Mechanical coupling and load condition.</li>
+<li>Axis travel limits and homing references.</li>
+<li>Correct direction of movement.</li>
+<li>Following error and position feedback.</li>
+<li>Brake operation where fitted.</li>
+<li>Torque and speed limits.</li>
+<li>Relevant safety functions.</li>
+<li>Approved motion test and repeatability criteria.</li>
+</ul>
+<p>Do not assume that clearing a servo alarm means the axis reference, calibration, or position accuracy is correct.</p>
+<h3 id="92-cnc-systems">9.2 CNC systems</h3>
+<p>After a CNC-related repair, confirm:</p>
+<ul>
+<li>The machine is in the approved recovery state.</li>
+<li>The relevant axis or spindle diagnostic has cleared.</li>
+<li>Tool, work, and axis references remain valid.</li>
+<li>The correct program and configuration are active.</li>
+<li>Required lubrication, cooling, and auxiliary systems operate correctly.</li>
+<li>The relevant movement is tested through the approved procedure.</li>
+<li>Part quality and dimensional results are verified when required.</li>
+</ul>
+<p>Use the machine builder's recovery and acceptance instructions, particularly after work involving encoders, absolute-position systems, axis drives, or mechanical transmission components.</p>
+<h3 id="93-robot-systems">9.3 Robot systems</h3>
+<p>Verify:</p>
+<ul>
+<li>Robot controller health and active fault status.</li>
+<li>Correct program and tool/frame configuration.</li>
+<li>End-effector and payload condition.</li>
+<li>Required safety inputs and protective devices.</li>
+<li>Approved mastering or calibration status where relevant.</li>
+<li>Clear movement path and safe recovery position.</li>
+<li>Correct sequence handshake with the PLC.</li>
+<li>Correct gripper, sensor, and part-transfer feedback.</li>
+<li>Required cycle and quality checks.</li>
+</ul>
+<p>Robot movement testing must use the authorized mode, access controls, and speed restrictions specified by the site and manufacturer.</p>
+<h2 id="10-test-the-original-fault-and-related-functions">10. Test the Original Fault and Related Functions</h2>
+<p>The test should target the original failure mechanism, not just the component that was replaced.</p>
+<table>
+<thead>
+<tr>
+<th>Original fault</th>
+<th>Minimum verification objective</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sensor failed to detect a part</td>
+<td>Confirm sensing across the required positions and verify the PLC sequence response</td>
+</tr>
+<tr>
+<td>Contactor failed to energize</td>
+<td>Confirm coil operation, contact condition, load response, and associated control logic</td>
+</tr>
+<tr>
+<td>VFD tripped during acceleration</td>
+<td>Verify the initiating cause was corrected and the motor accelerates under the required load</td>
+</tr>
+<tr>
+<td>PLC communication loss</td>
+<td>Confirm stable communication, valid data exchange, and normal device behavior</td>
+</tr>
+<tr>
+<td>Servo following error</td>
+<td>Confirm the axis moves correctly under the approved test and the cause of position deviation is resolved</td>
+</tr>
+<tr>
+<td>Pneumatic cylinder timeout</td>
+<td>Verify movement, pressure, sensor confirmation, and repeated sequence operation</td>
+</tr>
+<tr>
+<td>CNC axis alarm</td>
+<td>Confirm axis status, reference validity, movement, and required accuracy checks</td>
+</tr>
+<tr>
+<td>Robot transfer failure</td>
+<td>Verify the full handshake, grip/release sequence, position confirmation, and approved cycle test</td>
+</tr>
+</tbody>
+</table>
+<p>A single successful movement may not reveal an intermittent problem. The number of test cycles and duration should reflect the fault history, machine requirements, and approved acceptance criteria.</p>
+<h2 id="11-restart-procedure">11. Restart Procedure</h2>
+<p>Restarting is a controlled restoration of operation, not simply switching the machine back on.</p>
+<h3 id="111-before-restart">11.1 Before restart</h3>
+<ul>
+<li>Confirm the repair is complete and inspected.</li>
+<li>Remove tools, test leads, temporary wiring, and debris.</li>
+<li>Restore all guards and protective devices.</li>
+<li>Confirm that personnel are clear of hazardous areas.</li>
+<li>Confirm that components and covers are correctly installed.</li>
+<li>Restore required utilities and energy supplies through the approved procedure.</li>
+<li>Verify that all required safety conditions are satisfied.</li>
+<li>Confirm that relevant alarms and interlocks are understood.</li>
+<li>Ensure affected operators and maintenance personnel are informed.</li>
+<li>Obtain the required authorization to restart.</li>
+</ul>
+<h3 id="112-controlled-restart">11.2 Controlled restart</h3>
+<p>Follow the machine-specific sequence. Depending on the equipment, this may include:</p>
+<ol>
+<li>Restore power and utilities through the approved procedure.</li>
+<li>Confirm controller, drive, and communication health.</li>
+<li>Check required home or reference states.</li>
+<li>Clear faults only after their causes and reset conditions have been addressed.</li>
+<li>Select the authorized operating mode.</li>
+<li>Perform the specified low-risk functional test.</li>
+<li>Verify required sensors, actuators, and interlocks.</li>
+<li>Run the prescribed test cycle.</li>
+<li>Observe machine behavior and diagnostic status.</li>
+<li>Obtain production acceptance before returning to normal operation.</li>
+</ol>
+<p>Not every machine uses the same startup sequence. The manufacturer's procedure, site safety rules, and approved work instructions take precedence.</p>
+<h2 id="12-verification-must-include-safety-and-quality">12. Verification Must Include Safety and Quality</h2>
+<p>A machine that operates again may still be unsafe or produce defective parts.</p>
+<p>Verification should cover three separate dimensions.</p>
+<h3 id="121-functional-verification">12.1 Functional verification</h3>
+<ul>
+<li>Does the repaired function operate correctly?</li>
+<li>Does the original alarm remain cleared under the tested conditions?</li>
+<li>Does the sequence complete correctly?</li>
+<li>Are the expected feedback signals received?</li>
+<li>Does the equipment respond correctly to normal commands?</li>
+</ul>
+<h3 id="122-safety-verification">12.2 Safety verification</h3>
+<ul>
+<li>Are guards, interlocks, emergency stops, and safety functions restored?</li>
+<li>Are protective devices operating as intended?</li>
+<li>Are there any temporary overrides or bypasses remaining?</li>
+<li>Has the required safety validation been completed after changes affecting safety?</li>
+<li>Is the machine safe to hand back to production?</li>
+</ul>
+<p>Safety-related repairs or modifications require the prescribed validation. A normal production cycle is not a substitute for verifying safety functions.</p>
+<h3 id="123-quality-verification">12.3 Quality verification</h3>
+<p>Where the repair can affect product quality, check:</p>
+<ul>
+<li>Correct tool and work references.</li>
+<li>Positioning and repeatability.</li>
+<li>Sensor detection accuracy.</li>
+<li>Torque, pressure, temperature, or other controlled process values.</li>
+<li>Part presence and clamping confirmation.</li>
+<li>First-off or sample inspection results.</li>
+<li>Required process capability or calibration checks.</li>
+<li>Quality-system approval where applicable.</li>
+</ul>
+<p>For example, a repaired CNC axis may move without an alarm but still require reference and dimensional checks before production resumes.</p>
+<h2 id="13-what-to-do-if-the-fault-returns">13. What to Do If the Fault Returns</h2>
+<p>If the original fault reappears during testing or after restart, stop treating the previous repair as successful.</p>
+<ol>
+<li>Place the machine in the required safe state.</li>
+<li>Capture the new alarm and diagnostic evidence.</li>
+<li>Compare the new fault with the original event.</li>
+<li>Identify what changed during the repair or test.</li>
+<li>Revisit the root-cause hypothesis.</li>
+<li>Check whether the repair addressed a symptom rather than the initiating cause.</li>
+<li>Investigate related components and shared dependencies.</li>
+<li>Escalate to controls engineering, the equipment OEM, or the responsible specialist where necessary.</li>
+<li>Repeat testing after the revised corrective action.</li>
+</ol>
+<p>Common reasons for recurrence include incomplete diagnosis, incorrect replacement parts, poor connections, unsuitable parameters, a second fault, or an intermittent condition that was not reproduced during the first test.</p>
+<p>Repeatedly resetting the same alarm is not a corrective-action strategy.</p>
+<h2 id="14-acceptance-criteria-for-returning-equipment-to-service">14. Acceptance Criteria for Returning Equipment to Service</h2>
+<p>Acceptance criteria should be established before the test where possible.</p>
+<table>
+<thead>
+<tr>
+<th>Acceptance area</th>
+<th>Example criterion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fault clearance</td>
+<td>Original fault does not recur under the prescribed test conditions</td>
+</tr>
+<tr>
+<td>Functional operation</td>
+<td>Required sequence completes correctly</td>
+</tr>
+<tr>
+<td>Electrical condition</td>
+<td>Supply, connections, and protection meet applicable requirements</td>
+</tr>
+<tr>
+<td>Mechanical condition</td>
+<td>Movement is smooth and within specified operating limits</td>
+</tr>
+<tr>
+<td>Automation status</td>
+<td>PLC, HMI, drive, CNC, and robot diagnostics show the required healthy state</td>
+</tr>
+<tr>
+<td>Safety</td>
+<td>Protective functions are restored and required validation is complete</td>
+</tr>
+<tr>
+<td>Product quality</td>
+<td>Required inspection or first-off checks pass</td>
+</tr>
+<tr>
+<td>Stability</td>
+<td>Equipment completes the prescribed number of cycles or observation period</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Repair, configuration changes, and test results are recorded</td>
+</tr>
+<tr>
+<td>Handover</td>
+<td>Responsible production personnel accept the equipment</td>
+</tr>
+</tbody>
+</table>
+<p>Do not invent a universal number of test cycles. Use the machine's approved criteria and adjust the test scope according to the risk and failure history.</p>
+<h2 id="15-temporary-repairs-and-deviations">15. Temporary Repairs and Deviations</h2>
+<p>Sometimes a machine cannot be fully restored immediately because of parts availability, obsolescence, or a complex failure.</p>
+<p>A temporary repair must not be treated as equivalent to a permanent repair.</p>
+<p>Where temporary operation is permitted, it must have:</p>
+<ul>
+<li>Formal authorization.</li>
+<li>A documented risk assessment.</li>
+<li>A defined scope and operating restriction.</li>
+<li>Confirmation that required safety functions remain effective.</li>
+<li>A named owner for the follow-up action.</li>
+<li>A due date and escalation route.</li>
+<li>Clear communication to production and the next shift.</li>
+<li>A documented plan to complete the permanent repair.</li>
+</ul>
+<p>Never improvise a temporary bypass of a safety device or protective function to maintain production. If the equipment cannot meet the required safety conditions, it must remain out of service.</p>
+<h2 id="16-repair-quality-and-continuous-improvement">16. Repair Quality and Continuous Improvement</h2>
+<p>Breakdown maintenance should improve equipment reliability, not merely return the machine to its previous failure-prone state.</p>
+<p>After the immediate repair, consider whether the evidence justifies additional actions:</p>
+<ul>
+<li>Improve cable routing, strain relief, or connector protection.</li>
+<li>Correct recurring mechanical alignment or lubrication problems.</li>
+<li>Review unsuitable drive or motor settings.</li>
+<li>Improve alarm descriptions and diagnostics.</li>
+<li>Add missing fault-history or condition-monitoring data.</li>
+<li>Update PM checklists.</li>
+<li>Review critical spare availability.</li>
+<li>Identify obsolete components and approved replacements.</li>
+<li>Update electrical drawings, I/O lists, backups, and SOPs.</li>
+<li>Initiate root-cause analysis for repeated or high-impact failures.</li>
+</ul>
+<p>Any engineering modification must follow the applicable design, approval, configuration-management, and safety-validation process.</p>
+<h2 id="17-common-mistakes-during-fix-and-verify">17. Common Mistakes During Fix and Verify</h2>
+<ul>
+<li>Replacing a component without confirming that it caused the fault.</li>
+<li>Changing multiple components at once without recording what changed.</li>
+<li>Modifying PLC logic or drive parameters without a backup.</li>
+<li>Ignoring related faults elsewhere in the system.</li>
+<li>Testing only the repaired component instead of the complete function.</li>
+<li>Assuming an alarm-free HMI means the machine is healthy.</li>
+<li>Ignoring intermittent faults because the first test passed.</li>
+<li>Restarting before guards and protective devices are restored.</li>
+<li>Failing to verify product quality after motion or positioning repairs.</li>
+<li>Returning the machine to production without a clear handover.</li>
+<li>Leaving temporary jumpers, overrides, or test connections installed.</li>
+<li>Failing to record a recurring fault after an unsuccessful repair.</li>
+<li>Treating a temporary workaround as a permanent solution.</li>
+</ul>
+<h2 id="18-practical-breakdown-exercise">18. Practical Breakdown Exercise</h2>
+<p>A conveyor at an automated station stops during acceleration. The HMI displays <code>Conveyor drive fault</code>, the VFD reports an overcurrent fault, and the PLC reports a conveyor-running timeout.</p>
+<p>Inspection reveals that a roller bearing has seized. The bearing is replaced, but the machine has not yet been restarted.</p>
+<p>Complete the following checklist:</p>
+<ul>
+<li>Record the original HMI, VFD, and PLC diagnostic information.</li>
+<li>Confirm that the seized bearing was the verified cause of the abnormal load.</li>
+<li>Inspect related rollers, alignment, and conveyor condition.</li>
+<li>Confirm the motor, wiring, drive configuration, and protective devices are suitable for operation.</li>
+<li>Complete the required mechanical and electrical checks.</li>
+<li>Restore guards and verify that personnel and tools are clear.</li>
+<li>Follow the approved restart procedure.</li>
+<li>Observe acceleration, current, vibration, noise, and conveyor movement.</li>
+<li>Verify that the PLC receives the correct running feedback.</li>
+<li>Run the prescribed functional test and verify the required production conditions.</li>
+<li>Confirm that the original fault does not recur during the specified test.</li>
+<li>Record the repair, verification results, and handover.</li>
+</ul>
+<p>Key learning: Replacing the bearing is the repair. Confirming that the mechanical load is normal, the drive operates correctly, the PLC sequence completes, and the station is safe and stable is the verification.</p>
+<h2 id="19-interview-questions-and-answers">19. Interview Questions and Answers</h2>
+<h3 id="q1-what-is-the-difference-between-repair-and-verification">Q1. What is the difference between repair and verification?</h3>
+<p>Repair is the action taken to correct the identified fault. Verification is the evidence-based process of confirming that the repair worked, the required functions are restored, and the equipment meets its acceptance criteria.</p>
+<h3 id="q2-why-is-replacing-the-failed-component-not-enough">Q2. Why is replacing the failed component not enough?</h3>
+<p>The component may be a symptom or consequence of another problem. Verification must establish that the underlying cause is corrected and that related equipment functions correctly.</p>
+<h3 id="q3-what-should-be-checked-before-restarting-a-machine">Q3. What should be checked before restarting a machine?</h3>
+<p>Confirm the repair, restore guards and protective devices, remove tools and temporary connections, verify the safe condition, inform affected personnel, and follow the approved restart procedure.</p>
+<h3 id="q4-why-must-plc-and-vfd-configurations-be-backed-up-before-changes">Q4. Why must PLC and VFD configurations be backed up before changes?</h3>
+<p>Backups preserve the known configuration and support recovery if a modification introduces a new fault. Changes should be controlled, documented, and validated.</p>
+<h3 id="q5-how-should-a-technician-respond-when-the-same-fault-returns">Q5. How should a technician respond when the same fault returns?</h3>
+<p>Make the equipment safe, preserve the new diagnostic evidence, compare the event with the original fault, revisit the diagnosis, and verify the revised corrective action. Do not simply repeat the same reset.</p>
+<h3 id="q6-what-is-a-functional-test">Q6. What is a functional test?</h3>
+<p>A functional test confirms that the repaired equipment performs its intended operation under defined conditions. It should cover the relevant commands, feedback, sequence behavior, and required operating range.</p>
+<h3 id="q7-why-is-safety-verification-separate-from-functional-verification">Q7. Why is safety verification separate from functional verification?</h3>
+<p>A machine can operate normally while a guard interlock or another protective function is defective. Safety functions must be verified according to their specified procedures and validation requirements.</p>
+<h3 id="q8-what-should-be-done-after-a-repair-that-affects-product-quality">Q8. What should be done after a repair that affects product quality?</h3>
+<p>Complete the required quality checks, such as first-off inspection, dimensional verification, calibration checks, or process validation, before releasing affected production.</p>
+<h3 id="q9-when-is-a-temporary-repair-acceptable">Q9. When is a temporary repair acceptable?</h3>
+<p>Only when permitted by site policy and formally authorized with a documented risk assessment, effective safety controls, clear restrictions, ownership, and a plan for permanent correction.</p>
+<h3 id="q10-when-is-a-breakdown-considered-closed">Q10. When is a breakdown considered closed?</h3>
+<p>When the cause and corrective action are documented, the required functional and safety checks are complete, the equipment meets its acceptance criteria, and the responsible personnel have accepted the handover. The associated breakdown record must also be completed according to site requirements.</p>
+<h2 id="20-completion-criteria">20. Completion Criteria</h2>
+<p>This topic is complete when the learner can:</p>
+<ul>
+<li>Distinguish symptom correction from root-cause correction.</li>
+<li>Plan a repair using the correct parts, tools, documentation, and safety controls.</li>
+<li>Preserve PLC, drive, CNC, and robot configurations before relevant changes.</li>
+<li>Apply safe electrical, mechanical, pneumatic, and hydraulic repair practices.</li>
+<li>Test electrical circuits and automation signals appropriately.</li>
+<li>Verify PLC sequence behavior and field-device feedback.</li>
+<li>Test VFD, servo, CNC, and robot repairs using approved procedures.</li>
+<li>Restore and verify protective devices and safety functions.</li>
+<li>Perform a controlled restart and confirm stable operation.</li>
+<li>Recognize when a returning fault requires renewed diagnosis.</li>
+<li>Document the repair, test results, deviations, and handover.</li>
+<li>Identify reliability improvements arising from the breakdown.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\19_Breakdown\01_Approach\06_Record - Record: Log fault, cause, action</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CNC Servo System</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">CNC Servo System</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-cnc-servo-system-architecture">2. CNC Servo System Architecture</a></li>
+<li><a href="#3-servo-system-versus-open-loop-stepper-system">3. Servo System Versus Open-Loop Stepper System</a></li>
+<li><a href="#4-types-of-servo-control-loops">4. Types of Servo Control Loops</a><ul>
+<li><a href="#41-current-or-torque-loop">4.1 Current or Torque Loop</a></li>
+<li><a href="#42-velocity-loop">4.2 Velocity Loop</a></li>
+<li><a href="#43-position-loop">4.3 Position Loop</a></li>
+<li><a href="#typical-nested-loop-relationship">Typical nested-loop relationship</a></li>
+</ul>
+</li>
+<li><a href="#5-servo-motor-types-used-in-cnc-machines">5. Servo Motor Types Used in CNC Machines</a><ul>
+<li><a href="#51-ac-synchronous-servo-motor">5.1 AC Synchronous Servo Motor</a></li>
+<li><a href="#52-ac-induction-motor-used-in-servo-applications">5.2 AC Induction Motor Used in Servo Applications</a></li>
+<li><a href="#53-linear-motor">5.3 Linear Motor</a></li>
+<li><a href="#54-torque-motor">5.4 Torque Motor</a></li>
+</ul>
+</li>
+<li><a href="#6-servo-drive-and-cnc-communication">6. Servo Drive and CNC Communication</a></li>
+<li><a href="#7-position-feedback-devices">7. Position Feedback Devices</a><ul>
+<li><a href="#motor-encoder-versus-linear-scale">Motor encoder versus linear scale</a></li>
+</ul>
+</li>
+<li><a href="#8-commanded-position-actual-position-and-following-error">8. Commanded Position, Actual Position, and Following Error</a><ul>
+<li><a href="#practical-interpretation">Practical interpretation</a></li>
+</ul>
+</li>
+<li><a href="#9-servo-tuning-and-stability">9. Servo Tuning and Stability</a></li>
+<li><a href="#10-servo-torque-and-load-conditions">10. Servo Torque and Load Conditions</a></li>
+<li><a href="#11-servo-parameters-relevant-to-cnc-axes">11. Servo Parameters Relevant to CNC Axes</a></li>
+<li><a href="#12-cnc-servo-faults-and-diagnostic-approach">12. CNC Servo Faults and Diagnostic Approach</a></li>
+<li><a href="#13-practical-example-following-error-during-machining">13. Practical Example: Following Error During Machining</a><ul>
+<li><a href="#situation">Situation</a></li>
+<li><a href="#investigation">Investigation</a></li>
+<li><a href="#possible-findings">Possible findings</a></li>
+<li><a href="#corrective-action">Corrective action</a></li>
+</ul>
+</li>
+<li><a href="#14-practical-example-positioning-error-after-mechanical-maintenance">14. Practical Example: Positioning Error After Mechanical Maintenance</a><ul>
+<li><a href="#situation_1">Situation</a></li>
+<li><a href="#investigation_1">Investigation</a></li>
+<li><a href="#possible-causes">Possible causes</a></li>
+<li><a href="#corrective-action_1">Corrective action</a></li>
+</ul>
+</li>
+<li><a href="#15-practical-example-servo-axis-fault-after-motor-replacement">15. Practical Example: Servo Axis Fault After Motor Replacement</a><ul>
+<li><a href="#situation_2">Situation</a></li>
+<li><a href="#investigation_2">Investigation</a></li>
+<li><a href="#possible-causes_1">Possible causes</a></li>
+<li><a href="#corrective-action_2">Corrective action</a></li>
+</ul>
+</li>
+<li><a href="#16-safe-maintenance-and-testing">16. Safe Maintenance and Testing</a></li>
+<li><a href="#17-preventive-maintenance-checklist">17. Preventive Maintenance Checklist</a><ul>
+<li><a href="#routine-inspection">Routine inspection</a></li>
+<li><a href="#planned-maintenance">Planned maintenance</a></li>
+</ul>
+</li>
+<li><a href="#18-cnc-servo-spare-parts-and-configuration-control">18. CNC Servo Spare Parts and Configuration Control</a></li>
+<li><a href="#19-key-engineering-principles">19. Key Engineering Principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>A CNC servo system is the closed-loop motion-control system that moves a machine tool's axes accurately according to commands from the CNC controller.</p>
+<p>It converts programmed machining instructions into controlled mechanical movement. The system regulates motor position, speed, and torque while monitoring feedback to ensure the axis follows the required motion within specified limits.</p>
+<p>In a CNC machine, servo systems commonly control the X, Y, and Z linear axes and additional rotary axes such as A, B, and C. Depending on the machine architecture, similar control principles may also apply to tool changers, auxiliary positioning axes, and other controlled mechanisms.</p>
+<p>The primary objectives are:</p>
+<ul>
+<li>Accurate positioning of machine axes.</li>
+<li>Controlled acceleration, deceleration, and velocity.</li>
+<li>Coordinated multi-axis movement.</li>
+<li>Stable operation under changing cutting loads.</li>
+<li>Detection of excessive following error and other abnormal conditions.</li>
+<li>Repeatable machining and dimensional accuracy.</li>
+<li>Reliable integration with CNC, PLC, feedback, and machine safety systems.</li>
+</ul>
+<p>A servo system is not just a servo motor. It is a coordinated combination of the controller, drive, motor, feedback device, mechanical transmission, and associated configuration.</p>
+<h2 id="2-cnc-servo-system-architecture">2. CNC Servo System Architecture</h2>
+<pre><code>CNC Controller
+    ↓ Position / Velocity / Motion Commands
+Servo Drive
+    ↓ Controlled Motor Current and Voltage
+Servo Motor
+    ↓ Torque and Rotation
+Mechanical Transmission
+    ↓
+Machine Axis / Table / Tool Movement
+    ↑
+Encoder or Position Feedback
+    ↑
+Servo Drive / Motion Control
+    ↓
+Actual Position Compared with Commanded Position
+</code></pre>
+<p>This is a simplified functional representation. Depending on the control architecture, position, velocity, and current loops may be distributed between the CNC controller and servo drive.</p>
+<p>A typical system includes the following components:</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+<th>Typical fault</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CNC controller</td>
+<td>Generates motion commands and coordinates axes</td>
+<td>Axis-control or communication alarm</td>
+</tr>
+<tr>
+<td>Servo drive</td>
+<td>Controls motor current and motion response</td>
+<td>Overcurrent, undervoltage, feedback fault</td>
+</tr>
+<tr>
+<td>Servo motor</td>
+<td>Converts electrical energy into controlled torque and rotation</td>
+<td>Overheating, winding fault, abnormal noise</td>
+</tr>
+<tr>
+<td>Encoder or feedback device</td>
+<td>Measures motor position and supports speed estimation</td>
+<td>Feedback loss or position error</td>
+</tr>
+<tr>
+<td>Coupling and transmission</td>
+<td>Transfers motor movement to the machine axis</td>
+<td>Backlash, looseness, mechanical binding</td>
+</tr>
+<tr>
+<td>Ball screw or linear drive</td>
+<td>Converts rotation into linear movement, where fitted</td>
+<td>Wear, friction, pitch error</td>
+</tr>
+<tr>
+<td>Linear scale, if fitted</td>
+<td>Measures actual linear axis position</td>
+<td>Scale contamination or feedback error</td>
+</tr>
+<tr>
+<td>Brake, if fitted</td>
+<td>Holds the axis under specified conditions</td>
+<td>Brake does not release or hold correctly</td>
+</tr>
+<tr>
+<td>Power and feedback cables</td>
+<td>Carry electrical power and measurement signals</td>
+<td>Intermittent faults, insulation damage</td>
+</tr>
+<tr>
+<td>Cooling system</td>
+<td>Removes heat from the drive or motor</td>
+<td>Overtemperature</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-servo-system-versus-open-loop-stepper-system">3. Servo System Versus Open-Loop Stepper System</h2>
+<p>A CNC servo system generally uses feedback to regulate motion. An open-loop stepper system typically commands steps without continuously verifying actual position through a feedback loop.</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Closed-loop servo system</th>
+<th>Typical open-loop stepper system</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Feedback</td>
+<td>Uses position or other feedback</td>
+<td>Does not necessarily use position feedback</td>
+</tr>
+<tr>
+<td>Position correction</td>
+<td>Can correct motion based on feedback</td>
+<td>Cannot independently detect lost steps without feedback</td>
+</tr>
+<tr>
+<td>High-speed performance</td>
+<td>Designed for controlled dynamic motion within rated limits</td>
+<td>Depends on stepper characteristics and load</td>
+</tr>
+<tr>
+<td>Overload response</td>
+<td>May detect following error or drive faults</td>
+<td>May lose synchronism without direct position detection</td>
+</tr>
+<tr>
+<td>Tuning</td>
+<td>Requires configuration of motion and control behavior</td>
+<td>Usually requires step and motion parameter configuration</td>
+</tr>
+<tr>
+<td>Typical application</td>
+<td>Industrial CNC axes and demanding motion systems</td>
+<td>Smaller machines and less demanding positioning applications</td>
+</tr>
+</tbody>
+</table>
+<p>Closed-loop feedback does not make a servo system immune to positioning errors. Mechanical backlash, incorrect compensation, feedback faults, poor tuning, and thermal effects can still affect accuracy.</p>
+<h2 id="4-types-of-servo-control-loops">4. Types of Servo Control Loops</h2>
+<p>Many industrial servo systems use nested control loops. The exact arrangement and implementation depend on the drive and CNC platform.</p>
+<h3 id="41-current-or-torque-loop">4.1 Current or Torque Loop</h3>
+<p>The current loop regulates motor current. In many AC servo motors, controlled current produces electromagnetic torque.</p>
+<p>For a simplified motor model:</p>
+<div class="math-display">\[ T \approx K_t I \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(T\)</span> is motor torque.</li>
+<li><span class="math-inline">\(K_t\)</span> is the motor torque constant.</li>
+<li><span class="math-inline">\(I\)</span> is the relevant torque-producing current component.</li>
+</ul>
+<p>This relationship is simplified. Actual torque production depends on motor design, current-vector control, magnetic conditions, and drive implementation.</p>
+<p>The current loop is generally the fastest loop in a conventional nested servo architecture.</p>
+<h3 id="42-velocity-loop">4.2 Velocity Loop</h3>
+<p>The velocity loop regulates motor speed using a speed command and measured or estimated actual speed.</p>
+<div class="math-display">\[ e_v(t)=v\_{\text{commanded}}(t)-v\_{\text{actual}}(t) \]</div>
+<p>The controller uses the velocity error to determine the torque or current demand required to accelerate, decelerate, or maintain speed.</p>
+<h3 id="43-position-loop">4.3 Position Loop</h3>
+<p>The position loop compares commanded position with measured position and generates motion corrections.</p>
+<div class="math-display">\[ e_p(t)=x\_{\text{commanded}}(t)-x\_{\text{actual}}(t) \]</div>
+<p>The position-control function determines the corrective motion demand based on the error and configured control behavior.</p>
+<h3 id="typical-nested-loop-relationship">Typical nested-loop relationship</h3>
+<pre><code>Position Command
+      ↓
+Position Control
+      ↓ Velocity Demand
+Velocity Control
+      ↓ Torque / Current Demand
+Current Control
+      ↓
+Motor Torque
+      ↓
+Machine Movement
+      ↑
+Position and Speed Feedback
+</code></pre>
+<p>Some CNC systems perform portions of the position loop in the CNC controller, while the drive performs velocity and current regulation. Other architectures distribute functions differently.</p>
+<p>Maintenance implication: A position error does not automatically indicate a defective encoder. The fault may involve motion commands, control tuning, current limits, drive behavior, feedback, or mechanical resistance.</p>
+<h2 id="5-servo-motor-types-used-in-cnc-machines">5. Servo Motor Types Used in CNC Machines</h2>
+<h3 id="51-ac-synchronous-servo-motor">5.1 AC Synchronous Servo Motor</h3>
+<p>Permanent-magnet synchronous servo motors are common in industrial CNC axes.</p>
+<p>Typical characteristics include:</p>
+<ul>
+<li>High torque density.</li>
+<li>Accurate electronic commutation.</li>
+<li>Encoder or other rotor-feedback requirements, depending on the design.</li>
+<li>Good dynamic response.</li>
+<li>Integration with a compatible servo drive.</li>
+</ul>
+<p>The drive must be configured for the correct motor type and feedback arrangement.</p>
+<h3 id="52-ac-induction-motor-used-in-servo-applications">5.2 AC Induction Motor Used in Servo Applications</h3>
+<p>Some motion systems use induction motors with suitable vector-control drives and feedback arrangements.</p>
+<p>The motor and drive combination determines achievable dynamic performance, accuracy, and control behavior. Do not assume that every CNC axis uses a permanent-magnet servo motor.</p>
+<h3 id="53-linear-motor">5.3 Linear Motor</h3>
+<p>A linear motor produces linear force directly rather than generating rotary motion that must be converted through a ball screw or similar transmission.</p>
+<p>Potential advantages include:</p>
+<ul>
+<li>Direct linear movement.</li>
+<li>Reduced transmission-related backlash.</li>
+<li>High dynamic response in suitable designs.</li>
+</ul>
+<p>Maintenance considerations include cooling, magnetic contamination, cable management, feedback integrity, and the condition of the linear guide system.</p>
+<h3 id="54-torque-motor">5.4 Torque Motor</h3>
+<p>Torque motors are used in some direct-drive rotary axes, tables, and precision positioning systems.</p>
+<p>They can eliminate certain transmission components, but their behavior depends on motor sizing, cooling, feedback, bearing design, and control configuration.</p>
+<h2 id="6-servo-drive-and-cnc-communication">6. Servo Drive and CNC Communication</h2>
+<p>The CNC controller and servo drive exchange commands, status information, and diagnostic data through a supported interface.</p>
+<p>Depending on the machine, the interface may use a manufacturer-specific motion bus or an industrial network.</p>
+<p>Typical information exchanged includes:</p>
+<ul>
+<li>Position or motion commands.</li>
+<li>Velocity or torque references.</li>
+<li>Drive enable requests.</li>
+<li>Ready and fault status.</li>
+<li>Actual position and velocity.</li>
+<li>Following-error information.</li>
+<li>Operating-mode and diagnostic data.</li>
+</ul>
+<p>A communication fault may stop an axis even when the motor, encoder, and mechanical transmission are healthy.</p>
+<p>During diagnosis, distinguish between:</p>
+<ul>
+<li>Loss of communication between CNC and drive.</li>
+<li>Loss of feedback between encoder and drive.</li>
+<li>Failure of the drive's motor power stage.</li>
+<li>Failure of the CNC controller to generate or authorize motion.</li>
+</ul>
+<p>These conditions can produce similar symptoms but require different investigations.</p>
+<h2 id="7-position-feedback-devices">7. Position Feedback Devices</h2>
+<p>The servo system needs feedback appropriate to its control architecture.</p>
+<p>Common feedback technologies include:</p>
+<ul>
+<li>Incremental rotary encoder.</li>
+<li>Absolute rotary encoder.</li>
+<li>Resolver.</li>
+<li>Linear scale or linear encoder.</li>
+<li>Other supported motor or machine-position feedback devices.</li>
+</ul>
+<h3 id="motor-encoder-versus-linear-scale">Motor encoder versus linear scale</h3>
+<p>A motor encoder measures motor rotation. The CNC system may infer linear axis movement from the motor position and transmission characteristics.</p>
+<p>A linear scale measures linear position more directly at its installation location.</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Motor encoder</th>
+<th>Linear scale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Measurement location</td>
+<td>Motor shaft or motor feedback system</td>
+<td>Machine axis or linear measurement path</td>
+</tr>
+<tr>
+<td>Measures transmission errors directly</td>
+<td>Generally no</td>
+<td>Can capture errors within the measured axis path</td>
+</tr>
+<tr>
+<td>Mechanical transmission effects</td>
+<td>May not detect all backlash or pitch errors</td>
+<td>Can reflect many errors between the scale's measurement points</td>
+</tr>
+<tr>
+<td>Installation</td>
+<td>Often integrated with the motor</td>
+<td>Requires a separate linear measurement installation</td>
+</tr>
+<tr>
+<td>Maintenance concerns</td>
+<td>Encoder, feedback cable, connector</td>
+<td>Scale contamination, alignment, readhead, cable</td>
+</tr>
+</tbody>
+</table>
+<p>A linear scale does not automatically eliminate all machine errors. Its location, mounting, calibration, control configuration, and mechanical relationship to the tool and workpiece remain important.</p>
+<h2 id="8-commanded-position-actual-position-and-following-error">8. Commanded Position, Actual Position, and Following Error</h2>
+<p>Following error is the difference between the commanded and actual position values used by the control system.</p>
+<div class="math-display">\[ e(t)=x_c(t)-x_a(t) \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(x_c(t)\)</span> is commanded position.</li>
+<li><span class="math-inline">\(x_a(t)\)</span> is actual position.</li>
+<li><span class="math-inline">\(e(t)\)</span> is following error.</li>
+</ul>
+<p>The control system generally permits some dynamic error during motion. A fault may occur when the error exceeds a configured threshold or another diagnostic condition is met.</p>
+<p>Possible causes include:</p>
+<ul>
+<li>Mechanical binding.</li>
+<li>Excessive cutting load.</li>
+<li>Incorrect servo tuning.</li>
+<li>Excessive acceleration.</li>
+<li>Motor or drive torque limitation.</li>
+<li>Feedback interruption.</li>
+<li>Mechanical looseness.</li>
+<li>Incorrect motion configuration.</li>
+<li>Axis travel restriction.</li>
+</ul>
+<h3 id="practical-interpretation">Practical interpretation</h3>
+<p>If following error increases during acceleration, investigate the motion demand, torque capability, tuning, and load.</p>
+<p>If it increases at a consistent mechanical position, investigate local binding, guideway condition, transmission damage, cable movement, and other position-dependent conditions.</p>
+<p>If actual position changes unexpectedly while the axis should be stationary, investigate the feedback system, mechanical holding behavior, and control state using the approved diagnostic procedure.</p>
+<h2 id="9-servo-tuning-and-stability">9. Servo Tuning and Stability</h2>
+<p>Servo tuning determines how the control system responds to position and velocity errors.</p>
+<p>Typical tuning considerations include:</p>
+<ul>
+<li>Position-loop gain.</li>
+<li>Velocity-loop gain.</li>
+<li>Integral action, where applicable.</li>
+<li>Feedforward settings.</li>
+<li>Filtering and resonance suppression.</li>
+<li>Acceleration and deceleration behavior.</li>
+<li>Inertia estimation or load adaptation, where supported.</li>
+</ul>
+<p>Incorrect tuning may result in:</p>
+<ul>
+<li>Oscillation.</li>
+<li>Excessive overshoot.</li>
+<li>Long settling time.</li>
+<li>Abnormal noise.</li>
+<li>Vibration.</li>
+<li>Increased following error.</li>
+<li>Poor contouring accuracy.</li>
+<li>Unnecessary mechanical stress.</li>
+</ul>
+<p>Increasing gain is not a universal solution to following error. Excessive gain can make the system unstable or amplify mechanical resonance.</p>
+<p>Tuning changes should be performed by authorized personnel using the manufacturer's procedure, suitable measurements, and controlled test conditions. Preserve the original settings before making changes.</p>
+<h2 id="10-servo-torque-and-load-conditions">10. Servo Torque and Load Conditions</h2>
+<p>The servo motor must generate sufficient torque to overcome the load and accelerate the moving components.</p>
+<p>The required torque depends on several factors:</p>
+<ul>
+<li>Mass and inertia.</li>
+<li>Acceleration and deceleration.</li>
+<li>Friction.</li>
+<li>Cutting forces.</li>
+<li>Transmission efficiency.</li>
+<li>Vertical-axis gravity load.</li>
+<li>Mechanical condition.</li>
+<li>Operating speed and duty cycle.</li>
+</ul>
+<p>A simplified rotary relationship is:</p>
+<div class="math-display">\[ T=J\alpha \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(T\)</span> is the net torque associated with angular acceleration.</li>
+<li><span class="math-inline">\(J\)</span> is the equivalent rotary inertia.</li>
+<li><span class="math-inline">\(\alpha\)</span> is angular acceleration.</li>
+</ul>
+<p>This simplified equation does not include friction, external process forces, gravity effects, or transmission losses. Those must be considered in a complete machine-load calculation.</p>
+<p>Excessive torque demand can result in high motor current, following errors, overheating, or drive trips.</p>
+<p>When investigating increased torque demand, inspect the mechanical system as well as the electrical and control components. A worn bearing, damaged coupling, tight guideway, or obstructed mechanism may create symptoms that resemble an electrical fault.</p>
+<h2 id="11-servo-parameters-relevant-to-cnc-axes">11. Servo Parameters Relevant to CNC Axes</h2>
+<p>Servo-related parameters influence the relationship between commanded motion, motor response, feedback, and machine position.</p>
+<p>Depending on the platform, relevant parameter groups may include:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter group</th>
+<th>Purpose</th>
+<th>Risk if incorrect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Motor identification</td>
+<td>Defines the compatible motor and its characteristics</td>
+<td>Incorrect commutation or motor behavior</td>
+</tr>
+<tr>
+<td>Feedback configuration</td>
+<td>Defines the feedback type and scaling</td>
+<td>Invalid position measurement</td>
+</tr>
+<tr>
+<td>Electronic gearing or scaling</td>
+<td>Relates command units to motor movement</td>
+<td>Incorrect travel distance</td>
+</tr>
+<tr>
+<td>Velocity limits</td>
+<td>Restricts axis speed</td>
+<td>Unexpected speed limitation or unsuitable operation</td>
+</tr>
+<tr>
+<td>Acceleration limits</td>
+<td>Defines permitted acceleration behavior</td>
+<td>Excessive load or motion faults</td>
+</tr>
+<tr>
+<td>Torque/current limits</td>
+<td>Restricts motor effort</td>
+<td>Inadequate torque or excessive mechanical stress</td>
+</tr>
+<tr>
+<td>Position-loop settings</td>
+<td>Controls position response</td>
+<td>Instability or poor accuracy</td>
+</tr>
+<tr>
+<td>Velocity-loop settings</td>
+<td>Controls speed response</td>
+<td>Oscillation or sluggish response</td>
+</tr>
+<tr>
+<td>Following-error limits</td>
+<td>Defines permitted position deviation</td>
+<td>Nuisance faults or insufficient protection</td>
+</tr>
+<tr>
+<td>Reference-return settings</td>
+<td>Defines the reference procedure</td>
+<td>Incorrect machine coordinate establishment</td>
+</tr>
+<tr>
+<td>Travel limits</td>
+<td>Restricts movement range</td>
+<td>Incorrect travel protection</td>
+</tr>
+<tr>
+<td>Compensation settings</td>
+<td>Corrects supported mechanical or measurement errors</td>
+<td>Dimensional errors if configured incorrectly</td>
+</tr>
+</tbody>
+</table>
+<p>Parameter numbering and meaning vary between manufacturers and machine models. These categories are conceptual, not a universal parameter list.</p>
+<p>Always use the correct CNC, drive, and machine-builder documentation.</p>
+<h2 id="12-cnc-servo-faults-and-diagnostic-approach">12. CNC Servo Faults and Diagnostic Approach</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible causes</th>
+<th>Recommended diagnostic direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Axis will not enable</td>
+<td>Interlock, drive fault, communication problem, safety state</td>
+<td>Check controller, PLC, drive, and safety status</td>
+</tr>
+<tr>
+<td>Axis does not move</td>
+<td>Missing command, reference issue, brake, drive or feedback fault</td>
+<td>Review axis state and drive diagnostics</td>
+</tr>
+<tr>
+<td>Following-error alarm</td>
+<td>Excessive load, tuning, feedback issue, mechanical binding</td>
+<td>Compare commanded and actual motion</td>
+</tr>
+<tr>
+<td>Positioning error</td>
+<td>Scaling, compensation, backlash, feedback, mechanical wear</td>
+<td>Verify coordinate configuration and machine condition</td>
+</tr>
+<tr>
+<td>Oscillation or vibration</td>
+<td>Tuning, resonance, coupling, mechanical looseness</td>
+<td>Check mechanical condition and approved tuning diagnostics</td>
+</tr>
+<tr>
+<td>Overcurrent</td>
+<td>Short circuit, overload, mechanical resistance, configuration issue</td>
+<td>Review fault timing, motor circuit, and load</td>
+</tr>
+<tr>
+<td>Encoder alarm</td>
+<td>Cable, connector, feedback supply, encoder, compatibility</td>
+<td>Inspect feedback diagnostics and cable condition</td>
+</tr>
+<tr>
+<td>Overtemperature</td>
+<td>Excessive duty, high load, cooling issue</td>
+<td>Review load trend, ventilation, and temperature diagnostics</td>
+</tr>
+<tr>
+<td>Intermittent axis fault</td>
+<td>Cable flexing, loose connector, intermittent supply or network issue</td>
+<td>Correlate fault with axis position and movement</td>
+</tr>
+<tr>
+<td>Axis drifts when stationary</td>
+<td>Feedback, holding brake, mechanical load, control state</td>
+<td>Secure the axis and investigate according to the approved procedure</td>
+</tr>
+</tbody>
+</table>
+<p>Do not change parameters simply because an alarm is related to servo performance. Establish the failure mechanism first.</p>
+<h2 id="13-practical-example-following-error-during-machining">13. Practical Example: Following Error During Machining</h2>
+<h3 id="situation">Situation</h3>
+<p>A CNC machining centre intermittently generates a following-error alarm on the X-axis during heavy cutting. Rapid positioning without cutting appears normal.</p>
+<h3 id="investigation">Investigation</h3>
+<ol>
+<li>Capture the complete CNC and drive alarm history.</li>
+<li>Record the program block, cutting condition, and axis state.</li>
+<li>Compare the following error and torque demand during cutting and non-cutting motion.</li>
+<li>Check for unusual cutting forces or a process condition that has changed.</li>
+<li>Inspect the mechanical transmission and axis movement under the approved maintenance procedure.</li>
+<li>Review the motor, drive, feedback, and motion configuration if the evidence indicates an electrical or control issue.</li>
+<li>Compare the results with the machine's baseline behavior.</li>
+</ol>
+<h3 id="possible-findings">Possible findings</h3>
+<ul>
+<li>A mechanical component has developed increased friction.</li>
+<li>The cutting process is demanding more torque than the system can provide under the current conditions.</li>
+<li>A feedback cable is intermittently failing during movement.</li>
+<li>The motion configuration is unsuitable for the actual load.</li>
+</ul>
+<h3 id="corrective-action">Corrective action</h3>
+<p>Correct the verified cause and validate axis movement and machining performance. Avoid simply increasing the following-error limit, as this may conceal the underlying problem.</p>
+<h2 id="14-practical-example-positioning-error-after-mechanical-maintenance">14. Practical Example: Positioning Error After Mechanical Maintenance</h2>
+<h3 id="situation_1">Situation</h3>
+<p>After a ball-screw or coupling intervention, the machine reports incorrect positioning even though the servo drive shows no active fault.</p>
+<h3 id="investigation_1">Investigation</h3>
+<ul>
+<li>Verify the machine reference and coordinate system.</li>
+<li>Check the coupling and mechanical assembly.</li>
+<li>Confirm the relevant feedback and scaling configuration.</li>
+<li>Review any approved backlash or pitch compensation data.</li>
+<li>Compare commanded position with actual position using the available diagnostic tools.</li>
+<li>Perform the manufacturer's prescribed positioning verification.</li>
+</ul>
+<h3 id="possible-causes">Possible causes</h3>
+<ul>
+<li>Incorrect coupling installation.</li>
+<li>Mechanical backlash or looseness.</li>
+<li>Incorrect reference establishment.</li>
+<li>Feedback scaling or configuration mismatch.</li>
+<li>Compensation data changed or not restored.</li>
+</ul>
+<h3 id="corrective-action_1">Corrective action</h3>
+<p>Restore the correct mechanical assembly and approved configuration, then perform the required calibration and positioning checks.</p>
+<p>The absence of a servo alarm does not prove that the axis is dimensionally accurate.</p>
+<h2 id="15-practical-example-servo-axis-fault-after-motor-replacement">15. Practical Example: Servo Axis Fault After Motor Replacement</h2>
+<h3 id="situation_2">Situation</h3>
+<p>A replacement motor has been installed. The drive powers up, but the CNC reports an axis or feedback fault during startup.</p>
+<h3 id="investigation_2">Investigation</h3>
+<ol>
+<li>Verify the exact replacement motor and drive compatibility.</li>
+<li>Confirm the feedback type and connector pinout.</li>
+<li>Check the approved motor and drive configuration.</li>
+<li>Inspect power, feedback, and brake connections where fitted.</li>
+<li>Review the exact alarm code and startup sequence.</li>
+<li>Confirm whether the controller requires an approved initialization, reference, or commissioning procedure.</li>
+</ol>
+<h3 id="possible-causes_1">Possible causes</h3>
+<ul>
+<li>Incorrect motor or feedback combination.</li>
+<li>Wrong cable or connector pinout.</li>
+<li>Configuration not updated for the replacement.</li>
+<li>Damaged connector.</li>
+<li>Incorrect brake wiring or control sequence.</li>
+</ul>
+<h3 id="corrective-action_2">Corrective action</h3>
+<p>Use the correct approved motor and configuration, correct the identified connection fault, and complete the required commissioning and reference verification before releasing the machine.</p>
+<h2 id="16-safe-maintenance-and-testing">16. Safe Maintenance and Testing</h2>
+<p>Servo axes can produce unexpected movement and hazardous torque. CNC machines may also contain suspended loads, rotating components, stored electrical energy, and automatic restart functions.</p>
+<p>Before maintenance:</p>
+<ol>
+<li>Follow the machine's approved shutdown and lockout/tagout procedure.</li>
+<li>Identify all relevant electrical, mechanical, pneumatic, and hydraulic energy sources.</li>
+<li>Account for DC bus stored energy and verify the required discharge procedure.</li>
+<li>Secure vertical axes and other gravity-loaded mechanisms.</li>
+<li>Prevent unexpected motion from automatic sequences or remote commands.</li>
+<li>Verify the required safe state before touching or disconnecting components.</li>
+<li>Use approved test methods and suitable instruments.</li>
+<li>Restore guards and protective devices before functional testing.</li>
+</ol>
+<p>Do not manually force a servo axis or release a holding brake on a loaded vertical axis without the approved mechanical support and safety procedure.</p>
+<p>Insulation-resistance testing must not be performed through connected servo drives or encoder electronics. Follow the equipment manufacturer's instructions for isolating the motor and cables before testing.</p>
+<h2 id="17-preventive-maintenance-checklist">17. Preventive Maintenance Checklist</h2>
+<h3 id="routine-inspection">Routine inspection</h3>
+<ul>
+<li>Review CNC and servo-drive alarm history.</li>
+<li>Identify recurring following-error or feedback faults.</li>
+<li>Inspect accessible motor and feedback cables.</li>
+<li>Check for cable-carrier wear and movement-related damage.</li>
+<li>Inspect connectors, strain relief, and protective covers.</li>
+<li>Review abnormal torque, current, or temperature trends where available.</li>
+<li>Check cabinet cooling and drive ventilation.</li>
+<li>Record unusual vibration, noise, or positioning behavior.</li>
+</ul>
+<h3 id="planned-maintenance">Planned maintenance</h3>
+<ul>
+<li>Verify the approved CNC and drive parameter backups.</li>
+<li>Review motor, encoder, and drive compatibility records.</li>
+<li>Inspect relevant mechanical couplings and transmission components.</li>
+<li>Check feedback integrity using approved procedures.</li>
+<li>Verify axis reference and positioning according to the maintenance plan.</li>
+<li>Review tuning or compensation changes made since the previous inspection.</li>
+<li>Confirm availability of approved replacement cables, motors, and feedback components.</li>
+<li>Record findings and update maintenance history.</li>
+</ul>
+<p>Inspection frequency should reflect manufacturer requirements, axis criticality, machine duty, environment, and the history of recurring failures.</p>
+<h2 id="18-cnc-servo-spare-parts-and-configuration-control">18. CNC Servo Spare Parts and Configuration Control</h2>
+<p>Servo-system replacement parts must be selected by compatibility, not appearance.</p>
+<p>Maintain traceable information for:</p>
+<ul>
+<li>CNC controller and axis designation.</li>
+<li>Servo drive model and firmware.</li>
+<li>Motor model and rated characteristics.</li>
+<li>Encoder or feedback type.</li>
+<li>Motor and feedback cable part numbers.</li>
+<li>Coupling and transmission specifications.</li>
+<li>Brake specifications where fitted.</li>
+<li>Parameter and configuration backup revisions.</li>
+<li>Approved replacement or successor part numbers.</li>
+</ul>
+<p>A replacement motor may fit mechanically but still be incompatible with the drive, feedback interface, commutation configuration, or machine application.</p>
+<p>After a replacement, update the maintenance records and retain the approved configuration and commissioning results.</p>
+<h2 id="19-key-engineering-principles">19. Key Engineering Principles</h2>
+<ul>
+<li>A CNC servo system combines motion commands, drive control, feedback, motor torque, and mechanical transmission.</li>
+<li>Position, velocity, and current loops have distinct functions.</li>
+<li>Motor feedback and linear-axis measurement are not necessarily the same thing.</li>
+<li>Following error is a diagnostic measurement, not a root-cause diagnosis.</li>
+<li>Mechanical resistance can produce symptoms that resemble drive or motor faults.</li>
+<li>Servo tuning and parameter changes require controlled procedures and verified backups.</li>
+<li>A healthy drive status does not guarantee correct machine positioning.</li>
+<li>Replacement motors, encoders, cables, and drives must be compatible with the complete system.</li>
+<li>Error history and trend data should be used together where available.</li>
+<li>Safe isolation, load securing, and controlled commissioning are essential to reliable maintenance.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\18_PM\05_CNC\03_Spindle - Spindle</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

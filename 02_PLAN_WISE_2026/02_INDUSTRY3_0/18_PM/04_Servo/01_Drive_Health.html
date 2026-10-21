@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Servo Drive Health</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Servo Drive Health</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-servo-drive-position-in-a-motion-control-system">2. Servo Drive Position in a Motion-Control System</a></li>
+<li><a href="#3-main-functions-of-a-servo-drive">3. Main Functions of a Servo Drive</a></li>
+<li><a href="#4-important-servo-drive-health-indicators">4. Important Servo Drive Health Indicators</a><ul>
+<li><a href="#41-drive-status">4.1 Drive status</a></li>
+<li><a href="#42-alarm-and-fault-history">4.2 Alarm and fault history</a></li>
+<li><a href="#43-temperature">4.3 Temperature</a></li>
+<li><a href="#44-dc-bus-voltage">4.4 DC bus voltage</a></li>
+<li><a href="#45-current-and-torque-demand">4.5 Current and torque demand</a></li>
+</ul>
+</li>
+<li><a href="#5-servo-drive-health-versus-servo-system-health">5. Servo Drive Health Versus Servo System Health</a></li>
+<li><a href="#6-servo-drive-fault-categories">6. Servo Drive Fault Categories</a><ul>
+<li><a href="#61-overcurrent-or-overload">6.1 Overcurrent or overload</a></li>
+<li><a href="#62-dc-bus-overvoltage">6.2 DC bus overvoltage</a></li>
+<li><a href="#63-feedback-or-encoder-fault">6.3 Feedback or encoder fault</a></li>
+<li><a href="#64-following-error">6.4 Following error</a></li>
+<li><a href="#65-communication-fault">6.5 Communication fault</a></li>
+<li><a href="#66-overtemperature">6.6 Overtemperature</a></li>
+<li><a href="#67-safety-related-inhibit">6.7 Safety-related inhibit</a></li>
+</ul>
+</li>
+<li><a href="#7-servo-drive-diagnostics-and-monitoring-tools">7. Servo Drive Diagnostics and Monitoring Tools</a></li>
+<li><a href="#8-servo-drive-parameter-health">8. Servo Drive Parameter Health</a></li>
+<li><a href="#9-servo-tuning-and-motion-stability">9. Servo Tuning and Motion Stability</a></li>
+<li><a href="#10-mechanical-load-and-regenerative-energy">10. Mechanical Load and Regenerative Energy</a></li>
+<li><a href="#11-preventive-maintenance-for-servo-drives">11. Preventive Maintenance for Servo Drives</a></li>
+<li><a href="#12-practical-example-repeated-following-error-alarm">12. Practical Example: Repeated Following-Error Alarm</a><ul>
+<li><a href="#situation">Situation</a></li>
+<li><a href="#investigation">Investigation</a></li>
+<li><a href="#possible-findings">Possible findings</a></li>
+<li><a href="#corrective-action">Corrective action</a></li>
+</ul>
+</li>
+<li><a href="#13-servo-drive-health-checklist">13. Servo Drive Health Checklist</a><ul>
+<li><a href="#drive-and-electrical-condition">Drive and electrical condition</a></li>
+<li><a href="#feedback-and-control">Feedback and control</a></li>
+<li><a href="#mechanical-condition">Mechanical condition</a></li>
+<li><a href="#records-and-recovery">Records and recovery</a></li>
+</ul>
+</li>
+<li><a href="#14-servo-drive-health-in-plc-hmi-and-scada-systems">14. Servo Drive Health in PLC, HMI, and SCADA Systems</a><ul>
+<li><a href="#recommended-diagnostic-approach">Recommended diagnostic approach</a></li>
+</ul>
+</li>
+<li><a href="#15-servo-drive-health-trends-and-predictive-maintenance">15. Servo Drive Health Trends and Predictive Maintenance</a></li>
+<li><a href="#16-servo-drive-replacement-and-recovery">16. Servo Drive Replacement and Recovery</a></li>
+<li><a href="#17-fault-diagnosis-decision-table">17. Fault Diagnosis Decision Table</a></li>
+<li><a href="#18-servo-drive-health-records-for-maintenance-engineering">18. Servo Drive Health Records for Maintenance Engineering</a></li>
+<li><a href="#19-key-engineering-principles">19. Key Engineering Principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>Servo drive health refers to the electrical, thermal, functional, communication, and diagnostic condition of a servo drive and its associated motion-control system.</p>
+<p>A servo drive controls a servo motor by regulating electrical current and, depending on the control architecture, torque, speed, and position. It typically receives motion commands from a PLC, motion controller, CNC, or dedicated controller and uses feedback from an encoder or another supported feedback device to regulate motor movement.</p>
+<p>Drive health monitoring helps identify degradation, configuration problems, overload conditions, feedback faults, and communication issues before they cause unexpected machine stoppages.</p>
+<p>In industrial applications, servo drive health is particularly important for CNC axes, robotic mechanisms, indexing tables, electronic camming systems, precision feeders, and high-speed assembly equipment.</p>
+<p>The objective is to determine whether the servo drive can control its motor accurately, safely, and consistently under the required operating conditions.</p>
+<h2 id="2-servo-drive-position-in-a-motion-control-system">2. Servo Drive Position in a Motion-Control System</h2>
+<pre><code>PLC / Motion Controller / CNC
+            ↓
+     Motion Command
+            ↓
+       Servo Drive
+            ↓
+  Power Electronics / Inverter
+            ↓
+       Servo Motor
+            ↓
+     Mechanical Load
+
+Servo Motor Encoder / Feedback
+            ↓
+       Servo Drive
+            ↓
+ Position / Speed / Current Feedback
+
+Drive Diagnostics
+            ↓
+ PLC / HMI / Engineering Software / Maintenance Records
+</code></pre>
+<p>The exact control-loop arrangement depends on the drive and application. In many systems, the drive closes the current loop and speed loop, while position control may be performed by the drive or by an external motion controller.</p>
+<p>Drive health cannot be evaluated by checking only whether the display is on. A drive may appear normal while suffering from intermittent feedback errors, thermal stress, excessive following error, unstable tuning, or communication interruptions.</p>
+<h2 id="3-main-functions-of-a-servo-drive">3. Main Functions of a Servo Drive</h2>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Purpose</th>
+<th>Health concern</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Current control</td>
+<td>Regulates motor phase current</td>
+<td>Current-sensor fault, overload, power-stage problem</td>
+</tr>
+<tr>
+<td>Torque control</td>
+<td>Produces commanded motor torque</td>
+<td>Torque saturation, incorrect torque limit</td>
+</tr>
+<tr>
+<td>Speed control</td>
+<td>Regulates motor rotational speed</td>
+<td>Oscillation, unstable response, speed deviation</td>
+</tr>
+<tr>
+<td>Position control</td>
+<td>Controls commanded position where supported</td>
+<td>Following error, positioning inaccuracy</td>
+</tr>
+<tr>
+<td>Feedback processing</td>
+<td>Reads encoder or other supported feedback</td>
+<td>Feedback loss, invalid signal, communication error</td>
+</tr>
+<tr>
+<td>Regenerative energy handling</td>
+<td>Manages energy returned by the motor during deceleration</td>
+<td>DC bus overvoltage, braking circuit fault</td>
+</tr>
+<tr>
+<td>Thermal protection</td>
+<td>Monitors or estimates drive and motor thermal conditions</td>
+<td>Overtemperature, inadequate cooling</td>
+</tr>
+<tr>
+<td>Communication</td>
+<td>Exchanges commands and status with the controller</td>
+<td>Fieldbus errors, timeouts, network instability</td>
+</tr>
+<tr>
+<td>Fault monitoring</td>
+<td>Detects abnormal conditions and initiates defined responses</td>
+<td>Repeated trips, unresolved root cause</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-important-servo-drive-health-indicators">4. Important Servo Drive Health Indicators</h2>
+<h3 id="41-drive-status">4.1 Drive status</h3>
+<p>Check the drive's operating state and diagnostic display.</p>
+<p>Typical states include:</p>
+<ul>
+<li>Ready or disabled.</li>
+<li>Enabled or operation active.</li>
+<li>Running or motion active.</li>
+<li>Warning present.</li>
+<li>Faulted or tripped.</li>
+<li>Safety-related inhibit active, where applicable.</li>
+<li>Communication lost or configuration incomplete.</li>
+</ul>
+<p>The exact status names vary by manufacturer. A drive that is ready but not enabled may be operating normally if the machine sequence has not issued an enable command.</p>
+<h3 id="42-alarm-and-fault-history">4.2 Alarm and fault history</h3>
+<p>Review active alarms, historical faults, timestamps, and event sequences.</p>
+<p>Record the first fault in a sequence, not only the final alarm visible on the HMI. A feedback interruption, for example, may lead to a following-error alarm and then a motion stop.</p>
+<p>Useful information includes:</p>
+<ul>
+<li>Exact fault code and text.</li>
+<li>Timestamp and operating state.</li>
+<li>Axis position, speed, and torque demand if available.</li>
+<li>DC bus voltage and drive temperature.</li>
+<li>Controller and network status.</li>
+<li>Recent maintenance and parameter changes.</li>
+<li>Frequency of recurrence.</li>
+</ul>
+<p>A fault reset clears a fault condition when the required conditions are satisfied. It does not repair the underlying cause.</p>
+<h3 id="43-temperature">4.3 Temperature</h3>
+<p>Monitor available drive temperature measurements, thermal warnings, and the cooling system condition.</p>
+<p>Potential contributors to elevated temperature include:</p>
+<ul>
+<li>Blocked ventilation openings.</li>
+<li>Failed or degraded cooling fans.</li>
+<li>High ambient temperature.</li>
+<li>Excessive load or RMS current.</li>
+<li>Frequent acceleration and deceleration.</li>
+<li>High switching losses.</li>
+<li>Incorrect cabinet ventilation.</li>
+<li>Contaminated heat sinks.</li>
+<li>Installation outside the specified environmental conditions.</li>
+</ul>
+<p>Temperature should be evaluated against the manufacturer's limits and operating conditions. A single temperature reading without the drive model, ambient temperature, and load context may be misleading.</p>
+<h3 id="44-dc-bus-voltage">4.4 DC bus voltage</h3>
+<p>The DC bus supplies the inverter stage. Its voltage changes with supply conditions and regenerative energy from the motor.</p>
+<p>Abnormal readings can be associated with:</p>
+<ul>
+<li>Supply undervoltage or overvoltage.</li>
+<li>Rapid deceleration.</li>
+<li>Excessive regenerative energy.</li>
+<li>Braking resistor or braking circuit problems.</li>
+<li>Power-supply disturbances.</li>
+<li>Internal drive faults.</li>
+</ul>
+<p>When a servo axis decelerates a high-inertia load, the motor may return energy to the drive. The drive must manage this energy through a supported regenerative arrangement or braking system.</p>
+<h3 id="45-current-and-torque-demand">4.5 Current and torque demand</h3>
+<p>Servo drives commonly report current, torque demand, torque actual, or related load indicators.</p>
+<p>Use these values to determine whether the drive is operating within its expected range.</p>
+<p>Investigate:</p>
+<ul>
+<li>Repeated current or torque-limit saturation.</li>
+<li>Higher-than-normal RMS loading.</li>
+<li>Sudden current spikes.</li>
+<li>Torque oscillation.</li>
+<li>High holding torque when the axis is stationary.</li>
+<li>Different loading between similar operating cycles.</li>
+</ul>
+<p>Peak current can be normal during rapid acceleration. Persistent high current, unexplained torque demand, or repeated saturation requires further investigation.</p>
+<h2 id="5-servo-drive-health-versus-servo-system-health">5. Servo Drive Health Versus Servo System Health</h2>
+<p>A servo drive is only one component of a complete motion system. Symptoms that appear to indicate a drive fault may originate elsewhere.</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Health checks</th>
+<th>Typical problem</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Servo drive</td>
+<td>Status, temperature, DC bus, current, alarms</td>
+<td>Overtemperature or power-stage fault</td>
+</tr>
+<tr>
+<td>Servo motor</td>
+<td>Winding condition, temperature, noise, vibration</td>
+<td>Winding damage or bearing wear</td>
+</tr>
+<tr>
+<td>Encoder</td>
+<td>Feedback quality, connector, cable, position consistency</td>
+<td>Feedback loss or position error</td>
+</tr>
+<tr>
+<td>Motor power cable</td>
+<td>Insulation, continuity, terminals, shielding</td>
+<td>Intermittent connection or earth fault</td>
+</tr>
+<tr>
+<td>Mechanical transmission</td>
+<td>Coupling, gearbox, ballscrew, belt, bearings</td>
+<td>Backlash, friction, binding</td>
+</tr>
+<tr>
+<td>PLC or motion controller</td>
+<td>Motion commands, axis state, sequence logic</td>
+<td>Incorrect command or incomplete sequence</td>
+</tr>
+<tr>
+<td>Industrial network</td>
+<td>Link status, communication errors, cycle timing</td>
+<td>Intermittent control communication</td>
+</tr>
+<tr>
+<td>Brake system</td>
+<td>Brake release, timing, mechanical condition</td>
+<td>Brake remains partially engaged</td>
+</tr>
+<tr>
+<td>Cooling system</td>
+<td>Fan, airflow, cabinet temperature</td>
+<td>Excessive drive temperature</td>
+</tr>
+<tr>
+<td>Safety system</td>
+<td>Approved safety status and diagnostic information</td>
+<td>STO active or safety interlock not satisfied</td>
+</tr>
+</tbody>
+</table>
+<p>A useful diagnostic principle is to compare the command, feedback, drive response, and actual mechanical movement. This separates control problems from power, feedback, and mechanical problems.</p>
+<h2 id="6-servo-drive-fault-categories">6. Servo Drive Fault Categories</h2>
+<h3 id="61-overcurrent-or-overload">6.1 Overcurrent or overload</h3>
+<p>Possible causes include:</p>
+<ul>
+<li>Mechanical obstruction or excessive friction.</li>
+<li>Incorrect motor or drive sizing.</li>
+<li>Aggressive acceleration or deceleration.</li>
+<li>Incorrect tuning.</li>
+<li>Damaged motor cable or winding.</li>
+<li>Excessive torque demand.</li>
+<li>Incorrect motor configuration.</li>
+</ul>
+<p>Check the fault timing. A trip during acceleration may indicate excessive demand or mechanical resistance. A trip while stationary may point toward holding torque, brake problems, wiring faults, or another condition specific to the drive.</p>
+<h3 id="62-dc-bus-overvoltage">6.2 DC bus overvoltage</h3>
+<p>Common contributors include:</p>
+<ul>
+<li>Rapid deceleration of a high-inertia load.</li>
+<li>Excessive regenerative energy.</li>
+<li>Incorrect braking configuration.</li>
+<li>A failed or incorrectly sized braking resistor, where fitted.</li>
+<li>Supply voltage problems.</li>
+<li>A regenerative unit fault, where applicable.</li>
+</ul>
+<p>Review the deceleration profile, load inertia, bus-voltage trend, and braking-system status. Do not simply increase the deceleration time without checking the machine's stopping requirements and process constraints.</p>
+<h3 id="63-feedback-or-encoder-fault">6.3 Feedback or encoder fault</h3>
+<p>Potential causes include:</p>
+<ul>
+<li>Damaged encoder cable.</li>
+<li>Loose connectors.</li>
+<li>Incorrect encoder supply.</li>
+<li>Electromagnetic interference.</li>
+<li>Incompatible feedback configuration.</li>
+<li>Encoder or feedback-interface failure.</li>
+<li>Incorrect motor/feedback pairing.</li>
+</ul>
+<p>Check the drive's feedback diagnostics, connector condition, cable routing, and encoder specifications. Follow the manufacturer's test procedure before disconnecting or measuring feedback circuits.</p>
+<h3 id="64-following-error">6.4 Following error</h3>
+<p>Following error is the difference between commanded position and measured position.</p>
+<div class="math-display">\[ e(t)=x\_{\text{command}}(t)-x\_{\text{actual}}(t) \]</div>
+<p>A following-error alarm may result from:</p>
+<ul>
+<li>Mechanical binding.</li>
+<li>Excessive load.</li>
+<li>Insufficient torque.</li>
+<li>Incorrect tuning.</li>
+<li>Feedback loss or noise.</li>
+<li>A motion profile that exceeds the axis capability.</li>
+<li>Incorrect scaling or controller configuration.</li>
+</ul>
+<p>A following error is a symptom, not a diagnosis. Determine whether the actual position failed to follow a valid command, the feedback became invalid, or the command itself was incorrect.</p>
+<h3 id="65-communication-fault">6.5 Communication fault</h3>
+<p>Possible causes include:</p>
+<ul>
+<li>Network cable or connector damage.</li>
+<li>Switch or port problems.</li>
+<li>Incorrect address or device configuration.</li>
+<li>Controller configuration mismatch.</li>
+<li>Excessive communication errors.</li>
+<li>Network cycle-time or synchronization problems.</li>
+<li>Controller or drive restart.</li>
+</ul>
+<p>Check controller diagnostics, drive communication counters, network status, and the timing of the fault. Do not assume a servo hardware failure solely because the axis became unavailable to the PLC.</p>
+<h3 id="66-overtemperature">6.6 Overtemperature</h3>
+<p>Investigate both the electrical and mechanical load. Excessive friction can increase motor torque demand, while repeated high-current cycles can increase drive thermal loading.</p>
+<p>Check the drive cooling path, motor cooling, cabinet temperature, duty cycle, load profile, and recorded thermal warnings.</p>
+<h3 id="67-safety-related-inhibit">6.7 Safety-related inhibit</h3>
+<p>Some servo systems use Safe Torque Off (STO) or other safety functions. When STO is active, the drive's power stage is prevented from producing motor torque according to the applicable safety design.</p>
+<p>Possible causes of an unexpected inhibit include an open safety circuit, an unsatisfied interlock, a safety-controller state, or a detected safety-system fault.</p>
+<p>Do not bypass a safety function to restore motion. Diagnose the safety status and follow the approved safety-system procedure. STO does not necessarily provide electrical isolation for maintenance.</p>
+<h2 id="7-servo-drive-diagnostics-and-monitoring-tools">7. Servo Drive Diagnostics and Monitoring Tools</h2>
+<table>
+<thead>
+<tr>
+<th>Tool or source</th>
+<th>Useful information</th>
+<th>Limitation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Drive keypad or display</td>
+<td>Current state, active fault, basic measurements</td>
+<td>May provide limited history or detail</td>
+</tr>
+<tr>
+<td>Manufacturer engineering software</td>
+<td>Parameters, trends, diagnostics, status words</td>
+<td>Requires compatible software and access</td>
+</tr>
+<tr>
+<td>PLC diagnostics</td>
+<td>Command state, enable logic, interlocks, feedback values</td>
+<td>May not expose internal drive measurements</td>
+</tr>
+<tr>
+<td>HMI alarm history</td>
+<td>Operator-visible alarms and timestamps</td>
+<td>May show only summarized alarm text</td>
+</tr>
+<tr>
+<td>Oscilloscope or approved measurement equipment</td>
+<td>Electrical signal behavior where appropriate</td>
+<td>Requires suitable equipment, skills, and safe test methods</td>
+</tr>
+<tr>
+<td>Network diagnostics</td>
+<td>Link state, communication errors, timing</td>
+<td>Does not directly prove motor or mechanical health</td>
+</tr>
+<tr>
+<td>Vibration and thermal inspection</td>
+<td>Mechanical condition and heat patterns</td>
+<td>Needs context and suitable measurement methods</td>
+</tr>
+<tr>
+<td>Maintenance records</td>
+<td>Historical faults, repairs, and recurring patterns</td>
+<td>Depends on the quality of previous records</td>
+</tr>
+</tbody>
+</table>
+<p>Use the manufacturer's supported diagnostic tools as the primary source for drive-specific measurements. Verify that the measurement is meaningful for the operating mode and that its units and scaling are understood.</p>
+<h2 id="8-servo-drive-parameter-health">8. Servo Drive Parameter Health</h2>
+<p>Incorrect parameters can cause poor motion quality even when the hardware is healthy.</p>
+<p>Parameters that deserve controlled review include:</p>
+<ul>
+<li>Motor identification and rated data.</li>
+<li>Encoder type, resolution, and feedback configuration.</li>
+<li>Control mode.</li>
+<li>Current and torque limits.</li>
+<li>Speed limits.</li>
+<li>Position limits and reference configuration.</li>
+<li>Acceleration and deceleration profiles.</li>
+<li>Position, speed, and current-loop tuning settings.</li>
+<li>Brake control and timing.</li>
+<li>Communication settings.</li>
+<li>Fault reaction and restart behavior.</li>
+<li>Thermal protection.</li>
+<li>Safety-related configuration where applicable.</li>
+</ul>
+<p>Do not change tuning parameters randomly in response to an alarm. A parameter change can conceal a mechanical fault, destabilize the axis, or make a previously safe motion profile unsuitable.</p>
+<p>Before making a change, save the current approved configuration, record the reason, obtain the required authorization, and define the verification test.</p>
+<h2 id="9-servo-tuning-and-motion-stability">9. Servo Tuning and Motion Stability</h2>
+<p>Servo tuning determines how the control system responds to commands and disturbances. The appropriate tuning depends on the drive, motor, feedback device, mechanical load, and application.</p>
+<p>Symptoms of poor tuning may include:</p>
+<ul>
+<li>Oscillation while stationary.</li>
+<li>Excessive overshoot.</li>
+<li>Long settling time.</li>
+<li>Audible hunting or whining.</li>
+<li>Positioning error.</li>
+<li>Excessive vibration.</li>
+<li>High-frequency torque variation.</li>
+</ul>
+<p>However, these symptoms can also arise from mechanical looseness, backlash, resonance, damaged bearings, feedback problems, or an incorrect motion profile.</p>
+<p>A disciplined investigation should distinguish among:</p>
+<ol>
+<li>Mechanical problems, such as binding, looseness, or resonance.</li>
+<li>Feedback problems, such as encoder noise or incorrect scaling.</li>
+<li>Control problems, such as inappropriate tuning or command profiles.</li>
+<li>Capacity problems, such as insufficient torque or speed capability.</li>
+</ol>
+<p>Any tuning or autotuning procedure must follow the drive manufacturer's instructions and the machine's risk controls. Ensure that the axis can move safely during the procedure.</p>
+<h2 id="10-mechanical-load-and-regenerative-energy">10. Mechanical Load and Regenerative Energy</h2>
+<p>Servo axes frequently accelerate and decelerate high-inertia loads. The drive may need to supply energy during acceleration and absorb or return energy during deceleration.</p>
+<p>The kinetic energy of a rotating load is:</p>
+<div class="math-display">\[ E_k=\frac{1}{2}J\omega^2 \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(E_k\)</span> is rotational kinetic energy.</li>
+<li><span class="math-inline">\(J\)</span> is the equivalent rotational inertia.</li>
+<li><span class="math-inline">\(\omega\)</span> is angular velocity in radians per second.</li>
+</ul>
+<p>A larger inertia or higher speed increases the energy that must be managed during stopping.</p>
+<p>When diagnosing repeated DC bus overvoltage, review the load inertia, stopping profile, braking configuration, and drive capability. A braking resistor or regenerative supply must be selected and configured according to the manufacturer's specifications and application requirements.</p>
+<h2 id="11-preventive-maintenance-for-servo-drives">11. Preventive Maintenance for Servo Drives</h2>
+<p>Preventive maintenance should be based on the manufacturer's instructions, operating environment, duty cycle, fault history, and plant maintenance strategy.</p>
+<p>Typical checks include:</p>
+<ul>
+<li>Inspect cabinet ventilation and cooling fans.</li>
+<li>Check air filters and heat-sink cleanliness where applicable.</li>
+<li>Inspect for dust, moisture, oil, corrosion, and contamination.</li>
+<li>Review active and historical alarms.</li>
+<li>Check drive temperature trends and thermal warnings.</li>
+<li>Review recurring current, torque, or DC bus abnormalities.</li>
+<li>Inspect accessible power and feedback connectors.</li>
+<li>Check cable support, routing, and signs of abrasion.</li>
+<li>Inspect grounding and shield terminations where appropriate.</li>
+<li>Review communication diagnostics.</li>
+<li>Verify that configuration backups are current.</li>
+<li>Record recurring faults and repairs in the maintenance system.</li>
+</ul>
+<p>Electrical tightening, insulation testing, connector disconnection, and internal drive inspection must follow the approved isolation procedure and manufacturer requirements. Do not perform live internal work as part of routine preventive maintenance.</p>
+<h2 id="12-practical-example-repeated-following-error-alarm">12. Practical Example: Repeated Following-Error Alarm</h2>
+<h3 id="situation">Situation</h3>
+<p>A servo-driven indexing table intermittently trips on following error during acceleration. The drive's power-stage status appears normal, and the fault is more frequent after mechanical maintenance.</p>
+<h3 id="investigation">Investigation</h3>
+<ol>
+<li>Record the exact fault code and the position, speed, and torque demand at the time of the event.</li>
+<li>Compare commanded and actual position trends.</li>
+<li>Check whether the error begins before or after any feedback or communication alarm.</li>
+<li>Review recent coupling, gearbox, belt, ballscrew, and bearing work.</li>
+<li>Inspect the mechanical movement under the approved safe test procedure.</li>
+<li>Check encoder connectors, cable routing, and feedback diagnostics.</li>
+<li>Compare the motion profile and tuning with the approved baseline.</li>
+<li>Determine whether the drive is reaching a torque limit or experiencing unexpected resistance.</li>
+</ol>
+<h3 id="possible-findings">Possible findings</h3>
+<ul>
+<li>Increased friction from misalignment.</li>
+<li>A loose coupling or mechanical transmission component.</li>
+<li>Intermittent encoder feedback.</li>
+<li>An acceleration profile that exceeds the axis capability.</li>
+<li>A configuration change affecting feedback scaling or tuning.</li>
+</ul>
+<h3 id="corrective-action">Corrective action</h3>
+<p>Correct the verified mechanical, feedback, or configuration issue. Restore approved parameters where required, conduct controlled motion tests, and confirm repeatable positioning across the required operating cycle.</p>
+<p>Do not increase the following-error limit simply to suppress the alarm. The alarm may be identifying a genuine loss of motion accuracy or a mechanical fault.</p>
+<h2 id="13-servo-drive-health-checklist">13. Servo Drive Health Checklist</h2>
+<h3 id="drive-and-electrical-condition">Drive and electrical condition</h3>
+<ul>
+<li>Record drive model, serial number, firmware, and axis identification.</li>
+<li>Check active status, warnings, and fault history.</li>
+<li>Review temperature and cooling condition.</li>
+<li>Review DC bus voltage and current or torque diagnostics.</li>
+<li>Inspect accessible power connections and cable condition.</li>
+<li>Verify protective earth and required bonding.</li>
+<li>Check for contamination or environmental damage.</li>
+</ul>
+<h3 id="feedback-and-control">Feedback and control</h3>
+<ul>
+<li>Verify encoder or feedback status.</li>
+<li>Review following error and positioning performance.</li>
+<li>Check command and actual speed or position where available.</li>
+<li>Review PLC or motion-controller commands and interlocks.</li>
+<li>Check communication status and error counters.</li>
+<li>Compare relevant parameters against the approved baseline.</li>
+<li>Investigate repeated current or torque-limit saturation.</li>
+</ul>
+<h3 id="mechanical-condition">Mechanical condition</h3>
+<ul>
+<li>Inspect coupling, transmission, bearings, and load mechanism.</li>
+<li>Check for abnormal friction, vibration, or noise.</li>
+<li>Verify brake release and timing where fitted.</li>
+<li>Review motion profile and load conditions.</li>
+<li>Check for mechanical changes that coincide with fault recurrence.</li>
+</ul>
+<h3 id="records-and-recovery">Records and recovery</h3>
+<ul>
+<li>Save the diagnostic information before resetting a recurring fault.</li>
+<li>Verify that the approved configuration backup is available.</li>
+<li>Record parameter changes and authorization.</li>
+<li>Document root cause and corrective action.</li>
+<li>Perform the required functional and safety verification.</li>
+<li>Update the maintenance history and unresolved issues.</li>
+</ul>
+<h2 id="14-servo-drive-health-in-plc-hmi-and-scada-systems">14. Servo Drive Health in PLC, HMI, and SCADA Systems</h2>
+<p>In an automated production line, drive health information can be integrated into the PLC, HMI, SCADA, and maintenance reporting systems.</p>
+<p>Useful signals include:</p>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Purpose</th>
+<th>Maintenance use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Drive ready</td>
+<td>Indicates readiness according to drive status logic</td>
+<td>Identify enable or readiness problems</td>
+</tr>
+<tr>
+<td>Servo enabled</td>
+<td>Indicates the configured enabled state</td>
+<td>Check sequence and interlock conditions</td>
+</tr>
+<tr>
+<td>Motion active</td>
+<td>Indicates motion activity where supported</td>
+<td>Correlate faults with movement</td>
+</tr>
+<tr>
+<td>Fault active</td>
+<td>Indicates a drive fault state</td>
+<td>Trigger diagnostics and maintenance notification</td>
+</tr>
+<tr>
+<td>Warning active</td>
+<td>Indicates a warning condition</td>
+<td>Identify developing or non-trip conditions</td>
+</tr>
+<tr>
+<td>Actual position</td>
+<td>Reports measured axis position</td>
+<td>Investigate positioning deviations</td>
+</tr>
+<tr>
+<td>Actual speed</td>
+<td>Reports measured speed</td>
+<td>Identify speed instability</td>
+</tr>
+<tr>
+<td>Torque actual</td>
+<td>Reports measured or estimated torque</td>
+<td>Identify excessive load or friction</td>
+</tr>
+<tr>
+<td>Following error</td>
+<td>Reports command-to-feedback position deviation</td>
+<td>Identify motion-control problems</td>
+</tr>
+<tr>
+<td>Drive temperature</td>
+<td>Reports a supported thermal measurement</td>
+<td>Trend thermal condition</td>
+</tr>
+<tr>
+<td>Communication status</td>
+<td>Indicates controller-to-drive communication state</td>
+<td>Identify network-related stoppages</td>
+</tr>
+</tbody>
+</table>
+<p>Signal availability, naming, scaling, and update rate depend on the drive and control system. The PLC must interpret the drive's status words and numeric values according to the manufacturer's documentation.</p>
+<h3 id="recommended-diagnostic-approach">Recommended diagnostic approach</h3>
+<p>When a servo fault occurs, correlate:</p>
+<ul>
+<li>The drive fault timestamp.</li>
+<li>The PLC sequence step.</li>
+<li>The motion command and axis state.</li>
+<li>The feedback values immediately before the fault.</li>
+<li>The network and safety status.</li>
+<li>The mechanical process condition.</li>
+</ul>
+<p>For example, a following-error fault that consistently occurs at the same indexing position may suggest a localized mechanical resistance or cable-related problem. A fault that coincides with communication loss may require a network investigation first.</p>
+<h2 id="15-servo-drive-health-trends-and-predictive-maintenance">15. Servo Drive Health Trends and Predictive Maintenance</h2>
+<p>Historical data can help identify changes in drive or axis behavior before a failure causes a major production interruption.</p>
+<p>Useful trends include:</p>
+<ul>
+<li>Drive and motor temperature.</li>
+<li>RMS current or torque demand over comparable cycles.</li>
+<li>Peak torque during acceleration.</li>
+<li>Following error during repeated movements.</li>
+<li>Positioning and settling performance.</li>
+<li>Frequency of encoder and communication faults.</li>
+<li>DC bus voltage during deceleration.</li>
+<li>Cooling fan status, where monitored.</li>
+<li>Fault recurrence and recovery time.</li>
+</ul>
+<p>Trend data must be compared under reasonably similar conditions. Changes in product type, load mass, cycle time, acceleration profile, or ambient temperature can explain changes that might otherwise appear to indicate degradation.</p>
+<p>For example, increasing torque demand over several weeks on an indexing axis could indicate rising mechanical friction. However, the same pattern could result from a heavier load or a changed motion profile. Confirm the operating conditions before assigning a root cause.</p>
+<h2 id="16-servo-drive-replacement-and-recovery">16. Servo Drive Replacement and Recovery</h2>
+<p>When a servo drive fails, replacing the hardware is only part of the recovery process.</p>
+<ol>
+<li>Record the original drive's model, rating, serial number, firmware, and fault history if available.</li>
+<li>Confirm the replacement drive's hardware and firmware compatibility.</li>
+<li>Retrieve the approved configuration and verify its provenance.</li>
+<li>Check motor, encoder, brake, and power-cable compatibility.</li>
+<li>Restore the configuration using the manufacturer's procedure.</li>
+<li>Verify feedback configuration, motor data, limits, communication, and relevant tuning parameters.</li>
+<li>Confirm PLC, motion-controller, and safety-system interfaces.</li>
+<li>Perform the required functional and safety validation.</li>
+<li>Test the axis under controlled conditions and verify positioning accuracy.</li>
+<li>Record the replacement details, configuration revision, test results, and return-to-service approval.</li>
+</ol>
+<p>If the replacement drive is a different model or revision, do not assume that the original parameters can be transferred without review. Parameter mapping, control behavior, feedback interfaces, and safety requirements may differ.</p>
+<h2 id="17-fault-diagnosis-decision-table">17. Fault Diagnosis Decision Table</h2>
+<table>
+<thead>
+<tr>
+<th>Observation</th>
+<th>Initial investigation</th>
+<th>Important caution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Drive does not enable</td>
+<td>Check enable conditions, interlocks, safety status, and drive readiness</td>
+<td>Do not bypass the safety circuit</td>
+</tr>
+<tr>
+<td>Motor does not move despite enable</td>
+<td>Check command source, motion command, brake, and torque availability</td>
+<td>Verify whether movement is permitted by the machine sequence</td>
+</tr>
+<tr>
+<td>High torque at low speed</td>
+<td>Check mechanical resistance, load, brake release, and tuning</td>
+<td>Do not assume the drive is defective</td>
+</tr>
+<tr>
+<td>Position error increases during acceleration</td>
+<td>Check torque limits, motion profile, mechanics, and feedback</td>
+<td>Do not simply widen the error limit</td>
+</tr>
+<tr>
+<td>Fault occurs during deceleration</td>
+<td>Check regenerative energy, DC bus behavior, and braking configuration</td>
+<td>Verify required stopping performance</td>
+</tr>
+<tr>
+<td>Intermittent encoder alarms</td>
+<td>Check connectors, cable routing, feedback diagnostics, and compatibility</td>
+<td>Avoid disconnecting feedback circuits while energized</td>
+</tr>
+<tr>
+<td>Drive temperature rises over time</td>
+<td>Check cooling, load profile, ambient conditions, and current</td>
+<td>Compare against manufacturer limits</td>
+</tr>
+<tr>
+<td>Faults occur with network disturbances</td>
+<td>Check communication counters, cables, switches, and controller diagnostics</td>
+<td>Confirm whether the drive itself reports a hardware fault</td>
+</tr>
+<tr>
+<td>Axis oscillates at rest</td>
+<td>Check tuning, mechanical stiffness, resonance, and feedback</td>
+<td>Make controlled changes and verify stability</td>
+</tr>
+<tr>
+<td>Same fault returns after reset</td>
+<td>Investigate the underlying cause and event sequence</td>
+<td>Repeated resets are not a corrective action</td>
+</tr>
+</tbody>
+</table>
+<h2 id="18-servo-drive-health-records-for-maintenance-engineering">18. Servo Drive Health Records for Maintenance Engineering</h2>
+<p>For effective maintenance, each servo axis should have a defined asset record.</p>
+<p>Recommended information includes:</p>
+<ul>
+<li>Machine and functional location.</li>
+<li>Axis name and application.</li>
+<li>Servo drive manufacturer, model, serial number, and firmware.</li>
+<li>Servo motor identification and rated data.</li>
+<li>Encoder type and feedback interface.</li>
+<li>Brake and braking-system details.</li>
+<li>Drive configuration revision and backup location.</li>
+<li>Approved tuning and motion parameters.</li>
+<li>Network address and controller mapping.</li>
+<li>Fault history and recurring symptoms.</li>
+<li>Inspection results and measurement trends.</li>
+<li>Replacement parts and configuration changes.</li>
+<li>Root-cause analysis and corrective actions.</li>
+<li>Commissioning results and outstanding issues.</li>
+</ul>
+<p>Link the records to the appropriate SAP PM equipment, notification, or maintenance order according to the site's documentation process.</p>
+<p>A useful maintenance record should allow another engineer to understand what failed, what evidence supported the diagnosis, what was changed, and how correct operation was verified.</p>
+<h2 id="19-key-engineering-principles">19. Key Engineering Principles</h2>
+<ul>
+<li>Servo drive health must be assessed as part of the complete motion system.</li>
+<li>A drive that is powered and ready is not necessarily controlling motion correctly.</li>
+<li>Fault codes are evidence to investigate, not automatic proof of component failure.</li>
+<li>Current, torque, temperature, DC bus voltage, feedback, and communication diagnostics should be interpreted together.</li>
+<li>Following error can result from mechanical resistance, feedback faults, incorrect tuning, or unsuitable motion commands.</li>
+<li>Repeated fault resets without root-cause investigation can increase downtime and conceal developing failures.</li>
+<li>Parameter changes must be controlled, documented, and validated.</li>
+<li>Mechanical inspection is essential when drive diagnostics indicate abnormal load or torque demand.</li>
+<li>Safety-related inhibits must be investigated without bypassing protective functions.</li>
+<li>Configuration backups and fault history are essential parts of drive recovery and maintenance readiness.</li>
+<li>Health trends are most useful when compared under similar operating conditions.</li>
+<li>Return to service requires the prescribed functional tests and safety verification, not merely a cleared fault display.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\18_PM\04_Servo\02_Motor - Motor</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recurring vs Intermittent Failures</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Recurring vs Intermittent Failures</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-core-difference">2. Core Difference</a></li>
+<li><a href="#3-failure-behavior-categories">3. Failure Behavior Categories</a></li>
+<li><a href="#4-recurring-failures">4. Recurring Failures</a><ul>
+<li><a href="#41-typical-characteristics">4.1 Typical characteristics</a></li>
+<li><a href="#42-common-causes-of-recurrence">4.2 Common causes of recurrence</a></li>
+<li><a href="#43-recurring-failure-investigation-method">4.3 Recurring-failure investigation method</a></li>
+</ul>
+</li>
+<li><a href="#5-intermittent-failures">5. Intermittent Failures</a><ul>
+<li><a href="#51-typical-characteristics">5.1 Typical characteristics</a></li>
+<li><a href="#52-common-causes-of-intermittent-failures">5.2 Common causes of intermittent failures</a></li>
+<li><a href="#53-why-intermittent-failures-are-difficult-to-diagnose">5.3 Why intermittent failures are difficult to diagnose</a></li>
+</ul>
+</li>
+<li><a href="#6-distinguishing-recurring-intermittent-and-permanent-failures">6. Distinguishing Recurring, Intermittent, and Permanent Failures</a></li>
+<li><a href="#7-the-importance-of-timestamps-and-event-correlation">7. The Importance of Timestamps and Event Correlation</a><ul>
+<li><a href="#example-determining-the-primary-event">Example: Determining the primary event</a></li>
+</ul>
+</li>
+<li><a href="#8-practical-example-intermittent-robot-encoder-feedback">8. Practical Example: Intermittent Robot Encoder Feedback</a><ul>
+<li><a href="#reported-condition">Reported condition</a></li>
+<li><a href="#initial-classification">Initial classification</a></li>
+<li><a href="#investigation">Investigation</a></li>
+</ul>
+</li>
+<li><a href="#9-practical-example-recurring-cnc-spindle-overtemperature">9. Practical Example: Recurring CNC Spindle Overtemperature</a><ul>
+<li><a href="#reported-condition_1">Reported condition</a></li>
+<li><a href="#possible-explanations">Possible explanations</a></li>
+<li><a href="#investigation-plan">Investigation plan</a></li>
+</ul>
+</li>
+<li><a href="#10-capturing-intermittent-faults">10. Capturing Intermittent Faults</a><ul>
+<li><a href="#101-plc-and-io-monitoring">10.1 PLC and I/O monitoring</a></li>
+<li><a href="#102-drive-and-cnc-diagnostics">10.2 Drive and CNC diagnostics</a></li>
+<li><a href="#103-network-diagnostics">10.3 Network diagnostics</a></li>
+<li><a href="#104-physical-inspection">10.4 Physical inspection</a></li>
+</ul>
+</li>
+<li><a href="#11-the-danger-of-reset-based-maintenance">11. The Danger of Reset-Based Maintenance</a></li>
+<li><a href="#12-recurrence-metrics-and-failure-analysis">12. Recurrence Metrics and Failure Analysis</a><ul>
+<li><a href="#121-failure-count">12.1 Failure count</a></li>
+<li><a href="#122-recurrence-rate">12.2 Recurrence rate</a></li>
+<li><a href="#123-mean-time-between-failures">12.3 Mean time between failures</a></li>
+<li><a href="#124-mean-time-to-repair">12.4 Mean time to repair</a></li>
+<li><a href="#125-intermittent-event-frequency">12.5 Intermittent event frequency</a></li>
+</ul>
+</li>
+<li><a href="#13-using-failure-history-to-find-patterns">13. Using Failure History to Find Patterns</a></li>
+<li><a href="#14-corrective-actions-for-recurring-and-intermittent-failures">14. Corrective Actions for Recurring and Intermittent Failures</a><ul>
+<li><a href="#examples-of-action-types">Examples of action types</a></li>
+</ul>
+</li>
+<li><a href="#15-verification-and-effectiveness-review">15. Verification and Effectiveness Review</a></li>
+<li><a href="#16-maintenance-record-template">16. Maintenance Record Template</a></li>
+<li><a href="#17-common-troubleshooting-mistakes">17. Common Troubleshooting Mistakes</a></li>
+<li><a href="#18-interview-questions-and-answers">18. Interview Questions and Answers</a><ul>
+<li><a href="#q1-what-is-the-difference-between-recurring-and-intermittent-failure">Q1. What is the difference between recurring and intermittent failure?</a></li>
+<li><a href="#q2-why-are-intermittent-faults-difficult-to-diagnose">Q2. Why are intermittent faults difficult to diagnose?</a></li>
+<li><a href="#q3-what-is-the-first-action-when-the-same-breakdown-returns">Q3. What is the first action when the same breakdown returns?</a></li>
+<li><a href="#q4-why-is-resetting-a-drive-not-considered-a-permanent-corrective-action">Q4. Why is resetting a drive not considered a permanent corrective action?</a></li>
+<li><a href="#q5-how-would-you-troubleshoot-an-intermittent-plc-input">Q5. How would you troubleshoot an intermittent PLC input?</a></li>
+<li><a href="#q6-how-would-you-investigate-recurring-communication-faults">Q6. How would you investigate recurring communication faults?</a></li>
+<li><a href="#q7-how-do-you-prove-a-corrective-action-is-effective">Q7. How do you prove a corrective action is effective?</a></li>
+<li><a href="#q8-what-is-the-danger-of-assuming-the-same-alarm-means-the-same-fault">Q8. What is the danger of assuming the same alarm means the same fault?</a></li>
+<li><a href="#q9-what-information-is-most-useful-for-an-intermittent-fault">Q9. What information is most useful for an intermittent fault?</a></li>
+<li><a href="#q10-how-can-failure-history-improve-reliability">Q10. How can failure history improve reliability?</a></li>
+</ul>
+</li>
+<li><a href="#19-practical-completion-checklist">19. Practical Completion Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>Recurring failures and intermittent failures describe two different characteristics of equipment failure. They are related, but they are not interchangeable.</p>
+<p>A recurring failure is a failure that occurs again after a previous occurrence has been repaired, reset, or otherwise restored. The repeated failure may have the same underlying cause or a different cause that produces a similar symptom.</p>
+<p>An intermittent failure is a failure that appears and disappears over time, often depending on operating conditions, movement, temperature, vibration, electrical disturbances, or other changing conditions.</p>
+<p>A failure can be both recurring and intermittent.</p>
+<p>Examples:</p>
+<ul>
+<li>A VFD trips every morning during startup, is reset, and trips again the next morning. This is a recurring failure.</li>
+<li>A robot encoder signal drops out for 200 milliseconds during wrist movement and then returns. This is an intermittent failure.</li>
+<li>A proximity sensor repeatedly gives brief false signals when a machine vibrates. This may be both recurring and intermittent.</li>
+<li>A power supply fails permanently after overheating once. This is a failure, but it is not necessarily recurring or intermittent.</li>
+</ul>
+<h2 id="2-core-difference">2. Core Difference</h2>
+<table>
+<thead>
+<tr>
+<th>Characteristic</th>
+<th>Recurring failure</th>
+<th>Intermittent failure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Main meaning</td>
+<td>Failure happens again after a previous occurrence</td>
+<td>Failure appears and disappears</td>
+</tr>
+<tr>
+<td>Typical time pattern</td>
+<td>Separate events over multiple cycles, shifts, or days</td>
+<td>Temporary or irregular loss and restoration of function</td>
+</tr>
+<tr>
+<td>Equipment behavior between events</td>
+<td>May operate normally</td>
+<td>Often returns to normal without a permanent repair</td>
+</tr>
+<tr>
+<td>Common maintenance response</td>
+<td>Investigate why the problem returns</td>
+<td>Capture the conditions and evidence during the temporary fault</td>
+</tr>
+<tr>
+<td>Typical example</td>
+<td>Same CNC spindle alarm returns after each restart</td>
+<td>Encoder feedback briefly disappears during motion</td>
+</tr>
+<tr>
+<td>Key investigation question</td>
+<td>Why does this failure keep returning?</td>
+<td>Under what conditions does the failure appear and disappear?</td>
+</tr>
+<tr>
+<td>Important caution</td>
+<td>Similar symptoms do not prove the same root cause</td>
+<td>Recovery does not prove that the fault has disappeared permanently</td>
+</tr>
+</tbody>
+</table>
+<p>The distinction is based on the behavior of the failure, not merely on the alarm text.</p>
+<h2 id="3-failure-behavior-categories">3. Failure Behavior Categories</h2>
+<p>Equipment failures can be classified by their observed behavior.</p>
+<pre><code>Failure behavior
+    ↓
+Permanent failure
+    → Function remains unavailable until corrective action
+    ↓
+Intermittent failure
+    → Function is temporarily lost and then returns
+    ↓
+Recurring failure
+    → A previous failure occurs again after restoration
+    ↓
+Degraded or progressive failure
+    → Performance deteriorates over time
+</code></pre>
+<p>These categories are not mutually exclusive. A progressive fault can eventually become permanent, and an intermittent fault can recur repeatedly.</p>
+<p>For example, a cable with damaged conductors may initially produce occasional communication loss. Over time, conductor damage may worsen until communication fails permanently.</p>
+<h2 id="4-recurring-failures">4. Recurring Failures</h2>
+<h3 id="41-typical-characteristics">4.1 Typical characteristics</h3>
+<p>Recurring failures often indicate that the original corrective action was incomplete, the cause was not established, the operating conditions remain unchanged, or a new problem is producing a similar result.</p>
+<p>Common patterns include:</p>
+<ul>
+<li>The same alarm returns after a reset.</li>
+<li>The same component fails repeatedly after replacement.</li>
+<li>A machine operates for several hours and then stops again.</li>
+<li>A fault returns after every production changeover.</li>
+<li>A repaired cable or connector fails again at the same location.</li>
+<li>A drive trips under the same acceleration or loading conditions.</li>
+<li>The same breakdown occurs across different machines using a common design or component.</li>
+</ul>
+<h3 id="42-common-causes-of-recurrence">4.2 Common causes of recurrence</h3>
+<table>
+<thead>
+<tr>
+<th>Potential cause</th>
+<th>Example</th>
+<th>Investigation direction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Root cause not identified</td>
+<td>A VFD is repeatedly reset without checking the load</td>
+<td>Analyze fault history and actual operating conditions</td>
+</tr>
+<tr>
+<td>Temporary repair only</td>
+<td>Damaged cable is taped but not replaced</td>
+<td>Inspect the complete cable and its routing</td>
+</tr>
+<tr>
+<td>Incorrect replacement</td>
+<td>An incompatible sensor is installed</td>
+<td>Verify part number, electrical characteristics, and sensing requirements</td>
+</tr>
+<tr>
+<td>Parameter mismatch</td>
+<td>Replacement drive has incorrect motor data</td>
+<td>Compare parameters with the approved baseline</td>
+</tr>
+<tr>
+<td>Underlying mechanical problem</td>
+<td>Repeated motor overload due to binding</td>
+<td>Inspect the mechanical load and transmission</td>
+</tr>
+<tr>
+<td>Poor installation</td>
+<td>Connector repeatedly loosens</td>
+<td>Check mounting, torque, strain relief, and vibration</td>
+</tr>
+<tr>
+<td>Inadequate verification</td>
+<td>Machine is tested only without production load</td>
+<td>Validate under representative operating conditions</td>
+</tr>
+<tr>
+<td>Common environmental condition</td>
+<td>Several power supplies fail in one hot enclosure</td>
+<td>Review ambient temperature, ventilation, and loading</td>
+</tr>
+<tr>
+<td>New fault with similar symptoms</td>
+<td>A second component fails after the original repair</td>
+<td>Compare evidence rather than assuming an identical cause</td>
+</tr>
+</tbody>
+</table>
+<h3 id="43-recurring-failure-investigation-method">4.3 Recurring-failure investigation method</h3>
+<ol>
+<li>Confirm that the new event matches the previous failure mode.</li>
+<li>Compare timestamps, alarms, operating conditions, and machine states.</li>
+<li>Review the previous repair and the evidence used to identify the cause.</li>
+<li>Check whether the previous corrective action was permanent or temporary.</li>
+<li>Determine whether the same operating conditions or stresses remain.</li>
+<li>Test competing hypotheses using safe, controlled methods.</li>
+<li>Correct the verified cause or reduce the risk through an engineered action.</li>
+<li>Verify performance under the conditions associated with the original failure.</li>
+<li>Monitor subsequent operation and record recurrence status.</li>
+</ol>
+<p>The central rule is simple: do not repeat the previous repair automatically just because the same alarm returned.</p>
+<h2 id="5-intermittent-failures">5. Intermittent Failures</h2>
+<h3 id="51-typical-characteristics">5.1 Typical characteristics</h3>
+<p>Intermittent failures are often difficult to diagnose because the system may appear normal when maintenance arrives.</p>
+<p>Typical behavior includes:</p>
+<ul>
+<li>A signal disappears briefly and returns.</li>
+<li>Communication drops for a few seconds and reconnects.</li>
+<li>A machine works normally when cold but faults after heating.</li>
+<li>A sensor changes state when a cable or connector moves.</li>
+<li>A drive trips only under a specific transient load.</li>
+<li>A PLC input flickers during vibration.</li>
+<li>A CNC axis produces an occasional following error.</li>
+<li>A fault disappears after a reset, power cycle, or mechanical movement.</li>
+</ul>
+<p>Intermittent behavior is evidence of a condition that has not yet been fully characterized. It does not automatically mean the problem is electrical or that a loose connection is responsible.</p>
+<h3 id="52-common-causes-of-intermittent-failures">5.2 Common causes of intermittent failures</h3>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Potential cause</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Electrical</td>
+<td>Loose or oxidized terminal</td>
+<td>Digital input changes state under vibration</td>
+</tr>
+<tr>
+<td>Wiring</td>
+<td>Partial conductor break</td>
+<td>Robot feedback signal drops during cable movement</td>
+</tr>
+<tr>
+<td>Electronic</td>
+<td>Temperature-sensitive component</td>
+<td>Module works cold and fails when warm</td>
+</tr>
+<tr>
+<td>Mechanical</td>
+<td>Vibration or movement</td>
+<td>Connector intermittently loses contact</td>
+</tr>
+<tr>
+<td>Sensor</td>
+<td>Marginal detection conditions</td>
+<td>Photoelectric sensor misses certain targets</td>
+</tr>
+<tr>
+<td>Power</td>
+<td>Short-duration voltage dip</td>
+<td>Controller resets during a load transient</td>
+</tr>
+<tr>
+<td>Network</td>
+<td>Link instability or packet loss</td>
+<td>Remote I/O connection drops intermittently</td>
+</tr>
+<tr>
+<td>Software</td>
+<td>Race condition or timing dependency</td>
+<td>Sequence fails only under a particular event order</td>
+</tr>
+<tr>
+<td>Configuration</td>
+<td>Marginal timeout or unsuitable parameter</td>
+<td>Communication timeout occurs under peak load</td>
+</tr>
+<tr>
+<td>Process</td>
+<td>Variable load or operating condition</td>
+<td>Motor overcurrent occurs only during a specific cycle</td>
+</tr>
+</tbody>
+</table>
+<p>These are possible causes, not diagnoses. The actual cause must be established from the evidence.</p>
+<h3 id="53-why-intermittent-failures-are-difficult-to-diagnose">5.3 Why intermittent failures are difficult to diagnose</h3>
+<p>Several factors complicate investigation:</p>
+<ul>
+<li>The fault may disappear before measurements are taken.</li>
+<li>A reset may erase diagnostic information.</li>
+<li>Reconnecting a plug may temporarily restore a poor connection.</li>
+<li>Cooling may restore a temperature-sensitive component.</li>
+<li>Machine movement may temporarily change a damaged conductor's contact condition.</li>
+<li>Multiple devices may generate secondary alarms after one primary fault.</li>
+<li>A fault may occur only during a particular sequence, load, or environmental condition.</li>
+<li>The observation method may not have sufficient sampling rate to capture a short event.</li>
+</ul>
+<p>A normal measurement taken after the event does not prove that the system was healthy when the fault occurred.</p>
+<h2 id="6-distinguishing-recurring-intermittent-and-permanent-failures">6. Distinguishing Recurring, Intermittent, and Permanent Failures</h2>
+<table>
+<thead>
+<tr>
+<th>Observation</th>
+<th>Likely classification</th>
+<th>Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A motor fails to start and remains unavailable until repaired</td>
+<td>Permanent failure during the observed period</td>
+<td>Function does not return on its own</td>
+</tr>
+<tr>
+<td>A VFD trips every time a conveyor starts and is reset between attempts</td>
+<td>Recurring failure</td>
+<td>Separate failure events follow restoration</td>
+</tr>
+<tr>
+<td>A PLC input drops for 100 ms and returns without intervention</td>
+<td>Intermittent failure</td>
+<td>Temporary loss and recovery of the signal</td>
+</tr>
+<tr>
+<td>A robot repeatedly loses encoder feedback during wrist movement</td>
+<td>Recurring and intermittent</td>
+<td>The temporary fault repeats under a specific condition</td>
+</tr>
+<tr>
+<td>A sensor slowly drifts outside tolerance over several months</td>
+<td>Progressive or degraded failure</td>
+<td>Performance deteriorates over time</td>
+</tr>
+<tr>
+<td>A communication alarm appears repeatedly, but logs show different network and device faults</td>
+<td>Recurring symptom with potentially different causes</td>
+<td>The same alarm does not establish an identical root cause</td>
+</tr>
+</tbody>
+</table>
+<p>Classification should be based on recorded behavior, not on assumptions made from a single observation.</p>
+<h2 id="7-the-importance-of-timestamps-and-event-correlation">7. The Importance of Timestamps and Event Correlation</h2>
+<p>Time correlation is essential for understanding intermittent and recurring failures.</p>
+<p>Record the following whenever possible:</p>
+<ul>
+<li>Exact timestamp of the first observed abnormal condition.</li>
+<li>Timestamp and order of alarms.</li>
+<li>PLC mode and sequence step.</li>
+<li>Machine speed, load, and operating cycle.</li>
+<li>Drive current, voltage, temperature, and fault status where relevant.</li>
+<li>Communication diagnostics and device status.</li>
+<li>Operator action, reset, or power-cycle time.</li>
+<li>Environmental conditions when relevant.</li>
+<li>Whether the fault occurred during startup, steady operation, stopping, or changeover.</li>
+</ul>
+<h3 id="example-determining-the-primary-event">Example: Determining the primary event</h3>
+<p>A machine generates the following alarms:</p>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Event</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10:15:20.100</td>
+<td>Remote I/O connection fault</td>
+</tr>
+<tr>
+<td>10:15:20.140</td>
+<td>Sensor input data becomes unavailable</td>
+</tr>
+<tr>
+<td>10:15:20.300</td>
+<td>Sequence timeout</td>
+</tr>
+<tr>
+<td>10:15:20.500</td>
+<td>Machine cycle stops</td>
+</tr>
+</tbody>
+</table>
+<p>The first recorded event suggests that the communication fault may have preceded the other alarms. However, timestamp order alone does not prove causality. Clock synchronization, diagnostic delay, and alarm-processing order must be considered.</p>
+<p>A more reliable investigation combines timestamps with device diagnostics, signal states, and physical evidence.</p>
+<h2 id="8-practical-example-intermittent-robot-encoder-feedback">8. Practical Example: Intermittent Robot Encoder Feedback</h2>
+<h3 id="reported-condition">Reported condition</h3>
+<p>A robot occasionally stops with a position-feedback or servo alarm during wrist-axis movement. After resetting the alarm, the robot can sometimes complete several cycles normally.</p>
+<h3 id="initial-classification">Initial classification</h3>
+<ul>
+<li>Symptom: Robot stops with a servo or position-feedback alarm.</li>
+<li>Failure behavior: Intermittent, because the fault disappears and normal operation temporarily returns.</li>
+<li>Recurrence: Present if the same failure mode occurs again after restoration.</li>
+<li>Possible failure mode: Position-feedback signal becomes invalid or unavailable.</li>
+<li>Possible causes: Damaged feedback cable, connector problem, encoder issue, drive fault, electrical disturbance, or another system-specific condition.</li>
+</ul>
+<h3 id="investigation">Investigation</h3>
+<ol>
+<li>Retrieve the complete alarm history and identify the first relevant event.</li>
+<li>Check whether the fault occurs at a repeatable robot pose, axis position, speed, or direction.</li>
+<li>Review the controller and drive diagnostics for the affected axis.</li>
+<li>Inspect the relevant cable routing, connectors, strain relief, and physical condition under the approved isolation procedure.</li>
+<li>Compare the behavior with available known-good data or manufacturer diagnostic guidance.</li>
+<li>Use only approved tests to distinguish cable, encoder, drive, and configuration possibilities.</li>
+<li>Confirm that the corrective action resolves the fault across representative movement and operating conditions.</li>
+</ol>
+<p>Robot feedback cables may be subject to repeated flexing. However, replacing the cable without confirming the evidence may miss an encoder, connector, drive, or environmental problem.</p>
+<p>Never move or manipulate energized robot cables outside the approved diagnostic procedure. Robot motion and stored energy create serious hazards.</p>
+<h2 id="9-practical-example-recurring-cnc-spindle-overtemperature">9. Practical Example: Recurring CNC Spindle Overtemperature</h2>
+<h3 id="reported-condition_1">Reported condition</h3>
+<p>A CNC spindle develops an overtemperature alarm several times per week. Maintenance resets the machine, and production resumes.</p>
+<h3 id="possible-explanations">Possible explanations</h3>
+<ul>
+<li>Cooling airflow is insufficient.</li>
+<li>Cooling-fluid flow or temperature is outside specification.</li>
+<li>The spindle is being operated under excessive load.</li>
+<li>A bearing or mechanical condition generates excess heat.</li>
+<li>A temperature sensor or measurement channel is faulty.</li>
+<li>A drive or parameter issue contributes to abnormal operation.</li>
+<li>The alarm threshold or measurement interpretation is incorrect.</li>
+</ul>
+<h3 id="investigation-plan">Investigation plan</h3>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Action</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Compare alarm timestamps with the machining cycle</td>
+<td>Identify process correlation</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Review spindle speed, load, and operating duration</td>
+<td>Identify loading patterns</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Check cooling-system diagnostics and specified flow or temperature</td>
+<td>Evaluate heat-removal performance</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Compare temperature readings with appropriate independent measurements</td>
+<td>Assess measurement plausibility</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Review spindle and drive diagnostic history</td>
+<td>Identify related faults</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Inspect mechanical condition using approved methods</td>
+<td>Evaluate possible heat-generating defects</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Verify the confirmed cause and corrective action</td>
+<td>Prevent recurrence</td>
+</tr>
+</tbody>
+</table>
+<p>An overtemperature alarm that repeatedly clears after a cooldown is not proof that the spindle is healthy. It may simply mean the triggering condition temporarily subsided.</p>
+<h2 id="10-capturing-intermittent-faults">10. Capturing Intermittent Faults</h2>
+<p>Intermittent faults should be investigated using methods that can capture the fault while it is occurring.</p>
+<h3 id="101-plc-and-io-monitoring">10.1 PLC and I/O monitoring</h3>
+<p>Depending on the platform and application, useful methods include:</p>
+<ul>
+<li>Trend relevant PLC tags.</li>
+<li>Monitor the input signal and corresponding sequence conditions.</li>
+<li>Capture state changes and timestamps.</li>
+<li>Use approved event or diagnostic logging.</li>
+<li>Compare field-device indication with the PLC input state.</li>
+<li>Check input filtering, update behavior, and task execution where relevant.</li>
+</ul>
+<p>A standard trend may miss a very short pulse if its sampling interval is too slow. Choose an appropriate capture method and rate.</p>
+<h3 id="102-drive-and-cnc-diagnostics">10.2 Drive and CNC diagnostics</h3>
+<p>Useful evidence can include:</p>
+<ul>
+<li>Fault history and first-out information.</li>
+<li>Current, voltage, temperature, and load trends.</li>
+<li>Speed command versus actual speed.</li>
+<li>Position command versus actual feedback.</li>
+<li>Following-error or deviation history.</li>
+<li>Bus or communication diagnostics.</li>
+<li>Parameter backups and comparison reports.</li>
+</ul>
+<p>Do not clear fault history before preserving the information required for investigation.</p>
+<h3 id="103-network-diagnostics">10.3 Network diagnostics</h3>
+<p>For industrial networks, examine:</p>
+<ul>
+<li>Link up/down events.</li>
+<li>Device connection status.</li>
+<li>Error counters and retries where available.</li>
+<li>Port and module diagnostics.</li>
+<li>Network loading and update timing.</li>
+<li>Device power stability.</li>
+<li>Duplicate identity or configuration errors.</li>
+<li>Time correlation between network faults and application alarms.</li>
+</ul>
+<p>A device can remain physically connected while application-level communication is unhealthy. Conversely, a communication alarm can be secondary to loss of device power.</p>
+<h3 id="104-physical-inspection">10.4 Physical inspection</h3>
+<p>Inspect relevant components for:</p>
+<ul>
+<li>Loose terminals and connectors.</li>
+<li>Damaged insulation or cable jackets.</li>
+<li>Strain-relief problems.</li>
+<li>Moisture, oil, coolant, dust, or conductive contamination.</li>
+<li>Signs of overheating.</li>
+<li>Mechanical wear or movement.</li>
+<li>Poor grounding or shielding practices.</li>
+<li>Incorrect installation or routing.</li>
+</ul>
+<p>Physical inspection must follow the applicable electrical isolation, machine safety, and stored-energy procedures.</p>
+<h2 id="11-the-danger-of-reset-based-maintenance">11. The Danger of Reset-Based Maintenance</h2>
+<p>Resetting a fault restores operation only when the system's fault logic allows it. It does not necessarily repair the condition that caused the fault.</p>
+<p>Repeated resetting can:</p>
+<ul>
+<li>Hide the first-out evidence.</li>
+<li>Increase the time before the actual cause is found.</li>
+<li>Allow a degrading condition to worsen.</li>
+<li>Create unsafe operating conditions if the fault concerns a protective function.</li>
+<li>Distort failure records by making several related events appear unrelated.</li>
+<li>Increase downtime when the eventual failure becomes permanent.</li>
+</ul>
+<p>Resetting is appropriate only when permitted by the machine procedure and when the fault condition has been assessed. Safety-related trips and unexplained repeated faults require particular caution.</p>
+<h2 id="12-recurrence-metrics-and-failure-analysis">12. Recurrence Metrics and Failure Analysis</h2>
+<p>Maintenance teams can use historical data to quantify repeated failures. Metrics must be defined consistently to avoid misleading conclusions.</p>
+<h3 id="121-failure-count">12.1 Failure count</h3>
+<p>Count distinct failure events using a consistent event definition.</p>
+<p>A single breakdown that generates ten secondary alarms should not automatically be counted as ten independent failures.</p>
+<h3 id="122-recurrence-rate">12.2 Recurrence rate</h3>
+<p>A simple recurrence rate can be calculated as:</p>
+<div class="math-display">\[ \text{Recurrence Rate} = \frac{\text{Repeat Failure Events}}{\text{Relevant Failure Events}} \times 100\\% \]</div>
+<p>The organization must define what counts as a repeat event and what period or asset population is being evaluated.</p>
+<h3 id="123-mean-time-between-failures">12.3 Mean time between failures</h3>
+<p>For a repairable asset under a defined observation period, a simple estimate is:</p>
+<div class="math-display">\[ MTBF = \frac{\text{Total Operating Time}}{\text{Number of Failures}} \]</div>
+<p>MTBF is meaningful only when the operating-time basis, failure definition, and observation window are consistent. It does not directly reveal the cause of recurrence or the time required to repair the asset.</p>
+<h3 id="124-mean-time-to-repair">12.4 Mean time to repair</h3>
+<p>A common measure is:</p>
+<div class="math-display">\[ MTTR = \frac{\text{Total Repair Time}}{\text{Number of Repairs}} \]</div>
+<p>Organizations may define MTTR differently, such as including diagnosis, waiting time, or restoration verification. Use the local definition consistently.</p>
+<h3 id="125-intermittent-event-frequency">12.5 Intermittent event frequency</h3>
+<p>For intermittent failures, track event counts relative to operating exposure, such as events per operating hour or per machine cycle. Also record event duration and operating conditions.</p>
+<p>A high event count may be important even when each interruption is brief. Conversely, a single long interruption may dominate production losses.</p>
+<h2 id="13-using-failure-history-to-find-patterns">13. Using Failure History to Find Patterns</h2>
+<p>Recurring and intermittent failure records become much more useful when analyzed across several dimensions.</p>
+<table>
+<thead>
+<tr>
+<th>Analysis dimension</th>
+<th>Question answered</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Asset</td>
+<td>Which machines are affected most often?</td>
+</tr>
+<tr>
+<td>Component</td>
+<td>Which devices or component families recur?</td>
+</tr>
+<tr>
+<td>Failure mode</td>
+<td>Which specific functions fail repeatedly?</td>
+</tr>
+<tr>
+<td>Shift</td>
+<td>Does the fault correlate with operating periods or practices?</td>
+</tr>
+<tr>
+<td>Machine state</td>
+<td>Does the fault occur during startup, acceleration, or a particular sequence?</td>
+</tr>
+<tr>
+<td>Environmental condition</td>
+<td>Does it correlate with temperature, humidity, dust, or vibration?</td>
+</tr>
+<tr>
+<td>Repair action</td>
+<td>Which repairs are followed by recurrence?</td>
+</tr>
+<tr>
+<td>Time since repair</td>
+<td>Does the failure return soon after maintenance?</td>
+</tr>
+<tr>
+<td>Supplier or revision</td>
+<td>Are events concentrated in a component type or hardware revision?</td>
+</tr>
+<tr>
+<td>Operating exposure</td>
+<td>Does the failure rate change with operating hours or cycle count?</td>
+</tr>
+</tbody>
+</table>
+<p>Correlation is a clue, not proof. A pattern should lead to a testable hypothesis and a controlled investigation.</p>
+<h2 id="14-corrective-actions-for-recurring-and-intermittent-failures">14. Corrective Actions for Recurring and Intermittent Failures</h2>
+<p>Corrective actions should match the verified failure mechanism and causal conditions.</p>
+<h3 id="examples-of-action-types">Examples of action types</h3>
+<ul>
+<li>Permanent repair: Replace or repair a component confirmed to be defective.</li>
+<li>Design improvement: Modify routing, mounting, cooling, or protection to remove a demonstrated weakness.</li>
+<li>Configuration correction: Restore approved parameters, mapping, timing, or device configuration.</li>
+<li>Environmental improvement: Reduce verified contamination, temperature, moisture, or vibration exposure.</li>
+<li>Detection improvement: Add suitable diagnostic logging, condition monitoring, or alarm detail.</li>
+<li>Maintenance improvement: Revise inspection methods, replacement criteria, or verification tests.</li>
+<li>Process improvement: Correct an operating condition that repeatedly produces the failure.</li>
+<li>Documentation improvement: Update drawings, configuration records, repair procedures, or troubleshooting standards.</li>
+</ul>
+<p>A corrective action should identify the specific condition it is intended to address. “Monitor more carefully” is usually not enough unless the monitoring method, trigger, owner, and required response are defined.</p>
+<h2 id="15-verification-and-effectiveness-review">15. Verification and Effectiveness Review</h2>
+<p>A repair is not fully validated merely because the alarm clears.</p>
+<p>A useful verification plan should establish:</p>
+<ol>
+<li>The original required function has been restored.</li>
+<li>The suspected causal condition has been corrected or controlled.</li>
+<li>The system operates under the conditions associated with the fault.</li>
+<li>Relevant alarms, measurements, and diagnostics remain acceptable.</li>
+<li>The test does not bypass safety requirements or create additional hazards.</li>
+<li>The result is documented.</li>
+<li>Recurrence is reviewed over a period or operating exposure appropriate to the failure.</li>
+</ol>
+<p>For a fault that previously occurred once every few days, a brief no-load test may be insufficient. Verification should reflect the expected conditions and frequency of the original event, while remaining within approved operational limits.</p>
+<h2 id="16-maintenance-record-template">16. Maintenance Record Template</h2>
+<p>Use a consistent record for recurring or intermittent events in a breakdown log, SAP notification, or RCA database.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Event ID</td>
+<td>Unique identifier for the failure event</td>
+</tr>
+<tr>
+<td>Asset and component</td>
+<td>Machine number and relevant device tag</td>
+</tr>
+<tr>
+<td>First abnormal timestamp</td>
+<td>Earliest known abnormal event</td>
+</tr>
+<tr>
+<td>Failure mode</td>
+<td>Specific function or behavior that failed</td>
+</tr>
+<tr>
+<td>Failure behavior</td>
+<td>Recurring, intermittent, permanent, degraded, or combined</td>
+</tr>
+<tr>
+<td>Operating condition</td>
+<td>Mode, speed, load, sequence step, and relevant environment</td>
+</tr>
+<tr>
+<td>Observed evidence</td>
+<td>Alarm history, trends, measurements, and physical findings</td>
+</tr>
+<tr>
+<td>Immediate action</td>
+<td>Reset, isolation, repair, or other permitted response</td>
+</tr>
+<tr>
+<td>Previous related event</td>
+<td>Earlier event ID or <code>No known previous event</code></td>
+</tr>
+<tr>
+<td>Confirmed cause</td>
+<td>Verified cause or <code>Not yet confirmed</code></td>
+</tr>
+<tr>
+<td>Corrective action</td>
+<td>Actual repair or engineered change</td>
+</tr>
+<tr>
+<td>Verification result</td>
+<td>Evidence that the function and relevant conditions are acceptable</td>
+</tr>
+<tr>
+<td>Effectiveness review</td>
+<td>Planned or completed review for recurrence</td>
+</tr>
+</tbody>
+</table>
+<p>Record facts first. Avoid writing “loose wire caused fault” if the wire was not inspected or tested. Use wording such as “Intermittent input observed; wiring inspection pending” until evidence supports a stronger conclusion.</p>
+<h2 id="17-common-troubleshooting-mistakes">17. Common Troubleshooting Mistakes</h2>
+<ul>
+<li>Treating every repeat alarm as proof of an identical root cause.</li>
+<li>Replacing components without capturing evidence.</li>
+<li>Clearing fault history before reviewing it.</li>
+<li>Assuming a normal condition after reset means the system is healthy.</li>
+<li>Using monitoring tools whose sampling interval cannot capture the event.</li>
+<li>Ignoring operating conditions and sequence timing.</li>
+<li>Failing to distinguish primary faults from secondary alarms.</li>
+<li>Changing several parameters at once, making the effect of each change unclear.</li>
+<li>Testing under conditions that do not reproduce the original fault.</li>
+<li>Closing a breakdown without defining how recurrence will be monitored.</li>
+<li>Using repeated resets as a substitute for an investigation.</li>
+<li>Performing unsafe live checks or bypassing protective functions to reproduce a fault.</li>
+</ul>
+<h2 id="18-interview-questions-and-answers">18. Interview Questions and Answers</h2>
+<h3 id="q1-what-is-the-difference-between-recurring-and-intermittent-failure">Q1. What is the difference between recurring and intermittent failure?</h3>
+<p>A recurring failure happens again after a previous event has been restored. An intermittent failure appears and disappears, often depending on changing operating conditions. A fault can exhibit both behaviors.</p>
+<h3 id="q2-why-are-intermittent-faults-difficult-to-diagnose">Q2. Why are intermittent faults difficult to diagnose?</h3>
+<p>They may disappear before measurements are taken, diagnostic records may be lost during a reset, and the triggering condition may be temporary or difficult to reproduce.</p>
+<h3 id="q3-what-is-the-first-action-when-the-same-breakdown-returns">Q3. What is the first action when the same breakdown returns?</h3>
+<p>Confirm the failure mode, preserve diagnostic evidence, compare the new event with previous records, and review the previous corrective action before repeating it.</p>
+<h3 id="q4-why-is-resetting-a-drive-not-considered-a-permanent-corrective-action">Q4. Why is resetting a drive not considered a permanent corrective action?</h3>
+<p>A reset may clear the drive's fault state without removing the condition that triggered the trip. The cause must be investigated and the correction verified.</p>
+<h3 id="q5-how-would-you-troubleshoot-an-intermittent-plc-input">Q5. How would you troubleshoot an intermittent PLC input?</h3>
+<p>Compare the field sensor state with the PLC input, capture transitions and timestamps, inspect the wiring and supply conditions using approved procedures, and evaluate the input channel, filtering, and application logic.</p>
+<h3 id="q6-how-would-you-investigate-recurring-communication-faults">Q6. How would you investigate recurring communication faults?</h3>
+<p>Review the first relevant event, device and port diagnostics, network topology, power conditions, cable integrity, configuration, and operating-state correlation. Determine whether the communication alarm is primary or secondary.</p>
+<h3 id="q7-how-do-you-prove-a-corrective-action-is-effective">Q7. How do you prove a corrective action is effective?</h3>
+<p>Verify the required function under representative operating conditions, confirm the relevant fault mechanism or causal condition has been addressed, and monitor subsequent operation for recurrence.</p>
+<h3 id="q8-what-is-the-danger-of-assuming-the-same-alarm-means-the-same-fault">Q8. What is the danger of assuming the same alarm means the same fault?</h3>
+<p>Different underlying failures can produce the same alarm. Assuming an identical cause can lead to unnecessary part replacement, missed defects, and repeated downtime.</p>
+<h3 id="q9-what-information-is-most-useful-for-an-intermittent-fault">Q9. What information is most useful for an intermittent fault?</h3>
+<p>The first abnormal timestamp, sequence state, operating conditions, diagnostic history, relevant signal trends, fault duration, and evidence showing what changed immediately before the event.</p>
+<h3 id="q10-how-can-failure-history-improve-reliability">Q10. How can failure history improve reliability?</h3>
+<p>Standardized records allow maintenance teams to identify recurring modes, compare failure rates, detect common conditions, prioritize improvements, and verify whether corrective actions reduce repeat events.</p>
+<h2 id="19-practical-completion-checklist">19. Practical Completion Checklist</h2>
+<ul>
+<li>Failure behavior is classified using recorded evidence.</li>
+<li>Recurrence is distinguished from temporary loss and restoration of function.</li>
+<li>The actual failure mode is recorded separately from the alarm or symptom.</li>
+<li>Previous failure events and repair records have been reviewed.</li>
+<li>Relevant timestamps and operating conditions are captured.</li>
+<li>Primary events are distinguished from secondary alarms where possible.</li>
+<li>Diagnostic evidence is preserved before resets or configuration changes.</li>
+<li>Testing follows approved electrical, machine, and safety procedures.</li>
+<li>The corrective action addresses the verified condition.</li>
+<li>Restoration is verified under representative operating conditions.</li>
+<li>Recurrence or event frequency will be monitored where appropriate.</li>
+<li>The maintenance record is detailed enough to support future analysis.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\20_RCA\09_Error_Categories\01_Human - Human</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Probing in CNC Machining</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Probing in CNC Machining</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and scope</a></li>
+<li><a href="#2-probing-gauging-and-metrology">2. Probing, gauging, and metrology</a></li>
+<li><a href="#3-types-of-cnc-probing-systems">3. Types of CNC probing systems</a><ul>
+<li><a href="#31-touch-trigger-probe">3.1 Touch-trigger probe</a></li>
+<li><a href="#32-tool-setting-probe">3.2 Tool-setting probe</a></li>
+<li><a href="#33-non-contact-laser-measurement">3.3 Non-contact laser measurement</a></li>
+<li><a href="#34-scanning-probe">3.4 Scanning probe</a></li>
+<li><a href="#35-contact-and-non-contact-sensors">3.5 Contact and non-contact sensors</a></li>
+</ul>
+</li>
+<li><a href="#4-main-components-of-a-cnc-probing-system">4. Main components of a CNC probing system</a></li>
+<li><a href="#5-workpiece-coordinate-systems-and-datum-setting">5. Workpiece coordinate systems and datum setting</a><ul>
+<li><a href="#51-datum-finding">5.1 Datum finding</a></li>
+<li><a href="#52-establishing-a-work-offset">5.2 Establishing a work offset</a></li>
+</ul>
+</li>
+<li><a href="#6-probe-calibration">6. Probe calibration</a><ul>
+<li><a href="#61-why-calibration-is-required">6.1 Why calibration is required</a></li>
+<li><a href="#62-typical-calibration-procedure">6.2 Typical calibration procedure</a></li>
+<li><a href="#63-calibration-sphere-or-reference-artifact">6.3 Calibration sphere or reference artifact</a></li>
+<li><a href="#64-calibration-frequency">6.4 Calibration frequency</a></li>
+</ul>
+</li>
+<li><a href="#7-common-probing-cycles">7. Common probing cycles</a></li>
+<li><a href="#8-probe-motion-and-measurement-strategy">8. Probe motion and measurement strategy</a><ul>
+<li><a href="#81-approach-direction">8.1 Approach direction</a></li>
+<li><a href="#82-approach-feed">8.2 Approach feed</a></li>
+<li><a href="#83-retract-and-clearance">8.3 Retract and clearance</a></li>
+<li><a href="#84-multiple-point-measurement">8.4 Multiple-point measurement</a></li>
+</ul>
+</li>
+<li><a href="#9-measurement-accuracy-repeatability-and-uncertainty">9. Measurement accuracy, repeatability, and uncertainty</a><ul>
+<li><a href="#91-sources-of-measurement-error">9.1 Sources of measurement error</a></li>
+<li><a href="#92-repeatability-test">9.2 Repeatability test</a></li>
+</ul>
+</li>
+<li><a href="#10-probing-and-tool-compensation">10. Probing and tool compensation</a><ul>
+<li><a href="#101-work-offset-correction">10.1 Work offset correction</a></li>
+<li><a href="#102-tool-offset-correction">10.2 Tool offset correction</a></li>
+<li><a href="#103-automatic-compensation-safeguards">10.3 Automatic compensation safeguards</a></li>
+</ul>
+</li>
+<li><a href="#11-cnc-controller-and-plc-integration">11. CNC controller and PLC integration</a><ul>
+<li><a href="#111-typical-interface-signals">11.1 Typical interface signals</a></li>
+<li><a href="#112-failure-handling">11.2 Failure handling</a></li>
+<li><a href="#113-troubleshooting-probe-signals">11.3 Troubleshooting probe signals</a></li>
+</ul>
+</li>
+<li><a href="#12-probing-applications-in-production">12. Probing applications in production</a><ul>
+<li><a href="#121-first-piece-setup-verification">12.1 First-piece setup verification</a></li>
+<li><a href="#122-in-process-verification">12.2 In-process verification</a></li>
+<li><a href="#123-fixture-and-component-presence-detection">12.3 Fixture and component presence detection</a></li>
+<li><a href="#124-machine-and-fixture-verification">12.4 Machine and fixture verification</a></li>
+</ul>
+</li>
+<li><a href="#13-common-probing-faults-and-troubleshooting">13. Common probing faults and troubleshooting</a></li>
+<li><a href="#14-collision-recovery-and-probe-protection">14. Collision recovery and probe protection</a></li>
+<li><a href="#15-probe-related-quality-problems">15. Probe-related quality problems</a></li>
+<li><a href="#16-measurement-system-verification-and-capability">16. Measurement-system verification and capability</a></li>
+<li><a href="#17-probing-data-and-industry-40-integration">17. Probing data and Industry 4.0 integration</a><ul>
+<li><a href="#171-useful-applications">17.1 Useful applications</a></li>
+<li><a href="#172-data-quality-controls">17.2 Data-quality controls</a></li>
+</ul>
+</li>
+<li><a href="#18-documentation-and-maintenance-records">18. Documentation and maintenance records</a></li>
+<li><a href="#19-practical-exercises">19. Practical exercises</a><ul>
+<li><a href="#exercise-1-verify-probe-readiness">Exercise 1: Verify probe readiness</a></li>
+<li><a href="#exercise-2-establish-a-workpiece-datum">Exercise 2: Establish a workpiece datum</a></li>
+<li><a href="#exercise-3-investigate-inconsistent-bore-measurements">Exercise 3: Investigate inconsistent bore measurements</a></li>
+<li><a href="#exercise-4-audit-automatic-offset-correction">Exercise 4: Audit automatic offset correction</a></li>
+</ul>
+</li>
+<li><a href="#20-competency-checklist">20. Competency checklist</a></li>
+<li><a href="#21-technical-summary">21. Technical summary</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-and-scope">1. Purpose and scope</h2>
+<p>Probing is the use of a measurement device, commonly a touch-trigger probe or non-contact sensor, to detect the position, geometry, or condition of a workpiece, tool, or machine reference. CNC probing allows a machine to collect measurement information and use it to establish coordinates, correct positioning, verify setup, or inspect selected features.</p>
+<p>In a CNC machining environment, probing helps reduce manual setting time, improve repeatability, detect setup errors, and support automated production.</p>
+<p>Typical applications include:</p>
+<ul>
+<li>Workpiece setting: Determine the location and orientation of a component before machining.</li>
+<li>Workpiece alignment: Calculate workpiece rotation or angular misalignment.</li>
+<li>Coordinate setting: Establish work offsets and workpiece coordinate systems.</li>
+<li>Feature measurement: Measure surfaces, bores, bosses, pockets, and other accessible features.</li>
+<li>In-process inspection: Check selected dimensions between machining operations.</li>
+<li>Tool measurement: Measure tool length, diameter, or tool condition using suitable tool-setting equipment.</li>
+<li>Process correction: Apply approved coordinate or dimensional corrections based on measured results.</li>
+<li>Error detection: Identify missing components, incorrect setups, or features outside defined limits.</li>
+<li>Automated verification: Confirm that required conditions are satisfied before a subsequent machining operation.</li>
+</ul>
+<p>Probing is not the same as final metrology. A probe can provide useful measurements for machine setup and process control, but its accuracy depends on the probe system, machine condition, calibration, measurement strategy, temperature, surface condition, and control software.</p>
+<h2 id="2-probing-gauging-and-metrology">2. Probing, gauging, and metrology</h2>
+<p>These terms are related but serve different purposes.</p>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Main purpose</th>
+<th>Typical example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Probing</td>
+<td>Detects a surface or feature and reports its position or geometry</td>
+<td>CNC touch probe measuring a bore centre</td>
+</tr>
+<tr>
+<td>Gauging</td>
+<td>Checks a dimension or condition against a defined requirement</td>
+<td>Go/no-go plug gauge checking a hole</td>
+</tr>
+<tr>
+<td>Metrology</td>
+<td>Science and practice of measurement, including traceability and uncertainty</td>
+<td>CMM inspection of a machined component</td>
+</tr>
+<tr>
+<td>Tool setting</td>
+<td>Measures tool geometry or a reference position</td>
+<td>Tool setter measuring tool length</td>
+</tr>
+<tr>
+<td>In-process inspection</td>
+<td>Checks a feature during or between manufacturing operations</td>
+<td>Probe checks a machined datum before finishing</td>
+</tr>
+<tr>
+<td>Final inspection</td>
+<td>Verifies product conformity according to the inspection plan</td>
+<td>CMM or approved inspection equipment verifies final dimensions</td>
+</tr>
+</tbody>
+</table>
+<p>A CNC probe may support in-process inspection, but its results should not automatically replace a specified final inspection method. The inspection plan, drawing requirements, measurement uncertainty, and customer requirements determine whether the result is acceptable evidence of conformity.</p>
+<h2 id="3-types-of-cnc-probing-systems">3. Types of CNC probing systems</h2>
+<h3 id="31-touch-trigger-probe">3.1 Touch-trigger probe</h3>
+<p>A touch-trigger probe detects contact with a surface and generates a trigger signal when the probe stylus deflects sufficiently.</p>
+<p>Common components include:</p>
+<ul>
+<li>Probe body and internal sensing mechanism.</li>
+<li>Stylus and stylus tip.</li>
+<li>Trigger electronics.</li>
+<li>Wireless or wired signal transmission.</li>
+<li>CNC interface or receiver.</li>
+<li>Probe cycles and measurement software.</li>
+</ul>
+<p>Touch-trigger probes are widely used for workpiece setting, bore measurement, datum finding, and selected in-process checks.</p>
+<p>The trigger occurs after a defined mechanical displacement. This means the contact point and trigger point are not necessarily identical, and calibration is required to compensate for systematic effects.</p>
+<h3 id="32-tool-setting-probe">3.2 Tool-setting probe</h3>
+<p>A tool setter measures tool length, tool diameter, or a defined tool reference, depending on its design.</p>
+<p>Common configurations include contact-based setters and non-contact laser systems.</p>
+<p>Typical applications:</p>
+<ul>
+<li>Tool length measurement.</li>
+<li>Tool diameter measurement.</li>
+<li>Tool breakage detection.</li>
+<li>Tool wear monitoring where the system and process support it.</li>
+<li>Verification that the loaded tool matches expected geometry.</li>
+</ul>
+<p>A tool setter is not interchangeable with a workpiece probe. Their sensing arrangements, calibration requirements, and intended applications differ.</p>
+<h3 id="33-non-contact-laser-measurement">3.3 Non-contact laser measurement</h3>
+<p>Laser-based systems measure tool dimensions or detect tool presence without physically touching the cutting edge.</p>
+<p>They can be useful for small tools, high-speed applications, and tool-breakage detection.</p>
+<p>Performance can be affected by contamination, coolant, chips, optical alignment, tool surface characteristics, and the measurement system's design.</p>
+<h3 id="34-scanning-probe">3.4 Scanning probe</h3>
+<p>A scanning probe collects measurement data while the stylus moves along a surface, rather than relying only on discrete trigger points.</p>
+<p>Scanning systems can support more detailed surface or geometric measurement, but require compatible hardware, software, calibration, and suitable CNC motion strategies.</p>
+<h3 id="35-contact-and-non-contact-sensors">3.5 Contact and non-contact sensors</h3>
+<table>
+<thead>
+<tr>
+<th>Sensor type</th>
+<th>Measurement principle</th>
+<th>Typical considerations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Touch-trigger probe</td>
+<td>Mechanical contact generates a trigger</td>
+<td>Stylus condition, trigger repeatability, calibration</td>
+</tr>
+<tr>
+<td>Tool setter</td>
+<td>Contact or other sensing method measures tool geometry</td>
+<td>Tool approach direction, wear, contamination</td>
+</tr>
+<tr>
+<td>Laser tool measurement</td>
+<td>Optical system detects tool edges or presence</td>
+<td>Optical cleanliness, alignment, coolant and chip contamination</td>
+</tr>
+<tr>
+<td>Scanning probe</td>
+<td>Continuous contact measurement during motion</td>
+<td>Dynamic performance, surface condition, calibration</td>
+</tr>
+<tr>
+<td>Vision or optical system</td>
+<td>Image-based feature detection</td>
+<td>Lighting, optics, contrast, software and calibration</td>
+</tr>
+</tbody>
+</table>
+<p>The appropriate system depends on the feature, machine configuration, required tolerance, and measurement strategy.</p>
+<h2 id="4-main-components-of-a-cnc-probing-system">4. Main components of a CNC probing system</h2>
+<p>A complete probing installation combines the sensing device, communication interface, CNC software, calibration data, and measurement logic.</p>
+<pre><code>Workpiece or tool
+        ↓
+Probe stylus / sensor
+        ↓
+Probe electronics
+        ↓
+Wired or wireless transmission
+        ↓
+Receiver / CNC interface
+        ↓
+CNC control and probing cycle
+        ↓
+Measurement result
+        ↓
+Coordinate update / process decision
+        ↓
+CNC program continuation or alarm
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Function</th>
+<th>Common failure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Probe body</td>
+<td>Houses the sensing mechanism</td>
+<td>Internal damage or trigger instability</td>
+</tr>
+<tr>
+<td>Stylus</td>
+<td>Contacts the workpiece or feature</td>
+<td>Bending, wear, looseness, contamination</td>
+</tr>
+<tr>
+<td>Probe tip</td>
+<td>Provides the contact geometry</td>
+<td>Damage, incorrect size, unsuitable material</td>
+</tr>
+<tr>
+<td>Probe interface</td>
+<td>Connects probe signals to the machine control</td>
+<td>Wiring fault, power issue, configuration error</td>
+</tr>
+<tr>
+<td>Wireless receiver</td>
+<td>Receives probe transmissions where fitted</td>
+<td>Interference, poor signal, incorrect pairing</td>
+</tr>
+<tr>
+<td>CNC probing cycle</td>
+<td>Controls motion and interprets trigger events</td>
+<td>Incorrect parameters or unsupported cycle</td>
+</tr>
+<tr>
+<td>Calibration data</td>
+<td>Compensates for known probe and stylus characteristics</td>
+<td>Outdated or incorrect calibration</td>
+</tr>
+<tr>
+<td>Work offset table</td>
+<td>Stores workpiece coordinate references</td>
+<td>Wrong offset selected or incorrect update</td>
+</tr>
+<tr>
+<td>Tool offset table</td>
+<td>Stores tool geometry and corrections</td>
+<td>Wrong tool number or unintended offset change</td>
+</tr>
+<tr>
+<td>Diagnostic display</td>
+<td>Shows probe state and cycle status</td>
+<td>Misleading diagnosis if signals are not verified</td>
+</tr>
+</tbody>
+</table>
+<p>Probe systems may use normally open, normally closed, or dedicated electronic interfaces. The actual electrical behaviour must be taken from the probe and machine documentation. Never assume a particular contact arrangement based only on wire colour or connector appearance.</p>
+<h2 id="5-workpiece-coordinate-systems-and-datum-setting">5. Workpiece coordinate systems and datum setting</h2>
+<p>A CNC machine has machine coordinates, while a workpiece is usually programmed using a workpiece coordinate system. Probing helps establish the relationship between them.</p>
+<p>Common coordinate references include:</p>
+<ul>
+<li>Machine coordinate system: The coordinate reference defined by the machine's reference system.</li>
+<li>Workpiece coordinate system: The reference used to position features on the component.</li>
+<li>Work offset: The stored relationship between the workpiece coordinate system and the machine reference.</li>
+<li>Tool offset: A stored correction representing tool length, radius, diameter, or another defined tool characteristic.</li>
+</ul>
+<p>Common CNC work offsets include <code>G54</code> through <code>G59</code> on many controls, with additional offset systems available depending on the controller. Exact functions and supported ranges must be checked in the machine's programming manual.</p>
+<h3 id="51-datum-finding">5.1 Datum finding</h3>
+<p>A datum is a reference feature or geometric reference used to locate or orient the workpiece.</p>
+<p>A probe can locate:</p>
+<ul>
+<li>A flat surface to establish a Z reference.</li>
+<li>An edge to establish an X or Y reference.</li>
+<li>A bore to estimate its centre.</li>
+<li>A boss to estimate its centre.</li>
+<li>Multiple points to estimate an edge, plane, or angular alignment.</li>
+</ul>
+<p>A single point on a surface can establish a local contact position, but it cannot generally determine every aspect of workpiece alignment. Additional points or features are needed to determine orientation and other coordinate relationships.</p>
+<h3 id="52-establishing-a-work-offset">5.2 Establishing a work offset</h3>
+<p>A simplified setup sequence is:</p>
+<ol>
+<li>Confirm the correct workpiece, fixture, program, and work offset.</li>
+<li>Verify that the probe is correctly installed and calibrated.</li>
+<li>Load the approved probing cycle.</li>
+<li>Approach the target feature using the prescribed safe path.</li>
+<li>Capture the required measurement points.</li>
+<li>Calculate the reference position or alignment.</li>
+<li>Validate the result and confirm the intended offset update.</li>
+<li>Verify the setup before machining.</li>
+</ol>
+<p>A probe should not update a work offset without a clearly defined reason and approved logic. An incorrect automatic offset can shift every subsequent feature, potentially damaging the component or machine.</p>
+<h2 id="6-probe-calibration">6. Probe calibration</h2>
+<p>Calibration establishes the relationship between probe trigger behaviour and the measured position. It is essential because the stylus, trigger mechanism, probe orientation, and machine motion can introduce systematic effects.</p>
+<p>Calibration is different from merely confirming that the probe produces a trigger signal.</p>
+<h3 id="61-why-calibration-is-required">6.1 Why calibration is required</h3>
+<p>Calibration may compensate for:</p>
+<ul>
+<li>Stylus ball radius.</li>
+<li>Trigger characteristics.</li>
+<li>Probe orientation and directional effects.</li>
+<li>Stylus replacement or configuration changes.</li>
+<li>Systematic measurement offsets.</li>
+<li>Machine-specific probing-cycle requirements.</li>
+</ul>
+<p>The required calibration procedure depends on the probe type, controller, machine builder, and intended measurement cycle.</p>
+<h3 id="62-typical-calibration-procedure">6.2 Typical calibration procedure</h3>
+<ol>
+<li>Verify the probe model, stylus configuration, and approved calibration artifact.</li>
+<li>Inspect the stylus for bending, damage, contamination, or looseness.</li>
+<li>Check that the probe is mounted correctly.</li>
+<li>Clean the calibration artifact and relevant contact surfaces.</li>
+<li>Run the machine builder's approved calibration cycle.</li>
+<li>Confirm that the calibration result falls within the defined acceptance limits.</li>
+<li>Record the calibration status and relevant configuration.</li>
+<li>Repeat calibration when required after a stylus change, collision, repair, or other specified event.</li>
+</ol>
+<p>Do not invent calibration constants or reuse another machine's values without an approved technical basis.</p>
+<h3 id="63-calibration-sphere-or-reference-artifact">6.3 Calibration sphere or reference artifact</h3>
+<p>Some probing systems use a calibrated sphere or another known reference feature. The system measures the artifact and uses its known geometry to establish probe characteristics.</p>
+<p>The artifact must be suitable for the probe system and maintained with appropriate cleanliness and traceability. A damaged, contaminated, or incorrectly identified artifact can invalidate the calibration.</p>
+<h3 id="64-calibration-frequency">6.4 Calibration frequency</h3>
+<p>Calibration frequency should be defined by the equipment manufacturer, measurement plan, process capability requirements, and history of probe stability.</p>
+<p>Additional calibration or verification may be required after:</p>
+<ul>
+<li>Probe or stylus replacement.</li>
+<li>Probe collision.</li>
+<li>Machine or spindle service affecting measurement.</li>
+<li>Fixture changes.</li>
+<li>Abnormal measurement results.</li>
+<li>A prolonged shutdown or environmental change, where required by the procedure.</li>
+</ul>
+<h2 id="7-common-probing-cycles">7. Common probing cycles</h2>
+<p>CNC controllers provide probing cycles for common geometric tasks. Cycle names, parameters, and behaviour vary by controller and software version.</p>
+<table>
+<thead>
+<tr>
+<th>Cycle type</th>
+<th>Purpose</th>
+<th>Key consideration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Surface measurement</td>
+<td>Finds a surface reference</td>
+<td>Correct approach direction and contact point</td>
+</tr>
+<tr>
+<td>Edge measurement</td>
+<td>Locates an edge</td>
+<td>Correct feature orientation and clearance</td>
+</tr>
+<tr>
+<td>Bore measurement</td>
+<td>Estimates an internal diameter and centre</td>
+<td>Suitable probing points and bore geometry</td>
+</tr>
+<tr>
+<td>Boss measurement</td>
+<td>Estimates an external diameter and centre</td>
+<td>Correct contact strategy and access</td>
+</tr>
+<tr>
+<td>Web or pocket measurement</td>
+<td>Locates a feature between opposing surfaces</td>
+<td>Correct geometry and contact sequence</td>
+</tr>
+<tr>
+<td>Corner measurement</td>
+<td>Locates a corner or intersection</td>
+<td>Surface accessibility and corner geometry</td>
+</tr>
+<tr>
+<td>Plane measurement</td>
+<td>Estimates plane position and orientation from multiple points</td>
+<td>Point distribution and surface condition</td>
+</tr>
+<tr>
+<td>Angular alignment</td>
+<td>Estimates workpiece rotation relative to the machine</td>
+<td>Adequate separation between measured points</td>
+</tr>
+<tr>
+<td>Tool length measurement</td>
+<td>Measures tool length relative to a reference</td>
+<td>Correct tool setter and tool identity</td>
+</tr>
+<tr>
+<td>Tool breakage check</td>
+<td>Detects a missing or broken tool feature</td>
+<td>Detection limits and cycle reliability</td>
+</tr>
+<tr>
+<td>In-process dimension check</td>
+<td>Measures a selected feature after machining</td>
+<td>Validated measurement method and correction logic</td>
+</tr>
+</tbody>
+</table>
+<p>Probing cycles must be selected from the correct controller documentation. A cycle number or parameter set from one control family may have a different meaning on another.</p>
+<h2 id="8-probe-motion-and-measurement-strategy">8. Probe motion and measurement strategy</h2>
+<p>A probing cycle typically moves the probe toward a target, detects a trigger, records the relevant machine position, and calculates a result. Some cycles use multiple approach or retract moves to measure additional points.</p>
+<p>A simplified sequence is:</p>
+<pre><code>Cycle start
+    ↓
+Check probe and cycle conditions
+    ↓
+Move to safe approach position
+    ↓
+Approach target at specified feed
+    ↓
+Detect contact / trigger
+    ↓
+Record machine position
+    ↓
+Retract and measure additional points
+    ↓
+Calculate feature or coordinate result
+    ↓
+Check result against permitted limits
+    ↓
+Update approved data or generate alarm
+</code></pre>
+<h3 id="81-approach-direction">8.1 Approach direction</h3>
+<p>The approach direction must be suitable for the target feature and probe configuration. The probe should not strike fixtures, clamps, other tools, or unrelated surfaces.</p>
+<h3 id="82-approach-feed">8.2 Approach feed</h3>
+<p>The probing feed must follow the approved cycle and probe specification. Excessive feed can increase impact forces or measurement error, while an unsuitable low feed may affect cycle performance or trigger behaviour.</p>
+<h3 id="83-retract-and-clearance">8.3 Retract and clearance</h3>
+<p>After contact, the probe generally retracts before repositioning. Safe clearance is essential to prevent collision with the workpiece, fixture, or machine.</p>
+<p>Clearance must be based on actual geometry and motion limits, not assumptions about the nominal part size.</p>
+<h3 id="84-multiple-point-measurement">8.4 Multiple-point measurement</h3>
+<p>Multiple measurements can improve the estimate of a feature's position or orientation when the points are correctly selected.</p>
+<p>However, simply increasing the number of points does not guarantee a better result. Poorly distributed points, contamination, geometric defects, or systematic machine errors can bias the calculation.</p>
+<h2 id="9-measurement-accuracy-repeatability-and-uncertainty">9. Measurement accuracy, repeatability, and uncertainty</h2>
+<p>Probing performance depends on more than the resolution displayed by the CNC control.</p>
+<p>Important terms include:</p>
+<ul>
+<li>Accuracy: Closeness of a measured result to the accepted reference value.</li>
+<li>Repeatability: Agreement among repeated measurements under the same conditions.</li>
+<li>Resolution: The smallest increment that the system can display or distinguish.</li>
+<li>Bias: A systematic difference between measured results and a reference.</li>
+<li>Measurement uncertainty: A quantified expression of the doubt associated with a measurement result.</li>
+<li>Reproducibility: Agreement when measurement conditions change, such as operator, setup, or environment.</li>
+</ul>
+<p>A probe may repeat the same result consistently while still being systematically wrong. Calibration helps address certain systematic effects, but it does not eliminate every source of measurement uncertainty.</p>
+<h3 id="91-sources-of-measurement-error">9.1 Sources of measurement error</h3>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Possible effect</th>
+<th>Control measure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Damaged or bent stylus</td>
+<td>Incorrect contact position</td>
+<td>Inspect and replace as required</td>
+</tr>
+<tr>
+<td>Incorrect calibration</td>
+<td>Systematic measurement error</td>
+<td>Recalibrate using the approved method</td>
+</tr>
+<tr>
+<td>Chips on the surface</td>
+<td>False contact or incorrect surface detection</td>
+<td>Clean the feature before measurement</td>
+</tr>
+<tr>
+<td>Coolant film or contamination</td>
+<td>Contact instability or surface-detection effects</td>
+<td>Apply the approved cleaning and measurement procedure</td>
+</tr>
+<tr>
+<td>Thermal expansion</td>
+<td>Dimensional drift</td>
+<td>Control temperature and follow the measurement plan</td>
+</tr>
+<tr>
+<td>Machine geometric error</td>
+<td>Position-dependent measurement error</td>
+<td>Maintain and verify machine geometry</td>
+</tr>
+<tr>
+<td>Backlash or motion behaviour</td>
+<td>Direction-dependent effects</td>
+<td>Follow the OEM probing strategy and machine maintenance requirements</td>
+</tr>
+<tr>
+<td>Probe trigger variation</td>
+<td>Differences in recorded trigger position</td>
+<td>Use the correct probe configuration and calibration</td>
+</tr>
+<tr>
+<td>Loose fixture</td>
+<td>Changing workpiece position</td>
+<td>Inspect clamping and fixture condition</td>
+</tr>
+<tr>
+<td>Incorrect measurement cycle</td>
+<td>Wrong geometry or offset calculation</td>
+<td>Validate cycle parameters and controller compatibility</td>
+</tr>
+</tbody>
+</table>
+<h3 id="92-repeatability-test">9.2 Repeatability test</h3>
+<p>A basic verification may involve measuring the same reference feature repeatedly under controlled conditions.</p>
+<p>Calculate the measurement range as:</p>
+<div class="math-display">\[ \text{Range} = \text{Maximum reading} - \text{Minimum reading} \]</div>
+<p>A small range suggests good short-term repeatability under the test conditions, but it does not independently establish accuracy or suitability for a specified tolerance.</p>
+<p>The acceptance limit should come from the approved machine or measurement-system verification procedure.</p>
+<h2 id="10-probing-and-tool-compensation">10. Probing and tool compensation</h2>
+<p>Probing can support controlled adjustments to tool or workpiece data, but the type of correction matters.</p>
+<h3 id="101-work-offset-correction">10.1 Work offset correction</h3>
+<p>Work offset correction changes the coordinate relationship between the machine and the workpiece.</p>
+<p>It may be appropriate when the workpiece is positioned differently from its nominal setup or when an approved datum measurement establishes a correction.</p>
+<h3 id="102-tool-offset-correction">10.2 Tool offset correction</h3>
+<p>Tool offset correction changes the stored tool geometry or a permitted wear value. This may be appropriate when a validated measurement indicates a tool-length or diameter deviation.</p>
+<p>Tool offset changes must follow the control's conventions. On some CNC systems, geometry and wear are stored separately, and the effect of changing either field depends on the programming and compensation method.</p>
+<h3 id="103-automatic-compensation-safeguards">10.3 Automatic compensation safeguards</h3>
+<p>Automatic correction logic should define:</p>
+<ul>
+<li>Which offset is allowed to change.</li>
+<li>The maximum permitted correction.</li>
+<li>The conditions required before correction.</li>
+<li>The response when a measurement is outside the permitted range.</li>
+<li>Whether a correction requires operator approval.</li>
+<li>How the correction is recorded.</li>
+<li>What happens if the probe fails or produces an implausible result.</li>
+</ul>
+<p>A probe should not automatically compensate for every measurement error. A large deviation may indicate a misplaced component, wrong tool, incorrect fixture, probe fault, or machine problem that requires investigation rather than correction.</p>
+<h2 id="11-cnc-controller-and-plc-integration">11. CNC controller and PLC integration</h2>
+<p>A probing system can interact with CNC cycles, PLC logic, machine interlocks, and tool or work offset tables.</p>
+<p>The CNC usually manages the probing motion and measurement calculations, while the PLC may manage probe enable conditions, machine-state signals, doors, clamping, tool-change coordination, and alarms. The exact division of responsibility depends on the machine architecture.</p>
+<h3 id="111-typical-interface-signals">11.1 Typical interface signals</h3>
+<table>
+<thead>
+<tr>
+<th>Signal or function</th>
+<th>Purpose</th>
+<th>Maintenance consideration</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Probe ready</td>
+<td>Indicates the probe system is available</td>
+<td>Verify interface status and probe configuration</td>
+</tr>
+<tr>
+<td>Probe trigger</td>
+<td>Indicates contact or a detected event</td>
+<td>Check signal transitions and expected behaviour</td>
+</tr>
+<tr>
+<td>Probe enable</td>
+<td>Activates the intended probe mode</td>
+<td>Confirm cycle requirements and machine state</td>
+</tr>
+<tr>
+<td>Probe fault</td>
+<td>Reports a probe-system abnormality</td>
+<td>Check diagnostic codes and interface status</td>
+</tr>
+<tr>
+<td>Receiver status</td>
+<td>Indicates wireless communication condition where applicable</td>
+<td>Check battery, pairing, range, and interference</td>
+</tr>
+<tr>
+<td>Calibration status</td>
+<td>Indicates a defined calibration condition where supported</td>
+<td>Confirm that the value is current and valid</td>
+</tr>
+<tr>
+<td>CNC cycle active</td>
+<td>Indicates that a probing cycle is in progress</td>
+<td>Confirm sequence and interruption handling</td>
+</tr>
+<tr>
+<td>Work offset update</td>
+<td>Stores an approved coordinate correction</td>
+<td>Verify the intended offset and permitted limits</td>
+</tr>
+<tr>
+<td>Measurement result</td>
+<td>Holds the measured value or calculated feature</td>
+<td>Check units, sign convention, and result validity</td>
+</tr>
+<tr>
+<td>Measurement out-of-limit</td>
+<td>Indicates a failed acceptance check</td>
+<td>Follow the defined recovery and inspection procedure</td>
+</tr>
+</tbody>
+</table>
+<p>Not all systems expose every signal as a PLC bit. Some probe states and measurement values exist only within the CNC control or dedicated probe software.</p>
+<h3 id="112-failure-handling">11.2 Failure handling</h3>
+<p>A robust probing sequence should account for:</p>
+<ul>
+<li>Probe not ready before cycle start.</li>
+<li>No trigger within the permitted travel.</li>
+<li>Unexpected trigger before reaching the intended feature.</li>
+<li>Probe failure during a measurement sequence.</li>
+<li>Invalid or implausible calculated results.</li>
+<li>Workpiece movement during measurement.</li>
+<li>Incorrect or unavailable calibration data.</li>
+<li>Offset values outside the approved correction range.</li>
+</ul>
+<p>If a measurement fails, the system should stop or transition to a defined recovery state. It should not continue machining using an invalid result.</p>
+<h3 id="113-troubleshooting-probe-signals">11.3 Troubleshooting probe signals</h3>
+<p>A disciplined diagnostic sequence is:</p>
+<ol>
+<li>Record the CNC alarm and the exact cycle step.</li>
+<li>Confirm the probe model, stylus, and receiver configuration.</li>
+<li>Inspect the probe and target surface for damage or contamination.</li>
+<li>Check the probe's ready and trigger indications using the OEM diagnostic screens.</li>
+<li>Confirm the relevant interface signal changes when the probe is operated according to the approved test procedure.</li>
+<li>Check communication, battery, power, connectors, and wiring as applicable.</li>
+<li>Verify calibration and cycle parameters.</li>
+<li>Run the approved reference measurement and compare the result with the acceptance criteria.</li>
+<li>Record the confirmed cause and validate the repair.</li>
+</ol>
+<p>Do not short interface terminals or force trigger signals without an approved electrical test procedure. A forced signal can make the control believe a physical measurement occurred when it did not.</p>
+<h2 id="12-probing-applications-in-production">12. Probing applications in production</h2>
+<h3 id="121-first-piece-setup-verification">12.1 First-piece setup verification</h3>
+<p>Before full production, probing can verify that the workpiece is correctly located and that the intended datum references are established.</p>
+<p>A typical process is:</p>
+<ol>
+<li>Load and clamp the correct component.</li>
+<li>Verify the fixture and workpiece identity.</li>
+<li>Probe the specified reference features.</li>
+<li>Compare the results with the allowed setup range.</li>
+<li>Establish the approved work offset.</li>
+<li>Machine the first piece.</li>
+<li>Inspect the required features using the approved inspection method.</li>
+<li>Release production only when the required checks are satisfied.</li>
+</ol>
+<h3 id="122-in-process-verification">12.2 In-process verification</h3>
+<p>Probing between machining stages can detect selected dimensional changes before the component reaches final inspection.</p>
+<p>Examples include checking a bore after rough machining, verifying a reference surface before finishing, or confirming that a component remains correctly located.</p>
+<p>The measurement strategy must consider whether the probe can access the feature reliably and whether the measured condition represents the final dimension of interest.</p>
+<h3 id="123-fixture-and-component-presence-detection">12.3 Fixture and component presence detection</h3>
+<p>Probing may be used to verify that a component or selected feature is present in the expected location.</p>
+<p>However, a probe-based presence check must be designed to avoid collisions and false acceptance. A detected surface alone may not prove that the correct part is loaded or that all required clamping conditions are satisfied.</p>
+<h3 id="124-machine-and-fixture-verification">12.4 Machine and fixture verification</h3>
+<p>In appropriate systems, probing can check reference artifacts, fixture datums, or selected machine-related features. Such checks may help identify changes caused by fixture movement, collision, or maintenance.</p>
+<p>They do not replace formal machine geometry verification or calibration where those are required.</p>
+<h2 id="13-common-probing-faults-and-troubleshooting">13. Common probing faults and troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible causes</th>
+<th>Diagnostic approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Probe does not trigger</td>
+<td>Probe disabled, incorrect interface, power issue, damaged sensor</td>
+<td>Check probe status, interface diagnostics, and approved test procedure</td>
+</tr>
+<tr>
+<td>Probe triggers immediately</td>
+<td>Stylus already deflected, incorrect polarity or configuration, damaged mechanism</td>
+<td>Inspect stylus and verify interface behaviour and configuration</td>
+</tr>
+<tr>
+<td>Wireless probe disconnects</td>
+<td>Battery issue, pairing problem, communication interference</td>
+<td>Check battery, receiver status, pairing, and operating conditions</td>
+</tr>
+<tr>
+<td>Measurements vary between cycles</td>
+<td>Contamination, loose stylus, poor calibration, unstable workpiece</td>
+<td>Clean and inspect the setup, verify calibration, and repeat the approved test</td>
+</tr>
+<tr>
+<td>Bore centre is incorrect</td>
+<td>Incorrect cycle parameters, poor contact strategy, wrong feature geometry</td>
+<td>Verify the bore cycle, contact points, stylus configuration, and workpiece condition</td>
+</tr>
+<tr>
+<td>Work offset changes unexpectedly</td>
+<td>Wrong offset selected, incorrect cycle logic, unintended update</td>
+<td>Review program commands, offset selection, and update logic</td>
+</tr>
+<tr>
+<td>Tool measurement is incorrect</td>
+<td>Tool identity mismatch, incorrect reference, contamination, wrong compensation field</td>
+<td>Verify tool number, tool setter, reference condition, and offset conventions</td>
+</tr>
+<tr>
+<td>Probe collision occurs</td>
+<td>Unsafe approach path, incorrect clearance, wrong setup, unexpected geometry</td>
+<td>Stop safely, inspect for damage, review the path, and recalibrate as required</td>
+</tr>
+<tr>
+<td>No trigger within travel</td>
+<td>Feature not present, excessive initial distance, incorrect approach direction, probe fault</td>
+<td>Verify workpiece position, cycle parameters, and probe function</td>
+</tr>
+<tr>
+<td>Measurement passes despite a known defect</td>
+<td>Limits incorrect, wrong feature selected, invalid result handling</td>
+<td>Audit the measurement logic, feature selection, and acceptance criteria</td>
+</tr>
+<tr>
+<td>CNC reports a probe alarm</td>
+<td>Cycle interruption, interface fault, invalid parameter, unexpected trigger</td>
+<td>Follow the exact alarm and controller-specific diagnostic procedure</td>
+</tr>
+<tr>
+<td>Calibration fails</td>
+<td>Damaged stylus, dirty reference artifact, incorrect setup, machine or probe issue</td>
+<td>Inspect the artifact and stylus, confirm setup, and repeat the approved calibration</td>
+</tr>
+</tbody>
+</table>
+<h2 id="14-collision-recovery-and-probe-protection">14. Collision recovery and probe protection</h2>
+<p>Probe collisions can damage the stylus, probe mechanism, spindle interface, workpiece, fixture, or machine. Even a small visible deflection may affect calibration.</p>
+<p>After a collision:</p>
+<ol>
+<li>Stop the machine using the appropriate safe method.</li>
+<li>Follow the site procedure for assessing the event and isolating equipment if inspection requires access to hazardous areas.</li>
+<li>Inspect the stylus, probe body, holder, spindle interface, workpiece, and fixture.</li>
+<li>Check for bending, looseness, cracks, or other damage.</li>
+<li>Replace damaged parts according to the approved procedure.</li>
+<li>Perform the required calibration and reference verification.</li>
+<li>Review the CNC program, approach path, work offset, tool configuration, and fixture setup.</li>
+<li>Conduct a controlled test before returning the machine to production.</li>
+<li>Document the event and corrective action.</li>
+</ol>
+<p>Do not assume that a probe is accurate merely because it still triggers after a collision. Mechanical damage can alter measurement results without completely disabling the sensor.</p>
+<h2 id="15-probe-related-quality-problems">15. Probe-related quality problems</h2>
+<p>A probing result is useful only if it represents the feature and condition that the process intends to measure.</p>
+<table>
+<thead>
+<tr>
+<th>Quality problem</th>
+<th>Potential probing-related cause</th>
+<th>Required investigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Incorrect datum location</td>
+<td>Poor contact strategy, wrong feature, incorrect calibration</td>
+<td>Verify the datum definition and probing method</td>
+</tr>
+<tr>
+<td>Dimensional drift</td>
+<td>Thermal effects, tool wear, machine movement, unstable measurement</td>
+<td>Compare trends with reference measurements and process conditions</td>
+</tr>
+<tr>
+<td>False acceptance</td>
+<td>Limits too wide, wrong feature, invalid result accepted</td>
+<td>Audit measurement logic and acceptance limits</td>
+</tr>
+<tr>
+<td>False rejection</td>
+<td>Incorrect calibration, contamination, unsuitable measurement points</td>
+<td>Verify the probe and measurement method</td>
+</tr>
+<tr>
+<td>Repeated offset corrections</td>
+<td>Unstable process, tool wear, fixture movement, measurement bias</td>
+<td>Determine why the deviation recurs before allowing more correction</td>
+</tr>
+<tr>
+<td>Different result from external inspection</td>
+<td>Different measurement method, temperature, datum alignment, or uncertainty</td>
+<td>Compare methods, setups, and reference conditions</td>
+</tr>
+<tr>
+<td>Poor repeatability</td>
+<td>Loose stylus, probe instability, chips on contact surfaces</td>
+<td>Inspect hardware and measurement conditions</td>
+</tr>
+</tbody>
+</table>
+<p>A probing system should be validated against an appropriate reference method when the measurement is used for a critical quality decision. The validation must consider the tolerance, uncertainty, repeatability, and the intended use of the measurement.</p>
+<h2 id="16-measurement-system-verification-and-capability">16. Measurement-system verification and capability</h2>
+<p>Probing systems used for process control should have documented verification requirements.</p>
+<p>Possible verification activities include:</p>
+<ul>
+<li>Repeated measurements of a stable reference feature.</li>
+<li>Comparison with a calibrated reference artifact.</li>
+<li>Comparison with a suitable external measurement method.</li>
+<li>Verification after probe replacement or machine service.</li>
+<li>Review of measurement drift over time.</li>
+<li>Assessment of whether the measurement method is suitable for the tolerance being controlled.</li>
+</ul>
+<p>A gauge repeatability and reproducibility study, often called a GR&amp;R study, may be appropriate where required by the quality plan. Its design must reflect how the measurement will actually be used. CNC probing may have different sources of variation from manual gauging, so the study should not blindly copy an unrelated inspection procedure.</p>
+<p>The acceptance criteria should come from the applicable quality system, customer requirement, measurement plan, or approved engineering standard.</p>
+<h2 id="17-probing-data-and-industry-40-integration">17. Probing data and Industry 4.0 integration</h2>
+<p>Measurement results can support process monitoring when they are stored with the correct context.</p>
+<p>Potential data fields include:</p>
+<ul>
+<li>Machine ID and program ID.</li>
+<li>Part or batch identifier.</li>
+<li>Feature name and nominal dimension.</li>
+<li>Measured value and engineering unit.</li>
+<li>Applicable tolerance or acceptance range.</li>
+<li>Tool number and tool offset.</li>
+<li>Work offset and setup identifier.</li>
+<li>Probe calibration status.</li>
+<li>Measurement timestamp.</li>
+<li>Pass/fail status and alarm code.</li>
+<li>Applied correction and approval status.</li>
+</ul>
+<p>A simplified architecture is:</p>
+<pre><code>CNC probe and measurement cycle
+                ↓
+        CNC result variables
+                ↓
+       Approved data interface
+                ↓
+      PLC / edge / gateway layer
+                ↓
+       Historian or database
+                ↓
+       Quality / process dashboard
+                ↓
+     Engineering review and action
+</code></pre>
+<p>The interface may be a controller-specific data service, industrial protocol, approved gateway, or file-based exchange. The actual interface depends on the CNC model, software options, and plant architecture.</p>
+<h3 id="171-useful-applications">17.1 Useful applications</h3>
+<ul>
+<li>Detecting gradual dimensional drift.</li>
+<li>Tracking the frequency of automatic corrections.</li>
+<li>Identifying recurring setup errors.</li>
+<li>Comparing measurement results by machine, tool, or production batch.</li>
+<li>Correlating probe alarms with machine downtime.</li>
+<li>Monitoring first-piece verification results.</li>
+<li>Identifying when reference verification or calibration is required.</li>
+</ul>
+<h3 id="172-data-quality-controls">17.2 Data-quality controls</h3>
+<p>A measurement record should identify the feature, unit, timestamp, part or batch, and validity status. A bare numeric value without context is not enough for reliable quality analysis.</p>
+<p>The system should distinguish between a measured result, a failed measurement cycle, a substituted value, and a calculated correction. Invalid or missing measurement data must not be recorded as a valid pass.</p>
+<p>Automatic offset changes and quality acceptance decisions should remain governed by approved control logic and access permissions.</p>
+<h2 id="18-documentation-and-maintenance-records">18. Documentation and maintenance records</h2>
+<p>Each CNC machine should have a probing-system record containing:</p>
+<ul>
+<li>Probe and receiver manufacturer, model, and serial identification where applicable.</li>
+<li>Stylus type, diameter, length, and configuration.</li>
+<li>Probe interface and electrical documentation.</li>
+<li>CNC controller model and supported probing-cycle information.</li>
+<li>Approved calibration method and reference artifact details.</li>
+<li>Calibration and verification history.</li>
+<li>Measurement-cycle parameters and program version.</li>
+<li>Work offset and tool offset update rules.</li>
+<li>Alarm descriptions and diagnostic procedures.</li>
+<li>Collision history, repairs, and component replacements.</li>
+<li>Reference measurement results and acceptance criteria.</li>
+<li>Approved spare parts and maintenance instructions.</li>
+</ul>
+<p>Changes to probe hardware, stylus geometry, calibration data, cycle parameters, or offset-update logic should be controlled. The change record should identify what changed, why it changed, who approved it, and how the system was verified afterward.</p>
+<h2 id="19-practical-exercises">19. Practical exercises</h2>
+<h3 id="exercise-1-verify-probe-readiness">Exercise 1: Verify probe readiness</h3>
+<ol>
+<li>Identify the installed probe and interface.</li>
+<li>Inspect the stylus and confirm the approved configuration.</li>
+<li>Check probe-ready and trigger indications using the OEM diagnostics.</li>
+<li>Run the approved reference test.</li>
+<li>Confirm the result against the defined acceptance criteria.</li>
+<li>Record the outcome.</li>
+</ol>
+<h3 id="exercise-2-establish-a-workpiece-datum">Exercise 2: Establish a workpiece datum</h3>
+<ol>
+<li>Confirm the part, fixture, program, and intended work offset.</li>
+<li>Verify probe calibration.</li>
+<li>Identify the specified datum feature and safe approach direction.</li>
+<li>Run the approved probing cycle.</li>
+<li>Check the calculated coordinate and alignment.</li>
+<li>Confirm that any offset update is expected and within the permitted range.</li>
+<li>Verify the setup before machining.</li>
+</ol>
+<h3 id="exercise-3-investigate-inconsistent-bore-measurements">Exercise 3: Investigate inconsistent bore measurements</h3>
+<ol>
+<li>Repeat the measurement using the approved test method.</li>
+<li>Inspect the bore and stylus for chips, contamination, or damage.</li>
+<li>Verify calibration and probe mounting.</li>
+<li>Check the cycle parameters and measurement points.</li>
+<li>Compare the result with an appropriate reference measurement.</li>
+<li>Determine whether the difference is due to the probe, machine, part geometry, or measurement method.</li>
+<li>Document the corrective action and verification result.</li>
+</ol>
+<h3 id="exercise-4-audit-automatic-offset-correction">Exercise 4: Audit automatic offset correction</h3>
+<ol>
+<li>Identify the measurement that triggers the correction.</li>
+<li>Identify the specific work or tool offset that can change.</li>
+<li>Verify the permitted correction range.</li>
+<li>Check the response to invalid measurements and out-of-limit results.</li>
+<li>Confirm that correction events are logged.</li>
+<li>Test the logic using the approved validation procedure before release.</li>
+</ol>
+<h2 id="20-competency-checklist">20. Competency checklist</h2>
+<ul>
+<li>Explain the difference between probing, gauging, tool setting, and final metrology.</li>
+<li>Identify the main components of a CNC probing system.</li>
+<li>Explain workpiece coordinates, work offsets, and tool offsets.</li>
+<li>Describe the purpose and process of probe calibration.</li>
+<li>Identify common probing cycles and their intended applications.</li>
+<li>Explain how approach direction, clearance, and measurement points affect results.</li>
+<li>Distinguish accuracy, repeatability, resolution, bias, and uncertainty.</li>
+<li>Diagnose probe-ready, trigger, wireless, and cycle-related faults.</li>
+<li>Explain how probing interacts with CNC programs and PLC signals.</li>
+<li>Verify automatic offset changes and measurement acceptance logic.</li>
+<li>Recover safely from probe collisions and verify the system before production.</li>
+<li>Record measurement results with the context required for traceability.</li>
+</ul>
+<h2 id="21-technical-summary">21. Technical summary</h2>
+<p>CNC probing connects machine positioning with measurement-based process control. Its value comes from reliable sensing, correct calibration, suitable measurement strategies, safe motion, validated coordinate calculations, and controlled use of the resulting data.</p>
+<p>The most important maintenance distinction is between a probe that triggers and a probing system that produces a valid measurement. Trigger status alone does not establish calibration, accuracy, or correct offset handling.</p>
+<p>A robust probing system verifies its measurement conditions, rejects invalid results, restricts automatic corrections to approved limits, and records enough information to support troubleshooting and quality traceability.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\29_Line_Systems\05_Machining\07_Gauging - Gauging</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>07_Diagnostics: HMI Diagnostics</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">07_Diagnostics: HMI Diagnostics</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-why-hmi-diagnostics-is-important">2. Why HMI Diagnostics Is Important</a></li>
+<li><a href="#3-hmi-diagnostics-architecture">3. HMI Diagnostics Architecture</a></li>
+<li><a href="#4-main-types-of-hmi-diagnostics">4. Main Types of HMI Diagnostics</a><ul>
+<li><a href="#41-device-diagnostics">4.1 Device Diagnostics</a></li>
+<li><a href="#42-machine-state-diagnostics">4.2 Machine-State Diagnostics</a></li>
+<li><a href="#43-interlock-diagnostics">4.3 Interlock Diagnostics</a></li>
+<li><a href="#44-communication-diagnostics">4.4 Communication Diagnostics</a></li>
+<li><a href="#45-io-diagnostics">4.5 I/O Diagnostics</a></li>
+<li><a href="#46-controller-and-program-diagnostics">4.6 Controller and Program Diagnostics</a></li>
+<li><a href="#47-performance-diagnostics">4.7 Performance Diagnostics</a></li>
+</ul>
+</li>
+<li><a href="#5-diagnostic-information-versus-alarms">5. Diagnostic Information Versus Alarms</a></li>
+<li><a href="#6-diagnostic-status-categories">6. Diagnostic Status Categories</a></li>
+<li><a href="#7-diagnostic-screen-design">7. Diagnostic Screen Design</a><ul>
+<li><a href="#71-machine-overview">7.1 Machine Overview</a></li>
+<li><a href="#72-station-diagnostics">7.2 Station Diagnostics</a></li>
+<li><a href="#73-io-diagnostics">7.3 I/O Diagnostics</a></li>
+<li><a href="#74-communication-diagnostics">7.4 Communication Diagnostics</a></li>
+<li><a href="#75-fault-details">7.5 Fault Details</a></li>
+<li><a href="#76-maintenance-diagnostics">7.6 Maintenance Diagnostics</a></li>
+</ul>
+</li>
+<li><a href="#8-designing-useful-diagnostic-messages">8. Designing Useful Diagnostic Messages</a></li>
+<li><a href="#9-diagnostic-tags-and-data-structure">9. Diagnostic Tags and Data Structure</a><ul>
+<li><a href="#command-feedback-and-diagnostic-result">Command, feedback, and diagnostic result</a></li>
+</ul>
+</li>
+<li><a href="#10-diagnostic-logic-example-clamp-closing-timeout">10. Diagnostic Logic Example: Clamp Closing Timeout</a></li>
+<li><a href="#11-diagnostic-logic-example-communication-failure">11. Diagnostic Logic Example: Communication Failure</a></li>
+<li><a href="#12-troubleshooting-with-hmi-diagnostics">12. Troubleshooting with HMI Diagnostics</a><ul>
+<li><a href="#step-1-check-the-overall-machine-state">Step 1: Check the overall machine state</a></li>
+<li><a href="#step-2-review-active-alarms">Step 2: Review active alarms</a></li>
+<li><a href="#step-3-inspect-interlocks-and-permissives">Step 3: Inspect interlocks and permissives</a></li>
+<li><a href="#step-4-check-command-and-feedback-signals">Step 4: Check command and feedback signals</a></li>
+<li><a href="#step-5-check-device-diagnostics">Step 5: Check device diagnostics</a></li>
+<li><a href="#step-6-verify-communication">Step 6: Verify communication</a></li>
+<li><a href="#step-7-check-sequence-and-timing-information">Step 7: Check sequence and timing information</a></li>
+<li><a href="#step-8-verify-the-physical-condition">Step 8: Verify the physical condition</a></li>
+<li><a href="#step-9-correct-the-cause-and-verify-recovery">Step 9: Correct the cause and verify recovery</a></li>
+</ul>
+</li>
+<li><a href="#13-common-diagnostic-problems">13. Common Diagnostic Problems</a></li>
+<li><a href="#14-diagnostic-response-and-recovery">14. Diagnostic Response and Recovery</a></li>
+<li><a href="#15-diagnostic-data-and-maintenance-improvement">15. Diagnostic Data and Maintenance Improvement</a></li>
+<li><a href="#16-hmi-diagnostics-versus-plc-diagnostics-software">16. HMI Diagnostics Versus PLC Diagnostics Software</a></li>
+<li><a href="#17-hmi-diagnostics-versus-plc-communication">17. HMI Diagnostics Versus PLC Communication</a></li>
+<li><a href="#18-interview-questions-and-answers">18. Interview Questions and Answers</a></li>
+<li><a href="#19-practical-exercises">19. Practical Exercises</a></li>
+<li><a href="#20-final-mental-model">20. Final Mental Model</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>HMI diagnostics is the process of displaying and investigating information about the operating condition, faults, communication status, and performance of a machine or industrial control system through the Human-Machine Interface (HMI).</p>
+<p>Diagnostics helps maintenance engineers and operators identify:</p>
+<ul>
+<li>Which device has a fault.</li>
+<li>What condition caused the fault.</li>
+<li>Whether a PLC, HMI, drive, robot, or remote I/O device is communicating.</li>
+<li>Whether the machine is ready to operate.</li>
+<li>Which interlock or permissive is preventing operation.</li>
+<li>Whether a fault is active, cleared, or awaiting reset.</li>
+<li>What happened before a machine stopped.</li>
+</ul>
+<p>For example, if an automotive robotic station fails to start, the HMI should help distinguish between a robot fault, a missing clamp confirmation, a safety-related stop, a PLC communication failure, and a drive fault.</p>
+<p>Main purpose: HMI diagnostics reduces fault-finding time by presenting useful technical information instead of forcing maintenance personnel to investigate every device blindly.</p>
+<h2 id="2-why-hmi-diagnostics-is-important">2. Why HMI Diagnostics Is Important</h2>
+<p>Without useful diagnostics, an HMI may display only a generic message such as:</p>
+<p><code>MACHINE FAULT</code></p>
+<p>That tells the operator almost nothing. The maintenance engineer still needs to determine which device failed, what condition was detected, and where to begin troubleshooting.</p>
+<p>A properly designed diagnostic system can display:</p>
+<ul>
+<li>Fault description.</li>
+<li>Device or station identification.</li>
+<li>Fault code.</li>
+<li>Active or cleared status.</li>
+<li>Date and time.</li>
+<li>Relevant process state.</li>
+<li>Communication status.</li>
+<li>Interlock or permissive status.</li>
+<li>Suggested inspection point.</li>
+<li>Reset conditions, where appropriate.</li>
+</ul>
+<p>The goal is not to replace technical troubleshooting. It is to narrow the search to the most likely cause and provide reliable evidence.</p>
+<h2 id="3-hmi-diagnostics-architecture">3. HMI Diagnostics Architecture</h2>
+<p>Diagnostics information may originate from multiple devices and control layers.</p>
+<pre><code> Sensors / Actuators
+         |
+         v
+ PLC / Controller Logic
+         |
+         +--------------------+
+         |                    |
+         v                    v
+   Device Status        Fault / Alarm Logic
+         |                    |
+         +----------+---------+
+                    |
+                    v
+               HMI Tags
+                    |
+                    v
+         Diagnostic Screens
+                    |
+          +---------+---------+
+          |         |         |
+          v         v         v
+        Status    Faults   Diagnostic
+        Display   History   Details
+</code></pre>
+<p>In a more advanced architecture, information may also come from drives, robots, CNC controllers, remote I/O, network devices, SCADA, or diagnostic servers.</p>
+<p>The actual architecture depends on the machine and the communication capabilities of its devices.</p>
+<h2 id="4-main-types-of-hmi-diagnostics">4. Main Types of HMI Diagnostics</h2>
+<h3 id="41-device-diagnostics">4.1 Device Diagnostics</h3>
+<p>Shows the operating or fault status of individual devices.</p>
+<p>Examples:</p>
+<ul>
+<li>PLC CPU status.</li>
+<li>Robot controller status.</li>
+<li>VFD fault code.</li>
+<li>Servo drive ready or fault status.</li>
+<li>Remote I/O module fault.</li>
+<li>Sensor or actuator status.</li>
+<li>CNC controller alarm.</li>
+</ul>
+<p>Example:</p>
+<table>
+<thead>
+<tr>
+<th>Device</th>
+<th>Status</th>
+<th>Diagnostic information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC</td>
+<td>RUN</td>
+<td>Controller executing normally</td>
+</tr>
+<tr>
+<td>Robot controller</td>
+<td>FAULT</td>
+<td>Controller fault present</td>
+</tr>
+<tr>
+<td>VFD</td>
+<td>READY</td>
+<td>Drive ready for operation</td>
+</tr>
+<tr>
+<td>Remote I/O</td>
+<td>COMMUNICATION FAULT</td>
+<td>I/O connection unavailable</td>
+</tr>
+<tr>
+<td>Clamp sensor</td>
+<td>OFF</td>
+<td>Clamp-closed signal not detected</td>
+</tr>
+</tbody>
+</table>
+<p>These are illustrative states. Actual device status values and their meanings depend on the manufacturer and configuration.</p>
+<h3 id="42-machine-state-diagnostics">4.2 Machine-State Diagnostics</h3>
+<p>Shows the current operating state of a machine or station.</p>
+<p>Typical states include:</p>
+<ul>
+<li>Power off.</li>
+<li>Initializing.</li>
+<li>Manual mode.</li>
+<li>Automatic mode.</li>
+<li>Ready.</li>
+<li>Running.</li>
+<li>Waiting.</li>
+<li>Paused.</li>
+<li>Faulted.</li>
+<li>Recovering.</li>
+<li>Maintenance mode.</li>
+</ul>
+<p>Machine-state diagnostics help identify whether the machine is functioning normally or waiting for a specific condition.</p>
+<p>For example, a station may be in <code>WAITING</code> because it has not received a part-present signal.</p>
+<h3 id="43-interlock-diagnostics">4.3 Interlock Diagnostics</h3>
+<p>An interlock prevents an operation when a defined condition is not satisfied.</p>
+<p>Examples:</p>
+<ul>
+<li>Clamp not confirmed closed.</li>
+<li>Part not detected.</li>
+<li>Robot not at the required position.</li>
+<li>Conveyor not ready.</li>
+<li>Fixture not in the required state.</li>
+<li>Downstream station not ready.</li>
+</ul>
+<p>A useful HMI should identify the specific condition preventing the operation.</p>
+<p>Example:</p>
+<pre><code>AUTO START NOT PERMITTED
+
+Required conditions:
+  [OK] PLC in RUN mode
+  [OK] Robot ready
+  [OK] Part present
+  [X] Clamp closed confirmation missing
+  [OK] Downstream ready
+</code></pre>
+<p>This is much more useful than displaying only <code>START INTERLOCK ACTIVE</code>.</p>
+<p>Important distinction: An interlock is a control condition that prevents an action. It is not necessarily a device fault. The machine may be healthy but waiting for a required condition.</p>
+<p>Safety-related functions must be implemented and validated through the appropriate safety-rated architecture. An ordinary HMI indication does not establish that a safety function is effective.</p>
+<h3 id="44-communication-diagnostics">4.4 Communication Diagnostics</h3>
+<p>Shows whether devices can exchange data correctly.</p>
+<p>Examples include:</p>
+<ul>
+<li>HMI to PLC communication.</li>
+<li>PLC to remote I/O communication.</li>
+<li>PLC to robot communication.</li>
+<li>PLC to VFD communication.</li>
+<li>SCADA to PLC communication.</li>
+<li>Controller to database or industrial gateway communication.</li>
+</ul>
+<p>Typical information includes:</p>
+<ul>
+<li>Connected or disconnected state.</li>
+<li>Communication timeout.</li>
+<li>Data quality.</li>
+<li>Last successful update.</li>
+<li>Device response status.</li>
+<li>Communication error code.</li>
+<li>Connection state, where available.</li>
+</ul>
+<p>A communication failure can cause displayed values to become stale or unavailable. A diagnostic screen should distinguish this from a real process condition.</p>
+<h3 id="45-io-diagnostics">4.5 I/O Diagnostics</h3>
+<p>Helps determine whether input and output signals are behaving as expected.</p>
+<p>Examples:</p>
+<ul>
+<li>Sensor input is ON or OFF.</li>
+<li>Solenoid output command is ON.</li>
+<li>Actuator feedback has been received.</li>
+<li>Remote I/O module is healthy.</li>
+<li>A signal is not changing within the expected time.</li>
+</ul>
+<p>Consider a pneumatic clamp.</p>
+<table>
+<thead>
+<tr>
+<th>Signal</th>
+<th>Meaning</th>
+<th>Example state</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Clamp_Close_CMD</code></td>
+<td>PLC requests clamp closing</td>
+<td>ON</td>
+</tr>
+<tr>
+<td><code>Clamp_Closed_FB</code></td>
+<td>Sensor confirms clamp closed</td>
+<td>OFF</td>
+</tr>
+<tr>
+<td><code>Clamp_Open_FB</code></td>
+<td>Sensor confirms clamp open</td>
+<td>OFF</td>
+</tr>
+</tbody>
+</table>
+<p>If the close command is ON but the closed feedback remains OFF beyond the expected time, the diagnostic system can identify a clamp-closing timeout.</p>
+<p>Possible causes include low air pressure, a mechanical obstruction, a failed sensor, a wiring problem, a solenoid issue, or a PLC/output fault.</p>
+<p>The command signal alone does not prove that the actuator physically moved.</p>
+<h3 id="46-controller-and-program-diagnostics">4.6 Controller and Program Diagnostics</h3>
+<p>Displays information related to the PLC, CNC, robot, or other programmable controller.</p>
+<p>Depending on the platform, information may include:</p>
+<ul>
+<li>CPU mode.</li>
+<li>Controller fault status.</li>
+<li>Program execution status.</li>
+<li>Task or scan-time information.</li>
+<li>Controller diagnostic buffer.</li>
+<li>Module faults.</li>
+<li>Program-specific fault codes.</li>
+<li>Controller memory or resource warnings.</li>
+</ul>
+<p>For example, Siemens controllers provide diagnostic-buffer information, while Rockwell Automation controllers provide controller and module fault information through their engineering environment.</p>
+<p>An HMI may expose selected controller diagnostics, but it does not necessarily display every detail available in the programming software.</p>
+<h3 id="47-performance-diagnostics">4.7 Performance Diagnostics</h3>
+<p>Shows whether the machine is meeting expected operational targets.</p>
+<p>Examples:</p>
+<ul>
+<li>Excessive cycle time.</li>
+<li>Frequent station waiting.</li>
+<li>Repeated actuator timeouts.</li>
+<li>Increasing drive temperature.</li>
+<li>High number of robot faults.</li>
+<li>Repeated communication interruptions.</li>
+</ul>
+<p>These diagnostics can help identify developing problems that may not immediately stop production.</p>
+<h2 id="5-diagnostic-information-versus-alarms">5. Diagnostic Information Versus Alarms</h2>
+<p>Diagnostics and alarms are related, but they serve different purposes.</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Diagnostics</th>
+<th>Alarms</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Primary purpose</td>
+<td>Investigate machine condition</td>
+<td>Notify users of an abnormal or important condition</td>
+</tr>
+<tr>
+<td>Typical content</td>
+<td>Detailed device and signal status</td>
+<td>Fault or abnormal-condition notification</td>
+</tr>
+<tr>
+<td>Example</td>
+<td>Clamp command ON, closed feedback OFF</td>
+<td>Clamp closing timeout</td>
+</tr>
+<tr>
+<td>Main user action</td>
+<td>Investigate evidence and cause</td>
+<td>Recognize, respond, acknowledge, or clear as designed</td>
+</tr>
+<tr>
+<td>Historical information</td>
+<td>Diagnostic logs or device records, if supported</td>
+<td>Alarm history and event records</td>
+</tr>
+<tr>
+<td>Scope</td>
+<td>Can include normal states, interlocks, and faults</td>
+<td>Usually focuses on defined alarm conditions</td>
+</tr>
+</tbody>
+</table>
+<p>An alarm might state:</p>
+<p><code>FR1010: CLAMP CLOSING TIMEOUT</code></p>
+<p>The diagnostic screen can provide the details:</p>
+<ul>
+<li>Close command: ON.</li>
+<li>Closed feedback: OFF.</li>
+<li>Open feedback: OFF.</li>
+<li>Timeout elapsed: 3.0 seconds.</li>
+<li>Air pressure status: Normal, if a valid pressure signal is available.</li>
+<li>PLC output status: ON, if the relevant status is available.</li>
+</ul>
+<p>The alarm identifies the abnormal condition. Diagnostics helps investigate it.</p>
+<h2 id="6-diagnostic-status-categories">6. Diagnostic Status Categories</h2>
+<p>A useful HMI can classify device or machine status into understandable categories.</p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Normal</td>
+<td>No relevant fault detected</td>
+</tr>
+<tr>
+<td>Warning</td>
+<td>Condition requires attention but may not stop operation</td>
+</tr>
+<tr>
+<td>Fault</td>
+<td>A defined fault condition exists</td>
+</tr>
+<tr>
+<td>Not ready</td>
+<td>One or more operating requirements are not satisfied</td>
+</tr>
+<tr>
+<td>Interlocked</td>
+<td>An operation is prevented by a required condition</td>
+</tr>
+<tr>
+<td>Communication lost</td>
+<td>Expected communication is unavailable</td>
+</tr>
+<tr>
+<td>Unknown</td>
+<td>The state cannot be determined reliably</td>
+</tr>
+<tr>
+<td>Stale data</td>
+<td>The displayed value has not updated within the defined period</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>Unknown</code> and <code>Stale data</code> states are important. A communication failure should not automatically make the HMI show a device as healthy merely because its last received status was normal.</p>
+<p>Diagnostic displays should make data freshness and validity clear wherever they affect decisions.</p>
+<h2 id="7-diagnostic-screen-design">7. Diagnostic Screen Design</h2>
+<p>A practical diagnostic system may use several screens rather than placing everything on one page.</p>
+<h3 id="71-machine-overview">7.1 Machine Overview</h3>
+<p>Displays the overall state of the machine or production line.</p>
+<p>Typical information:</p>
+<ul>
+<li>Machine mode.</li>
+<li>Machine state.</li>
+<li>Active fault count.</li>
+<li>Station readiness.</li>
+<li>Communication status.</li>
+<li>Major equipment status.</li>
+</ul>
+<h3 id="72-station-diagnostics">7.2 Station Diagnostics</h3>
+<p>Shows the conditions for one station or machine section.</p>
+<p>For an automotive robotic station, this could include:</p>
+<ul>
+<li>Robot status.</li>
+<li>Fixture and clamp status.</li>
+<li>Part detection.</li>
+<li>Conveyor state.</li>
+<li>PLC sequence state.</li>
+<li>Interlock summary.</li>
+</ul>
+<h3 id="73-io-diagnostics">7.3 I/O Diagnostics</h3>
+<p>Shows selected input and output states, often organized by device or functional group.</p>
+<p>It should clearly distinguish an output command from the physical feedback confirming that the device responded.</p>
+<h3 id="74-communication-diagnostics">7.4 Communication Diagnostics</h3>
+<p>Shows communication status between the PLC and connected equipment.</p>
+<p>Depending on available data, it may include connection state, timeout information, device status, or last-update time.</p>
+<h3 id="75-fault-details">7.5 Fault Details</h3>
+<p>Displays the cause and context of a specific fault.</p>
+<p>Useful fields include:</p>
+<ul>
+<li>Fault ID.</li>
+<li>Fault description.</li>
+<li>Station and device.</li>
+<li>First-occurrence time.</li>
+<li>Current state.</li>
+<li>Relevant signal conditions.</li>
+<li>Possible inspection points.</li>
+<li>Required reset conditions.</li>
+</ul>
+<h3 id="76-maintenance-diagnostics">7.6 Maintenance Diagnostics</h3>
+<p>Provides maintenance personnel with additional information such as:</p>
+<ul>
+<li>Device identifiers.</li>
+<li>I/O addresses or PLC tags.</li>
+<li>Drive fault codes.</li>
+<li>Sensor state.</li>
+<li>Equipment-specific diagnostic details.</li>
+<li>Relevant maintenance instructions.</li>
+</ul>
+<p>Sensitive controls and configuration functions should remain restricted to authorized users.</p>
+<h2 id="8-designing-useful-diagnostic-messages">8. Designing Useful Diagnostic Messages</h2>
+<p>Diagnostic messages should describe the condition precisely.</p>
+<p>Poor message:</p>
+<p><code>ROBOT ERROR</code></p>
+<p>Better message:</p>
+<p><code>FR1010: ROBOT CONTROLLER FAULT ACTIVE</code></p>
+<p>More useful diagnostic detail, when available:</p>
+<pre><code>Station: FR1010
+Device: Robot controller
+Status: Fault active
+Controller fault code: [actual device code]
+Machine state: Automatic sequence stopped
+Action: Inspect the robot controller diagnostic display
+</code></pre>
+<p>Do not invent fault codes or imply that a suspected cause has been confirmed.</p>
+<p>A good diagnostic message should answer three questions:</p>
+<ol>
+<li>What is abnormal?</li>
+<li>Where is the problem?</li>
+<li>What information or inspection will help locate the cause?</li>
+</ol>
+<p>For complex faults, the HMI may provide a list of possible causes rather than claiming a single root cause.</p>
+<h2 id="9-diagnostic-tags-and-data-structure">9. Diagnostic Tags and Data Structure</h2>
+<p>Diagnostic information is often built from PLC tags, device status words, communication status, and calculated conditions.</p>
+<p>Example tag structure:</p>
+<table>
+<thead>
+<tr>
+<th>Tag</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Machine_State</code></td>
+<td>Current machine state</td>
+</tr>
+<tr>
+<td><code>Station_Ready</code></td>
+<td>Indicates whether defined readiness conditions are satisfied</td>
+</tr>
+<tr>
+<td><code>Station_Faulted</code></td>
+<td>Indicates that a defined station fault is active</td>
+</tr>
+<tr>
+<td><code>Robot_Ready</code></td>
+<td>Robot readiness status</td>
+</tr>
+<tr>
+<td><code>Robot_Faulted</code></td>
+<td>Robot fault status</td>
+</tr>
+<tr>
+<td><code>Clamp_Close_CMD</code></td>
+<td>Clamp-closing command</td>
+</tr>
+<tr>
+<td><code>Clamp_Closed_FB</code></td>
+<td>Clamp-closed feedback</td>
+</tr>
+<tr>
+<td><code>PLC_Comm_OK</code></td>
+<td>PLC communication status</td>
+</tr>
+<tr>
+<td><code>Robot_Comm_OK</code></td>
+<td>Robot communication status</td>
+</tr>
+<tr>
+<td><code>Diagnostic_Error_Code</code></td>
+<td>Diagnostic code, if provided</td>
+</tr>
+<tr>
+<td><code>Diagnostic_Update_Time</code></td>
+<td>Time of the most recent valid update, if implemented</td>
+</tr>
+</tbody>
+</table>
+<p>The exact names are examples, not universal tag standards.</p>
+<h3 id="command-feedback-and-diagnostic-result">Command, feedback, and diagnostic result</h3>
+<p>These should not be confused.</p>
+<ul>
+<li>Command: What the control system requests.</li>
+<li>Feedback: What a sensor or device reports.</li>
+<li>Diagnostic result: What the control logic concludes from relevant evidence.</li>
+</ul>
+<p>For example:</p>
+<pre><code>Clamp_Close_CMD = ON
+Clamp_Closed_FB = OFF
+Timeout_Expired = TRUE
+</code></pre>
+<p>Together, these conditions may establish a clamp-closing timeout, assuming the sequence and signal validity checks support that conclusion.</p>
+<h2 id="10-diagnostic-logic-example-clamp-closing-timeout">10. Diagnostic Logic Example: Clamp Closing Timeout</h2>
+<p>Suppose a PLC commands a clamp to close and expects a closed-position sensor to activate within a defined period.</p>
+<p>Conceptually:</p>
+<pre><code>Close command issued
+        |
+        v
+Start timeout monitoring
+        |
+        v
+Closed feedback received?
+        |
+    +---+---+
+    |       |
+   Yes      No
+    |       |
+    v       v
+Stop timer  Timeout elapsed?
+                |
+            +---+---+
+            |       |
+           No      Yes
+            |       |
+            v       v
+        Continue   Set diagnostic
+        monitoring fault condition
+</code></pre>
+<p>This is a conceptual example, not ready-to-deploy safety or machine-control code.</p>
+<p>A real implementation must define signal validity, expected operating states, timer behavior, recovery conditions, and the response to a detected fault.</p>
+<p>The diagnostic message might be:</p>
+<p><code>CLAMP CLOSING TIMEOUT: CLOSED FEEDBACK NOT RECEIVED</code></p>
+<p>The HMI should then show the relevant command, feedback, and available supporting information.</p>
+<h2 id="11-diagnostic-logic-example-communication-failure">11. Diagnostic Logic Example: Communication Failure</h2>
+<p>Suppose an HMI receives data from a PLC over an industrial network.</p>
+<p>A robust display should distinguish between:</p>
+<ul>
+<li>Valid and current data.</li>
+<li>A communication error.</li>
+<li>A stale value retained from the last successful update.</li>
+<li>An unknown state.</li>
+</ul>
+<p>Conceptually:</p>
+<pre><code>PLC data received and valid?
+          |
+      +---+---+
+      |       |
+     Yes      No
+      |       |
+      v       v
+Update      Show communication
+display     fault / unknown state
+      |
+      v
+Track data freshness
+</code></pre>
+<p>The exact implementation depends on the HMI driver and communication interface.</p>
+<p>A last-known value may still be useful for troubleshooting, but it must not be presented as a confirmed current condition when its freshness cannot be established.</p>
+<h2 id="12-troubleshooting-with-hmi-diagnostics">12. Troubleshooting with HMI Diagnostics</h2>
+<p>Consider a station that refuses to enter automatic operation.</p>
+<p>A systematic approach is more effective than randomly resetting devices.</p>
+<h3 id="step-1-check-the-overall-machine-state">Step 1: Check the overall machine state</h3>
+<p>Determine whether the station is stopped, waiting, faulted, or not ready.</p>
+<h3 id="step-2-review-active-alarms">Step 2: Review active alarms</h3>
+<p>Identify the current alarms and distinguish them from old, cleared events.</p>
+<h3 id="step-3-inspect-interlocks-and-permissives">Step 3: Inspect interlocks and permissives</h3>
+<p>Find the exact condition preventing automatic operation.</p>
+<p>Examples include missing part detection, clamp feedback, robot readiness, or downstream availability.</p>
+<h3 id="step-4-check-command-and-feedback-signals">Step 4: Check command and feedback signals</h3>
+<p>If the PLC commands an actuator but the feedback does not change, investigate the signal path and physical device.</p>
+<h3 id="step-5-check-device-diagnostics">Step 5: Check device diagnostics</h3>
+<p>Inspect available drive, robot, CNC, remote I/O, or controller fault information.</p>
+<h3 id="step-6-verify-communication">Step 6: Verify communication</h3>
+<p>Confirm that displayed device statuses are current and that relevant PLC-to-device connections are healthy.</p>
+<h3 id="step-7-check-sequence-and-timing-information">Step 7: Check sequence and timing information</h3>
+<p>Determine whether the machine is waiting for a condition or whether a defined timeout has expired.</p>
+<h3 id="step-8-verify-the-physical-condition">Step 8: Verify the physical condition</h3>
+<p>Use approved procedures to inspect the relevant sensor, actuator, wiring, supply, mechanical condition, or device diagnostic information.</p>
+<h3 id="step-9-correct-the-cause-and-verify-recovery">Step 9: Correct the cause and verify recovery</h3>
+<p>After the fault has been corrected, follow the machine's documented recovery and reset procedure.</p>
+<p>Do not treat repeated resetting as troubleshooting. A reset may clear a symptom without removing the underlying fault.</p>
+<p>Safety devices must not be bypassed to make the machine run. Follow the site's approved isolation, lockout/tagout, and safety procedures when physical intervention is required.</p>
+<h2 id="13-common-diagnostic-problems">13. Common Diagnostic Problems</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>What to check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HMI shows a device as healthy when it is disconnected</td>
+<td>Last-known value retained or communication status not linked correctly</td>
+<td>Data quality, connection state, and update freshness</td>
+</tr>
+<tr>
+<td>Every device appears faulted simultaneously</td>
+<td>Shared communication or power problem</td>
+<td>PLC state, network, power supplies, and common modules</td>
+</tr>
+<tr>
+<td>Interlock message is too generic</td>
+<td>Insufficient diagnostic detail</td>
+<td>Individual permissive conditions and message design</td>
+</tr>
+<tr>
+<td>Fault clears but immediately returns</td>
+<td>Root cause remains present</td>
+<td>Physical condition, sequence logic, and fault-trigger conditions</td>
+</tr>
+<tr>
+<td>Device fault code is missing</td>
+<td>Fault-code mapping or interface issue</td>
+<td>Controller tags, device data mapping, and driver support</td>
+</tr>
+<tr>
+<td>I/O state does not match the physical device</td>
+<td>Sensor, wiring, mapping, module, or feedback problem</td>
+<td>Signal path from field device to displayed tag</td>
+</tr>
+<tr>
+<td>Diagnostic screen updates slowly</td>
+<td>Polling interval, network load, controller scan, or display refresh</td>
+<td>End-to-end update behavior</td>
+</tr>
+<tr>
+<td>Historical fault information is unavailable</td>
+<td>Logging not implemented or retention insufficient</td>
+<td>Alarm history, diagnostic logs, and storage configuration</td>
+</tr>
+<tr>
+<td>HMI shows a stale robot status</td>
+<td>Robot communication loss or outdated data</td>
+<td>Robot connection, update timestamps, and quality state</td>
+</tr>
+<tr>
+<td>Reset is unavailable</td>
+<td>Reset conditions are not satisfied or permission is missing</td>
+<td>Active faults, machine state, required conditions, and authorization</td>
+</tr>
+</tbody>
+</table>
+<h2 id="14-diagnostic-response-and-recovery">14. Diagnostic Response and Recovery</h2>
+<p>A diagnostic system should distinguish between detecting a problem and recovering from it.</p>
+<p>A typical sequence is:</p>
+<ol>
+<li>Detect the abnormal condition.</li>
+<li>Record or identify the fault.</li>
+<li>Present the diagnostic information.</li>
+<li>Stop or inhibit the affected operation as defined by the control design.</li>
+<li>Allow maintenance personnel to investigate.</li>
+<li>Correct the underlying cause.</li>
+<li>Verify that the required conditions have returned.</li>
+<li>Perform the approved reset or recovery procedure.</li>
+<li>Confirm that the equipment is ready before restarting.</li>
+</ol>
+<p>The exact sequence depends on the equipment and fault category.</p>
+<p>Not every diagnostic condition requires the entire machine to stop. Some warnings can permit continued operation, while other faults require an immediate controlled response. Safety-related responses must be designed and validated independently of ordinary HMI messaging.</p>
+<h2 id="15-diagnostic-data-and-maintenance-improvement">15. Diagnostic Data and Maintenance Improvement</h2>
+<p>Diagnostic data becomes more valuable when it is retained and analyzed.</p>
+<p>Useful measures include:</p>
+<ul>
+<li>Most frequent faults.</li>
+<li>Repeated faults by station.</li>
+<li>Average fault duration.</li>
+<li>Time between recurring faults.</li>
+<li>Communication interruptions.</li>
+<li>Repeated actuator timeouts.</li>
+<li>Fault recurrence after reset.</li>
+<li>Production downtime associated with faults.</li>
+</ul>
+<p>For example, if a clamp timeout occurs repeatedly on the same station, the problem may involve the actuator, sensor alignment, air supply, wiring, or sequence timing.</p>
+<p>Historical data helps identify patterns, but it does not prove the root cause by itself. Maintenance findings and physical verification remain necessary.</p>
+<p>A useful architecture may connect PLC diagnostic tags to an HMI, SCADA system, database, or maintenance reporting system. Logging and retention must be configured rather than assumed to exist automatically.</p>
+<h2 id="16-hmi-diagnostics-versus-plc-diagnostics-software">16. HMI Diagnostics Versus PLC Diagnostics Software</h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>HMI diagnostics</th>
+<th>PLC engineering diagnostics</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Main audience</td>
+<td>Operators and maintenance personnel</td>
+<td>Controls engineers and advanced maintenance personnel</td>
+</tr>
+<tr>
+<td>Main purpose</td>
+<td>Present machine and device conditions</td>
+<td>Investigate controller, program, and module behavior</td>
+</tr>
+<tr>
+<td>Typical information</td>
+<td>Interlocks, device status, fault messages</td>
+<td>Diagnostic buffers, module status, program details, controller faults</td>
+</tr>
+<tr>
+<td>Access</td>
+<td>Available through the configured HMI interface</td>
+<td>Usually requires engineering software and suitable access</td>
+</tr>
+<tr>
+<td>Detail level</td>
+<td>Selected and organized for the application</td>
+<td>Often more extensive and platform-specific</td>
+</tr>
+<tr>
+<td>Use during troubleshooting</td>
+<td>Rapid initial investigation</td>
+<td>Deeper controller-level investigation</td>
+</tr>
+</tbody>
+</table>
+<p>For example, an HMI might show <code>REMOTE I/O COMMUNICATION FAULT</code>, while the PLC engineering software reveals the specific module or connection diagnostic.</p>
+<p>Both are useful, but they serve different purposes.</p>
+<h2 id="17-hmi-diagnostics-versus-plc-communication">17. HMI Diagnostics Versus PLC Communication</h2>
+<p>Diagnostics and communication are closely related but not identical.</p>
+<ul>
+<li>Diagnostics is the broader function of identifying and presenting equipment or process conditions.</li>
+<li>PLC communication is the exchange of data between the PLC and other devices or systems.</li>
+</ul>
+<p>Communication status is one important part of diagnostics. However, a machine can have healthy communication and still have a mechanical fault, failed sensor, incorrect sequence condition, or process abnormality.</p>
+<p>Conversely, a communication failure can prevent the HMI from receiving the information needed to diagnose a remote device.</p>
+<p>This distinction leads directly to the next study topic.</p>
+<h2 id="18-interview-questions-and-answers">18. Interview Questions and Answers</h2>
+<p>Q1. What is HMI diagnostics?</p>
+<p>HMI diagnostics presents machine, device, controller, and communication status so users can identify and investigate abnormal conditions.</p>
+<p>Q2. What is the difference between an alarm and a diagnostic message?</p>
+<p>An alarm notifies the user of a defined abnormal or important condition. Diagnostic information provides details that help identify and investigate the cause.</p>
+<p>Q3. What is an interlock?</p>
+<p>An interlock is a control condition that prevents an operation when a required condition is not satisfied.</p>
+<p>Q4. What is the difference between a command and feedback?</p>
+<p>A command represents the requested action. Feedback represents the reported condition or result. A command does not prove that the physical action occurred.</p>
+<p>Q5. Why should communication status be displayed separately?</p>
+<p>Because missing or stale data must not be mistaken for a confirmed healthy device state.</p>
+<p>Q6. What should a useful diagnostic message contain?</p>
+<p>A clear description, affected station or device, fault status, relevant code where available, and useful inspection information.</p>
+<p>Q7. Why does a fault return immediately after reset?</p>
+<p>The underlying condition may still exist, or the triggering logic may immediately detect it again.</p>
+<p>Q8. How can HMI diagnostics reduce downtime?</p>
+<p>It narrows the investigation by identifying the affected device, missing condition, fault code, or communication problem.</p>
+<p>Q9. Does an HMI diagnostic indication implement a safety function?</p>
+<p>No. An ordinary HMI indication does not replace an appropriately designed and validated safety-rated control system.</p>
+<p>Q10. What is stale diagnostic data?</p>
+<p>Data that has not been refreshed within the defined period and therefore may no longer represent the device's current condition.</p>
+<p>Q11. Can an HMI display PLC module faults?</p>
+<p>Yes, when the controller exposes the required information and the HMI project is configured to retrieve and display it.</p>
+<p>Q12. What is the first step when a machine will not start in automatic mode?</p>
+<p>Check the machine state, active faults, and required interlocks or permissives to identify the condition preventing operation.</p>
+<h2 id="19-practical-exercises">19. Practical Exercises</h2>
+<p>Use an approved simulator or non-production training setup.</p>
+<ol>
+<li>Create a diagnostic screen showing PLC, robot, drive, and remote I/O status.</li>
+<li>Display machine mode and operating state.</li>
+<li>Create a list of individual start permissives.</li>
+<li>Display command and feedback signals for a simulated clamp.</li>
+<li>Implement a simulated timeout diagnostic.</li>
+<li>Display a communication fault separately from a device fault.</li>
+<li>Simulate stale data and show an appropriate unknown or communication-error state.</li>
+<li>Add a fault code and descriptive message.</li>
+<li>Create a diagnostic view that distinguishes active faults from cleared events.</li>
+<li>Test whether a reset is available only when the configured reset conditions are met.</li>
+<li>Document the troubleshooting sequence for one simulated station fault.</li>
+<li>If logging is available, review repeated faults and calculate which faults consume the most downtime.</li>
+</ol>
+<h2 id="20-final-mental-model">20. Final Mental Model</h2>
+<p>HMI diagnostics connects the machine's actual reported conditions to information that operators and maintenance personnel can understand.</p>
+<pre><code>Device / Process Condition
+           |
+           v
+      PLC / Device
+      Status Data
+           |
+           v
+   Diagnostic Evaluation
+           |
+           v
+      HMI Display
+           |
+           v
+   Fault Investigation
+           |
+           v
+   Corrective Action
+           |
+           v
+   Verified Recovery
+</code></pre>
+<p>Remember these distinctions:</p>
+<ul>
+<li>Alarm: Identifies an abnormal or important condition.</li>
+<li>Diagnostic: Provides information for investigation.</li>
+<li>Interlock: Prevents an operation when a required condition is not satisfied.</li>
+<li>Command: Indicates what the control system requests.</li>
+<li>Feedback: Indicates what the device or sensor reports.</li>
+<li>Communication status: Indicates whether data exchange is working as expected.</li>
+<li>Root cause: The underlying reason the problem occurred, which must be established through evidence.</li>
+</ul>
+<p>Next topic: <code>08_PLC_Comm - PLC communication</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

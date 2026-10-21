@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLC-HMI Communication Commissioning</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">PLC-HMI Communication Commissioning</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-scope-of-plc-hmi-communication">2. Scope of PLC-HMI Communication</a></li>
+<li><a href="#3-plc-hmi-communication-architecture">3. PLC-HMI Communication Architecture</a><ul>
+<li><a href="#31-main-components">3.1 Main components</a></li>
+</ul>
+</li>
+<li><a href="#4-communication-protocols-and-interfaces">4. Communication Protocols and Interfaces</a><ul>
+<li><a href="#41-choosing-the-communication-method">4.1 Choosing the communication method</a></li>
+</ul>
+</li>
+<li><a href="#5-ip-addressing-and-network-configuration">5. IP Addressing and Network Configuration</a><ul>
+<li><a href="#51-basic-ipv4-concepts">5.1 Basic IPv4 concepts</a></li>
+<li><a href="#52-ip-address-and-subnet-verification">5.2 IP address and subnet verification</a></li>
+<li><a href="#53-useful-windows-commands">5.3 Useful Windows commands</a></li>
+</ul>
+</li>
+<li><a href="#6-communication-settings-and-connection-parameters">6. Communication Settings and Connection Parameters</a><ul>
+<li><a href="#61-connection-timeout-and-retry-behavior">6.1 Connection timeout and retry behavior</a></li>
+</ul>
+</li>
+<li><a href="#7-plc-tags-and-hmi-tag-mapping">7. PLC Tags and HMI Tag Mapping</a><ul>
+<li><a href="#71-symbolic-versus-absolute-addressing">7.1 Symbolic versus absolute addressing</a></li>
+<li><a href="#72-tag-mapping-checklist">7.2 Tag mapping checklist</a></li>
+</ul>
+</li>
+<li><a href="#8-data-types-byte-order-and-data-interpretation">8. Data Types, Byte Order, and Data Interpretation</a><ul>
+<li><a href="#81-scaling-and-engineering-units">8.1 Scaling and engineering units</a></li>
+<li><a href="#82-units-and-precision">8.2 Units and precision</a></li>
+</ul>
+</li>
+<li><a href="#9-read-and-write-operations">9. Read and Write Operations</a><ul>
+<li><a href="#91-read-verification">9.1 Read verification</a></li>
+<li><a href="#92-write-verification">9.2 Write verification</a></li>
+</ul>
+</li>
+<li><a href="#10-command-handshake-design">10. Command Handshake Design</a><ul>
+<li><a href="#101-momentary-and-maintained-commands">10.1 Momentary and maintained commands</a></li>
+<li><a href="#102-edge-detection-and-duplicate-commands">10.2 Edge detection and duplicate commands</a></li>
+</ul>
+</li>
+<li><a href="#11-hmi-screens-and-object-commissioning">11. HMI Screens and Object Commissioning</a></li>
+<li><a href="#12-alarms-events-and-trends">12. Alarms, Events, and Trends</a><ul>
+<li><a href="#121-alarm-verification">12.1 Alarm verification</a></li>
+<li><a href="#122-alarm-state-versus-communication-fault">12.2 Alarm state versus communication fault</a></li>
+<li><a href="#123-trend-verification">12.3 Trend verification</a></li>
+</ul>
+</li>
+<li><a href="#13-communication-loading-and-performance">13. Communication Loading and Performance</a><ul>
+<li><a href="#131-practical-optimization">13.1 Practical optimization</a></li>
+</ul>
+</li>
+<li><a href="#14-communication-loss-and-recovery">14. Communication Loss and Recovery</a><ul>
+<li><a href="#141-expected-failure-behavior">14.1 Expected failure behavior</a></li>
+<li><a href="#142-controlled-communication-loss-test">14.2 Controlled communication-loss test</a></li>
+</ul>
+</li>
+<li><a href="#15-cybersecurity-and-access-control">15. Cybersecurity and Access Control</a></li>
+<li><a href="#16-plc-hmi-commissioning-procedure">16. PLC-HMI Commissioning Procedure</a><ul>
+<li><a href="#stage-1-documentation-and-preparation">Stage 1: Documentation and preparation</a></li>
+<li><a href="#stage-2-physical-inspection">Stage 2: Physical inspection</a></li>
+<li><a href="#stage-3-network-verification">Stage 3: Network verification</a></li>
+<li><a href="#stage-4-plc-and-hmi-configuration">Stage 4: PLC and HMI configuration</a></li>
+<li><a href="#stage-5-data-verification">Stage 5: Data verification</a></li>
+<li><a href="#stage-6-fault-and-recovery-testing">Stage 6: Fault and recovery testing</a></li>
+<li><a href="#stage-7-final-handover">Stage 7: Final handover</a></li>
+</ul>
+</li>
+<li><a href="#17-troubleshooting-guide">17. Troubleshooting Guide</a><ul>
+<li><a href="#171-diagnostic-order">17.1 Diagnostic order</a></li>
+</ul>
+</li>
+<li><a href="#18-fat-and-sat-for-plc-hmi-communication">18. FAT and SAT for PLC-HMI Communication</a></li>
+<li><a href="#19-acceptance-criteria">19. Acceptance Criteria</a></li>
+<li><a href="#20-example-plc-hmi-commissioning-for-a-hydraulic-clamping-station">20. Example: PLC-HMI Commissioning for a Hydraulic Clamping Station</a><ul>
+<li><a href="#201-required-tags">20.1 Required tags</a></li>
+<li><a href="#202-commissioning-tests">20.2 Commissioning tests</a></li>
+</ul>
+</li>
+<li><a href="#21-common-commissioning-mistakes">21. Common Commissioning Mistakes</a></li>
+<li><a href="#22-interview-questions-and-answers">22. Interview Questions and Answers</a></li>
+<li><a href="#23-final-commissioning-checklist">23. Final Commissioning Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>PLC-HMI communication commissioning is the systematic process of configuring, verifying, testing, and documenting data exchange between a Programmable Logic Controller (PLC) and a Human-Machine Interface (HMI) so that operators can monitor machine conditions, issue permitted commands, acknowledge alarms, and interact with the automation system reliably.</p>
+<p>Commissioning must verify more than whether the HMI connects to the PLC. It must establish that the correct data is exchanged, displayed, interpreted, and acted upon under normal conditions, faults, communication interruptions, and recovery.</p>
+<p>Core principle: A communication indicator showing green proves neither correct tag mapping nor correct machine behavior. Networks are excellent at delivering the wrong value exactly as configured.</p>
+<h2 id="2-scope-of-plc-hmi-communication">2. Scope of PLC-HMI Communication</h2>
+<p>PLC-HMI commissioning covers these areas:</p>
+<ul>
+<li>Physical communication media, switches, connectors, and network topology.</li>
+<li>PLC and HMI interface configuration, including IP addresses and protocols.</li>
+<li>Device connections, driver configuration, tag mapping, and data types.</li>
+<li>Reading PLC values and writing operator commands.</li>
+<li>Command handshakes, permissives, interlocks, and status feedback.</li>
+<li>Alarms, events, trends, recipes, and diagnostic information.</li>
+<li>Communication failure detection, timeout handling, and recovery.</li>
+<li>Access control, operational safety, testing, and acceptance documentation.</li>
+</ul>
+<p>It does not replace PLC logic validation, machine safety validation, or a complete machine risk assessment. Those activities must be coordinated with communication testing.</p>
+<h2 id="3-plc-hmi-communication-architecture">3. PLC-HMI Communication Architecture</h2>
+<p>A typical industrial architecture is:</p>
+<pre><code>Operator
+   ↓
+HMI Runtime
+   ↓
+HMI Communication Driver
+   ↓
+Industrial Ethernet / Field Network
+   ↓
+Industrial Switches
+   ↓
+PLC Ethernet Interface
+   ↓
+PLC Tags and Program Logic
+   ↓
+Sensors, Actuators, Drives, and Machine Sequence
+</code></pre>
+<p>The return path carries PLC values and status information back to the HMI for display.</p>
+<p>In a real installation, the HMI may communicate with the PLC through a managed switch, an integrated switch, a remote I/O network, or a routed industrial network. The exact design depends on the machine architecture.</p>
+<h3 id="31-main-components">3.1 Main components</h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Purpose</th>
+<th>Commissioning focus</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC CPU</td>
+<td>Executes machine logic and exposes data</td>
+<td>CPU state, tag availability, communication services</td>
+</tr>
+<tr>
+<td>PLC Ethernet module</td>
+<td>Provides network connectivity</td>
+<td>Link status, IP settings, firmware compatibility</td>
+</tr>
+<tr>
+<td>HMI panel or PC</td>
+<td>Displays data and accepts operator input</td>
+<td>Runtime, project version, touch/input functionality</td>
+</tr>
+<tr>
+<td>HMI driver</td>
+<td>Implements communication with the PLC</td>
+<td>Correct driver, protocol, device selection</td>
+</tr>
+<tr>
+<td>Industrial switch</td>
+<td>Connects network devices</td>
+<td>Port status, VLANs, link speed, network faults</td>
+</tr>
+<tr>
+<td>Ethernet cable</td>
+<td>Physical data transmission</td>
+<td>Correct wiring, connector condition, shielding where required</td>
+</tr>
+<tr>
+<td>PLC tag database</td>
+<td>Defines process variables</td>
+<td>Data type, scope, address, permissions</td>
+</tr>
+<tr>
+<td>HMI tag database</td>
+<td>Associates displayed objects with PLC data</td>
+<td>Tag mapping, scaling, read/write access</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-communication-protocols-and-interfaces">4. Communication Protocols and Interfaces</h2>
+<p>A protocol defines how devices identify each other, request information, exchange data, and interpret messages.</p>
+<table>
+<thead>
+<tr>
+<th>Protocol or interface</th>
+<th>Typical application</th>
+<th>Important checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EtherNet/IP</td>
+<td>Allen-Bradley PLCs and compatible devices</td>
+<td>Controller path, device identity, supported data access</td>
+</tr>
+<tr>
+<td>PROFINET</td>
+<td>Siemens PLCs and compatible devices</td>
+<td>Device name, IP configuration, network topology</td>
+</tr>
+<tr>
+<td>Modbus TCP</td>
+<td>PLCs, meters, gateways, and third-party equipment</td>
+<td>Unit ID where applicable, register addresses, data format</td>
+</tr>
+<tr>
+<td>OPC UA</td>
+<td>Structured data exchange between supported industrial systems</td>
+<td>Endpoint, certificates, security policy, namespaces</td>
+</tr>
+<tr>
+<td>Mitsubishi MC Protocol</td>
+<td>Mitsubishi PLC data access</td>
+<td>Supported frame, connection settings, device addressing</td>
+</tr>
+<tr>
+<td>Siemens S7 communication</td>
+<td>HMI access to compatible Siemens PLCs</td>
+<td>CPU compatibility, connection path, access configuration</td>
+</tr>
+<tr>
+<td>Serial communication</td>
+<td>Legacy or serial-based HMI-PLC links</td>
+<td>RS-232/RS-485 wiring, baud rate, parity, stop bits, protocol</td>
+</tr>
+</tbody>
+</table>
+<p>These technologies are not interchangeable merely because they all exchange data. A driver supporting a protocol does not guarantee that every PLC model, data type, or firmware version is supported.</p>
+<h3 id="41-choosing-the-communication-method">4.1 Choosing the communication method</h3>
+<p>Confirm the following before configuring anything:</p>
+<ol>
+<li>PLC manufacturer, model, CPU, firmware, and communication interface.</li>
+<li>HMI manufacturer, model, runtime version, and supported drivers.</li>
+<li>Required protocol and any licensing requirements.</li>
+<li>Whether the PLC exposes symbolic tags, absolute addresses, or both.</li>
+<li>Whether a gateway, protocol converter, or routed connection is required.</li>
+<li>Whether the selected method supports all required data types and write operations.</li>
+</ol>
+<p>For an existing machine, inspect the approved electrical drawings and project configuration before changing network settings. A working production system is not the ideal place to conduct an experiment in addressing.</p>
+<h2 id="5-ip-addressing-and-network-configuration">5. IP Addressing and Network Configuration</h2>
+<h3 id="51-basic-ipv4-concepts">5.1 Basic IPv4 concepts</h3>
+<p>An IPv4 address identifies a network interface. The subnet mask identifies which part of the address represents the local network.</p>
+<p>Example:</p>
+<table>
+<thead>
+<tr>
+<th>Device</th>
+<th>IP address</th>
+<th>Subnet mask</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC</td>
+<td><code>192.168.10.10</code></td>
+<td><code>255.255.255.0</code></td>
+</tr>
+<tr>
+<td>HMI</td>
+<td><code>192.168.10.20</code></td>
+<td><code>255.255.255.0</code></td>
+</tr>
+<tr>
+<td>Engineering PC</td>
+<td><code>192.168.10.30</code></td>
+<td><code>255.255.255.0</code></td>
+</tr>
+</tbody>
+</table>
+<p>These example addresses place the devices on the same IPv4 subnet. They are illustrative only and must not be copied into a running plant network without checking its approved addressing plan.</p>
+<h3 id="52-ip-address-and-subnet-verification">5.2 IP address and subnet verification</h3>
+<p>Check the following:</p>
+<ul>
+<li>Each device has the intended IP address.</li>
+<li>No two devices use the same IP address on the same network.</li>
+<li>The subnet mask matches the approved design.</li>
+<li>The default gateway is configured only when required by the network design.</li>
+<li>VLANs, access-control lists, and routing rules permit the required traffic.</li>
+<li>The HMI is communicating with the intended PLC, not another PLC with a copied project.</li>
+<li>Any required DNS names, routes, or gateway settings are correct.</li>
+</ul>
+<p>Two devices can be physically connected and still be unable to communicate because their addressing or network configuration is wrong.</p>
+<h3 id="53-useful-windows-commands">5.3 Useful Windows commands</h3>
+<p>Run these from an authorized engineering PC connected to the relevant network.</p>
+<pre><code>ipconfig /all
+ping 192.168.10.10
+arp -a
+tracert 192.168.10.10
+</code></pre>
+<p>Interpretation:</p>
+<ul>
+<li><code>ipconfig /all</code> shows the PC's IP configuration.</li>
+<li><code>ping</code> checks IP reachability when ICMP is permitted.</li>
+<li><code>arp -a</code> shows known IP-to-MAC address mappings.</li>
+<li><code>tracert</code> helps investigate routed paths.</li>
+</ul>
+<p>Important: A failed ping does not prove the PLC is offline. ICMP may be disabled, filtered, or deprioritized. A successful ping does not prove that the PLC communication protocol or HMI tag access is working.</p>
+<p>Do not scan production networks or change switch configurations without authorization.</p>
+<h2 id="6-communication-settings-and-connection-parameters">6. Communication Settings and Connection Parameters</h2>
+<p>The HMI project typically defines a connection to one or more PLC devices.</p>
+<p>Common parameters include:</p>
+<ul>
+<li>PLC device type and model.</li>
+<li>Communication driver or protocol.</li>
+<li>PLC IP address or network path.</li>
+<li>Rack, slot, station number, or CPU selection where applicable.</li>
+<li>Port number or serial settings.</li>
+<li>Connection timeout and retry behavior.</li>
+<li>Polling or subscription settings.</li>
+<li>Tag addressing mode.</li>
+<li>Security credentials or certificates where required.</li>
+</ul>
+<h3 id="61-connection-timeout-and-retry-behavior">6.1 Connection timeout and retry behavior</h3>
+<p>A timeout determines how long the HMI waits for a response before treating an operation as unsuccessful. Retry behavior determines how the client attempts communication again.</p>
+<p>Timeouts that are too short can produce nuisance communication alarms during brief delays. Excessively long timeouts can make faults slow to appear to the operator.</p>
+<p>Choose settings based on the PLC, protocol, network design, HMI workload, and required fault-detection time. Do not tune timeouts merely to hide an underlying network problem.</p>
+<h2 id="7-plc-tags-and-hmi-tag-mapping">7. PLC Tags and HMI Tag Mapping</h2>
+<p>A tag is a named variable or data point used to represent a machine condition, measurement, command, or status.</p>
+<p>The PLC tag and HMI object must refer to the same intended data.</p>
+<p>Example:</p>
+<table>
+<thead>
+<tr>
+<th>PLC tag</th>
+<th>Data type</th>
+<th>Intended HMI use</th>
+<th>Access</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Machine_Ready</code></td>
+<td>BOOL</td>
+<td>Ready indicator</td>
+<td>Read</td>
+</tr>
+<tr>
+<td><code>Cycle_Active</code></td>
+<td>BOOL</td>
+<td>Cycle-running indicator</td>
+<td>Read</td>
+</tr>
+<tr>
+<td><code>Fault_Active</code></td>
+<td>BOOL</td>
+<td>Fault indicator</td>
+<td>Read</td>
+</tr>
+<tr>
+<td><code>Part_Count</code></td>
+<td>DINT</td>
+<td>Production counter</td>
+<td>Read</td>
+</tr>
+<tr>
+<td><code>Pressure_PV</code></td>
+<td>REAL</td>
+<td>Pressure display</td>
+<td>Read</td>
+</tr>
+<tr>
+<td><code>Start_Request</code></td>
+<td>BOOL</td>
+<td>Operator start request</td>
+<td>Write, with PLC validation</td>
+</tr>
+<tr>
+<td><code>Reset_Request</code></td>
+<td>BOOL</td>
+<td>Operator reset request</td>
+<td>Write, with PLC validation</td>
+</tr>
+</tbody>
+</table>
+<p>The names are illustrative. Actual tag names and data types must match the deployed PLC program.</p>
+<h3 id="71-symbolic-versus-absolute-addressing">7.1 Symbolic versus absolute addressing</h3>
+<p>Symbolic addressing uses named variables, such as <code>Machine_Ready</code>.</p>
+<p>Advantages include easier maintenance, clearer diagnostics, and reduced dependence on raw memory locations. Its availability depends on the PLC, protocol, driver, and access configuration.</p>
+<p>Absolute addressing uses physical or logical locations, such as a register, data block offset, or memory address.</p>
+<p>Absolute addressing requires careful checking of address conventions, offsets, array layouts, and data sizes. Different software packages may display addresses differently, so verify the manufacturer's addressing rules.</p>
+<h3 id="72-tag-mapping-checklist">7.2 Tag mapping checklist</h3>
+<ul>
+<li>The HMI tag points to the correct PLC device.</li>
+<li>The tag name or address exists in the deployed PLC program.</li>
+<li>The data type matches the PLC variable.</li>
+<li>The read/write permissions are appropriate.</li>
+<li>Array indexes and structure members are correct.</li>
+<li>The HMI object references the intended HMI tag.</li>
+<li>Scaling, units, and display formatting are correct.</li>
+<li>No obsolete or duplicate tags are used unintentionally.</li>
+<li>The downloaded PLC and HMI projects match the approved versions.</li>
+</ul>
+<h2 id="8-data-types-byte-order-and-data-interpretation">8. Data Types, Byte Order, and Data Interpretation</h2>
+<p>A communication link may successfully transfer bytes while the HMI displays a completely incorrect value. The cause can be a data type mismatch, incorrect word order, wrong scaling, or an incorrect address.</p>
+<table>
+<thead>
+<tr>
+<th>Data type</th>
+<th>Common purpose</th>
+<th>Common error</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BOOL</td>
+<td>Single true/false condition</td>
+<td>Wrong bit or inverted interpretation</td>
+</tr>
+<tr>
+<td>INT</td>
+<td>Signed 16-bit integer</td>
+<td>Incorrect signedness or range</td>
+</tr>
+<tr>
+<td>UINT</td>
+<td>Unsigned 16-bit integer</td>
+<td>Negative-looking or oversized value</td>
+</tr>
+<tr>
+<td>DINT</td>
+<td>Signed 32-bit integer</td>
+<td>Incorrect word mapping or size</td>
+</tr>
+<tr>
+<td>REAL</td>
+<td>32-bit floating-point value</td>
+<td>Incorrect format or word order</td>
+</tr>
+<tr>
+<td>STRING</td>
+<td>Text or identifiers</td>
+<td>Different string length or encoding conventions</td>
+</tr>
+<tr>
+<td>ARRAY</td>
+<td>Repeated data values</td>
+<td>Incorrect index, length, or element type</td>
+</tr>
+<tr>
+<td>STRUCT/UDT</td>
+<td>Grouped related variables</td>
+<td>Incompatible layout or unsupported access</td>
+</tr>
+</tbody>
+</table>
+<p>Data sizes and formats depend on the specific controller and communication interface. For example, an IEEE 754 32-bit floating-point value occupies four bytes, but interpreting those bytes correctly also requires the expected byte and word order.</p>
+<h3 id="81-scaling-and-engineering-units">8.1 Scaling and engineering units</h3>
+<p>Suppose a PLC provides an integer value from 0 to 27648 representing a pressure transmitter's 0 to 10 bar range.</p>
+<p>The engineering value can be calculated as:</p>
+<div class="math-display">\[ P = \frac{N}{27648}\times 10 \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(P\)</span> is pressure in bar.</li>
+<li><span class="math-inline">\(N\)</span> is the raw PLC value.</li>
+</ul>
+<p>At <span class="math-inline">\(N = 13824\)</span>:</p>
+<div class="math-display">\[ P = \frac{13824}{27648}\times 10 = 5\text{ bar} \]</div>
+<p>This example assumes the raw range and scaling are actually configured that way. Other systems use different raw ranges, direct engineering units, or different analog input representations.</p>
+<p>Check that scaling is applied exactly once. If the PLC already supplies pressure in bar and the HMI scales it again, the displayed value will be wrong even though communication is functioning.</p>
+<h3 id="82-units-and-precision">8.2 Units and precision</h3>
+<p>Verify:</p>
+<ul>
+<li>Pressure: bar, kPa, or MPa.</li>
+<li>Temperature: °C or °F.</li>
+<li>Speed: rpm or another specified unit.</li>
+<li>Position: mm, degrees, or encoder counts.</li>
+<li>Time: milliseconds, seconds, or minutes.</li>
+<li>Counters: integer range, rollover behavior, and reset behavior.</li>
+<li>Display precision: enough to be useful without implying false measurement accuracy.</li>
+</ul>
+<h2 id="9-read-and-write-operations">9. Read and Write Operations</h2>
+<p>HMI communication commonly has two directions.</p>
+<p>Read operations: The HMI receives PLC data for indicators, numeric displays, alarms, trends, and status screens.</p>
+<p>Write operations: The HMI sends permitted operator inputs to PLC variables, such as setpoints, command requests, recipe values, or reset requests.</p>
+<p>Read access and write access must be considered separately. A tag can read correctly but reject writes because of access settings, driver limitations, PLC permissions, or application logic.</p>
+<h3 id="91-read-verification">9.1 Read verification</h3>
+<p>For each critical read tag:</p>
+<ol>
+<li>Identify the actual PLC variable or address.</li>
+<li>Establish its expected value using approved online monitoring or a controlled machine condition.</li>
+<li>Observe the same value on the HMI.</li>
+<li>Confirm the value updates as the PLC variable changes.</li>
+<li>Check the units, scaling, sign, precision, and update behavior.</li>
+<li>Confirm that communication loss does not leave a misleading stale value presented as current.</li>
+</ol>
+<h3 id="92-write-verification">9.2 Write verification</h3>
+<p>For each writable tag:</p>
+<ol>
+<li>Confirm that the write operation is approved for commissioning.</li>
+<li>Identify the expected operating mode and permissives.</li>
+<li>Verify the correct target tag and permitted value range.</li>
+<li>Apply a controlled test input.</li>
+<li>Confirm the PLC receives the request.</li>
+<li>Confirm that PLC logic accepts or rejects it according to the specified conditions.</li>
+<li>Verify the resulting machine status or feedback.</li>
+<li>Confirm that unauthorized or out-of-range inputs are rejected.</li>
+</ol>
+<p>Do not test start, motion, reset, pressure, speed, or other consequential commands on a live machine without the required authorization, risk controls, and safe operating conditions.</p>
+<h2 id="10-command-handshake-design">10. Command Handshake Design</h2>
+<p>For important operator commands, a handshake is usually more robust than treating a momentary HMI button as proof that an action occurred.</p>
+<p>A command interface may include:</p>
+<ul>
+<li><code>Start_Request</code>: HMI asks the PLC to start.</li>
+<li><code>Start_Accepted</code>: PLC confirms that the request was accepted.</li>
+<li><code>Cycle_Active</code>: PLC indicates that the sequence is running.</li>
+<li><code>Start_Reject</code>: PLC indicates that the request was rejected.</li>
+<li><code>Reject_Code</code>: PLC provides the reason.</li>
+<li><code>Command_Busy</code>: PLC indicates that a command is being processed.</li>
+</ul>
+<p>A typical logical sequence is:</p>
+<pre><code>Operator presses Start
+        ↓
+HMI sends Start_Request
+        ↓
+PLC checks mode, permissives, interlocks, and faults
+        ↓
+PLC accepts or rejects the request
+        ↓
+HMI displays accepted, rejected, or busy status
+        ↓
+PLC reports actual machine state
+</code></pre>
+<p>The HMI must distinguish a request from a successful outcome. A button press is not proof that the machine started.</p>
+<h3 id="101-momentary-and-maintained-commands">10.1 Momentary and maintained commands</h3>
+<p>A momentary command is active for a limited period or until the PLC acknowledges it. A maintained command remains active until it is explicitly cleared or its holding condition ends.</p>
+<p>For a request/acknowledgement handshake, define:</p>
+<ul>
+<li>Who sets the request bit.</li>
+<li>Who clears the request bit.</li>
+<li>How acknowledgement is generated.</li>
+<li>What happens if acknowledgement never arrives.</li>
+<li>What happens if communication fails during the command.</li>
+<li>Whether a duplicate command can be accepted.</li>
+<li>How the interface behaves after an HMI restart.</li>
+</ul>
+<p>Avoid a request bit that remains permanently true after a communication interruption unless that behavior is explicitly required and safely handled.</p>
+<h3 id="102-edge-detection-and-duplicate-commands">10.2 Edge detection and duplicate commands</h3>
+<p>If the PLC detects only a rising edge, a request that remains true may not trigger again after the first event. Conversely, a poorly designed level-sensitive command can retrigger repeatedly.</p>
+<p>Use the command pattern specified by the PLC application, such as:</p>
+<ul>
+<li>Rising-edge request with PLC-side edge detection.</li>
+<li>Request/acknowledgement handshake.</li>
+<li>Sequence number or transaction identifier for systems requiring stronger duplicate detection.</li>
+</ul>
+<p>Test the actual behavior instead of assuming that the HMI button animation reflects the PLC's command logic.</p>
+<h2 id="11-hmi-screens-and-object-commissioning">11. HMI Screens and Object Commissioning</h2>
+<p>Every interactive HMI object should be checked against its intended function.</p>
+<table>
+<thead>
+<tr>
+<th>HMI object</th>
+<th>Commissioning test</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Status indicator</td>
+<td>Correct PLC condition drives the correct visual state</td>
+</tr>
+<tr>
+<td>Numeric display</td>
+<td>Correct value, unit, sign, precision, and scaling</td>
+</tr>
+<tr>
+<td>Numeric input</td>
+<td>Valid entries are accepted and invalid entries rejected</td>
+</tr>
+<tr>
+<td>Start button</td>
+<td>Sends the intended request and shows the resulting state</td>
+</tr>
+<tr>
+<td>Reset button</td>
+<td>Resets only the intended fault or sequence under approved conditions</td>
+</tr>
+<tr>
+<td>Mode selector</td>
+<td>Displays and requests the correct mode with PLC validation</td>
+</tr>
+<tr>
+<td>Alarm banner</td>
+<td>Correct alarm appears, clears, and retains required information</td>
+</tr>
+<tr>
+<td>Trend</td>
+<td>Correct tag, time axis, sampling behavior, and engineering scale</td>
+</tr>
+<tr>
+<td>Recipe interface</td>
+<td>Correct parameters, limits, selection, and transfer verification</td>
+</tr>
+<tr>
+<td>Navigation button</td>
+<td>Opens the intended screen and respects access restrictions</td>
+</tr>
+<tr>
+<td>Login/logout</td>
+<td>Enforces the configured user roles and session behavior</td>
+</tr>
+</tbody>
+</table>
+<p>Test screen transitions, pop-up dialogs, overlapping objects, touch response, numeric keypad behavior, language settings, and screen readability under actual operating conditions.</p>
+<h2 id="12-alarms-events-and-trends">12. Alarms, Events, and Trends</h2>
+<h3 id="121-alarm-verification">12.1 Alarm verification</h3>
+<p>For each configured alarm, verify:</p>
+<ul>
+<li>Trigger condition.</li>
+<li>Alarm text and equipment identification.</li>
+<li>Priority or severity.</li>
+<li>Active and cleared state.</li>
+<li>Timestamp behavior.</li>
+<li>Acknowledgement behavior.</li>
+<li>Latching and reset conditions.</li>
+<li>Required historical recording.</li>
+<li>Behavior during communication loss.</li>
+</ul>
+<p>Acknowledging an alarm generally means the operator has recognized it. It does not necessarily clear the underlying fault or make the machine safe to operate.</p>
+<h3 id="122-alarm-state-versus-communication-fault">12.2 Alarm state versus communication fault</h3>
+<p>A PLC alarm and a communication alarm are different conditions.</p>
+<p>If the HMI loses communication, it may be unable to receive new PLC alarms. The HMI should indicate that the data source is unavailable rather than displaying old values as if they were current.</p>
+<p>Where the application requires it, define a separate communication-health status, stale-data indication, or timestamp/quality check.</p>
+<h3 id="123-trend-verification">12.3 Trend verification</h3>
+<p>Check:</p>
+<ul>
+<li>Correct tag assignment.</li>
+<li>Correct engineering units and scale.</li>
+<li>Correct time base and sampling interval.</li>
+<li>Behavior during value changes.</li>
+<li>Historical retention and retrieval.</li>
+<li>Handling of missing data.</li>
+<li>Clock synchronization and timestamp interpretation.</li>
+<li>Whether the sampling rate is appropriate for the process.</li>
+</ul>
+<p>An HMI trend is not necessarily a high-speed data recorder. Fast transient capture may require PLC trace functionality or a dedicated data acquisition system.</p>
+<h2 id="13-communication-loading-and-performance">13. Communication Loading and Performance</h2>
+<p>The HMI may read many tags across several screens. Poorly planned communication can increase network traffic, controller communication workload, or display latency.</p>
+<p>Relevant factors include:</p>
+<ul>
+<li>Number of connected HMI clients.</li>
+<li>Total tag count.</li>
+<li>Polling interval or subscription rate.</li>
+<li>Number of simultaneously visible screens.</li>
+<li>Array and structure read sizes.</li>
+<li>Alarm and event subscriptions.</li>
+<li>Trend sampling.</li>
+<li>PLC communication capacity.</li>
+<li>Network topology and other devices sharing the network.</li>
+</ul>
+<h3 id="131-practical-optimization">13.1 Practical optimization</h3>
+<ul>
+<li>Read only the tags needed by the application.</li>
+<li>Use reasonable update rates for each class of data.</li>
+<li>Avoid unnecessarily rapid polling of slow-changing values.</li>
+<li>Prefer efficient grouped reads where supported and appropriate.</li>
+<li>Avoid repeatedly reading large structures for a single value.</li>
+<li>Verify that background screens do not create excessive traffic.</li>
+<li>Monitor actual communication performance under expected operating load.</li>
+</ul>
+<p>Do not optimize solely for the smallest update interval. A counter updated every few seconds may be adequate, while a rapidly changing control-related display may require different handling. HMI communication should not replace deterministic control logic in the PLC.</p>
+<h2 id="14-communication-loss-and-recovery">14. Communication Loss and Recovery</h2>
+<p>Communication failure must be tested deliberately in a controlled commissioning environment.</p>
+<p>Possible causes include:</p>
+<ul>
+<li>Broken or disconnected cable.</li>
+<li>Switch power loss.</li>
+<li>Incorrect IP configuration.</li>
+<li>PLC stop or power loss.</li>
+<li>HMI restart.</li>
+<li>Driver or protocol failure.</li>
+<li>Network congestion.</li>
+<li>Routing, VLAN, or firewall changes.</li>
+<li>PLC connection resource exhaustion.</li>
+</ul>
+<h3 id="141-expected-failure-behavior">14.1 Expected failure behavior</h3>
+<p>The application specification should define:</p>
+<ul>
+<li>How quickly the HMI detects communication loss.</li>
+<li>What warning or fault appears.</li>
+<li>Whether numeric values are blanked, marked invalid, or shown with a stale-data indicator.</li>
+<li>Whether operator writes are disabled during the failure.</li>
+<li>How the HMI behaves when the PLC returns.</li>
+<li>Whether a command can be unintentionally replayed after reconnection.</li>
+<li>Whether alarms, trends, and timestamps recover correctly.</li>
+<li>Whether the operator must explicitly reissue a command.</li>
+</ul>
+<p>A lost HMI connection must not be treated as a safety function. Machine motion and hazardous energy must be controlled by the designed PLC logic, safety system, and hardware architecture.</p>
+<h3 id="142-controlled-communication-loss-test">14.2 Controlled communication-loss test</h3>
+<ol>
+<li>Confirm the test is authorized and the machine is in a safe state.</li>
+<li>Record the initial PLC state and HMI indications.</li>
+<li>Interrupt the intended communication path using an approved method.</li>
+<li>Confirm the HMI identifies the failure within the specified time.</li>
+<li>Verify that stale data and operator controls behave as specified.</li>
+<li>Restore the connection.</li>
+<li>Verify reconnection and correct tag updates.</li>
+<li>Confirm that no unintended command executes during recovery.</li>
+<li>Record the outcome and any defect.</li>
+</ol>
+<p>Never disconnect a live production network simply to see what happens. That is not a test strategy; it is an incident with paperwork.</p>
+<h2 id="15-cybersecurity-and-access-control">15. Cybersecurity and Access Control</h2>
+<p>PLC-HMI networks are operational technology networks. Availability, integrity, and safe operation matter alongside confidentiality.</p>
+<p>Commissioning checks should include:</p>
+<ul>
+<li>Unique and approved device addresses.</li>
+<li>Controlled engineering access.</li>
+<li>Role-based HMI permissions.</li>
+<li>Strong credentials and removal of default passwords where applicable.</li>
+<li>Restricted network paths and unnecessary services.</li>
+<li>Approved firewall rules and VLAN configuration.</li>
+<li>Secure protocol configuration where supported.</li>
+<li>Certificate validation for systems using OPC UA or similar security mechanisms.</li>
+<li>Controlled software and project backups.</li>
+<li>Change records for IP, driver, firmware, and project modifications.</li>
+<li>A recovery plan for corrupted projects or failed updates.</li>
+</ul>
+<p>Do not expose PLC or HMI interfaces directly to public networks. Remote access should follow the plant's approved architecture, authentication, logging, and authorization requirements.</p>
+<h2 id="16-plc-hmi-commissioning-procedure">16. PLC-HMI Commissioning Procedure</h2>
+<h3 id="stage-1-documentation-and-preparation">Stage 1: Documentation and preparation</h3>
+<ul>
+<li>Obtain approved PLC and HMI project versions.</li>
+<li>Review electrical drawings and network architecture.</li>
+<li>Confirm the PLC model, firmware, and HMI model.</li>
+<li>Verify protocol and driver compatibility.</li>
+<li>Prepare an IP address and device register.</li>
+<li>Obtain the tag list, alarm list, and HMI screen specifications.</li>
+<li>Review machine risk controls and test permissions.</li>
+<li>Back up the current working PLC and HMI projects.</li>
+</ul>
+<h3 id="stage-2-physical-inspection">Stage 2: Physical inspection</h3>
+<ul>
+<li>Inspect network cables, connectors, and ports.</li>
+<li>Verify switch power and link indicators.</li>
+<li>Confirm cable routing and separation from sources of electrical interference according to the design.</li>
+<li>Check shield termination and grounding where specified.</li>
+<li>Confirm that the HMI and PLC interfaces are connected to the intended network.</li>
+<li>Check that labels match the electrical drawings.</li>
+</ul>
+<h3 id="stage-3-network-verification">Stage 3: Network verification</h3>
+<ul>
+<li>Verify IP address, subnet mask, and required gateway.</li>
+<li>Check for duplicate addresses.</li>
+<li>Verify link speed and duplex where relevant.</li>
+<li>Confirm VLAN and routing configuration.</li>
+<li>Check basic network reachability where permitted.</li>
+<li>Confirm the intended PLC identity.</li>
+<li>Verify that required protocol traffic is permitted.</li>
+</ul>
+<h3 id="stage-4-plc-and-hmi-configuration">Stage 4: PLC and HMI configuration</h3>
+<ul>
+<li>Verify PLC communication services and interface configuration.</li>
+<li>Configure the HMI device connection and driver.</li>
+<li>Confirm device path, slot, station, or other protocol-specific parameters.</li>
+<li>Verify PLC tag access permissions.</li>
+<li>Download only the approved project version.</li>
+<li>Confirm the HMI runtime is running the intended application.</li>
+<li>Verify that the connection status is healthy.</li>
+</ul>
+<h3 id="stage-5-data-verification">Stage 5: Data verification</h3>
+<ul>
+<li>Test representative BOOL, integer, floating-point, and structured values where used.</li>
+<li>Verify addresses and tag names.</li>
+<li>Confirm numeric scaling, units, and display precision.</li>
+<li>Test read-only tags.</li>
+<li>Test writable tags under approved conditions.</li>
+<li>Confirm command handshakes and PLC-side interlocks.</li>
+<li>Verify alarm and event behavior.</li>
+<li>Verify trends and historical data where required.</li>
+</ul>
+<h3 id="stage-6-fault-and-recovery-testing">Stage 6: Fault and recovery testing</h3>
+<ul>
+<li>Test the specified communication-loss scenario.</li>
+<li>Verify alarm and stale-data indication.</li>
+<li>Verify command handling during loss of communication.</li>
+<li>Restore communication and confirm recovery.</li>
+<li>Confirm no unintended commands are replayed.</li>
+<li>Verify behavior after an HMI restart if required.</li>
+<li>Record deviations and retest corrected defects.</li>
+</ul>
+<h3 id="stage-7-final-handover">Stage 7: Final handover</h3>
+<ul>
+<li>Complete the approved test records.</li>
+<li>Resolve or formally disposition defects.</li>
+<li>Save final PLC and HMI backups.</li>
+<li>Record firmware, project versions, and communication settings.</li>
+<li>Update the network diagram and tag documentation.</li>
+<li>Obtain required commissioning and customer sign-offs.</li>
+</ul>
+<h2 id="17-troubleshooting-guide">17. Troubleshooting Guide</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Likely causes</th>
+<th>Diagnostic action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HMI shows disconnected</td>
+<td>Cable, IP, driver, PLC state, or routing issue</td>
+<td>Check physical link, addressing, PLC status, and driver diagnostics</td>
+</tr>
+<tr>
+<td>Ping works but HMI is disconnected</td>
+<td>Protocol service, port, driver, or access issue</td>
+<td>Verify protocol settings and communication diagnostics</td>
+</tr>
+<tr>
+<td>Some tags work and others fail</td>
+<td>Incorrect address, unsupported data type, or access restriction</td>
+<td>Compare failed tags with PLC declarations and driver support</td>
+</tr>
+<tr>
+<td>BOOL value is inverted</td>
+<td>Incorrect logic polarity or wrong bit mapping</td>
+<td>Monitor the actual PLC bit and verify HMI tag configuration</td>
+</tr>
+<tr>
+<td>Numeric value is incorrect</td>
+<td>Wrong data type, address, scaling, or byte order</td>
+<td>Compare raw PLC value with HMI interpretation</td>
+</tr>
+<tr>
+<td>Value freezes</td>
+<td>Polling problem, stale cache, lost connection, or tag update issue</td>
+<td>Check quality status, timestamps, driver diagnostics, and PLC updates</td>
+</tr>
+<tr>
+<td>Writes fail but reads work</td>
+<td>Write permission, mode restriction, unsupported access, or PLC logic rejection</td>
+<td>Check write diagnostics, tag permissions, and command acceptance feedback</td>
+</tr>
+<tr>
+<td>HMI updates slowly</td>
+<td>Excessive polling, large reads, network congestion, or PLC workload</td>
+<td>Review communication load and update rates</td>
+</tr>
+<tr>
+<td>Repeated communication alarms</td>
+<td>Intermittent cable, switch port, power, or network fault</td>
+<td>Inspect physical layer and switch diagnostics</td>
+</tr>
+<tr>
+<td>Values become wrong after project update</td>
+<td>Inconsistent project versions or changed tag definitions</td>
+<td>Compare deployed versions and validate the mapping</td>
+</tr>
+<tr>
+<td>HMI reconnects but command behavior is wrong</td>
+<td>Stale request state, retry behavior, or handshake defect</td>
+<td>Test request/acknowledgement logic and reconnection handling</td>
+</tr>
+<tr>
+<td>Alarms appear late</td>
+<td>Polling delay, alarm configuration, or PLC logic timing</td>
+<td>Measure the full detection and display path</td>
+</tr>
+</tbody>
+</table>
+<h3 id="171-diagnostic-order">17.1 Diagnostic order</h3>
+<p>Use a layered approach instead of changing random settings until the fault disappears.</p>
+<pre><code>1. Physical layer
+   ↓
+2. IP addressing and network path
+   ↓
+3. Protocol and driver configuration
+   ↓
+4. PLC access and tag availability
+   ↓
+5. HMI tag mapping and data types
+   ↓
+6. PLC logic, handshake, and permissives
+   ↓
+7. Display behavior, alarms, and performance
+</code></pre>
+<p>Change one variable at a time where practical and record the original setting. If several parameters are changed simultaneously, the root cause becomes harder to identify.</p>
+<h2 id="18-fat-and-sat-for-plc-hmi-communication">18. FAT and SAT for PLC-HMI Communication</h2>
+<p>Factory Acceptance Testing (FAT) checks the integrated system before shipment or site deployment. Site Acceptance Testing (SAT) confirms operation under the installed site's actual network, hardware, and operating conditions.</p>
+<table>
+<thead>
+<tr>
+<th>Test item</th>
+<th>FAT focus</th>
+<th>SAT focus</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC-HMI connection</td>
+<td>Correct configured connection</td>
+<td>Correct installed network path</td>
+</tr>
+<tr>
+<td>Tag mapping</td>
+<td>Simulated or bench-verified values</td>
+<td>Actual machine values</td>
+</tr>
+<tr>
+<td>Data scaling</td>
+<td>Known test values</td>
+<td>Real sensor and process values</td>
+</tr>
+<tr>
+<td>Operator commands</td>
+<td>Controlled logic testing</td>
+<td>Controlled machine testing</td>
+</tr>
+<tr>
+<td>Alarms</td>
+<td>Trigger, acknowledgement, and reset</td>
+<td>Actual installed alarm behavior</td>
+</tr>
+<tr>
+<td>Network loss</td>
+<td>Simulated disconnection</td>
+<td>Approved site-specific failure test</td>
+</tr>
+<tr>
+<td>Performance</td>
+<td>Expected bench workload</td>
+<td>Installed operating workload</td>
+</tr>
+<tr>
+<td>Security</td>
+<td>Roles and access configuration</td>
+<td>Actual deployed access controls</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Approved project and test records</td>
+<td>As-built configuration and final sign-off</td>
+</tr>
+</tbody>
+</table>
+<p>FAT cannot fully prove site network performance when the production switch, routed path, or final machine hardware is not present. SAT must close that gap.</p>
+<h2 id="19-acceptance-criteria">19. Acceptance Criteria</h2>
+<p>Acceptance criteria must be defined before testing and aligned with the project specification.</p>
+<p>Typical criteria include:</p>
+<ul>
+<li>HMI connects to the correct PLC using the approved communication method.</li>
+<li>Required tags update within specified time limits.</li>
+<li>All tested values match PLC values and intended engineering units.</li>
+<li>All writable controls enforce the required limits, modes, permissives, and interlocks.</li>
+<li>Commands receive appropriate acknowledgement or rejection feedback.</li>
+<li>Alarms display the correct message, priority, and state.</li>
+<li>Communication loss is detected within the specified time.</li>
+<li>Stale data is not misleadingly presented as current.</li>
+<li>Reconnection does not trigger unintended commands.</li>
+<li>HMI response time and communication loading meet the specified requirements.</li>
+<li>Access controls behave according to the approved design.</li>
+<li>Final project backups, configuration records, and test evidence are available.</li>
+</ul>
+<p>Do not invent a universal response-time limit. A project's required timing depends on the process, protocol, display function, and contractual specification. Safety-related response times require separate analysis and validation.</p>
+<h2 id="20-example-plc-hmi-commissioning-for-a-hydraulic-clamping-station">20. Example: PLC-HMI Commissioning for a Hydraulic Clamping Station</h2>
+<p>Consider a station with a PLC controlling a hydraulic clamp and an HMI displaying pressure, clamp status, machine mode, and alarms.</p>
+<h3 id="201-required-tags">20.1 Required tags</h3>
+<table>
+<thead>
+<tr>
+<th>Tag</th>
+<th>Type</th>
+<th>HMI purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Clamp_Closed</code></td>
+<td>BOOL</td>
+<td>Clamp-closed status</td>
+</tr>
+<tr>
+<td><code>Clamp_Open</code></td>
+<td>BOOL</td>
+<td>Clamp-open status</td>
+</tr>
+<tr>
+<td><code>Hydraulic_Pressure</code></td>
+<td>REAL</td>
+<td>Pressure display</td>
+</tr>
+<tr>
+<td><code>Auto_Mode</code></td>
+<td>BOOL</td>
+<td>Mode indication</td>
+</tr>
+<tr>
+<td><code>Clamp_Request</code></td>
+<td>BOOL</td>
+<td>Operator command request</td>
+</tr>
+<tr>
+<td><code>Clamp_Sequence_Active</code></td>
+<td>BOOL</td>
+<td>Sequence feedback</td>
+</tr>
+<tr>
+<td><code>Hydraulic_Fault</code></td>
+<td>BOOL</td>
+<td>Fault indication</td>
+</tr>
+<tr>
+<td><code>Communication_Healthy</code></td>
+<td>BOOL</td>
+<td>Communication or data-quality indication</td>
+</tr>
+</tbody>
+</table>
+<p><code>Communication_Healthy</code> must be designed carefully. If the PLC itself supplies this tag, it cannot independently prove that communication is healthy when the link carrying that tag is lost. The HMI should also use the driver's connection or data-quality diagnostics.</p>
+<h3 id="202-commissioning-tests">20.2 Commissioning tests</h3>
+<ol>
+<li>Confirm the HMI pressure display matches the PLC's pressure variable.</li>
+<li>Apply an approved test condition and verify pressure scaling.</li>
+<li>Confirm <code>Clamp_Closed</code> and <code>Clamp_Open</code> match the actual position feedback.</li>
+<li>Request clamp operation only under the specified safe conditions.</li>
+<li>Verify that the PLC rejects the command when required permissives are absent.</li>
+<li>Verify that the HMI displays sequence feedback rather than assuming the clamp moved merely because a request was sent.</li>
+<li>Trigger an approved fault condition and verify the alarm.</li>
+<li>Test communication loss in a controlled condition.</li>
+<li>Restore communication and verify correct state reporting without unintended movement.</li>
+</ol>
+<p>The HMI must not bypass the PLC's process interlocks or replace the machine's designed safety functions.</p>
+<h2 id="21-common-commissioning-mistakes">21. Common Commissioning Mistakes</h2>
+<ul>
+<li>Assuming a successful ping proves the application works.</li>
+<li>Assuming a green connection indicator proves every tag is correct.</li>
+<li>Using duplicate IP addresses or undocumented network settings.</li>
+<li>Mapping a tag to the wrong PLC variable or bit.</li>
+<li>Mixing signed and unsigned integers.</li>
+<li>Applying scaling twice.</li>
+<li>Ignoring byte and word ordering for multi-byte values.</li>
+<li>Testing commands without checking machine mode and permissives.</li>
+<li>Treating a button press as confirmation that the operation completed.</li>
+<li>Allowing old values to appear current during communication failure.</li>
+<li>Ignoring command bits that remain active after reconnection.</li>
+<li>Changing PLC, HMI, or switch configuration without a backup.</li>
+<li>Testing only normal operation and never checking fault recovery.</li>
+<li>Failing to document final IP addresses, versions, and test results.</li>
+</ul>
+<h2 id="22-interview-questions-and-answers">22. Interview Questions and Answers</h2>
+<p>Q1. What is PLC-HMI communication commissioning?</p>
+<p>It is the verification of the physical connection, network configuration, communication protocol, tag mapping, read/write operations, command feedback, alarms, performance, and recovery behavior between a PLC and HMI.</p>
+<p>Q2. Why can an HMI connect successfully but display incorrect values?</p>
+<p>The connection may be healthy while individual tags have incorrect addresses, data types, scaling, units, or byte ordering.</p>
+<p>Q3. What is the difference between PLC communication and HMI application logic?</p>
+<p>Communication transfers data between systems. HMI application logic defines how that data is displayed and how operator inputs are handled. Both must be verified.</p>
+<p>Q4. Why is a command handshake useful?</p>
+<p>It distinguishes a command request from acceptance and completion, supports timeout handling, and reduces ambiguity during communication faults.</p>
+<p>Q5. Why should the PLC validate HMI commands?</p>
+<p>The HMI is an operator interface, not the final authority on machine permissives. The PLC must validate the command against its control logic, operating mode, and applicable interlocks.</p>
+<p>Q6. What is the difference between a communication alarm and a process alarm?</p>
+<p>A communication alarm indicates that data exchange is unavailable or degraded. A process alarm indicates an equipment or process condition reported by the automation system.</p>
+<p>Q7. Does a successful ping prove that the HMI can communicate with the PLC?</p>
+<p>No. Ping verifies IP reachability when ICMP is allowed. The required application protocol, driver, device path, and tag access may still be incorrect.</p>
+<p>Q8. Why must communication-loss recovery be tested?</p>
+<p>A system may reconnect while retaining stale values, pending requests, or incorrect quality states. Recovery testing verifies that the HMI returns to a valid state without unintended actions.</p>
+<p>Q9. What is the difference between FAT and SAT for PLC-HMI communication?</p>
+<p>FAT verifies the integrated design before deployment. SAT verifies the installed system using the actual site network and machine conditions.</p>
+<p>Q10. Why is HMI communication not a safety function by itself?</p>
+<p>Communication can fail, be delayed, or deliver stale data. Safety functions require an appropriately designed and validated safety architecture, not reliance on ordinary HMI communication.</p>
+<h2 id="23-final-commissioning-checklist">23. Final Commissioning Checklist</h2>
+<ul>
+<li>Approved PLC and HMI versions identified and backed up.</li>
+<li>Physical network inspected and verified.</li>
+<li>IP addressing and network configuration confirmed.</li>
+<li>Correct PLC device and communication driver selected.</li>
+<li>PLC-HMI connection verified.</li>
+<li>Required tags and data types validated.</li>
+<li>Scaling, units, and numeric displays checked.</li>
+<li>Read and write operations tested.</li>
+<li>Command handshake, rejection, and timeout behavior checked.</li>
+<li>Alarms, trends, and navigation verified.</li>
+<li>Communication loss and recovery tested.</li>
+<li>Stale-data behavior verified.</li>
+<li>Network loading and response time meet specifications.</li>
+<li>Access controls checked.</li>
+<li>Defects resolved or formally dispositioned.</li>
+<li>Final configuration, test evidence, and handover records saved.</li>
+</ul>
+<p>The commissioning objective is not simply to make the HMI talk to the PLC. It is to prove that the information is correct, operator commands are handled predictably, faults are visible, and the system recovers in the intended state.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\13_Commissioning\04_Stage4_Communication\02_PLC_Drive - PLC-Drive</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

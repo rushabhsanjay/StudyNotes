@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clamp Meter: Measuring Load Current Without Disconnecting the Circuit</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Clamp Meter: Measuring Load Current Without Disconnecting the Circuit</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-operating-principle">2. Operating Principle</a></li>
+<li><a href="#3-main-parts-of-a-clamp-meter">3. Main Parts of a Clamp Meter</a></li>
+<li><a href="#4-clamp-meter-types">4. Clamp Meter Types</a><ul>
+<li><a href="#41-ac-clamp-meter">4.1 AC clamp meter</a></li>
+<li><a href="#42-acdc-clamp-meter">4.2 AC/DC clamp meter</a></li>
+<li><a href="#43-true-rms-clamp-meter">4.3 True-RMS clamp meter</a></li>
+</ul>
+</li>
+<li><a href="#5-ac-and-dc-current-measurement">5. AC and DC Current Measurement</a></li>
+<li><a href="#6-correct-clamp-placement">6. Correct Clamp Placement</a><ul>
+<li><a href="#61-clamp-around-one-conductor-only">6.1 Clamp around one conductor only</a></li>
+<li><a href="#62-jaw-closure-and-positioning">6.2 Jaw closure and positioning</a></li>
+</ul>
+</li>
+<li><a href="#7-step-by-step-procedure-for-measuring-ac-load-current">7. Step-by-Step Procedure for Measuring AC Load Current</a></li>
+<li><a href="#8-measuring-three-phase-motor-current">8. Measuring Three-Phase Motor Current</a><ul>
+<li><a href="#81-example">8.1 Example</a></li>
+<li><a href="#82-current-imbalance-is-not-the-same-as-voltage-imbalance">8.2 Current imbalance is not the same as voltage imbalance</a></li>
+</ul>
+</li>
+<li><a href="#9-measuring-startup-and-inrush-current">9. Measuring Startup and Inrush Current</a></li>
+<li><a href="#10-clamp-meter-measurements-on-vfd-driven-motors">10. Clamp Meter Measurements on VFD-Driven Motors</a></li>
+<li><a href="#11-dc-current-measurement">11. DC Current Measurement</a></li>
+<li><a href="#12-interpreting-current-readings">12. Interpreting Current Readings</a></li>
+<li><a href="#13-relationship-between-current-voltage-power-and-load">13. Relationship Between Current, Voltage, Power, and Load</a></li>
+<li><a href="#14-clamp-meter-versus-multimeter">14. Clamp Meter Versus Multimeter</a></li>
+<li><a href="#15-clamp-meter-versus-current-transformer">15. Clamp Meter Versus Current Transformer</a></li>
+<li><a href="#16-common-sources-of-measurement-error">16. Common Sources of Measurement Error</a><ul>
+<li><a href="#161-clamping-multiple-conductors">16.1 Clamping multiple conductors</a></li>
+<li><a href="#162-incomplete-jaw-closure">16.2 Incomplete jaw closure</a></li>
+<li><a href="#163-wrong-current-mode">16.3 Wrong current mode</a></li>
+<li><a href="#164-incorrect-range">16.4 Incorrect range</a></li>
+<li><a href="#165-non-sinusoidal-waveform">16.5 Non-sinusoidal waveform</a></li>
+<li><a href="#166-different-operating-conditions">16.6 Different operating conditions</a></li>
+<li><a href="#167-external-magnetic-interference">16.7 External magnetic interference</a></li>
+<li><a href="#168-treating-a-current-reading-as-a-complete-diagnosis">16.8 Treating a current reading as a complete diagnosis</a></li>
+</ul>
+</li>
+<li><a href="#17-electrical-safety">17. Electrical Safety</a></li>
+<li><a href="#18-practical-automotive-manufacturing-example">18. Practical Automotive Manufacturing Example</a></li>
+<li><a href="#19-interview-questions-and-answers">19. Interview Questions and Answers</a><ul>
+<li><a href="#q1-what-is-a-clamp-meter">Q1. What is a clamp meter?</a></li>
+<li><a href="#q2-why-is-a-clamp-meter-useful-in-industrial-maintenance">Q2. Why is a clamp meter useful in industrial maintenance?</a></li>
+<li><a href="#q3-why-should-only-one-conductor-normally-be-inside-the-clamp">Q3. Why should only one conductor normally be inside the clamp?</a></li>
+<li><a href="#q4-can-every-clamp-meter-measure-dc-current">Q4. Can every clamp meter measure DC current?</a></li>
+<li><a href="#q5-what-is-true-rms-measurement">Q5. What is true-RMS measurement?</a></li>
+<li><a href="#q6-how-do-you-check-a-three-phase-motor-using-a-clamp-meter">Q6. How do you check a three-phase motor using a clamp meter?</a></li>
+<li><a href="#q7-does-high-motor-current-always-mean-the-motor-is-faulty">Q7. Does high motor current always mean the motor is faulty?</a></li>
+<li><a href="#q8-why-might-an-ac-clamp-meter-fail-to-capture-motor-inrush-current">Q8. Why might an AC clamp meter fail to capture motor inrush current?</a></li>
+<li><a href="#q9-can-a-clamp-meter-measure-voltage">Q9. Can a clamp meter measure voltage?</a></li>
+<li><a href="#q10-what-is-the-difference-between-a-clamp-meter-and-a-current-transformer">Q10. What is the difference between a clamp meter and a current transformer?</a></li>
+<li><a href="#q11-why-can-current-readings-from-a-vfd-output-be-inaccurate">Q11. Why can current readings from a VFD output be inaccurate?</a></li>
+<li><a href="#q12-what-should-be-done-if-phase-currents-are-unequal">Q12. What should be done if phase currents are unequal?</a></li>
+</ul>
+</li>
+<li><a href="#20-final-checklist">20. Final Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>A clamp meter is an electrical test instrument that measures current flowing through a conductor by sensing the magnetic field produced by that current. It allows current measurements without opening the circuit or disconnecting the conductor, provided the instrument supports the required measurement type and range.</p>
+<p>In industrial commissioning and maintenance, clamp meters are used to diagnose motors, pumps, fans, heaters, contactors, variable-frequency drives (VFDs), servo systems, power supplies, and other electrical loads.</p>
+<p>Typical applications include:</p>
+<ul>
+<li>Measuring motor running current.</li>
+<li>Comparing current across three phases.</li>
+<li>Identifying phase imbalance or abnormal loading.</li>
+<li>Checking whether a motor is overloaded.</li>
+<li>Comparing current before and after a mechanical adjustment.</li>
+<li>Investigating nuisance overload trips.</li>
+<li>Measuring AC or DC current with a suitable clamp meter.</li>
+<li>Checking current changes during startup and operation.</li>
+<li>Assessing whether an electrical load behaves as expected.</li>
+</ul>
+<p>The main advantage is that the conductor normally remains connected during the measurement. However, the clamp meter does not automatically make an energized measurement safe. The instrument, conductor, installation, work conditions, and operator competence must all be suitable.</p>
+<h2 id="2-operating-principle">2. Operating Principle</h2>
+<p>A clamp meter detects the magnetic field around a current-carrying conductor.</p>
+<p>When current flows through a conductor, it produces a magnetic field around it. The clamp's sensing element detects that field and converts it into a current reading.</p>
+<p>For a long, straight conductor, the magnetic field strength around the conductor is proportional to the current and inversely proportional to the distance from it:</p>
+<div class="math-display">\[ B \approx \frac{\mu I}{2\pi r} \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(B\)</span> is magnetic flux density.</li>
+<li><span class="math-inline">\(\mu\)</span> is the magnetic permeability of the surrounding medium.</li>
+<li><span class="math-inline">\(I\)</span> is the current flowing through the conductor.</li>
+<li><span class="math-inline">\(r\)</span> is the distance from the conductor.</li>
+</ul>
+<p>The clamp meter uses its calibrated sensing arrangement to estimate current from the magnetic field.</p>
+<p>A simplified measurement architecture is:</p>
+<pre><code>Current flows through conductor
+              ↓
+Magnetic field is produced
+              ↓
+Clamp sensor detects the field
+              ↓
+Instrument processes the signal
+              ↓
+Current value is displayed
+</code></pre>
+<p>The clamp must surround the correct conductor, and the conductor must be positioned appropriately within the jaw. Incorrect placement, multiple conductors inside the jaw, external magnetic fields, or unsuitable measurement technology can produce misleading readings.</p>
+<h2 id="3-main-parts-of-a-clamp-meter">3. Main Parts of a Clamp Meter</h2>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Clamp jaws</td>
+<td>Surround the conductor and sense its magnetic field</td>
+</tr>
+<tr>
+<td>Jaw opening lever</td>
+<td>Opens the jaws to position them around the conductor</td>
+</tr>
+<tr>
+<td>Display</td>
+<td>Shows current, units, and measurement status</td>
+</tr>
+<tr>
+<td>Function selector</td>
+<td>Selects AC current, DC current, voltage, resistance, or other functions</td>
+</tr>
+<tr>
+<td>Zero or relative button</td>
+<td>Removes a baseline offset where supported and appropriate</td>
+</tr>
+<tr>
+<td>Hold button</td>
+<td>Freezes the displayed reading</td>
+</tr>
+<tr>
+<td>COM terminal</td>
+<td>Common connection for test leads</td>
+</tr>
+<tr>
+<td>V/Ω terminal</td>
+<td>Voltage, resistance, and related test input</td>
+</tr>
+<tr>
+<td>Current input terminal</td>
+<td>Used for current measurement through test leads when supported</td>
+</tr>
+<tr>
+<td>Test leads</td>
+<td>Allow voltage and other non-clamp measurements</td>
+</tr>
+<tr>
+<td>Internal battery</td>
+<td>Powers the instrument</td>
+</tr>
+</tbody>
+</table>
+<p>The exact functions vary by model. Some clamp meters measure only AC current, while others measure AC and DC current, voltage, resistance, frequency, temperature, or inrush current.</p>
+<h2 id="4-clamp-meter-types">4. Clamp Meter Types</h2>
+<h3 id="41-ac-clamp-meter">4.1 AC clamp meter</h3>
+<p>An AC clamp meter commonly uses a current transformer principle. The changing magnetic field produced by alternating current induces a signal in the sensing circuit.</p>
+<p>Advantages include:</p>
+<ul>
+<li>Simple and effective measurement of AC load current.</li>
+<li>No need to disconnect the conductor.</li>
+<li>Suitable for many industrial motors and AC loads.</li>
+</ul>
+<p>A conventional transformer-based clamp cannot measure steady DC current because a constant magnetic field does not continuously induce the required alternating signal.</p>
+<h3 id="42-acdc-clamp-meter">4.2 AC/DC clamp meter</h3>
+<p>An AC/DC clamp meter commonly uses a Hall-effect sensor or another suitable magnetic-field sensing technology to measure AC and DC current.</p>
+<p>Typical applications include:</p>
+<ul>
+<li>DC power supplies.</li>
+<li>Battery systems.</li>
+<li>DC control circuits where the current is within the instrument's range.</li>
+<li>Certain drive and electronic power circuits.</li>
+</ul>
+<p>DC measurement may require a zero adjustment to remove the sensor's baseline offset. The clamp must be positioned correctly, and the manufacturer's procedure must be followed.</p>
+<h3 id="43-true-rms-clamp-meter">4.3 True-RMS clamp meter</h3>
+<p>A true-RMS clamp meter measures the root-mean-square value of current using a method designed to handle the waveform within its specified bandwidth and crest-factor limits.</p>
+<p>This matters when measuring current from:</p>
+<ul>
+<li>VFDs.</li>
+<li>Rectifiers.</li>
+<li>Switched-mode power supplies.</li>
+<li>Electronic lighting systems.</li>
+<li>Other nonlinear loads.</li>
+</ul>
+<p>An average-responding meter calibrated to display RMS for a sinusoidal waveform may be inaccurate when measuring distorted current.</p>
+<p>True-RMS capability does not guarantee accurate results for every waveform. Frequency response, crest factor, current range, and measurement bandwidth still matter.</p>
+<h2 id="5-ac-and-dc-current-measurement">5. AC and DC Current Measurement</h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>AC current</th>
+<th>DC current</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Current direction</td>
+<td>Alternates periodically</td>
+<td>Flows predominantly in one direction</td>
+</tr>
+<tr>
+<td>Typical industrial examples</td>
+<td>Motors, transformers, AC heaters</td>
+<td>Batteries and DC supplies</td>
+</tr>
+<tr>
+<td>Clamp technology</td>
+<td>Often current-transformer based</td>
+<td>Usually Hall-effect or another DC-capable sensor</td>
+</tr>
+<tr>
+<td>Zero adjustment</td>
+<td>Model-dependent</td>
+<td>Often important</td>
+</tr>
+<tr>
+<td>Polarity indication</td>
+<td>Generally not relevant to ordinary AC RMS current</td>
+<td>May indicate direction or sign</td>
+</tr>
+<tr>
+<td>Important limitation</td>
+<td>Distorted waveforms may require true-RMS capability</td>
+<td>Offset, magnetic interference, and orientation can affect the result</td>
+</tr>
+</tbody>
+</table>
+<p>Before measuring, confirm whether the circuit carries AC, DC, or a waveform containing both components and whether the clamp supports that measurement.</p>
+<h2 id="6-correct-clamp-placement">6. Correct Clamp Placement</h2>
+<h3 id="61-clamp-around-one-conductor-only">6.1 Clamp around one conductor only</h3>
+<p>For a normal single-conductor current measurement, the clamp should surround one current-carrying conductor.</p>
+<p>Correct arrangement:</p>
+<pre><code>Phase L1 ───────────────
+             ( CLAMP )
+</code></pre>
+<p>Incorrect arrangement:</p>
+<pre><code>Phase L1 ───────────────
+Phase L2 ───────────────  Both inside clamp
+Phase L3 ───────────────  Magnetic fields may cancel
+             ( CLAMP )
+</code></pre>
+<p>If the clamp surrounds multiple conductors carrying currents that produce opposing magnetic fields, the measured net field may be small or misleading.</p>
+<p>For a single-phase cable, clamping around both line and neutral usually produces a reading near zero under normal conditions because their magnetic fields largely cancel. This is not a valid method for measuring the load current.</p>
+<h3 id="62-jaw-closure-and-positioning">6.2 Jaw closure and positioning</h3>
+<p>For a reliable measurement:</p>
+<ul>
+<li>Ensure the jaws close completely.</li>
+<li>Remove dirt or debris that prevents proper closure.</li>
+<li>Position the conductor within the jaw as specified by the manufacturer.</li>
+<li>Avoid clamping around multiple conductors unless the test specifically requires measurement of their net current.</li>
+<li>Keep the clamp away from strong external magnetic fields where practical.</li>
+<li>Avoid unnecessary movement during the reading.</li>
+</ul>
+<p>Some instruments specify a preferred conductor position for optimum accuracy.</p>
+<h2 id="7-step-by-step-procedure-for-measuring-ac-load-current">7. Step-by-Step Procedure for Measuring AC Load Current</h2>
+<ol>
+<li>Identify the load, conductor, expected current, and measurement location.</li>
+<li>Review the electrical drawing and equipment nameplate.</li>
+<li>Confirm the clamp meter's AC current range, measurement category, and condition.</li>
+<li>Inspect the jaw surfaces, enclosure, and any test leads.</li>
+<li>Select the AC current function and an appropriate range.</li>
+<li>Open the clamp jaws and place them around one conductor.</li>
+<li>Close the jaws fully.</li>
+<li>Observe the reading under the specified operating condition.</li>
+<li>If required, capture the current at startup, steady state, or different load levels using a suitable instrument.</li>
+<li>Compare the readings with the equipment rating, operating conditions, and relevant design criteria.</li>
+<li>Remove the instrument safely and record the results.</li>
+</ol>
+<p>Important: Energized measurements must be performed only by competent, authorized personnel using the site's electrical safety procedures, required PPE, and suitable instruments. Do not expose yourself to live conductors merely to obtain a reading.</p>
+<h2 id="8-measuring-three-phase-motor-current">8. Measuring Three-Phase Motor Current</h2>
+<p>Three-phase motor current is one of the most useful applications of a clamp meter.</p>
+<p>For a three-phase motor, measure each phase separately under comparable operating conditions.</p>
+<pre><code>L1 ─────── (Clamp) ─────── Motor
+L2 ─────── (Clamp) ─────── Motor
+L3 ─────── (Clamp) ─────── Motor
+
+Measure L1, L2, and L3 separately
+under the same operating condition.
+</code></pre>
+<p>Do not place all three phase conductors inside the clamp when the objective is to measure individual phase currents.</p>
+<h3 id="81-example">8.1 Example</h3>
+<p>Suppose a motor operates under a stable production load.</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Measured current</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L1</td>
+<td>18.2 A</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>18.7 A</td>
+</tr>
+<tr>
+<td>L3</td>
+<td>17.9 A</td>
+</tr>
+</tbody>
+</table>
+<p>The average current is:</p>
+<div class="math-display">\[ I\_{avg}=\frac{18.2+18.7+17.9}{3}=18.27\text{ A} \]</div>
+<p>One useful current-deviation calculation is:</p>
+<div class="math-display">\[ \\%\text{ Deviation} = \frac{\max|I_i-I\_{avg}|}{I\_{avg}}\times100 \]</div>
+<p>For these readings, the maximum deviation from the average is approximately 0.47 A.</p>
+<div class="math-display">\[ \\%\text{ Deviation}\approx\frac{0.47}{18.27}\times100=2.57\\% \]</div>
+<p>This indicates the maximum phase-current deviation from the average for this sample. It is not a universal pass/fail criterion. The acceptable limits depend on the motor, load, supply, applicable requirements, measurement accuracy, and the manufacturer's recommendations.</p>
+<h3 id="82-current-imbalance-is-not-the-same-as-voltage-imbalance">8.2 Current imbalance is not the same as voltage imbalance</h3>
+<p>Unequal phase currents may be caused by:</p>
+<ul>
+<li>Unequal mechanical loading.</li>
+<li>Supply-voltage imbalance.</li>
+<li>Loose or high-resistance connections.</li>
+<li>Winding defects.</li>
+<li>Drive output or control issues.</li>
+<li>Differences in measurement conditions.</li>
+<li>A fault in the driven machine.</li>
+</ul>
+<p>Current readings alone cannot identify the exact root cause. Voltage measurements, operating conditions, protection history, and appropriate motor tests may be needed.</p>
+<h2 id="9-measuring-startup-and-inrush-current">9. Measuring Startup and Inrush Current</h2>
+<p>Motors and transformers can draw substantially more current during startup than during normal operation.</p>
+<p>A clamp meter with an appropriate inrush-current function may capture a defined short-duration current event.</p>
+<p>This can help investigate:</p>
+<ul>
+<li>Motor-starting problems.</li>
+<li>Nuisance overload trips.</li>
+<li>Excessive starting load.</li>
+<li>Unexpected acceleration time.</li>
+<li>Incorrect starting configuration.</li>
+<li>Abnormal current during contactor switching.</li>
+</ul>
+<p>A normal display update may be too slow to capture a short transient. Use an instrument with a specified inrush capture method and sufficient response characteristics.</p>
+<p>When measuring inrush current, record the operating condition, start method, and capture settings. Do not compare readings taken using incompatible capture windows or measurement modes.</p>
+<h2 id="10-clamp-meter-measurements-on-vfd-driven-motors">10. Clamp Meter Measurements on VFD-Driven Motors</h2>
+<p>A motor driven by a variable-frequency drive does not necessarily receive a clean sinusoidal voltage or current waveform.</p>
+<p>The drive uses switching electronics to control motor voltage and frequency. The resulting output waveform can contain substantial high-frequency components.</p>
+<p>When measuring VFD output current:</p>
+<ul>
+<li>Use an instrument suitable for the drive output waveform.</li>
+<li>Confirm the specified frequency response and true-RMS capability.</li>
+<li>Observe the manufacturer's restrictions for measurements on drive outputs.</li>
+<li>Compare readings only when the drive frequency, load, and operating conditions are comparable.</li>
+<li>Avoid interpreting a single current value as proof of motor health.</li>
+<li>Use drive diagnostics and other appropriate tests when investigating abnormal current.</li>
+</ul>
+<p>A clamp meter may display misleading results if the waveform falls outside its specified measurement bandwidth.</p>
+<p>The motor's nameplate current remains an important reference, but expected current varies with load, speed, control strategy, and operating conditions. A lightly loaded motor may draw less current than its rated value.</p>
+<h2 id="11-dc-current-measurement">11. DC Current Measurement</h2>
+<p>A DC-capable clamp meter uses a magnetic sensor that can respond to the field produced by steady current.</p>
+<p>A typical procedure is:</p>
+<ol>
+<li>Confirm the meter supports DC current and has a suitable range.</li>
+<li>Select DC current mode.</li>
+<li>Perform the manufacturer's zero-adjustment procedure away from the conductor where required.</li>
+<li>Clamp around one conductor.</li>
+<li>Follow the specified conductor orientation and observe any polarity indication.</li>
+<li>Compare the result with the expected load current.</li>
+<li>Re-zero if required by the measurement conditions or manufacturer's instructions.</li>
+</ol>
+<p>Potential sources of error include:</p>
+<ul>
+<li>Magnetic offset.</li>
+<li>External magnetic fields.</li>
+<li>Incorrect zeroing.</li>
+<li>Conductor position.</li>
+<li>Jaw misalignment.</li>
+<li>Nearby current-carrying conductors.</li>
+</ul>
+<p>A DC-capable clamp meter is particularly useful when opening a DC circuit would interrupt an important system or create additional risk, provided the measurement can be performed safely.</p>
+<h2 id="12-interpreting-current-readings">12. Interpreting Current Readings</h2>
+<p>A current reading should be interpreted alongside the equipment rating, process condition, voltage, and expected operating behavior.</p>
+<table>
+<thead>
+<tr>
+<th>Observation</th>
+<th>Possible explanation</th>
+<th>Recommended investigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Current is higher than expected</td>
+<td>Overload, mechanical binding, supply problem, incorrect configuration, or faulty component</td>
+<td>Compare load, voltage, drive parameters, and operating history</td>
+</tr>
+<tr>
+<td>Current is lower than expected</td>
+<td>Light load, missing phase, disconnected load, wrong measurement point, or incorrect instrument setup</td>
+<td>Confirm operating state, all phase currents, and measurement method</td>
+</tr>
+<tr>
+<td>One phase current differs significantly</td>
+<td>Supply imbalance, connection problem, winding issue, or unequal loading</td>
+<td>Measure phase currents and voltages under comparable conditions</td>
+</tr>
+<tr>
+<td>Current fluctuates</td>
+<td>Variable process load, unstable control, intermittent connection, or waveform effects</td>
+<td>Correlate current trends with machine sequence and load</td>
+</tr>
+<tr>
+<td>Current is zero</td>
+<td>No load current, open circuit, wrong conductor, wrong mode, or measurement error</td>
+<td>Confirm the circuit is operating and the correct conductor is clamped</td>
+</tr>
+<tr>
+<td>Startup current is high</td>
+<td>Normal inrush or excessive acceleration load</td>
+<td>Compare inrush profile and duration with the design and motor requirements</td>
+</tr>
+<tr>
+<td>Drive output current reading seems implausible</td>
+<td>Meter bandwidth or waveform limitations</td>
+<td>Use an instrument suitable for the drive output and compare with drive diagnostics</td>
+</tr>
+</tbody>
+</table>
+<p>These observations guide diagnosis; none of them alone proves a specific fault.</p>
+<h2 id="13-relationship-between-current-voltage-power-and-load">13. Relationship Between Current, Voltage, Power, and Load</h2>
+<p>For a single-phase AC load, apparent power is:</p>
+<div class="math-display">\[ S=VI \]</div>
+<p>For a balanced three-phase system:</p>
+<div class="math-display">\[ S=\sqrt{3}V_LI_L \]</div>
+<p>Where:</p>
+<ul>
+<li><span class="math-inline">\(S\)</span> is apparent power in volt-amperes.</li>
+<li><span class="math-inline">\(V_L\)</span> is line-to-line RMS voltage.</li>
+<li><span class="math-inline">\(I_L\)</span> is line current.</li>
+</ul>
+<p>For a balanced three-phase load, real power is:</p>
+<div class="math-display">\[ P=\sqrt{3}V_LI_L\cos\phi \]</div>
+<p>Where <span class="math-inline">\(\cos\phi\)</span> is the power factor for the applicable sinusoidal or fundamental-component interpretation. For distorted waveforms, total power calculations may require true power measurement rather than a simple power-factor assumption.</p>
+<p>A clamp meter measuring current alone does not directly determine real power, efficiency, or mechanical output power. These require additional measurements or suitable power-analysis instrumentation.</p>
+<h2 id="14-clamp-meter-versus-multimeter">14. Clamp Meter Versus Multimeter</h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Clamp meter</th>
+<th>Conventional multimeter</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Typical current measurement</td>
+<td>Magnetic sensing around a conductor</td>
+<td>Inserted in series through the current input</td>
+</tr>
+<tr>
+<td>Need to open circuit</td>
+<td>Usually not required for clamp measurement</td>
+<td>Usually required for current measurement</td>
+</tr>
+<tr>
+<td>AC current</td>
+<td>Supported by suitable models</td>
+<td>Supported by suitable models and ranges</td>
+</tr>
+<tr>
+<td>DC current</td>
+<td>Only if the clamp supports DC</td>
+<td>Supported by suitable models and ranges</td>
+</tr>
+<tr>
+<td>Voltage measurement</td>
+<td>Many models support it with test leads</td>
+<td>Commonly supported</td>
+</tr>
+<tr>
+<td>Resistance and continuity</td>
+<td>Supported by many models</td>
+<td>Commonly supported</td>
+</tr>
+<tr>
+<td>Best use</td>
+<td>Load current and current trending</td>
+<td>Voltage, resistance, continuity, and suitable current measurements</td>
+</tr>
+<tr>
+<td>Key limitation</td>
+<td>Conductor access, range, waveform, jaw position</td>
+<td>Incorrect series connection can cause a short circuit</td>
+</tr>
+</tbody>
+</table>
+<p>For routine industrial maintenance, the two instruments complement each other. A clamp meter can measure operating current while a multimeter checks voltage at appropriate test points.</p>
+<h2 id="15-clamp-meter-versus-current-transformer">15. Clamp Meter Versus Current Transformer</h2>
+<p>A current transformer (CT) is commonly installed in electrical distribution systems to provide a reduced current signal for meters, relays, or monitoring systems.</p>
+<p>A clamp meter is a portable instrument that temporarily senses the magnetic field around a conductor.</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Clamp meter</th>
+<th>Fixed current transformer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Installation</td>
+<td>Portable</td>
+<td>Installed as part of the system</td>
+</tr>
+<tr>
+<td>Purpose</td>
+<td>Troubleshooting and spot measurement</td>
+<td>Continuous monitoring or protection</td>
+</tr>
+<tr>
+<td>Output</td>
+<td>Usually a displayed measurement</td>
+<td>Secondary current or signal for connected equipment</td>
+</tr>
+<tr>
+<td>Measurement duration</td>
+<td>Usually temporary</td>
+<td>Can be continuous</td>
+</tr>
+<tr>
+<td>Installation changes</td>
+<td>Normally no circuit modification for clamping</td>
+<td>Requires installation and correct integration</td>
+</tr>
+<tr>
+<td>Safety concern</td>
+<td>Safe positioning and instrument rating</td>
+<td>Correct wiring and handling of the CT secondary</td>
+</tr>
+</tbody>
+</table>
+<p>Never leave the secondary of a conventional energized current transformer open-circuited when its primary is carrying current, unless the specific CT design and manufacturer's instructions explicitly permit that condition. Dangerous secondary voltage can develop. CT work requires the correct procedures and qualified personnel.</p>
+<h2 id="16-common-sources-of-measurement-error">16. Common Sources of Measurement Error</h2>
+<h3 id="161-clamping-multiple-conductors">16.1 Clamping multiple conductors</h3>
+<p>The magnetic fields may cancel or combine, producing a reading that does not represent individual load current.</p>
+<h3 id="162-incomplete-jaw-closure">16.2 Incomplete jaw closure</h3>
+<p>A gap, contamination, or damaged jaw surface can affect measurement accuracy.</p>
+<h3 id="163-wrong-current-mode">16.3 Wrong current mode</h3>
+<p>An AC-only clamp meter cannot measure steady DC current correctly. A DC-capable meter may also require zero adjustment.</p>
+<h3 id="164-incorrect-range">16.4 Incorrect range</h3>
+<p>A reading may be over-range or inaccurate if the selected range is unsuitable. Auto-ranging does not remove every limitation.</p>
+<h3 id="165-non-sinusoidal-waveform">16.5 Non-sinusoidal waveform</h3>
+<p>A meter without suitable true-RMS and bandwidth characteristics may produce inaccurate results on VFDs and other nonlinear loads.</p>
+<h3 id="166-different-operating-conditions">16.6 Different operating conditions</h3>
+<p>Comparing currents measured at different speeds, production rates, temperatures, or mechanical loads can lead to incorrect conclusions.</p>
+<h3 id="167-external-magnetic-interference">16.7 External magnetic interference</h3>
+<p>Nearby conductors, transformers, or strong magnetic fields can affect some instruments.</p>
+<h3 id="168-treating-a-current-reading-as-a-complete-diagnosis">16.8 Treating a current reading as a complete diagnosis</h3>
+<p>High current can result from electrical or mechanical causes. Additional evidence is needed before replacing a motor, changing drive parameters, or modifying protection settings.</p>
+<h2 id="17-electrical-safety">17. Electrical Safety</h2>
+<p>Clamp meters reduce the need to interrupt current-carrying conductors, but the measurement may still require access to hazardous electrical equipment.</p>
+<p>Before measuring:</p>
+<ul>
+<li>Confirm the instrument's voltage and measurement-category ratings are suitable for the location.</li>
+<li>Inspect the instrument and leads for damage.</li>
+<li>Use appropriate PPE and follow the site's electrical work procedure.</li>
+<li>Ensure the jaw can be positioned without contact with exposed hazardous parts.</li>
+<li>Avoid placing hands near moving machinery or energized components.</li>
+<li>Never force the jaws around a conductor or into a restricted live panel.</li>
+<li>Do not remove guards or barriers unless the approved procedure authorizes it and appropriate controls are in place.</li>
+<li>Do not use the clamp meter as proof that a circuit is de-energized.</li>
+<li>Do not change electrical connections or protection settings solely because a current reading appears abnormal.</li>
+<li>Follow safe isolation and lockout/tagout requirements before work that requires touching, disconnecting, or modifying conductors.</li>
+</ul>
+<p>A clamp measurement may be non-contact with respect to the conductor, but that does not mean the surrounding work is automatically safe.</p>
+<h2 id="18-practical-automotive-manufacturing-example">18. Practical Automotive Manufacturing Example</h2>
+<p>Consider a three-phase motor driving a coolant pump on a CNC machine. The motor overload trips intermittently during production.</p>
+<p>The maintenance technician records the following currents under the same operating condition:</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Measured current</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L1</td>
+<td>12.8 A</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>15.4 A</td>
+</tr>
+<tr>
+<td>L3</td>
+<td>12.9 A</td>
+</tr>
+</tbody>
+</table>
+<p>The readings show a significant difference in L2 compared with the other two phases. The technician should not immediately increase the overload setting.</p>
+<p>A controlled investigation should include:</p>
+<ol>
+<li>Confirming the correct conductor and measurement mode.</li>
+<li>Repeating measurements under comparable operating conditions.</li>
+<li>Checking supply voltage balance using a suitable meter and safe procedure.</li>
+<li>Reviewing overload trip history and motor operating conditions.</li>
+<li>Inspecting connections and terminals under safe isolation.</li>
+<li>Investigating the motor, cable, starter, and mechanical load as appropriate.</li>
+<li>Comparing findings with motor nameplate information and approved protection settings.</li>
+<li>Correcting the identified cause and verifying operation.</li>
+</ol>
+<p>Possible causes include supply or connection issues, motor winding problems, measurement error, or abnormal operating conditions. The current readings alone do not identify the root cause.</p>
+<p>After correction, the technician records the measured currents, test conditions, actions taken, and final verification results.</p>
+<h2 id="19-interview-questions-and-answers">19. Interview Questions and Answers</h2>
+<h3 id="q1-what-is-a-clamp-meter">Q1. What is a clamp meter?</h3>
+<p>A clamp meter is an electrical instrument that measures current by sensing the magnetic field around a conductor.</p>
+<h3 id="q2-why-is-a-clamp-meter-useful-in-industrial-maintenance">Q2. Why is a clamp meter useful in industrial maintenance?</h3>
+<p>It allows many load-current measurements without opening the circuit, helping diagnose motors, heaters, drives, and other electrical loads.</p>
+<h3 id="q3-why-should-only-one-conductor-normally-be-inside-the-clamp">Q3. Why should only one conductor normally be inside the clamp?</h3>
+<p>The instrument measures the net magnetic field. When opposing currents in multiple conductors are enclosed together, their magnetic fields may cancel, producing a misleading reading.</p>
+<h3 id="q4-can-every-clamp-meter-measure-dc-current">Q4. Can every clamp meter measure DC current?</h3>
+<p>No. DC current measurement requires a suitable DC-capable sensor, commonly a Hall-effect sensor or equivalent technology.</p>
+<h3 id="q5-what-is-true-rms-measurement">Q5. What is true-RMS measurement?</h3>
+<p>True-RMS measurement calculates the RMS value using a method suitable for the measured waveform within the instrument's specified limits. It is important for distorted waveforms, such as those associated with many VFD-driven loads.</p>
+<h3 id="q6-how-do-you-check-a-three-phase-motor-using-a-clamp-meter">Q6. How do you check a three-phase motor using a clamp meter?</h3>
+<p>Measure each phase conductor separately under comparable operating conditions, compare the readings, and investigate significant differences alongside voltage, load, protection history, and other relevant evidence.</p>
+<h3 id="q7-does-high-motor-current-always-mean-the-motor-is-faulty">Q7. Does high motor current always mean the motor is faulty?</h3>
+<p>No. High current may result from mechanical overload, supply conditions, incorrect configuration, winding faults, or other issues. The cause must be established through additional testing.</p>
+<h3 id="q8-why-might-an-ac-clamp-meter-fail-to-capture-motor-inrush-current">Q8. Why might an AC clamp meter fail to capture motor inrush current?</h3>
+<p>The inrush event may be too brief for the instrument's response or display update rate. A suitable inrush-current function and specified capture characteristics are required.</p>
+<h3 id="q9-can-a-clamp-meter-measure-voltage">Q9. Can a clamp meter measure voltage?</h3>
+<p>Many models can measure voltage using test leads, but the instrument's supported functions and safety ratings must be checked.</p>
+<h3 id="q10-what-is-the-difference-between-a-clamp-meter-and-a-current-transformer">Q10. What is the difference between a clamp meter and a current transformer?</h3>
+<p>A clamp meter is typically portable and used for temporary measurements. A current transformer is usually installed for continuous monitoring, metering, or protection.</p>
+<h3 id="q11-why-can-current-readings-from-a-vfd-output-be-inaccurate">Q11. Why can current readings from a VFD output be inaccurate?</h3>
+<p>The waveform may contain switching-related components or frequencies outside the meter's specified bandwidth. A suitable instrument and measurement method are required.</p>
+<h3 id="q12-what-should-be-done-if-phase-currents-are-unequal">Q12. What should be done if phase currents are unequal?</h3>
+<p>Verify the measurement method, repeat the readings under comparable conditions, check phase voltages and connections using appropriate procedures, review the load and protection history, and investigate the underlying cause before changing settings or replacing equipment.</p>
+<h2 id="20-final-checklist">20. Final Checklist</h2>
+<ul>
+<li>Identify the load and the measurement objective.</li>
+<li>Confirm whether the current is AC, DC, or a distorted waveform.</li>
+<li>Check the clamp meter's range, accuracy, bandwidth, and safety rating.</li>
+<li>Inspect the instrument and jaw surfaces.</li>
+<li>Select the correct measurement function.</li>
+<li>Zero the meter when required.</li>
+<li>Clamp around one conductor for an individual current measurement.</li>
+<li>Ensure the jaws close completely.</li>
+<li>Record the operating conditions.</li>
+<li>Measure all relevant phases separately.</li>
+<li>Compare results with nameplate information and approved criteria.</li>
+<li>Investigate abnormal readings before changing protection settings.</li>
+<li>Use an appropriate instrument for VFD waveforms and transient measurements.</li>
+<li>Follow the site's electrical safety procedures.</li>
+<li>Record results and verify the effect of corrective action.</li>
+</ul>
+<p>Key principle: A clamp meter provides a measurement of current at a particular conductor and operating condition. Accurate diagnosis depends on correct conductor selection, suitable instrument capability, comparable test conditions, and interpretation alongside the machine's electrical and mechanical behavior.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\13_Commissioning\07_Test_Tools\03_Insulation_Tester - Insulation tester: Megger test on cables and motors</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

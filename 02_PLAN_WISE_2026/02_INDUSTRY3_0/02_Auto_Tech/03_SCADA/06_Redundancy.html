@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>06_Redundancy: Redundancy, Server and Network Failover</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">06_Redundancy: Redundancy, Server and Network Failover</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition">1. Definition</a></li>
+<li><a href="#2-why-redundancy-is-required">2. Why Redundancy Is Required</a></li>
+<li><a href="#3-what-is-a-single-point-of-failure">3. What Is a Single Point of Failure?</a><ul>
+<li><a href="#redundancy-changes-the-architecture">Redundancy changes the architecture</a></li>
+</ul>
+</li>
+<li><a href="#4-important-redundancy-terminology">4. Important Redundancy Terminology</a></li>
+<li><a href="#5-types-of-redundancy">5. Types of Redundancy</a><ul>
+<li><a href="#51-server-redundancy">5.1 Server redundancy</a></li>
+<li><a href="#52-network-redundancy">5.2 Network redundancy</a></li>
+<li><a href="#53-communication-redundancy">5.3 Communication redundancy</a></li>
+<li><a href="#54-power-redundancy">5.4 Power redundancy</a></li>
+<li><a href="#55-storage-redundancy">5.5 Storage redundancy</a></li>
+<li><a href="#56-database-redundancy">5.6 Database redundancy</a></li>
+</ul>
+</li>
+<li><a href="#6-activestandby-and-activeactive-architectures">6. Active/Standby and Active/Active Architectures</a><ul>
+<li><a href="#61-activestandby">6.1 Active/standby</a></li>
+<li><a href="#62-activeactive">6.2 Active/active</a></li>
+</ul>
+</li>
+<li><a href="#7-how-server-failover-works">7. How Server Failover Works</a><ul>
+<li><a href="#example-scada-server-failure">Example: SCADA server failure</a></li>
+</ul>
+</li>
+<li><a href="#8-heartbeats-and-failure-detection">8. Heartbeats and Failure Detection</a><ul>
+<li><a href="#why-failure-detection-is-not-always-simple">Why failure detection is not always simple</a></li>
+<li><a href="#preventing-split-brain">Preventing split-brain</a></li>
+</ul>
+</li>
+<li><a href="#9-network-redundancy-and-failover">9. Network Redundancy and Failover</a><ul>
+<li><a href="#91-single-path-network">9.1 Single-path network</a></li>
+<li><a href="#92-redundant-paths">9.2 Redundant paths</a></li>
+<li><a href="#common-network-redundancy-approaches">Common network redundancy approaches</a></li>
+<li><a href="#important-caution">Important caution</a></li>
+</ul>
+</li>
+<li><a href="#10-redundancy-in-scada-data-acquisition">10. Redundancy in SCADA Data Acquisition</a><ul>
+<li><a href="#example">Example</a></li>
+</ul>
+</li>
+<li><a href="#11-redundancy-and-historical-data">11. Redundancy and Historical Data</a><ul>
+<li><a href="#example_1">Example</a></li>
+</ul>
+</li>
+<li><a href="#12-redundancy-versus-backup">12. Redundancy Versus Backup</a></li>
+<li><a href="#13-availability-mtbf-mttr-and-recovery-targets">13. Availability, MTBF, MTTR, and Recovery Targets</a><ul>
+<li><a href="#mean-time-between-failures-mtbf">Mean Time Between Failures (MTBF)</a></li>
+<li><a href="#mean-time-to-repair-mttr">Mean Time To Repair (MTTR)</a></li>
+<li><a href="#availability">Availability</a></li>
+<li><a href="#recovery-time-objective-rto">Recovery Time Objective (RTO)</a></li>
+<li><a href="#recovery-point-objective-rpo">Recovery Point Objective (RPO)</a></li>
+</ul>
+</li>
+<li><a href="#14-common-redundancy-faults">14. Common Redundancy Faults</a></li>
+<li><a href="#15-redundancy-testing-and-commissioning">15. Redundancy Testing and Commissioning</a><ul>
+<li><a href="#server-tests">Server tests</a></li>
+<li><a href="#network-tests">Network tests</a></li>
+<li><a href="#data-integrity-tests">Data integrity tests</a></li>
+</ul>
+</li>
+<li><a href="#16-practical-automotive-manufacturing-example">16. Practical Automotive Manufacturing Example</a><ul>
+<li><a href="#normal-operation">Normal operation</a></li>
+<li><a href="#primary-server-failure">Primary server failure</a></li>
+<li><a href="#what-must-be-verified">What must be verified</a></li>
+<li><a href="#network-switch-failure">Network switch failure</a></li>
+</ul>
+</li>
+<li><a href="#17-interview-questions-and-answers">17. Interview Questions and Answers</a></li>
+<li><a href="#18-practical-exercises">18. Practical Exercises</a></li>
+<li><a href="#19-final-mental-model">19. Final Mental Model</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-definition">1. Definition</h2>
+<p>Redundancy is the use of additional components, connections, or systems so that a failure in one component does not necessarily cause the entire system to lose its required function.</p>
+<p>In industrial SCADA, redundancy is used to improve availability when servers, network connections, communication services, or other critical components fail.</p>
+<p>For example, a SCADA system monitoring an automotive robotic line may use two SCADA servers. If the active server fails, a standby server can take over, provided the system is designed and configured to support that transition.</p>
+<p>Redundancy is not simply installing two computers and hoping they cooperate. The system must detect failures, determine which component should take control, preserve or recover the required data, and avoid conflicting active systems.</p>
+<h2 id="2-why-redundancy-is-required">2. Why Redundancy Is Required</h2>
+<p>Industrial systems can experience failures involving:</p>
+<ul>
+<li>SCADA server hardware.</li>
+<li>Operating systems or SCADA services.</li>
+<li>Network switches.</li>
+<li>Network cables or fiber links.</li>
+<li>PLC communication paths.</li>
+<li>OPC servers and communication gateways.</li>
+<li>Database servers.</li>
+<li>Power supplies.</li>
+<li>Storage devices.</li>
+<li>Cooling systems and other supporting infrastructure.</li>
+</ul>
+<p>A single component whose failure interrupts an important function is a potential single point of failure.</p>
+<p>For example, if every SCADA client depends on one server and that server becomes unavailable, the clients may lose monitoring and supervisory functions even if the PLCs continue controlling the machines.</p>
+<p>Redundancy aims to reduce the operational impact of such failures.</p>
+<p>Its objectives may include:</p>
+<ol>
+<li>Maintaining monitoring and visualization.</li>
+<li>Reducing interruption to operator supervision.</li>
+<li>Preserving alarm and process data.</li>
+<li>Maintaining communication availability.</li>
+<li>Supporting recovery with minimal disruption.</li>
+<li>Reducing production risk caused by infrastructure failure.</li>
+</ol>
+<p>The required level of availability depends on the consequences of failure, the process design, and the organization's recovery requirements.</p>
+<h2 id="3-what-is-a-single-point-of-failure">3. What Is a Single Point of Failure?</h2>
+<p>A single point of failure (SPOF) is a component or dependency whose failure can interrupt a required system function because no suitable alternative is available.</p>
+<p>Consider a basic SCADA architecture:</p>
+<pre><code>PLC Network
+     |
+     v
+Single Network Switch
+     |
+     v
+Single SCADA Server
+     |
+     v
+Operator Clients
+</code></pre>
+<p>Potential single points of failure include:</p>
+<ul>
+<li>The network switch.</li>
+<li>The SCADA server.</li>
+<li>A single communication gateway.</li>
+<li>A single network connection to a critical device.</li>
+</ul>
+<p>If the SCADA server fails, clients may lose SCADA services. If the switch fails, the server may lose connectivity to the PLC network.</p>
+<p>The PLCs may continue their local control programs, but this depends on the control architecture and failure conditions. Loss of SCADA does not automatically mean either that production stops or that production can safely continue.</p>
+<h3 id="redundancy-changes-the-architecture">Redundancy changes the architecture</h3>
+<pre><code>                  +-------------------+
+                  | Operator Clients  |
+                  +---------+---------+
+                            |
+                      Redundant Path
+                            |
+              +-------------+-------------+
+              |                           |
+              v                           v
+      +---------------+           +---------------+
+      | SCADA Server A|           | SCADA Server B|
+      | Active        |           | Standby       |
+      +-------+-------+           +-------+-------+
+              |                           |
+              +-------------+-------------+
+                            |
+                    PLC / Data Network
+                            |
+                            v
+                           PLCs
+</code></pre>
+<p>This is a conceptual diagram. Real redundancy architectures require more detailed decisions about network paths, server roles, data synchronization, connection ownership, and failover behavior.</p>
+<p>Duplicating only the server may not eliminate the other single points of failure.</p>
+<h2 id="4-important-redundancy-terminology">4. Important Redundancy Terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Redundancy</td>
+<td>Providing additional components or paths to reduce the impact of failures</td>
+</tr>
+<tr>
+<td>Primary server</td>
+<td>Server designated as the primary or preferred operating system</td>
+</tr>
+<tr>
+<td>Secondary server</td>
+<td>Additional server available for standby or backup operation</td>
+</tr>
+<tr>
+<td>Active server</td>
+<td>Server currently performing the relevant active role</td>
+</tr>
+<tr>
+<td>Standby server</td>
+<td>Server prepared to take over if the active server fails</td>
+</tr>
+<tr>
+<td>Failover</td>
+<td>Transfer of a service or role from a failed or unavailable component to an alternative</td>
+</tr>
+<tr>
+<td>Failback</td>
+<td>Return of the service to the preferred component after recovery</td>
+</tr>
+<tr>
+<td>High availability (HA)</td>
+<td>Design intended to minimize service interruption</td>
+</tr>
+<tr>
+<td>Single point of failure</td>
+<td>A component or dependency whose failure interrupts a required function</td>
+</tr>
+<tr>
+<td>Heartbeat</td>
+<td>Mechanism used to assess the availability of another component</td>
+</tr>
+<tr>
+<td>Split-brain</td>
+<td>A failure condition in which two nodes incorrectly believe they should both be active</td>
+</tr>
+<tr>
+<td>Recovery time</td>
+<td>Time required to restore the required service after a failure</td>
+</tr>
+<tr>
+<td>Data replication</td>
+<td>Copying data between systems or storage locations</td>
+</tr>
+<tr>
+<td>Redundancy switchover</td>
+<td>Change of the active role between redundant components</td>
+</tr>
+</tbody>
+</table>
+<p>Different products use different names and procedures. Always distinguish the product's specific implementation from the general concepts.</p>
+<h2 id="5-types-of-redundancy">5. Types of Redundancy</h2>
+<h3 id="51-server-redundancy">5.1 Server redundancy</h3>
+<p>Two or more servers provide the same critical service, with an active/standby or other supported arrangement.</p>
+<p>Examples:</p>
+<ul>
+<li>Redundant SCADA servers.</li>
+<li>Redundant OPC or communication servers.</li>
+<li>Redundant application services.</li>
+</ul>
+<p>The standby system must have the required configuration, software, licenses, connections, and data synchronization to perform the intended role.</p>
+<h3 id="52-network-redundancy">5.2 Network redundancy</h3>
+<p>Multiple communication paths are provided so that a cable, switch, or link failure does not necessarily isolate the system.</p>
+<p>Examples:</p>
+<ul>
+<li>Redundant Ethernet paths.</li>
+<li>Supported ring topologies.</li>
+<li>Redundant industrial network interfaces.</li>
+<li>Redundant switches and uplinks.</li>
+</ul>
+<p>Network redundancy depends on the topology and protocol. Two cables do not automatically create a functioning redundant network.</p>
+<h3 id="53-communication-redundancy">5.3 Communication redundancy</h3>
+<p>A device or application can communicate through an alternative supported communication path or interface.</p>
+<p>For example, a SCADA data service may be configured to use a secondary communication path when the primary path becomes unavailable.</p>
+<p>The controller, driver, network, and application must all support the intended arrangement.</p>
+<h3 id="54-power-redundancy">5.4 Power redundancy</h3>
+<p>Critical equipment uses redundant power supplies or separate power sources where supported.</p>
+<p>A redundant server connected to a single failed power distribution point may still lose power. The upstream power architecture matters.</p>
+<h3 id="55-storage-redundancy">5.5 Storage redundancy</h3>
+<p>Storage systems may use RAID, replicated storage, or other technologies to reduce the impact of particular storage failures.</p>
+<p>Storage redundancy does not replace backups. RAID, for example, does not protect against every form of data loss, such as accidental deletion, corruption replicated across a system, or ransomware.</p>
+<h3 id="56-database-redundancy">5.6 Database redundancy</h3>
+<p>A database architecture may use replication, clustering, or supported high-availability mechanisms.</p>
+<p>This helps preserve access to historical or transactional data when a database component fails.</p>
+<p>However, database failover must account for connection handling, committed transactions, data consistency, and application reconnection.</p>
+<h2 id="6-activestandby-and-activeactive-architectures">6. Active/Standby and Active/Active Architectures</h2>
+<h3 id="61-activestandby">6.1 Active/standby</h3>
+<p>One system performs the active role while another is prepared to take over.</p>
+<pre><code>Normal operation:
+
+PLC Data ---&gt; Server A [ACTIVE]
+             Server B [STANDBY]
+
+After Server A fails:
+
+PLC Data ---&gt; Server B [ACTIVE]
+             Server A [FAILED]
+</code></pre>
+<p>Advantages:</p>
+<ul>
+<li>Clear ownership of the active role.</li>
+<li>Potentially simpler workload and state management.</li>
+<li>Often suitable for supervisory services.</li>
+</ul>
+<p>Considerations:</p>
+<ul>
+<li>The standby system must remain ready.</li>
+<li>Configuration and relevant state must be synchronized.</li>
+<li>Failover may interrupt clients or data acquisition.</li>
+<li>A failed primary may not return automatically to service.</li>
+</ul>
+<p>Some products support warm standby, where the secondary remains initialized and synchronized. Others may require a more substantial startup process.</p>
+<h3 id="62-activeactive">6.2 Active/active</h3>
+<p>Multiple systems perform active work simultaneously.</p>
+<p>Examples may include distributed SCADA servers or services sharing workloads.</p>
+<p>Advantages:</p>
+<ul>
+<li>Workload can be distributed.</li>
+<li>Some failures may have less effect on capacity.</li>
+<li>Resources may be used more efficiently.</li>
+</ul>
+<p>Considerations:</p>
+<ul>
+<li>Workload distribution and service ownership must be defined.</li>
+<li>Data consistency becomes more complex.</li>
+<li>Clients must know which service or node to use.</li>
+<li>Simultaneous writes or commands must be controlled.</li>
+<li>Failure of one node can overload the remaining nodes.</li>
+</ul>
+<p>Active/active is not automatically more reliable than active/standby. It depends on the application and the way shared state is managed.</p>
+<h2 id="7-how-server-failover-works">7. How Server Failover Works</h2>
+<p>Failover usually involves several stages.</p>
+<ol>
+<li>Failure detection: The system identifies that the active service is unavailable or unhealthy.</li>
+<li>Role decision: The redundancy mechanism determines whether the standby should take over.</li>
+<li>Promotion: The standby becomes active for the relevant service.</li>
+<li>Client reconnection: Clients connect to the active service, using the product's supported mechanism.</li>
+<li>Data recovery: The system resumes data acquisition and logging, with any required reconciliation.</li>
+<li>Status verification: Operators and administrators verify that the service is operating correctly.</li>
+</ol>
+<h3 id="example-scada-server-failure">Example: SCADA server failure</h3>
+<p>Suppose Server A is actively acquiring PLC data and serving operator clients. Server B is synchronized and on standby.</p>
+<p>If Server A fails, the redundancy mechanism may promote Server B. Clients then resume using the active server.</p>
+<p>The actual result depends on the product. There may be a brief interruption, missing samples, client reconnection delays, or a need for manual intervention.</p>
+<p>Failover does not guarantee zero interruption or zero data loss. Those are design targets that must be verified under realistic failure tests.</p>
+<h2 id="8-heartbeats-and-failure-detection">8. Heartbeats and Failure Detection</h2>
+<p>A heartbeat is a periodic indication that a component or service is available.</p>
+<p>A redundancy system may use:</p>
+<ul>
+<li>Network heartbeat messages.</li>
+<li>Service health checks.</li>
+<li>Application-level status checks.</li>
+<li>Controller or device communication diagnostics.</li>
+<li>Dedicated monitoring paths.</li>
+</ul>
+<p>If expected heartbeats are not received, the system may classify a node as unavailable.</p>
+<h3 id="why-failure-detection-is-not-always-simple">Why failure detection is not always simple</h3>
+<p>A missed heartbeat does not necessarily prove that the server has failed.</p>
+<p>Possible causes include:</p>
+<ul>
+<li>Server failure.</li>
+<li>Network partition.</li>
+<li>Switch failure.</li>
+<li>Temporary congestion.</li>
+<li>A stalled application service.</li>
+<li>A blocked monitoring path.</li>
+</ul>
+<p>If the system incorrectly promotes a standby while the original server is still operating, both may become active.</p>
+<p>This condition is called split-brain.</p>
+<h3 id="preventing-split-brain">Preventing split-brain</h3>
+<p>Depending on the architecture, prevention mechanisms may include:</p>
+<ul>
+<li>Quorum or voting mechanisms.</li>
+<li>Witness services.</li>
+<li>Fencing or isolation of the failed node.</li>
+<li>Leases or controlled ownership of shared resources.</li>
+<li>A supported redundancy protocol.</li>
+</ul>
+<p>A system should not rely on the assumption that only one server can ever believe it is active. Networks have an irritating habit of failing in ways that violate assumptions.</p>
+<h2 id="9-network-redundancy-and-failover">9. Network Redundancy and Failover</h2>
+<p>Network redundancy aims to preserve communication when a link or network component fails.</p>
+<h3 id="91-single-path-network">9.1 Single-path network</h3>
+<pre><code>SCADA Server
+     |
+     v
+  Switch A
+     |
+     v
+    PLC
+</code></pre>
+<p>If the only switch or link fails, communication may be interrupted.</p>
+<h3 id="92-redundant-paths">9.2 Redundant paths</h3>
+<pre><code>                +---- Switch A ----+
+                |                  |
+SCADA Server ---+                  +--- PLC Network
+                |                  |
+                +---- Switch B ----+
+</code></pre>
+<p>This is only conceptual. Actual redundant network topologies must avoid loops, define link-selection behavior, and use protocols supported by the network devices.</p>
+<h3 id="common-network-redundancy-approaches">Common network redundancy approaches</h3>
+<p>Redundant links: Alternative connections between network devices.</p>
+<p>Ring topologies: Devices are connected in a ring, with supported mechanisms to restore communication around a failed link.</p>
+<p>Spanning Tree protocols: Ethernet switching protocols that prevent loops and can reconfigure paths after certain failures.</p>
+<p>Industrial redundancy protocols: Protocols designed for specific industrial network requirements, depending on the devices and topology.</p>
+<p>Redundant network interfaces: A device or server uses multiple supported network interfaces.</p>
+<p>These approaches are not interchangeable. Selection depends on device compatibility, topology, recovery-time requirements, network design, and configuration.</p>
+<h3 id="important-caution">Important caution</h3>
+<p>Connecting two network cables between the same devices without the correct supported configuration can create an Ethernet loop, duplicate paths, or unexpected traffic behavior.</p>
+<p>Network redundancy must be engineered and tested, not improvised during a production shift.</p>
+<h2 id="10-redundancy-in-scada-data-acquisition">10. Redundancy in SCADA Data Acquisition</h2>
+<p>A redundant SCADA server must be able to acquire the required PLC data after taking over.</p>
+<p>The design must consider:</p>
+<ul>
+<li>Which server owns each active PLC connection.</li>
+<li>Whether both servers can communicate with the PLC.</li>
+<li>Whether the PLC or driver supports multiple simultaneous clients.</li>
+<li>Whether communication ownership changes during failover.</li>
+<li>How tag values and data quality are initialized.</li>
+<li>Whether alarms are duplicated or missed.</li>
+<li>Whether historical logging resumes correctly.</li>
+<li>How the clients locate the active server.</li>
+</ul>
+<p>Some PLCs and communication interfaces have connection limits or specific redundancy requirements. Confirm the supported architecture before enabling simultaneous communication from multiple servers.</p>
+<h3 id="example">Example</h3>
+<p>Suppose a line has 150 robots and stations monitored by a SCADA server. The standby server has the same tag configuration but is not actively acquiring every value.</p>
+<p>After failover, the standby may need to establish communication sessions and refresh its tag values.</p>
+<p>If its connection capacity or startup behavior has not been tested, the system may technically fail over while still delivering incomplete or delayed monitoring.</p>
+<p>A redundancy test must therefore verify service quality, not merely confirm that a server icon changes from standby to active.</p>
+<h2 id="11-redundancy-and-historical-data">11. Redundancy and Historical Data</h2>
+<p>Failover can affect logging in several ways.</p>
+<p>Potential problems include:</p>
+<ul>
+<li>Duplicate records during transition.</li>
+<li>Missing samples.</li>
+<li>Gaps in event history.</li>
+<li>Conflicting timestamps.</li>
+<li>Incomplete alarm transitions.</li>
+<li>Interrupted database connections.</li>
+<li>Loss of buffered data.</li>
+</ul>
+<p>The design should define which server or service is responsible for writing records and how duplicate or incomplete records are handled.</p>
+<h3 id="example_1">Example</h3>
+<p>Server A fails at 10:00:00. Server B takes over at 10:00:04.</p>
+<p>If the acquisition service does not buffer data during the transition, records may be missing for that interval. If both servers write the same data simultaneously, duplicate records may be created.</p>
+<p>Possible design controls include:</p>
+<ul>
+<li>A clearly defined active logging owner.</li>
+<li>Persistent local buffering where supported.</li>
+<li>Unique event identifiers.</li>
+<li>Duplicate detection.</li>
+<li>Consistent timestamp conventions.</li>
+<li>Recovery and reconciliation procedures.</li>
+</ul>
+<p>The correct solution depends on the data type and the consequences of missing or duplicated records.</p>
+<h2 id="12-redundancy-versus-backup">12. Redundancy Versus Backup</h2>
+<p>Redundancy and backup solve different problems.</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Redundancy</th>
+<th>Backup</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Primary purpose</td>
+<td>Maintain service when a component fails</td>
+<td>Recover data or configuration after loss or corruption</td>
+</tr>
+<tr>
+<td>Typical mechanism</td>
+<td>Standby server, alternate network path, replicated service</td>
+<td>Backup copies and recovery procedures</td>
+</tr>
+<tr>
+<td>Recovery speed</td>
+<td>May be automatic or near-automatic</td>
+<td>Often requires a restore or recovery process</td>
+</tr>
+<tr>
+<td>Protects against server hardware failure</td>
+<td>Potentially, if designed for it</td>
+<td>May allow recovery, but not necessarily immediate continuity</td>
+</tr>
+<tr>
+<td>Protects against accidental deletion</td>
+<td>Not necessarily</td>
+<td>Yes, if a suitable recoverable copy exists</td>
+</tr>
+<tr>
+<td>Protects against ransomware</td>
+<td>Not necessarily</td>
+<td>Can, if backups are protected and recoverable</td>
+</tr>
+<tr>
+<td>Replaces the other?</td>
+<td>No</td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<p>If an incorrect configuration is replicated to both servers, redundancy may simply ensure that the incorrect configuration remains available.</p>
+<p>Backups should be independent enough to protect against the failures they are intended to address. Recovery tests are required to verify that backup files and procedures actually work.</p>
+<h2 id="13-availability-mtbf-mttr-and-recovery-targets">13. Availability, MTBF, MTTR, and Recovery Targets</h2>
+<p>Redundancy planning often uses reliability and recovery metrics.</p>
+<h3 id="mean-time-between-failures-mtbf">Mean Time Between Failures (MTBF)</h3>
+<p>MTBF is the average operating time between failures for a repairable system or component, under a defined measurement method.</p>
+<h3 id="mean-time-to-repair-mttr">Mean Time To Repair (MTTR)</h3>
+<p>MTTR commonly represents the average time required to restore a failed item to service, though organizations may define its start and end points differently.</p>
+<h3 id="availability">Availability</h3>
+<p>A common steady-state approximation is:</p>
+<div class="math-display">\[ A=\frac{MTBF}{MTBF+MTTR} \]</div>
+<p>where:</p>
+<ul>
+<li><span class="math-inline">\(A\)</span> is availability as a fraction.</li>
+<li>MTBF is mean time between failures.</li>
+<li>MTTR is mean time to repair or restore service.</li>
+</ul>
+<p>For example, if a service has an MTBF of 1,000 hours and an MTTR of 1 hour:</p>
+<div class="math-display">\[ A=\frac{1000}{1000+1}\approx0.9990 \]</div>
+<p>That corresponds to approximately 99.90% availability under the assumptions of this simplified model.</p>
+<p>Real systems may have planned downtime, common-cause failures, dependencies, and maintenance windows that this simple formula does not capture.</p>
+<h3 id="recovery-time-objective-rto">Recovery Time Objective (RTO)</h3>
+<p>The RTO is the target maximum time within which a service or function should be restored after a disruption.</p>
+<h3 id="recovery-point-objective-rpo">Recovery Point Objective (RPO)</h3>
+<p>The RPO defines the acceptable data-loss window, expressed as a period of time.</p>
+<p>For example, a system with an RPO of 5 minutes is designed so that the amount of lost data does not exceed the agreed equivalent of that five-minute window, subject to the recovery design and measurement rules.</p>
+<p>RTO and RPO are especially important for historical databases and reporting systems. They are not substitutes for safety or real-time control requirements.</p>
+<h2 id="14-common-redundancy-faults">14. Common Redundancy Faults</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Diagnostic approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Standby does not become active</td>
+<td>Failed health check, configuration error, or redundancy service failure</td>
+<td>Check redundancy diagnostics and failure-detection rules</td>
+</tr>
+<tr>
+<td>Both servers claim to be active</td>
+<td>Split-brain or role-coordination failure</td>
+<td>Inspect cluster state, network partitions, and ownership controls</td>
+</tr>
+<tr>
+<td>Failover occurs but clients remain disconnected</td>
+<td>Client reconnection or active-server discovery failure</td>
+<td>Verify client configuration and failover support</td>
+</tr>
+<tr>
+<td>Monitoring resumes with stale values</td>
+<td>Tag refresh or communication acquisition issue</td>
+<td>Check tag quality, timestamps, and driver diagnostics</td>
+</tr>
+<tr>
+<td>Alarms appear twice</td>
+<td>Both nodes generate or log the same events</td>
+<td>Verify alarm ownership and duplicate suppression</td>
+</tr>
+<tr>
+<td>Historical data has gaps</td>
+<td>Buffering, acquisition, or replay failure</td>
+<td>Inspect logging status and records around the failover</td>
+</tr>
+<tr>
+<td>Network failover does not work</td>
+<td>Unsupported topology or incorrect redundancy configuration</td>
+<td>Check network design and protocol diagnostics</td>
+</tr>
+<tr>
+<td>Recovery causes repeated switching</td>
+<td>Unstable health checks or recovery logic</td>
+<td>Review failover thresholds and stabilization rules</td>
+</tr>
+<tr>
+<td>Database service is unavailable after server failover</td>
+<td>Database connections or replication not configured for the transition</td>
+<td>Check database HA configuration and client reconnection</td>
+</tr>
+<tr>
+<td>Both servers fail together</td>
+<td>Shared power, network, storage, configuration, or other common dependency</td>
+<td>Identify shared components and common-cause failure paths</td>
+</tr>
+</tbody>
+</table>
+<h2 id="15-redundancy-testing-and-commissioning">15. Redundancy Testing and Commissioning</h2>
+<p>Redundancy is not complete when the configuration screen shows a green status. It is complete only after the intended failure cases have been tested and the results documented.</p>
+<p>A controlled test plan should include:</p>
+<h3 id="server-tests">Server tests</h3>
+<ol>
+<li>Confirm the active and standby roles.</li>
+<li>Verify configuration and data synchronization.</li>
+<li>Test a planned active-server failure using an approved procedure.</li>
+<li>Measure the interruption and recovery time.</li>
+<li>Verify client reconnection.</li>
+<li>Confirm PLC data updates and quality indicators.</li>
+<li>Verify alarm handling and historical logging.</li>
+<li>Test recovery and failback according to the approved procedure.</li>
+</ol>
+<h3 id="network-tests">Network tests</h3>
+<ol>
+<li>Confirm the intended network topology.</li>
+<li>Verify redundant paths and protocol status.</li>
+<li>Test a link failure under controlled conditions.</li>
+<li>Confirm communication recovery.</li>
+<li>Check for loops, duplicate addressing, or unexpected traffic.</li>
+<li>Verify communication with all required devices.</li>
+<li>Record actual recovery time and any data gaps.</li>
+</ol>
+<h3 id="data-integrity-tests">Data integrity tests</h3>
+<ol>
+<li>Check for duplicate event records.</li>
+<li>Check for missing process samples.</li>
+<li>Verify timestamp continuity.</li>
+<li>Confirm that alarm transitions are recorded correctly.</li>
+<li>Verify recovery from any temporary logging or database interruption.</li>
+</ol>
+<p>Testing must follow the site's change-control and production-safety procedures. Do not deliberately disconnect live industrial infrastructure without authorization and an approved test plan.</p>
+<h2 id="16-practical-automotive-manufacturing-example">16. Practical Automotive Manufacturing Example</h2>
+<p>Consider a SCADA system monitoring stations FR1010 through FR1050.</p>
+<p>The system uses:</p>
+<ul>
+<li>A primary SCADA server.</li>
+<li>A standby SCADA server.</li>
+<li>A managed industrial Ethernet network.</li>
+<li>PLC communication drivers.</li>
+<li>A historical data service.</li>
+<li>Operator clients.</li>
+</ul>
+<h3 id="normal-operation">Normal operation</h3>
+<p>The primary server acquires PLC data and serves the clients. The standby monitors the primary and maintains the configuration or state required for takeover.</p>
+<h3 id="primary-server-failure">Primary server failure</h3>
+<p>The redundancy mechanism detects that the primary server is unavailable. The standby takes over, clients reconnect, and data acquisition resumes.</p>
+<h3 id="what-must-be-verified">What must be verified</h3>
+<ul>
+<li>Do all required station values update?</li>
+<li>Are communication and stale-data conditions displayed correctly?</li>
+<li>Are alarms still generated and recorded?</li>
+<li>Does historical logging continue?</li>
+<li>Is there a measurable gap in the data?</li>
+<li>Can the failed server return without creating a split-brain condition?</li>
+<li>Does the recovery process require operator or administrator intervention?</li>
+</ul>
+<h3 id="network-switch-failure">Network switch failure</h3>
+<p>If the architecture includes a properly configured redundant path, communication may recover through the alternative path.</p>
+<p>If both paths depend on the same failed switch or power source, redundancy may not provide the expected protection.</p>
+<p>This example demonstrates why redundancy must be designed across the entire service path rather than at only one component.</p>
+<h2 id="17-interview-questions-and-answers">17. Interview Questions and Answers</h2>
+<p>Q1. What is redundancy in industrial automation?</p>
+<p>Providing alternative components, systems, or communication paths so that a single failure does not necessarily interrupt the required function.</p>
+<p>Q2. What is failover?</p>
+<p>The transfer of a service or active role to an alternative component after a failure or defined availability condition.</p>
+<p>Q3. What is failback?</p>
+<p>Returning the service to its preferred or original component after recovery, according to the system's failback policy.</p>
+<p>Q4. What is the difference between active/standby and active/active?</p>
+<p>Active/standby assigns one component the active role while another waits to take over. Active/active allows multiple components to perform active work simultaneously.</p>
+<p>Q5. What is a single point of failure?</p>
+<p>A component or dependency whose failure interrupts a required function because a suitable alternative is unavailable.</p>
+<p>Q6. What is split-brain?</p>
+<p>A condition in which multiple nodes incorrectly believe they should both be active, potentially causing conflicting operations or inconsistent data.</p>
+<p>Q7. What is the purpose of a heartbeat?</p>
+<p>To help a redundancy system monitor the availability or health of another component.</p>
+<p>Q8. Does server redundancy guarantee zero data loss?</p>
+<p>No. Data loss depends on acquisition, buffering, replication, storage, and recovery design. The system must be tested against defined requirements.</p>
+<p>Q9. What is the difference between redundancy and backup?</p>
+<p>Redundancy aims to maintain service during particular failures. Backup preserves recoverable copies of data or configuration for restoration after loss or corruption.</p>
+<p>Q10. What is network redundancy?</p>
+<p>Providing alternative communication paths or network components to reduce the effect of a link or device failure.</p>
+<p>Q11. What are RTO and RPO?</p>
+<p>RTO is the target time to restore a service. RPO defines the acceptable data-loss window.</p>
+<p>Q12. Why must redundancy be tested?</p>
+<p>Configuration alone cannot establish actual recovery time, client behavior, data integrity, or correct role switching during failure.</p>
+<p>Q13. Can two redundant servers share the same single network switch?</p>
+<p>They can, but that switch remains a shared dependency and potential single point of failure for communication through it.</p>
+<p>Q14. Why might a redundant SCADA server fail to provide useful monitoring after takeover?</p>
+<p>It may have incomplete synchronization, insufficient connection capacity, failed data acquisition, stale tags, client reconnection problems, or configuration differences.</p>
+<h2 id="18-practical-exercises">18. Practical Exercises</h2>
+<p>Use a development environment or an approved test system.</p>
+<ol>
+<li>Draw a SCADA architecture with one server and identify its single points of failure.</li>
+<li>Redesign it using active/standby servers.</li>
+<li>Identify the remaining shared dependencies in the redesigned architecture.</li>
+<li>Draw a network with redundant paths and identify how a failed link should be handled.</li>
+<li>Explain how a heartbeat can fail even when the monitored server is still running.</li>
+<li>Define expected failover behavior for operator clients.</li>
+<li>Prepare a test checklist for server failover.</li>
+<li>Define an RTO and RPO for a hypothetical historical database, based on stated business requirements.</li>
+<li>Explain how duplicate fault events might arise during failover.</li>
+<li>Design a method to detect missing samples and duplicate records after recovery.</li>
+<li>Distinguish failover from failback and backup restoration.</li>
+<li>Document a controlled test that verifies monitoring, alarm handling, and logging after a server transition.</li>
+</ol>
+<h2 id="19-final-mental-model">19. Final Mental Model</h2>
+<pre><code>Normal operation
+       |
+       v
+Active component provides service
+       |
+       v
+Failure detected
+       |
+       v
+Redundancy mechanism validates role transition
+       |
+       v
+Standby / alternative path takes over
+       |
+       v
+Clients and data services recover
+       |
+       v
+Verify availability and data integrity
+       |
+       v
+Repair failed component and manage recovery
+</code></pre>
+<p>Remember the five central principles:</p>
+<ol>
+<li>Redundancy reduces the impact of specified failures.</li>
+<li>Failover must be detected, coordinated, and tested.</li>
+<li>Shared dependencies can defeat otherwise redundant components.</li>
+<li>Redundancy is not a substitute for backups or recovery procedures.</li>
+<li>Successful failover means the required service works correctly, not merely that another server becomes active.</li>
+</ol>
+<p>Topic covered: <code>06_Redundancy - Redundancy: Server and network failover</code></p>
+<p>Next topic: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\02_Auto_Tech\04_VFD\01_Drive_Arch - Drive architecture</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

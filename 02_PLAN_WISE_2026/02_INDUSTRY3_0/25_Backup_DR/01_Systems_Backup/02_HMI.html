@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HMI Backup and Disaster Recovery</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">HMI Backup and Disaster Recovery</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-purpose-and-scope">1. Purpose and scope</a></li>
+<li><a href="#2-essential-terminology">2. Essential terminology</a></li>
+<li><a href="#3-what-must-be-backed-up">3. What must be backed up?</a></li>
+<li><a href="#4-hmi-backup-architecture">4. HMI backup architecture</a></li>
+<li><a href="#5-hmi-backup-methods">5. HMI backup methods</a><ul>
+<li><a href="#51-original-engineering-project-backup">5.1 Original engineering-project backup</a></li>
+<li><a href="#52-upload-from-the-hmi">5.2 Upload from the HMI</a></li>
+<li><a href="#53-removable-storage-and-runtime-backup">5.3 Removable storage and runtime backup</a></li>
+<li><a href="#54-screenshots-and-documentation">5.4 Screenshots and documentation</a></li>
+</ul>
+</li>
+<li><a href="#6-backup-strategy-by-hmi-manufacturer">6. Backup strategy by HMI manufacturer</a></li>
+<li><a href="#7-backup-frequency-and-triggers">7. Backup frequency and triggers</a></li>
+<li><a href="#8-hmi-data-integrity-and-version-control">8. HMI data integrity and version control</a><ul>
+<li><a href="#81-backup-validation-levels">8.1 Backup validation levels</a></li>
+<li><a href="#82-revision-control-procedure">8.2 Revision-control procedure</a></li>
+</ul>
+</li>
+<li><a href="#9-storage-strategy-and-cybersecurity">9. Storage strategy and cybersecurity</a></li>
+<li><a href="#10-hmi-restoration-procedure">10. HMI restoration procedure</a><ul>
+<li><a href="#101-pre-restoration-checklist">10.1 Pre-restoration checklist</a></li>
+<li><a href="#102-restoration-sequence">10.2 Restoration sequence</a></li>
+<li><a href="#103-post-restoration-verification">10.3 Post-restoration verification</a></li>
+</ul>
+</li>
+<li><a href="#11-recovery-scenarios">11. Recovery scenarios</a><ul>
+<li><a href="#111-hmi-hardware-failure">11.1 HMI hardware failure</a></li>
+<li><a href="#112-corrupted-hmi-project">11.2 Corrupted HMI project</a></li>
+<li><a href="#113-lost-engineering-pc">11.3 Lost engineering PC</a></li>
+<li><a href="#114-cybersecurity-incident">11.4 Cybersecurity incident</a></li>
+<li><a href="#115-hmi-obsolescence-migration">11.5 HMI obsolescence migration</a></li>
+</ul>
+</li>
+<li><a href="#12-common-backup-and-restoration-failures">12. Common backup and restoration failures</a></li>
+<li><a href="#13-practical-implementation-for-industrial-maintenance">13. Practical implementation for industrial maintenance</a><ul>
+<li><a href="#131-hmi-backup-register">13.1 HMI backup register</a></li>
+<li><a href="#132-example-folder-structure">13.2 Example folder structure</a></li>
+<li><a href="#133-maintenance-work-order-integration">13.3 Maintenance work-order integration</a></li>
+</ul>
+</li>
+<li><a href="#14-recovery-drills-and-audit">14. Recovery drills and audit</a><ul>
+<li><a href="#141-recovery-drill">14.1 Recovery drill</a></li>
+<li><a href="#142-audit-checklist">14.2 Audit checklist</a></li>
+</ul>
+</li>
+<li><a href="#15-backup-management-kpis">15. Backup management KPIs</a></li>
+<li><a href="#16-interview-questions-and-technical-answers">16. Interview questions and technical answers</a></li>
+<li><a href="#17-final-engineering-principles">17. Final engineering principles</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><h2 id="1-purpose-and-scope">1. Purpose and scope</h2>
+<p>An HMI backup preserves the engineering project, configuration, and other required data needed to restore an operator interface after hardware failure, accidental modification, software corruption, replacement, or a cybersecurity incident.</p>
+<p>An HMI is not merely a display. It may contain the operator's access to machine commands, alarms, recipes, production counts, maintenance screens, trends, and communication settings. Losing the HMI project can therefore affect both production recovery and the ability to operate equipment correctly.</p>
+<p>The objective is to ensure that the HMI can be restored to a known, approved state using compatible hardware, software, configuration, and supporting data.</p>
+<p>Common recovery scenarios include:</p>
+<ul>
+<li>HMI panel failure requiring replacement.</li>
+<li>Corrupted project or failed firmware update.</li>
+<li>Accidental modification of screens, scripts, or device addresses.</li>
+<li>Loss of the engineering PC or original project.</li>
+<li>HMI replacement during obsolescence migration.</li>
+<li>Loss of recipe or logging configuration.</li>
+<li>Communication failure after a network or PLC change.</li>
+<li>Cybersecurity incidents affecting the panel or engineering system.</li>
+</ul>
+<p>Core principle: A backup file is not a proven recovery solution until its identity, integrity, dependencies, and restoration procedure have been verified.</p>
+<h2 id="2-essential-terminology">2. Essential terminology</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+<th>Industrial example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HMI project</td>
+<td>Editable engineering data used to configure the operator interface</td>
+<td>GT Designer project for a Mitsubishi GOT</td>
+</tr>
+<tr>
+<td>Runtime project</td>
+<td>Application data executed by the HMI</td>
+<td>Screens and objects running on the panel</td>
+</tr>
+<tr>
+<td>Upload</td>
+<td>Retrieving supported project or runtime data from the panel</td>
+<td>Recovering available HMI data to an engineering PC</td>
+</tr>
+<tr>
+<td>Download</td>
+<td>Transferring a project or configuration from the engineering PC to the panel</td>
+<td>Installing an approved project on a replacement HMI</td>
+</tr>
+<tr>
+<td>Archive</td>
+<td>Packaged backup of the project and required recovery information</td>
+<td>Controlled archive of a PanelView project</td>
+</tr>
+<tr>
+<td>Recipe data</td>
+<td>Stored sets of process parameters</td>
+<td>Approved welding or machining parameter sets</td>
+</tr>
+<tr>
+<td>Alarm history</td>
+<td>Recorded alarm events and associated information</td>
+<td>Historical faults for troubleshooting</td>
+</tr>
+<tr>
+<td>Data logging</td>
+<td>Recording values over time</td>
+<td>Temperature, pressure, cycle time, or production count</td>
+</tr>
+<tr>
+<td>Firmware</td>
+<td>Software that operates the HMI hardware</td>
+<td>Panel system software</td>
+</tr>
+<tr>
+<td>Golden backup</td>
+<td>Approved reference version of the HMI project</td>
+<td>Released project after successful commissioning</td>
+</tr>
+<tr>
+<td>FAT</td>
+<td>Factory Acceptance Test</td>
+<td>HMI function verification before installation</td>
+</tr>
+<tr>
+<td>SAT</td>
+<td>Site Acceptance Test</td>
+<td>HMI verification on the installed machine</td>
+</tr>
+<tr>
+<td>RPO</td>
+<td>Recovery Point Objective</td>
+<td>Maximum acceptable loss of recent changes or data</td>
+</tr>
+<tr>
+<td>RTO</td>
+<td>Recovery Time Objective</td>
+<td>Target time to restore HMI service</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-what-must-be-backed-up">3. What must be backed up?</h2>
+<p>A complete HMI recovery package may contain several independent items. Their availability depends on the HMI family, software version, storage method, and project design.</p>
+<table>
+<thead>
+<tr>
+<th>Backup item</th>
+<th>Contents</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Editable project</td>
+<td>Screens, objects, tags, and application configuration</td>
+<td>Allows engineering changes and restoration</td>
+</tr>
+<tr>
+<td>Communication configuration</td>
+<td>PLC drivers, station settings, IP addresses, and port parameters</td>
+<td>Restores PLC connectivity</td>
+</tr>
+<tr>
+<td>Screen resources</td>
+<td>Graphics, icons, fonts, and reusable objects</td>
+<td>Preserves screen appearance and readability</td>
+</tr>
+<tr>
+<td>Scripts and macros</td>
+<td>Calculations, event actions, and custom behavior</td>
+<td>Restores functions beyond basic screen objects</td>
+</tr>
+<tr>
+<td>Alarm configuration</td>
+<td>Alarm triggers, messages, priorities, and acknowledgement behavior</td>
+<td>Restores fault indication</td>
+</tr>
+<tr>
+<td>Recipe configuration</td>
+<td>Recipe structures, device mapping, and transfer rules</td>
+<td>Preserves parameter handling</td>
+</tr>
+<tr>
+<td>Logging configuration</td>
+<td>Sampling, storage, retention, and export settings</td>
+<td>Restores historical-data collection</td>
+</tr>
+<tr>
+<td>Security configuration</td>
+<td>User roles, permissions, and protected functions</td>
+<td>Preserves authorized access controls</td>
+</tr>
+<tr>
+<td>Firmware information</td>
+<td>Panel system version and compatibility details</td>
+<td>Supports compatible replacement</td>
+</tr>
+<tr>
+<td>Hardware information</td>
+<td>Model number, ports, display characteristics, and options</td>
+<td>Identifies a suitable replacement panel</td>
+</tr>
+<tr>
+<td>Runtime data</td>
+<td>Recipes, histories, counters, or stored values where required</td>
+<td>Supports data recovery when the data is not in the project archive</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Screen lists, device mapping, network configuration, and test records</td>
+<td>Supports troubleshooting and validation</td>
+</tr>
+<tr>
+<td>Dependencies</td>
+<td>Required engineering software, libraries, drivers, and licenses</td>
+<td>Allows the project to be opened and maintained</td>
+</tr>
+</tbody>
+</table>
+<p>Do not assume that the editable project contains all runtime data. Historical alarms, recipe values, logged measurements, and user settings may require separate export or backup procedures.</p>
+<h2 id="4-hmi-backup-architecture">4. HMI backup architecture</h2>
+<pre><code>Installed HMI and running application
+        ↓
+Identify panel model, software and configuration
+        ↓
+Locate the approved editable project
+        ↓
+Capture required runtime data separately
+        ↓
+Create a versioned backup package
+        ↓
+Validate project identity and file integrity
+        ↓
+Store in controlled engineering repository
+        ↓
+Create an independent recovery copy
+        ↓
+Test restoration using compatible equipment
+        ↓
+Record verification and recovery results
+</code></pre>
+<p>The backup must preserve the relationship between the HMI project, its connected PLC, the machine, and the approved revision. A perfectly valid project for the wrong machine is still a bad recovery asset.</p>
+<h2 id="5-hmi-backup-methods">5. HMI backup methods</h2>
+<h3 id="51-original-engineering-project-backup">5.1 Original engineering-project backup</h3>
+<p>The preferred method is to preserve the original editable project maintained in the appropriate engineering software.</p>
+<p>Procedure:</p>
+<ol>
+<li>Identify the HMI and its installed machine.</li>
+<li>Locate the latest approved project.</li>
+<li>Confirm the project model, revision, and software version.</li>
+<li>Compare the project with the installed configuration using approved methods.</li>
+<li>Save or archive a new revision without overwriting the released source.</li>
+<li>Include the required communication settings and project dependencies.</li>
+<li>Capture runtime data separately if it is needed for recovery.</li>
+<li>Record the backup location, revision, date, and responsible engineer.</li>
+<li>Verify that the archived project can be reopened in the required software.</li>
+</ol>
+<p>This method normally provides better engineering traceability than relying exclusively on an upload from the panel.</p>
+<h3 id="52-upload-from-the-hmi">5.2 Upload from the HMI</h3>
+<p>Uploading can help recover available project information when the original engineering project is missing.</p>
+<p>However, an HMI upload is not guaranteed to reproduce the complete original editable project. Depending on the platform and protection settings, it may omit comments, reusable libraries, source resources, scripts, or other engineering information.</p>
+<p>Before attempting an upload:</p>
+<ul>
+<li>Confirm that the panel and software support the operation.</li>
+<li>Verify that the correct HMI is selected.</li>
+<li>Record the current model and firmware.</li>
+<li>Check whether the upload can affect production operation.</li>
+<li>Follow access-control and authorization procedures.</li>
+<li>Preserve the resulting files as a recovered project, not automatically as the approved golden backup.</li>
+</ul>
+<p>After uploading, compare the recovered information with the installed application and other available records.</p>
+<h3 id="53-removable-storage-and-runtime-backup">5.3 Removable storage and runtime backup</h3>
+<p>Some HMIs support USB storage, SD cards, or other media for project transfer, data export, or backup.</p>
+<p>The exact capabilities are model-specific. Removable storage may contain a project, recipes, logs, screenshots, or only selected data. Do not assume that one card contains everything needed for complete restoration.</p>
+<p>Document:</p>
+<ul>
+<li>Supported storage type and capacity.</li>
+<li>Backup or export method.</li>
+<li>Contents and revision.</li>
+<li>Whether the media contains project data or runtime data.</li>
+<li>Compatibility with the replacement panel.</li>
+<li>Storage location and physical protection.</li>
+<li>Required passwords or permissions, stored under approved security procedures.</li>
+</ul>
+<h3 id="54-screenshots-and-documentation">5.4 Screenshots and documentation</h3>
+<p>Screenshots can preserve visual evidence of screen layouts, alarm messages, and settings. They do not replace the editable engineering project.</p>
+<p>Use screenshots to supplement the backup, particularly when recovering an undocumented legacy HMI. Record the screen name, purpose, relevant PLC devices, and expected behavior.</p>
+<p>A screenshot of a recipe screen cannot restore its recipe-transfer logic, device assignments, validation rules, or stored values. Humans keep inventing new ways to confuse a picture of a system with the system itself.</p>
+<h2 id="6-backup-strategy-by-hmi-manufacturer">6. Backup strategy by HMI manufacturer</h2>
+<p>Different HMI families use different engineering environments and project formats. The backup procedure must match the actual panel.</p>
+<table>
+<thead>
+<tr>
+<th>HMI family</th>
+<th>Typical engineering software</th>
+<th>Important backup considerations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mitsubishi GOT1000</td>
+<td>GT Designer2, depending on model and project</td>
+<td>Preserve original project and verify upload limitations</td>
+</tr>
+<tr>
+<td>Mitsubishi GOT2000</td>
+<td>GT Designer3 within the applicable GT Works3 environment</td>
+<td>Record target model, project version, communication settings, and options</td>
+</tr>
+<tr>
+<td>Siemens SIMATIC HMI</td>
+<td>WinCC within the applicable TIA Portal or legacy environment</td>
+<td>Check panel family, software version, project compatibility, and runtime data</td>
+</tr>
+<tr>
+<td>Allen-Bradley PanelView Plus</td>
+<td>FactoryTalk View Studio and applicable transfer utilities</td>
+<td>Preserve application files, terminal configuration, communication settings, and required software dependencies</td>
+</tr>
+<tr>
+<td>Allen-Bradley PanelView 5000</td>
+<td>Applicable Studio 5000 environment</td>
+<td>Verify controller integration, terminal model, and supported project workflow</td>
+</tr>
+<tr>
+<td>Omron HMI</td>
+<td>Applicable NB-Designer, CX-Designer, or Sysmac Studio environment</td>
+<td>Check exact HMI series, project format, and runtime-data backup options</td>
+</tr>
+<tr>
+<td>Schneider Electric HMI</td>
+<td>Applicable EcoStruxure Operator Terminal Expert or Vijeo Designer environment</td>
+<td>Verify target model, software version, and supported transfer procedure</td>
+</tr>
+<tr>
+<td>Pro-face HMI</td>
+<td>Applicable GP-Pro EX environment</td>
+<td>Preserve project, communication settings, and supported runtime data</td>
+</tr>
+<tr>
+<td>Weintek HMI</td>
+<td>EasyBuilder Pro for supported models</td>
+<td>Check project version, model compatibility, and separately stored data</td>
+</tr>
+</tbody>
+</table>
+<p>Software names and capabilities vary by product generation. Verify the actual panel's manual and supported engineering workflow before backing up or restoring it.</p>
+<h2 id="7-backup-frequency-and-triggers">7. Backup frequency and triggers</h2>
+<p>The backup schedule should reflect equipment criticality, project change frequency, and the cost of losing HMI functionality.</p>
+<table>
+<thead>
+<tr>
+<th>Trigger</th>
+<th>Required backup action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>New machine commissioning</td>
+<td>Create the initial approved project backup</td>
+</tr>
+<tr>
+<td>Approved screen modification</td>
+<td>Save and archive the released project revision</td>
+</tr>
+<tr>
+<td>PLC device-address change</td>
+<td>Back up the updated project and communication mapping</td>
+</tr>
+<tr>
+<td>HMI replacement</td>
+<td>Preserve the old project and create a separate target project</td>
+</tr>
+<tr>
+<td>Firmware update</td>
+<td>Preserve the pre-update state and verify the post-update state</td>
+</tr>
+<tr>
+<td>Recipe modification</td>
+<td>Back up the configuration and required recipe data</td>
+</tr>
+<tr>
+<td>Security or permission change</td>
+<td>Preserve the approved security configuration</td>
+</tr>
+<tr>
+<td>Network modification</td>
+<td>Record and back up relevant communication settings</td>
+</tr>
+<tr>
+<td>Engineering-PC replacement</td>
+<td>Verify that the project and required dependencies are recoverable</td>
+</tr>
+<tr>
+<td>Cybersecurity incident</td>
+<td>Preserve evidence and recover only from a trusted source</td>
+</tr>
+<tr>
+<td>Periodic maintenance audit</td>
+<td>Check backup currency, integrity, and recoverability</td>
+</tr>
+</tbody>
+</table>
+<p>For critical equipment, a practical baseline is to create a backup after every approved engineering change and perform scheduled verification. The exact schedule should follow plant policy and the risk assessment.</p>
+<h2 id="8-hmi-data-integrity-and-version-control">8. HMI data integrity and version control</h2>
+<h3 id="81-backup-validation-levels">8.1 Backup validation levels</h3>
+<table>
+<thead>
+<tr>
+<th>Validation level</th>
+<th>What it confirms</th>
+<th>Remaining limitation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>File existence</td>
+<td>Expected backup files are present</td>
+<td>Files may be incomplete</td>
+</tr>
+<tr>
+<td>File integrity</td>
+<td>Files match their recorded checksums</td>
+<td>Correctness is not proven</td>
+</tr>
+<tr>
+<td>Project opening</td>
+<td>Engineering software can open the project</td>
+<td>Runtime behavior is not proven</td>
+</tr>
+<tr>
+<td>Model compatibility</td>
+<td>Project supports the intended target panel</td>
+<td>Communication and functions still require testing</td>
+</tr>
+<tr>
+<td>Revision verification</td>
+<td>Project matches the approved release</td>
+<td>Required runtime data may be missing</td>
+</tr>
+<tr>
+<td>Restore test</td>
+<td>The recovery procedure works in the tested setup</td>
+<td>Untested field conditions may remain</td>
+</tr>
+<tr>
+<td>Functional test</td>
+<td>Required HMI functions behave correctly</td>
+<td>Does not replace machine safety validation</td>
+</tr>
+</tbody>
+</table>
+<p>A checksum such as SHA-256 can detect unexpected changes to a file after its checksum was recorded.</p>
+<pre><code>Approved project archive
+        ↓
+Calculate SHA-256 checksum
+        ↓
+Store checksum in backup manifest
+        ↓
+Retrieve archive during recovery
+        ↓
+Calculate checksum again
+        ↓
+Compare with recorded value
+        ↓
+Match: integrity check passes
+Mismatch: investigate before use
+</code></pre>
+<p>A checksum cannot determine whether the backup is the latest approved project or whether it contains the correct machine configuration.</p>
+<h3 id="82-revision-control-procedure">8.2 Revision-control procedure</h3>
+<p>Use a controlled revision identifier rather than relying on the file's modification date alone.</p>
+<p>Example:</p>
+<pre><code>MACHINE_ID_HMI_REVISION_DATE
+LINE1059_HMI01_R008_20261017
+</code></pre>
+<p>The example is illustrative. Use the plant's actual asset identifiers and document-control rules.</p>
+<p>Each released revision should identify:</p>
+<ul>
+<li>HMI model and machine.</li>
+<li>Engineering software version.</li>
+<li>Project revision.</li>
+<li>Change or work-order reference.</li>
+<li>Approval status.</li>
+<li>Backup timestamp.</li>
+<li>Integrity-check result.</li>
+<li>Storage location.</li>
+<li>Required runtime-data backup.</li>
+<li>Verification status.</li>
+</ul>
+<p>Preserve the original project and each required released revision. Do not overwrite the only known-good backup with an untested engineering change.</p>
+<h2 id="9-storage-strategy-and-cybersecurity">9. Storage strategy and cybersecurity</h2>
+<p>HMI backups should be protected against accidental deletion, hardware failure, unauthorized modification, and ransomware.</p>
+<p>A useful baseline is the 3-2-1 backup principle:</p>
+<ul>
+<li>Maintain at least three copies of important data.</li>
+<li>Use at least two different storage types or platforms where practical.</li>
+<li>Keep at least one copy off-site or otherwise isolated from the primary failure domain.</li>
+</ul>
+<p>Example:</p>
+<pre><code>Primary engineering repository
+        ↓
+Independent backup repository
+        ↓
+Offline or isolated recovery copy
+</code></pre>
+<p>Three folders on one engineering PC are not three independent backups. If the PC fails or is compromised, all three may disappear together.</p>
+<p>Recommended controls include:</p>
+<ul>
+<li>Role-based access to approved project repositories.</li>
+<li>Separate permissions for reading and modifying released backups.</li>
+<li>Offline or isolated copies for critical systems.</li>
+<li>Encryption where required by plant policy.</li>
+<li>Controlled retention and deletion rules.</li>
+<li>Audit records for changes to released projects.</li>
+<li>Secure handling of passwords, certificates, and recovery credentials.</li>
+<li>Malware checks and integrity verification according to approved procedures.</li>
+</ul>
+<p>Do not expose HMI engineering systems directly to untrusted networks merely to simplify backup access. Recovery convenience must not undermine the plant's OT security controls.</p>
+<h2 id="10-hmi-restoration-procedure">10. HMI restoration procedure</h2>
+<p>Restoration must reinstate the correct application and required configuration without introducing unintended machine behavior.</p>
+<h3 id="101-pre-restoration-checklist">10.1 Pre-restoration checklist</h3>
+<ul>
+<li>Identify the exact HMI and connected machine.</li>
+<li>Determine the failure and required recovery scope.</li>
+<li>Confirm the replacement panel model and compatibility.</li>
+<li>Select the approved backup revision.</li>
+<li>Verify project integrity and provenance.</li>
+<li>Confirm the required engineering software and license.</li>
+<li>Record firmware and communication settings.</li>
+<li>Identify required recipes, logs, and other runtime data.</li>
+<li>Confirm the safe-state and isolation requirements.</li>
+<li>Obtain the required maintenance and production authorization.</li>
+<li>Preserve diagnostic evidence when relevant.</li>
+<li>Confirm that the recovery procedure will not cause unexpected machine startup.</li>
+</ul>
+<h3 id="102-restoration-sequence">10.2 Restoration sequence</h3>
+<ol>
+<li>Diagnose the HMI failure and determine whether the panel, project, network, or PLC connection is responsible.</li>
+<li>Place the equipment in the approved state for restoration.</li>
+<li>Record the existing panel model, firmware, communication settings, and project identity where available.</li>
+<li>Retrieve and verify the approved backup.</li>
+<li>Install compatible replacement hardware if necessary.</li>
+<li>Install or access the required engineering software.</li>
+<li>Configure the target model and communication parameters.</li>
+<li>Transfer the project using the manufacturer's supported procedure.</li>
+<li>Restore separately backed-up runtime data where required and approved.</li>
+<li>Verify startup behavior, screen navigation, and communication.</li>
+<li>Test critical operator functions, alarms, recipes, and permissions.</li>
+<li>Complete required functional and safety-related verification.</li>
+<li>Obtain authorization before releasing the equipment.</li>
+<li>Update the backup register and preserve the final verified project.</li>
+</ol>
+<p>The precise download and restoration steps depend on the HMI family. Some operations can restart the panel, overwrite an existing application, or alter settings. Follow the applicable manufacturer's documentation.</p>
+<h3 id="103-post-restoration-verification">10.3 Post-restoration verification</h3>
+<p>Verify more than the presence of the home screen.</p>
+<ul>
+<li>Correct panel model and project revision.</li>
+<li>Correct PLC driver and communication settings.</li>
+<li>Correct device addresses and displayed values.</li>
+<li>Correct operator commands and numeric-entry limits.</li>
+<li>Correct alarm indication, acknowledgement, and history behavior.</li>
+<li>Correct recipe selection and transfer.</li>
+<li>Correct trends, logging, and data retention where required.</li>
+<li>Correct user permissions and protected functions.</li>
+<li>Correct restart and power-recovery behavior.</li>
+<li>Correct interaction with drives, robots, CNCs, and other connected equipment.</li>
+<li>No unexplained communication or system errors.</li>
+<li>Required machine safety verification completed under approved procedures.</li>
+</ul>
+<p>An HMI is an interface to the control system. Testing the HMI does not independently prove that the PLC logic, safety system, or physical machine is safe.</p>
+<h2 id="11-recovery-scenarios">11. Recovery scenarios</h2>
+<h3 id="111-hmi-hardware-failure">11.1 HMI hardware failure</h3>
+<p>Situation: The HMI panel fails to start or has a defective display or touch interface.</p>
+<p>Recovery procedure:</p>
+<ol>
+<li>Confirm that the fault is actually in the HMI and not its power supply, wiring, or network connection.</li>
+<li>Record the panel model and installed configuration.</li>
+<li>Identify a compatible replacement.</li>
+<li>Retrieve the approved project and required runtime data.</li>
+<li>Install the replacement using approved electrical isolation procedures.</li>
+<li>Transfer the project and configure communication.</li>
+<li>Verify all critical screens and machine interfaces.</li>
+<li>Obtain release approval and update the installed-base record.</li>
+</ol>
+<p>A replacement panel with the same screen size may still have different interfaces, firmware requirements, or software compatibility.</p>
+<h3 id="112-corrupted-hmi-project">11.2 Corrupted HMI project</h3>
+<p>Situation: A project change causes missing screens, broken scripts, or unexpected operation.</p>
+<p>Recovery procedure:</p>
+<ul>
+<li>Preserve the current project and available diagnostic evidence.</li>
+<li>Identify the last approved revision.</li>
+<li>Compare the current revision with the released baseline.</li>
+<li>Restore the approved revision under change-control procedures.</li>
+<li>Verify communication, commands, alarms, and other affected functions.</li>
+<li>Document the cause and corrective action.</li>
+</ul>
+<p>Do not overwrite the only copy of the corrupted project before preserving it. It may contain evidence needed to identify the failure.</p>
+<h3 id="113-lost-engineering-pc">11.3 Lost engineering PC</h3>
+<p>Situation: The PC containing the HMI engineering software and project is unavailable.</p>
+<p>Recovery procedure:</p>
+<ol>
+<li>Retrieve the project from the independent repository.</li>
+<li>Verify its integrity and revision.</li>
+<li>Install the required supported engineering software.</li>
+<li>Recover the necessary licenses, drivers, libraries, and dependencies through authorized channels.</li>
+<li>Confirm that the project opens.</li>
+<li>Verify access to the replacement HMI.</li>
+<li>Conduct the required transfer and functional checks.</li>
+</ol>
+<p>A project archive alone may not be enough. The engineering software version, hardware descriptions, license requirements, and project dependencies can determine how quickly recovery is possible.</p>
+<h3 id="114-cybersecurity-incident">11.4 Cybersecurity incident</h3>
+<p>Situation: The HMI or engineering system may have been modified by unauthorized software or an attacker.</p>
+<p>Recovery procedure:</p>
+<ol>
+<li>Follow the approved incident-response process.</li>
+<li>Coordinate with authorized OT/IT cybersecurity personnel.</li>
+<li>Preserve relevant logs and evidence.</li>
+<li>Identify a trusted backup from before the incident.</li>
+<li>Verify the backup's integrity and provenance.</li>
+<li>Restore in an approved, trusted environment.</li>
+<li>Validate the project and required communications.</li>
+<li>Reconnect the system only after the required security and engineering approvals.</li>
+</ol>
+<p>Do not assume that the most recent backup is trustworthy. A recent copy can preserve unauthorized changes along with the legitimate project.</p>
+<h3 id="115-hmi-obsolescence-migration">11.5 HMI obsolescence migration</h3>
+<p>Situation: A legacy HMI is being replaced with a newer generation.</p>
+<p>Recovery and migration require separate source and target records.</p>
+<ul>
+<li>Preserve the original editable project.</li>
+<li>Record the source panel model, software version, and firmware.</li>
+<li>Confirm the target panel's supported features.</li>
+<li>Convert the project using the documented procedure.</li>
+<li>Revalidate screens, communication, alarms, scripts, and recipes.</li>
+<li>Test the migrated project on the target panel.</li>
+<li>Retain the source project for rollback and historical troubleshooting.</li>
+<li>Create a new approved backup after migration acceptance.</li>
+</ul>
+<p>A converted project must not silently replace the original legacy project. The two serve different recovery purposes.</p>
+<h2 id="12-common-backup-and-restoration-failures">12. Common backup and restoration failures</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Corrective action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Project is missing</td>
+<td>Backup procedure or storage location was not documented</td>
+<td>Search approved repositories and review backup records</td>
+</tr>
+<tr>
+<td>Project will not open</td>
+<td>Incompatible software version or damaged archive</td>
+<td>Verify software requirements and retrieve a verified copy</td>
+</tr>
+<tr>
+<td>Upload lacks engineering details</td>
+<td>Panel upload does not preserve all original project information</td>
+<td>Recover the original editable project or reconstruct missing data under change control</td>
+</tr>
+<tr>
+<td>Download is rejected</td>
+<td>Wrong target model or unsupported project format</td>
+<td>Verify model selection and software compatibility</td>
+</tr>
+<tr>
+<td>HMI starts but PLC data is unavailable</td>
+<td>Incorrect driver, address, IP configuration, or cable</td>
+<td>Verify the complete communication path</td>
+</tr>
+<tr>
+<td>Screens appear different</td>
+<td>Display resolution, font, or object compatibility changed</td>
+<td>Compare with approved layouts and correct the target project</td>
+</tr>
+<tr>
+<td>Recipe values are missing</td>
+<td>Runtime data was not backed up separately</td>
+<td>Recover the approved recipe dataset</td>
+</tr>
+<tr>
+<td>Alarm history is missing</td>
+<td>Historical records were not included in the project archive</td>
+<td>Restore from a supported separate data backup if available</td>
+</tr>
+<tr>
+<td>Numeric values are incorrect</td>
+<td>Wrong data type, scaling, signedness, or device mapping</td>
+<td>Compare against the PLC and approved device list</td>
+</tr>
+<tr>
+<td>Operator access is incorrect</td>
+<td>Security configuration was not restored correctly</td>
+<td>Verify user roles and permissions</td>
+</tr>
+<tr>
+<td>Backup is outdated</td>
+<td>Engineering changes were not followed by backup updates</td>
+<td>Reconcile the released revision and establish change-triggered backups</td>
+</tr>
+<tr>
+<td>Recovery is delayed</td>
+<td>Missing software, licenses, cables, or dependencies</td>
+<td>Improve the recovery package and test the procedure</td>
+</tr>
+<tr>
+<td>Backup checksum fails</td>
+<td>File corruption or unexpected modification</td>
+<td>Retrieve a verified copy and investigate the discrepancy</td>
+</tr>
+</tbody>
+</table>
+<h2 id="13-practical-implementation-for-industrial-maintenance">13. Practical implementation for industrial maintenance</h2>
+<h3 id="131-hmi-backup-register">13.1 HMI backup register</h3>
+<p>Maintain a central register that links each HMI to its approved project and recovery records.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Required information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine ID</td>
+<td>Plant-approved equipment identifier</td>
+</tr>
+<tr>
+<td>Area</td>
+<td>Production line or department</td>
+</tr>
+<tr>
+<td>HMI tag</td>
+<td>Unique panel identifier</td>
+</tr>
+<tr>
+<td>Manufacturer and model</td>
+<td>Exact panel model</td>
+</tr>
+<tr>
+<td>Firmware</td>
+<td>Installed system version</td>
+</tr>
+<tr>
+<td>Engineering software</td>
+<td>Product and version</td>
+</tr>
+<tr>
+<td>PLC connection</td>
+<td>PLC tag and communication method</td>
+</tr>
+<tr>
+<td>Approved project revision</td>
+<td>Released revision identifier</td>
+</tr>
+<tr>
+<td>Last backup date</td>
+<td>Actual completed date</td>
+</tr>
+<tr>
+<td>Last restore test</td>
+<td>Actual completed test date</td>
+</tr>
+<tr>
+<td>Primary storage</td>
+<td>Approved repository</td>
+</tr>
+<tr>
+<td>Independent copy</td>
+<td>Secondary or isolated storage location</td>
+</tr>
+<tr>
+<td>Runtime data</td>
+<td>Required recipe, history, or logging backup status</td>
+</tr>
+<tr>
+<td>Criticality</td>
+<td>Risk-based equipment classification</td>
+</tr>
+<tr>
+<td>RTO/RPO</td>
+<td>Approved recovery targets</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Current, overdue, failed, or under review</td>
+</tr>
+<tr>
+<td>Responsible owner</td>
+<td>Assigned engineering or maintenance role</td>
+</tr>
+</tbody>
+</table>
+<h3 id="132-example-folder-structure">13.2 Example folder structure</h3>
+<pre><code>HMI_BACKUP_SYSTEM/
+    01_ASSET_REGISTER/
+    02_APPROVED_PROJECTS/
+        MACHINE_1059/
+            HMI_01/
+                SOURCE_PROJECT/
+                RELEASED_BACKUPS/
+                COMMUNICATION_SETTINGS/
+                GRAPHICS_AND_LIBRARIES/
+                RUNTIME_DATA/
+                TEST_RECORDS/
+                CHANGE_HISTORY/
+                RECOVERY_PROCEDURE/
+    03_INDEPENDENT_RECOVERY_COPIES/
+    04_RESTORE_TEST_RECORDS/
+    05_ENGINEERING_SOFTWARE/
+    06_DISASTER_RECOVERY_PROCEDURES/
+</code></pre>
+<p>Use the actual plant repository structure and access-control rules. Store credentials and sensitive security material separately under approved controls.</p>
+<h3 id="133-maintenance-work-order-integration">13.3 Maintenance work-order integration</h3>
+<p>For a planned HMI modification or breakdown replacement:</p>
+<ol>
+<li>Identify the HMI tag and the connected PLC.</li>
+<li>Check the latest approved project revision.</li>
+<li>Create a pre-change backup where practical.</li>
+<li>Perform the authorized repair or project modification.</li>
+<li>Verify the required operator and communication functions.</li>
+<li>Save and archive the released project.</li>
+<li>Back up separately required runtime data.</li>
+<li>Update the asset register and link the change to the work order.</li>
+<li>Verify that the independent recovery copy is current.</li>
+<li>Record outstanding issues and obtain the required approval.</li>
+</ol>
+<p>This creates a traceable relationship between the physical panel, the engineering project, the maintenance activity, and the recovery package.</p>
+<h2 id="14-recovery-drills-and-audit">14. Recovery drills and audit</h2>
+<h3 id="141-recovery-drill">14.1 Recovery drill</h3>
+<p>A recovery drill confirms that the HMI project, software, dependencies, and procedure can restore the required service.</p>
+<ol>
+<li>Select a suitable nonproduction panel or approved test environment.</li>
+<li>Retrieve a released backup from the controlled repository.</li>
+<li>Verify the manifest and file integrity.</li>
+<li>Confirm software and target-model compatibility.</li>
+<li>Follow the documented restoration procedure.</li>
+<li>Verify startup, screens, communications, alarms, and other required functions.</li>
+<li>Measure elapsed recovery time.</li>
+<li>Document missing dependencies and failures.</li>
+<li>Correct the procedure and backup package.</li>
+<li>Repeat the test when necessary.</li>
+</ol>
+<p>Do not perform an experimental restoration on a live production panel without authorization and an approved recovery plan.</p>
+<h3 id="142-audit-checklist">14.2 Audit checklist</h3>
+<ul>
+<li>All critical HMIs are included in the installed-base register.</li>
+<li>Each HMI has an approved backup requirement.</li>
+<li>The original editable project is preserved where available.</li>
+<li>Backup revisions match approved engineering releases.</li>
+<li>Required runtime data is backed up separately.</li>
+<li>Engineering software and dependencies are documented.</li>
+<li>Independent recovery copies are maintained.</li>
+<li>Access control and retention rules are enforced.</li>
+<li>Backup integrity is checked.</li>
+<li>Restoration procedures are documented.</li>
+<li>Restore tests are completed at the defined interval.</li>
+<li>Recovery times are checked against approved targets.</li>
+<li>HMI changes trigger the required backup updates.</li>
+<li>Obsolete HMIs have documented migration and rollback plans.</li>
+</ul>
+<h2 id="15-backup-management-kpis">15. Backup management KPIs</h2>
+<table>
+<thead>
+<tr>
+<th>KPI</th>
+<th>Calculation</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Backup coverage</td>
+<td>HMIs with required backups divided by HMIs requiring backups, multiplied by 100%</td>
+<td>Measures backup availability</td>
+</tr>
+<tr>
+<td>Backup currency</td>
+<td>HMIs with current approved backups divided by HMIs requiring backups, multiplied by 100%</td>
+<td>Measures revision accuracy</td>
+</tr>
+<tr>
+<td>Restore-test success</td>
+<td>Successful restore tests divided by completed restore tests, multiplied by 100%</td>
+<td>Measures demonstrated recoverability</td>
+</tr>
+<tr>
+<td>Backup compliance</td>
+<td>Backups completed on time divided by backups scheduled, multiplied by 100%</td>
+<td>Measures process compliance</td>
+</tr>
+<tr>
+<td>Mean recovery time</td>
+<td>Total measured recovery time divided by recovery events</td>
+<td>Measures recovery performance</td>
+</tr>
+<tr>
+<td>Missing-dependency rate</td>
+<td>Packages missing required dependencies divided by packages audited, multiplied by 100%</td>
+<td>Identifies incomplete recovery packages</td>
+</tr>
+</tbody>
+</table>
+<p>For example, if 48 of 50 required HMIs have current, verified backups:</p>
+<div class="math-display">\[ \text{Backup coverage}=\frac{48}{50}\times100=96\\% \]</div>
+<p>Coverage alone does not prove recoverability. A complete program archive may still fail to restore because of missing software, incompatible firmware, unavailable licenses, or missing runtime data.</p>
+<h2 id="16-interview-questions-and-technical-answers">16. Interview questions and technical answers</h2>
+<p>1. What is the difference between an HMI project backup and runtime data backup?</p>
+<p>The project backup preserves the engineering configuration, screens, objects, and supported application logic. Runtime data backup preserves required data generated or stored during operation, such as recipes, historical alarms, and logged measurements.</p>
+<p>2. Why is uploading an HMI not always sufficient?</p>
+<p>The upload may not contain the complete editable engineering project, original resources, comments, libraries, or all runtime data. Limitations depend on the panel and engineering software.</p>
+<p>3. What is a golden backup?</p>
+<p>A golden backup is the controlled, approved reference version of the HMI project for a defined machine state. It should have a known revision, compatibility information, and verification records.</p>
+<p>4. What should be checked before downloading a project to a replacement HMI?</p>
+<p>Verify the target model, project revision, software compatibility, communication settings, required runtime data, and approved transfer procedure. Confirm that the operation will not cause unexpected machine behavior.</p>
+<p>5. Why should alarm history and recipes be backed up separately?</p>
+<p>They may be stored in runtime storage rather than the editable project. Restoring the project alone may therefore restore the configuration without restoring the historical records or required recipe values.</p>
+<p>6. What is the difference between RPO and RTO?</p>
+<p>RPO defines the maximum acceptable loss of recent changes or data. RTO defines the target time for restoring the affected service.</p>
+<p>7. Why should the original HMI project be retained after an obsolescence migration?</p>
+<p>It supports rollback, historical troubleshooting, comparison with the converted project, and recovery of the original configuration.</p>
+<p>8. How can HMI backup integrity be verified?</p>
+<p>Use checksums, revision records, project-opening checks, compatibility checks, and controlled restoration tests. Each validates a different aspect of the backup.</p>
+<p>9. Does a successful HMI restoration prove that the machine is safe?</p>
+<p>No. HMI restoration must be followed by the required functional checks and separate verification of relevant machine safety functions under approved procedures.</p>
+<p>10. What is the most important proof that an HMI backup is useful?</p>
+<p>A controlled restoration test demonstrating that the correct project and required dependencies can restore the required functions within the approved recovery objectives.</p>
+<h2 id="17-final-engineering-principles">17. Final engineering principles</h2>
+<ul>
+<li>Preserve the editable HMI project and its dependencies.</li>
+<li>Back up separately stored runtime data when required.</li>
+<li>Keep released backups distinct from working and converted projects.</li>
+<li>Verify model compatibility, revision, integrity, and communication settings.</li>
+<li>Maintain independent recovery copies with appropriate security controls.</li>
+<li>Test restoration instead of relying only on file existence.</li>
+<li>Record backups and changes against the machine asset and maintenance work order.</li>
+<li>Include software availability and licensing in recovery planning.</li>
+<li>Verify operator functions and machine interfaces before production release.</li>
+<li>Maintain a documented rollback procedure for replacement and migration work.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\25_Backup_DR\01_Systems_Backup\03_VFD - VFD</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

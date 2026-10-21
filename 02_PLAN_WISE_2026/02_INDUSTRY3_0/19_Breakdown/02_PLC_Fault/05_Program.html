@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLC Fault: Program Logic Changes and Forced Bits</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">PLC Fault: Program Logic Changes and Forced Bits</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-understand-the-plc-scan-cycle">2. Understand the PLC Scan Cycle</a></li>
+<li><a href="#3-common-symptoms-of-program-related-faults">3. Common Symptoms of Program-Related Faults</a></li>
+<li><a href="#4-online-monitoring-and-logic-troubleshooting">4. Online Monitoring and Logic Troubleshooting</a><ul>
+<li><a href="#41-diagnostic-procedure">4.1 Diagnostic procedure</a></li>
+<li><a href="#42-trace-logic-from-the-symptom-backward">4.2 Trace logic from the symptom backward</a></li>
+</ul>
+</li>
+<li><a href="#5-logic-changes-and-online-edits">5. Logic Changes and Online Edits</a><ul>
+<li><a href="#51-why-unauthorized-changes-are-dangerous">5.1 Why unauthorized changes are dangerous</a></li>
+<li><a href="#52-verify-recent-program-changes">5.2 Verify recent program changes</a></li>
+<li><a href="#53-program-comparison">5.3 Program comparison</a></li>
+</ul>
+</li>
+<li><a href="#6-forced-bits-definition-and-risks">6. Forced Bits: Definition and Risks</a><ul>
+<li><a href="#61-common-symptoms-of-an-active-force">6.1 Common symptoms of an active force</a></li>
+<li><a href="#62-why-forces-are-dangerous">6.2 Why forces are dangerous</a></li>
+<li><a href="#63-force-versus-normal-logic">6.3 Force versus normal logic</a></li>
+</ul>
+</li>
+<li><a href="#7-how-to-check-active-forces">7. How to Check Active Forces</a><ul>
+<li><a href="#71-general-method">7.1 General method</a></li>
+<li><a href="#72-important-distinction-force-versus-bypass">7.2 Important distinction: force versus bypass</a></li>
+</ul>
+</li>
+<li><a href="#8-timers-counters-and-latches">8. Timers, Counters, and Latches</a><ul>
+<li><a href="#81-timers">8.1 Timers</a></li>
+<li><a href="#82-counters">8.2 Counters</a></li>
+<li><a href="#83-latches-and-retained-states">8.3 Latches and retained states</a></li>
+</ul>
+</li>
+<li><a href="#9-program-data-tags-and-variable-mapping">9. Program Data, Tags, and Variable Mapping</a><ul>
+<li><a href="#91-example-incorrect-speed-reference">9.1 Example: Incorrect speed reference</a></li>
+</ul>
+</li>
+<li><a href="#10-operating-modes-and-program-paths">10. Operating Modes and Program Paths</a><ul>
+<li><a href="#diagnostic-approach">Diagnostic approach</a></li>
+</ul>
+</li>
+<li><a href="#11-distinguish-a-program-fault-from-an-io-fault">11. Distinguish a Program Fault from an I/O Fault</a></li>
+<li><a href="#12-controlled-program-modification-procedure">12. Controlled Program Modification Procedure</a><ul>
+<li><a href="#before-changing-logic">Before changing logic</a></li>
+<li><a href="#during-the-change">During the change</a></li>
+<li><a href="#after-the-change">After the change</a></li>
+</ul>
+</li>
+<li><a href="#13-recovery-and-verification">13. Recovery and Verification</a></li>
+<li><a href="#14-practical-breakdown-example-output-will-not-activate">14. Practical Breakdown Example: Output Will Not Activate</a></li>
+<li><a href="#15-practical-breakdown-example-machine-works-only-when-a-bit-is-forced">15. Practical Breakdown Example: Machine Works Only When a Bit Is Forced</a></li>
+<li><a href="#16-common-mistakes-during-plc-program-troubleshooting">16. Common Mistakes During PLC Program Troubleshooting</a></li>
+<li><a href="#17-program-fault-record-template">17. Program Fault Record Template</a></li>
+<li><a href="#18-interview-questions-and-answers">18. Interview Questions and Answers</a><ul>
+<li><a href="#q1-why-can-a-plc-be-in-run-while-the-machine-does-not-operate">Q1. Why can a PLC be in RUN while the machine does not operate?</a></li>
+<li><a href="#q2-what-is-an-online-edit">Q2. What is an online edit?</a></li>
+<li><a href="#q3-what-is-a-forced-bit">Q3. What is a forced bit?</a></li>
+<li><a href="#q4-why-are-active-forces-dangerous">Q4. Why are active forces dangerous?</a></li>
+<li><a href="#q5-how-do-you-investigate-a-machine-that-stops-at-the-same-sequence-step-every-time">Q5. How do you investigate a machine that stops at the same sequence step every time?</a></li>
+<li><a href="#q6-how-do-you-determine-whether-a-fault-is-in-the-plc-program-or-field-hardware">Q6. How do you determine whether a fault is in the PLC program or field hardware?</a></li>
+<li><a href="#q7-why-is-program-comparison-useful">Q7. Why is program comparison useful?</a></li>
+<li><a href="#q8-what-should-be-done-after-a-logic-change">Q8. What should be done after a logic change?</a></li>
+<li><a href="#q9-why-should-a-permissive-not-be-removed-just-to-make-a-machine-run">Q9. Why should a permissive not be removed just to make a machine run?</a></li>
+<li><a href="#q10-what-is-the-difference-between-a-latched-bit-and-a-forced-bit">Q10. What is the difference between a latched bit and a forced bit?</a></li>
+</ul>
+</li>
+<li><a href="#19-completion-checklist">19. Completion Checklist</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\19_Breakdown\02_PLC_Fault\05_Program</code></p>
+<h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>A PLC program fault occurs when the controller's logic, configuration, execution state, or data produces behavior that differs from the intended machine operation.</p>
+<p>During industrial breakdowns, the PLC may remain in RUN mode with no hardware fault while the machine refuses to start, stops unexpectedly, skips an operation, or activates an output under unexpected conditions.</p>
+<p>Program-related troubleshooting involves investigating:</p>
+<ul>
+<li>Recent logic changes and online edits.</li>
+<li>Incorrect conditions, interlocks, and permissives.</li>
+<li>Timer, counter, latch, and sequence logic.</li>
+<li>Forced inputs and outputs.</li>
+<li>Modified setpoints and configuration values.</li>
+<li>Incorrect tag mapping or variable values.</li>
+<li>Program version mismatches.</li>
+<li>Unexpected changes to operating modes.</li>
+<li>Logic that has been bypassed, overwritten, or unintentionally modified.</li>
+</ul>
+<p>The objective is to identify the actual logic or configuration issue, restore the approved behavior, and verify the machine's operation without creating an unsafe condition.</p>
+<p>Important distinction: A PLC being in RUN does not prove that its program is correct. The CPU can execute incorrect logic perfectly well. Computers have a talent for doing exactly what they were told, including the wrong thing.</p>
+<h2 id="2-understand-the-plc-scan-cycle">2. Understand the PLC Scan Cycle</h2>
+<p>Most conventional PLC programs execute through a repeating scan cycle, although exact execution behavior depends on the controller and task configuration.</p>
+<p>A simplified scan consists of:</p>
+<ol>
+<li>Reading or updating input data.</li>
+<li>Executing the applicable program logic.</li>
+<li>Updating outputs.</li>
+<li>Performing communication, diagnostics, and other scheduled tasks.</li>
+</ol>
+<pre><code>Physical Inputs / Received Network Data
+                  ↓
+          Input Data Available
+                  ↓
+          Execute Program Logic
+                  ↓
+         Update Output Commands
+                  ↓
+    Physical Outputs / Network Commands
+                  ↓
+             Repeat Scan
+</code></pre>
+<p>Modern PLCs may use periodic tasks, event-triggered tasks, asynchronous communication, distributed I/O updates, and process-image configurations that differ from this simplified model.</p>
+<p>When diagnosing a program fault, determine where the expected behavior breaks down:</p>
+<ul>
+<li>Is the input data correct?</li>
+<li>Is the logic condition becoming true?</li>
+<li>Is the expected internal bit or state changing?</li>
+<li>Is the output command being generated?</li>
+<li>Is the output module or network device receiving the command?</li>
+<li>Is a separate interlock preventing physical operation?</li>
+</ul>
+<p>This prevents unnecessary changes to working logic when the actual problem is a sensor, output module, drive, or communication fault.</p>
+<h2 id="3-common-symptoms-of-program-related-faults">3. Common Symptoms of Program-Related Faults</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible program-related cause</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Machine does not start</td>
+<td>Missing permissive, incorrect mode condition, latched fault, or incorrect start logic</td>
+</tr>
+<tr>
+<td>Machine stops at a particular operation</td>
+<td>Incorrect transition condition, missing completion signal, or sequence logic error</td>
+</tr>
+<tr>
+<td>Output activates unexpectedly</td>
+<td>Incorrect Boolean condition, retained bit, force, or unintended logic change</td>
+</tr>
+<tr>
+<td>Output never activates</td>
+<td>False condition, incorrect address, overwritten value, or an output being inhibited elsewhere</td>
+</tr>
+<tr>
+<td>Timer never completes</td>
+<td>Timer enable condition is false, timer is reset repeatedly, or preset configuration is incorrect</td>
+</tr>
+<tr>
+<td>Counter value is incorrect</td>
+<td>Count condition, reset condition, duplicate counting, or data-mapping issue</td>
+</tr>
+<tr>
+<td>Machine works after a restart but fails again</td>
+<td>Retentive state, initialization logic, timing dependency, or an intermittent external condition</td>
+</tr>
+<tr>
+<td>Fault occurs after a program download</td>
+<td>Wrong program version, changed configuration, altered initial values, or incorrect target controller</td>
+</tr>
+<tr>
+<td>HMI command has no effect</td>
+<td>Incorrect tag mapping, missing logic condition, mode restriction, or command not reaching the PLC</td>
+</tr>
+<tr>
+<td>Machine behavior changes between manual and automatic</td>
+<td>Different mode-specific logic, permissives, or command paths</td>
+</tr>
+</tbody>
+</table>
+<p>These are possible causes, not diagnoses. Always confirm the actual signal path and logic state.</p>
+<h2 id="4-online-monitoring-and-logic-troubleshooting">4. Online Monitoring and Logic Troubleshooting</h2>
+<p>Online monitoring lets a technician observe the live state of program instructions, variables, timers, counters, and outputs while the PLC is connected.</p>
+<p>Examples of engineering environments include:</p>
+<ul>
+<li>Siemens TIA Portal.</li>
+<li>Rockwell Studio 5000 Logix Designer.</li>
+<li>Mitsubishi GX Works.</li>
+<li>Other manufacturer-specific PLC programming software.</li>
+</ul>
+<p>The exact features, terminology, and safety requirements vary by platform.</p>
+<h3 id="41-diagnostic-procedure">4.1 Diagnostic procedure</h3>
+<ol>
+<li>Identify the exact machine symptom and affected operation.</li>
+<li>Confirm the correct PLC, project, controller, and program version.</li>
+<li>Establish an approved online connection.</li>
+<li>Read the controller status and relevant diagnostic information.</li>
+<li>Monitor the logic associated with the failed operation.</li>
+<li>Trace the condition from physical or network inputs through internal logic to the expected output.</li>
+<li>Identify the first condition that differs from the intended behavior.</li>
+<li>Check recent changes, forces, retained values, and operating modes.</li>
+<li>Correct the verified cause using the approved change procedure.</li>
+<li>Test the affected operation and relevant interlocks.</li>
+<li>Save the verified program and record the change.</li>
+</ol>
+<h3 id="42-trace-logic-from-the-symptom-backward">4.2 Trace logic from the symptom backward</h3>
+<p>Suppose a conveyor does not start.</p>
+<p>A simplified start condition might be:</p>
+<pre><code>Conveyor_Start =
+    Auto_Mode
+    AND Safety_OK
+    AND Drive_Ready
+    AND Start_Request
+    AND NOT Fault_Active
+</code></pre>
+<p>If <code>Conveyor_Start</code> is false, inspect each contributing condition.</p>
+<ul>
+<li>Is automatic mode selected?</li>
+<li>Is the relevant safety status healthy?</li>
+<li>Is the drive ready?</li>
+<li>Is the start request reaching the PLC?</li>
+<li>Is a fault bit active?</li>
+</ul>
+<p>The expression is illustrative only. Actual safety functions must be implemented in the appropriate safety-related system and verified according to the machine design. A standard PLC bit must not be treated as proof that a safety function is effective.</p>
+<p>Troubleshooting principle: Find the first unexpected condition in the logic path. Do not change the final output instruction merely because it is the last visible point in the chain.</p>
+<h2 id="5-logic-changes-and-online-edits">5. Logic Changes and Online Edits</h2>
+<p>A logic change modifies the program's behavior. Depending on the platform, changes may be made offline and downloaded, or performed through supported online editing functions.</p>
+<p>Common examples include:</p>
+<ul>
+<li>Adding or removing a permissive.</li>
+<li>Modifying a timer preset.</li>
+<li>Changing an interlock condition.</li>
+<li>Altering a counter reset.</li>
+<li>Changing a sequence transition.</li>
+<li>Modifying a drive command.</li>
+<li>Changing a tag address or data type.</li>
+<li>Adjusting initialization or retentive behavior.</li>
+<li>Modifying a fault-handling routine.</li>
+</ul>
+<h3 id="51-why-unauthorized-changes-are-dangerous">5.1 Why unauthorized changes are dangerous</h3>
+<p>An undocumented logic change may:</p>
+<ul>
+<li>Alter machine timing.</li>
+<li>Allow an operation to proceed without an intended condition.</li>
+<li>Disable a fault response.</li>
+<li>Change the sequence order.</li>
+<li>Cause unexpected output behavior.</li>
+<li>Create differences between the running controller and the approved project.</li>
+<li>Make future breakdowns harder to diagnose.</li>
+</ul>
+<h3 id="52-verify-recent-program-changes">5.2 Verify recent program changes</h3>
+<p>Check:</p>
+<ul>
+<li>Controller change logs, where available.</li>
+<li>Online-edit status.</li>
+<li>Project comparison results.</li>
+<li>Program version and revision records.</li>
+<li>Modified rungs, networks, blocks, or routines.</li>
+<li>Changed timer and counter presets.</li>
+<li>Modified tag values or initial values.</li>
+<li>Changes made during the previous breakdown.</li>
+<li>Download records and backup timestamps.</li>
+</ul>
+<p>Not every PLC platform records a complete audit trail. If the required history is unavailable, compare the controller with a verified approved project and review maintenance records.</p>
+<h3 id="53-program-comparison">5.3 Program comparison</h3>
+<p>A comparison can identify differences between two program versions or between an offline project and the online controller.</p>
+<p>Depending on the platform, compare:</p>
+<ul>
+<li>Program logic.</li>
+<li>Data structures and tag definitions.</li>
+<li>Hardware configuration.</li>
+<li>Network configuration.</li>
+<li>Initial values.</li>
+<li>Retentive settings.</li>
+<li>Safety-related program elements, using the required safety validation process.</li>
+<li>Firmware and project compatibility.</li>
+</ul>
+<p>A difference is not automatically a fault. Some differences may be approved changes. The task is to identify whether each difference is intentional, authorized, and validated.</p>
+<h2 id="6-forced-bits-definition-and-risks">6. Forced Bits: Definition and Risks</h2>
+<p>A force is a controller or engineering-software feature that overrides the normal value of a supported signal or variable, depending on the platform and the object being forced.</p>
+<p>Forces are sometimes used during controlled commissioning and troubleshooting. They can also cause severe problems if left active or applied to the wrong signal.</p>
+<p>Examples include:</p>
+<ul>
+<li>Forcing an input value for a test.</li>
+<li>Forcing an output command.</li>
+<li>Overriding a supported variable.</li>
+<li>Leaving an old force active after a repair.</li>
+<li>Applying a force while another technician is diagnosing the machine.</li>
+</ul>
+<p>Force behavior differs across PLC manufacturers, variable types, and controller architectures. A force may override the normal logic value, the input value presented to the program, or the output value delivered to the hardware, depending on the platform.</p>
+<h3 id="61-common-symptoms-of-an-active-force">6.1 Common symptoms of an active force</h3>
+<ul>
+<li>A sensor indication does not match the physical condition.</li>
+<li>A signal remains ON or OFF despite normal field changes.</li>
+<li>An output behaves differently from the monitored logic.</li>
+<li>The machine operates unexpectedly after a maintenance intervention.</li>
+<li>A diagnostic view indicates an active force.</li>
+<li>The machine works only while a test override remains active.</li>
+</ul>
+<h3 id="62-why-forces-are-dangerous">6.2 Why forces are dangerous</h3>
+<p>An active force can mask a real failure or defeat the intended control logic.</p>
+<p>For example, a forced <code>Part_Present</code> signal may make the PLC believe a part exists when the sensor is not detecting one. The sequence could then continue based on a false condition.</p>
+<p>Similarly, forcing an output command may activate a device despite the normal program conditions being false. The resulting movement can cause injury, equipment damage, or product defects.</p>
+<p>Never force safety inputs, safety outputs, emergency-stop signals, guard interlocks, or other safety-related functions as a routine troubleshooting shortcut. Any permitted safety validation or test must follow the approved safety procedure and use the appropriate safety-rated methods.</p>
+<h3 id="63-force-versus-normal-logic">6.3 Force versus normal logic</h3>
+<table>
+<thead>
+<tr>
+<th>Normal logic</th>
+<th>Forced signal or value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Value is determined by normal execution or signal acquisition</td>
+<td>Supported value may be overridden by the force mechanism</td>
+</tr>
+<tr>
+<td>Changes according to inputs, logic, and operating conditions</td>
+<td>May remain fixed or overridden despite normal changes</td>
+</tr>
+<tr>
+<td>Reflects the normal control path</td>
+<td>Can hide the normal control path's behavior</td>
+</tr>
+<tr>
+<td>Expected in normal production operation</td>
+<td>Requires explicit authorization, tracking, and controlled removal</td>
+</tr>
+</tbody>
+</table>
+<p>A monitored variable displaying ON does not necessarily mean the physical sensor is ON. Determine whether the value is forced, substituted, retained, or otherwise overridden.</p>
+<h2 id="7-how-to-check-active-forces">7. How to Check Active Forces</h2>
+<p>The exact procedure depends on the PLC software and controller.</p>
+<h3 id="71-general-method">7.1 General method</h3>
+<ol>
+<li>Establish the correct controller connection.</li>
+<li>Open the controller's force or override status view.</li>
+<li>Review all active and pending forces where the platform exposes them.</li>
+<li>Identify the affected signal, variable, channel, or output.</li>
+<li>Confirm who applied the force and why, using maintenance records.</li>
+<li>Determine the physical and operational consequences of removing it.</li>
+<li>Place the machine in the required safe condition.</li>
+<li>Remove the force using the approved procedure.</li>
+<li>Confirm the force status is cleared.</li>
+<li>Verify the real input, normal logic result, and physical output behavior.</li>
+</ol>
+<p>Some platforms distinguish between enabling forces globally and individual forces on specific objects. Clearing one force may not remove all forces. Confirm the actual status in the engineering software and controller.</p>
+<h3 id="72-important-distinction-force-versus-bypass">7.2 Important distinction: force versus bypass</h3>
+<p>A force overrides a supported value through controller or engineering functionality. A bypass may instead involve program logic, a configured maintenance mode, an external jumper, or a separate system mechanism.</p>
+<p>Both can alter normal behavior, but they are not interchangeable terms. Investigate the actual implementation rather than assuming that a force list reveals every possible bypass.</p>
+<h2 id="8-timers-counters-and-latches">8. Timers, Counters, and Latches</h2>
+<p>Program faults often involve internal control elements that retain or change state according to specific rules.</p>
+<h3 id="81-timers">8.1 Timers</h3>
+<p>Common timer problems include:</p>
+<ul>
+<li>Enable condition never becomes true.</li>
+<li>Timer is reset before completion.</li>
+<li>Preset value is incorrect.</li>
+<li>Time unit is misunderstood.</li>
+<li>Timer done bit is used incorrectly.</li>
+<li>Timer instance is reused unexpectedly.</li>
+<li>Scan or task timing differs from assumptions.</li>
+</ul>
+<p>For a simplified non-retentive timer:</p>
+<pre><code>Timer_Enable = TRUE
+       ↓
+Elapsed_Time increases
+       ↓
+Elapsed_Time reaches Preset
+       ↓
+Timer_Done = TRUE
+</code></pre>
+<p>The actual behavior depends on the timer instruction and platform. Some timers reset when the enabling condition becomes false; others have different retention and timing semantics.</p>
+<h3 id="82-counters">8.2 Counters</h3>
+<p>Common counter problems include:</p>
+<ul>
+<li>Input signal remains active for multiple scans.</li>
+<li>Count logic triggers on the wrong edge.</li>
+<li>Reset condition activates unexpectedly.</li>
+<li>Counter preset is wrong.</li>
+<li>Counter value is retained unexpectedly.</li>
+<li>Multiple routines modify the same count variable.</li>
+<li>A communication update causes the count logic to see repeated or missing events.</li>
+</ul>
+<h3 id="83-latches-and-retained-states">8.3 Latches and retained states</h3>
+<p>A latch or set/reset instruction may retain a bit after the initiating condition disappears.</p>
+<p>Example:</p>
+<pre><code>IF Fault_Detected THEN
+    Fault_Latched := TRUE;
+END_IF;
+
+IF Reset_Request AND Reset_Conditions_OK THEN
+    Fault_Latched := FALSE;
+END_IF;
+</code></pre>
+<p>This is illustrative pseudocode, not a complete safety or machine-control implementation.</p>
+<p>When a fault remains active after the original condition disappears, check whether the program intentionally latches the fault and what reset conditions are required. Do not clear retained states blindly because they may preserve important machine or process information.</p>
+<h2 id="9-program-data-tags-and-variable-mapping">9. Program Data, Tags, and Variable Mapping</h2>
+<p>A logic problem may originate from incorrect data rather than incorrect instructions.</p>
+<p>Common issues include:</p>
+<ul>
+<li>Wrong tag address.</li>
+<li>Incorrect alias or mapping.</li>
+<li>Incorrect data type.</li>
+<li>Incorrect array index.</li>
+<li>Wrong structure member.</li>
+<li>Unexpected retentive value.</li>
+<li>Incorrect initialization.</li>
+<li>Incorrect scaling.</li>
+<li>Data overwritten by another routine.</li>
+<li>HMI writing to the wrong variable.</li>
+<li>Network data being mapped to an incorrect PLC tag.</li>
+</ul>
+<h3 id="91-example-incorrect-speed-reference">9.1 Example: Incorrect speed reference</h3>
+<p>Suppose the HMI requests a speed of 1,200 RPM, but the drive receives a reference corresponding to 120 RPM.</p>
+<p>Potential causes include:</p>
+<ul>
+<li>Incorrect scaling.</li>
+<li>Wrong engineering units.</li>
+<li>Wrong register or tag.</li>
+<li>Incorrect numeric data type.</li>
+<li>Incorrect reference range.</li>
+<li>Different scaling assumptions between the PLC and drive.</li>
+</ul>
+<p>The right approach is to trace the requested value from the HMI through the PLC logic and communication mapping to the drive's interpreted reference.</p>
+<p>Do not assume that a displayed value and the value received by the final device use the same units or scale.</p>
+<h2 id="10-operating-modes-and-program-paths">10. Operating Modes and Program Paths</h2>
+<p>Many machines have separate logic paths for:</p>
+<ul>
+<li>Manual mode.</li>
+<li>Automatic mode.</li>
+<li>Setup or maintenance mode.</li>
+<li>Jog operation.</li>
+<li>Single-cycle operation.</li>
+<li>Recovery mode.</li>
+<li>Homing or initialization.</li>
+<li>Fault-reset and restart operations.</li>
+</ul>
+<p>An output may behave correctly in one mode and remain inactive in another because different conditions govern each path.</p>
+<h3 id="diagnostic-approach">Diagnostic approach</h3>
+<ol>
+<li>Verify the selected operating mode.</li>
+<li>Identify the logic path for that mode.</li>
+<li>Confirm the expected start conditions.</li>
+<li>Check mode-transition logic.</li>
+<li>Check whether the mode is inhibited by a fault or permissive.</li>
+<li>Verify that the mode change is allowed by the machine's control design.</li>
+<li>Test each affected mode using the approved procedure.</li>
+</ol>
+<p>Never change a mode or bypass a permissive solely to make the machine move. The permissive may be preventing an unsafe or damaging operation.</p>
+<h2 id="11-distinguish-a-program-fault-from-an-io-fault">11. Distinguish a Program Fault from an I/O Fault</h2>
+<table>
+<thead>
+<tr>
+<th>Observation</th>
+<th>Program-related possibility</th>
+<th>Hardware or signal possibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Input LED is ON but PLC logic shows OFF</td>
+<td>Incorrect address or mapping</td>
+<td>Input channel or configuration issue</td>
+</tr>
+<tr>
+<td>Logic condition is true but output does not activate</td>
+<td>Output command overwritten or inhibited elsewhere</td>
+<td>Output module, wiring, power, or actuator fault</td>
+</tr>
+<tr>
+<td>Physical sensor changes but program value does not</td>
+<td>Incorrect tag or input mapping</td>
+<td>Sensor wiring or input channel fault</td>
+</tr>
+<tr>
+<td>Output command is OFF but actuator remains active</td>
+<td>Another logic path or force may be involved</td>
+<td>Welded contact, short circuit, or actuator fault</td>
+</tr>
+<tr>
+<td>PLC is in RUN but sequence does not advance</td>
+<td>Missing transition condition or wrong state</td>
+<td>Missing field feedback or communication data</td>
+</tr>
+<tr>
+<td>Behavior changed after a download</td>
+<td>Changed logic or configuration</td>
+<td>Hardware configuration mismatch or changed device settings</td>
+</tr>
+</tbody>
+</table>
+<p>The table gives investigation directions, not definitive diagnoses. Use the actual circuit, logic, and controller diagnostics to determine the cause.</p>
+<h2 id="12-controlled-program-modification-procedure">12. Controlled Program Modification Procedure</h2>
+<p>A production PLC program must be treated as controlled machine configuration, not as a scratchpad.</p>
+<h3 id="before-changing-logic">Before changing logic</h3>
+<ul>
+<li>Identify the fault and its evidence.</li>
+<li>Confirm the correct PLC and project.</li>
+<li>Check whether the current project is the approved version.</li>
+<li>Save or verify a recoverable backup.</li>
+<li>Review the proposed change with the responsible person.</li>
+<li>Identify affected machine functions and interlocks.</li>
+<li>Assess the risk of online edits or downloading.</li>
+<li>Establish the required machine state and isolation procedure.</li>
+<li>Record the existing values and relevant logic.</li>
+</ul>
+<h3 id="during-the-change">During the change</h3>
+<ul>
+<li>Modify only the approved logic.</li>
+<li>Avoid unrelated cleanup or optimization.</li>
+<li>Confirm the target controller and program.</li>
+<li>Follow the platform's online-edit or download procedure.</li>
+<li>Observe any required transition or controller-state restrictions.</li>
+<li>Keep the change traceable.</li>
+</ul>
+<h3 id="after-the-change">After the change</h3>
+<ul>
+<li>Compare the modified logic against the approved intent.</li>
+<li>Confirm that no unintended forces or overrides remain.</li>
+<li>Test the affected function.</li>
+<li>Verify permissives and interlocks.</li>
+<li>Test normal and fault-recovery behavior.</li>
+<li>Check adjacent machine operations for side effects.</li>
+<li>Save the verified project.</li>
+<li>Record the change, reason, test results, and approval.</li>
+</ul>
+<p>A change that fixes one symptom but creates another is not a completed repair. It is just a fault that moved to a different address.</p>
+<h2 id="13-recovery-and-verification">13. Recovery and Verification</h2>
+<p>After correcting a program-related issue, verify more than the original symptom.</p>
+<ul>
+<li>Confirm the PLC's operating state.</li>
+<li>Confirm the intended program version is running.</li>
+<li>Confirm no unauthorized forces or overrides remain.</li>
+<li>Verify the original failed condition.</li>
+<li>Check the related inputs and outputs.</li>
+<li>Test required permissives and interlocks.</li>
+<li>Confirm the expected sequence and timing.</li>
+<li>Check manual and automatic operation where applicable.</li>
+<li>Verify fault handling and reset behavior.</li>
+<li>Confirm HMI values and alarms are consistent with the PLC.</li>
+<li>Check for new diagnostic faults.</li>
+<li>Document the result and restore the approved machine configuration.</li>
+</ul>
+<p>If a program download or controller restart is required, follow the approved procedure. It may reset outputs, alter retained data, interrupt communications, or affect the machine's recovery state.</p>
+<h2 id="14-practical-breakdown-example-output-will-not-activate">14. Practical Breakdown Example: Output Will Not Activate</h2>
+<p>Machine condition: A conveyor does not start even though the PLC CPU is in RUN.</p>
+<p>Observations:</p>
+<ul>
+<li>Start request is present.</li>
+<li>The HMI shows no active fault.</li>
+<li>The conveyor output remains OFF.</li>
+<li>The drive is powered.</li>
+</ul>
+<p>Investigation:</p>
+<ol>
+<li>Monitor the start request in the PLC.</li>
+<li>Trace the logic conditions for the conveyor start command.</li>
+<li>Check automatic mode, drive-ready status, fault conditions, and required permissives.</li>
+<li>Identify which condition remains false.</li>
+<li>Compare the relevant tags with actual device status.</li>
+<li>Check whether a force, latch, or recent logic change is affecting the signal.</li>
+<li>Confirm the output mapping and drive command path.</li>
+<li>Correct the verified fault and test the operation.</li>
+</ol>
+<p>Possible root cause: A recent logic edit added a permissive tied to a status tag that is not being updated correctly.</p>
+<p>Corrective action: Verify the intended permissive, repair the underlying mapping or configuration, and restore the approved logic behavior. Do not simply delete the permissive to force the conveyor to start.</p>
+<p>Verification: Confirm the conveyor starts only when the intended conditions are satisfied, stops as designed, and responds correctly to relevant faults and interlocks.</p>
+<h2 id="15-practical-breakdown-example-machine-works-only-when-a-bit-is-forced">15. Practical Breakdown Example: Machine Works Only When a Bit Is Forced</h2>
+<p>Machine condition: A station operates during maintenance testing but stops working when normal logic is restored.</p>
+<p>Observations:</p>
+<ul>
+<li>An internal status bit was forced during earlier troubleshooting.</li>
+<li>The machine operated while the force was active.</li>
+<li>After the force was removed, the expected condition remained false.</li>
+</ul>
+<p>Investigation:</p>
+<ol>
+<li>Identify the forced object and the reason it was forced.</li>
+<li>Verify the actual physical input or data source.</li>
+<li>Trace the normal logic that should generate the bit.</li>
+<li>Check whether the upstream condition is missing, incorrectly mapped, or blocked.</li>
+<li>Review recent changes and maintenance records.</li>
+<li>Correct the actual fault instead of reinstating the force.</li>
+<li>Verify the bit changes naturally under the correct operating conditions.</li>
+<li>Confirm that all forces are cleared and the machine operates normally.</li>
+</ol>
+<p>Possible root cause: The forced bit had been masking a failed sensor or incorrect signal mapping.</p>
+<p>Verification: The real signal changes correctly, the program responds without overrides, and the machine passes the approved functional test.</p>
+<h2 id="16-common-mistakes-during-plc-program-troubleshooting">16. Common Mistakes During PLC Program Troubleshooting</h2>
+<ul>
+<li>Changing logic before identifying the first incorrect condition.</li>
+<li>Assuming that RUN status means the program is healthy.</li>
+<li>Downloading a project without confirming the target controller.</li>
+<li>Treating every program difference as an error.</li>
+<li>Removing a permissive without understanding its purpose.</li>
+<li>Leaving forces active after testing.</li>
+<li>Forcing a signal to hide a failed sensor or communication link.</li>
+<li>Resetting latches without investigating why they activated.</li>
+<li>Changing timer presets to compensate for a mechanical or sensor fault.</li>
+<li>Editing unrelated logic during a breakdown.</li>
+<li>Failing to save the verified program after a repair.</li>
+<li>Testing only the immediate symptom and ignoring adjacent operations.</li>
+<li>Assuming the online project and approved backup are identical.</li>
+<li>Ignoring safety validation when changes affect safety-related functions.</li>
+</ul>
+<h2 id="17-program-fault-record-template">17. Program Fault Record Template</h2>
+<pre><code>Machine / Station:
+PLC Manufacturer and Model:
+CPU / Controller:
+Program Name:
+Approved Program Revision:
+Online Program Revision:
+Date and Time:
+
+Machine Symptom:
+Affected Sequence / Function:
+PLC Operating State:
+Relevant Inputs:
+Relevant Internal Bits:
+Relevant Outputs:
+Active Faults:
+Active Forces / Overrides:
+Recent Logic Changes:
+
+Logic Path Investigated:
+First Unexpected Condition:
+Program Comparison Result:
+Verified Root Cause:
+
+Corrective Action:
+Logic / Configuration Changed:
+Change Approval:
+Backup Location / Revision:
+Force Status After Repair:
+
+Functional Test:
+Permissive / Interlock Verification:
+Manual Mode Test:
+Automatic Mode Test:
+Fault-Recovery Test:
+Adjacent Function Verification:
+
+Downtime:
+Maintenance Record Reference:
+Technician / Reviewer:
+</code></pre>
+<h2 id="18-interview-questions-and-answers">18. Interview Questions and Answers</h2>
+<h3 id="q1-why-can-a-plc-be-in-run-while-the-machine-does-not-operate">Q1. Why can a PLC be in RUN while the machine does not operate?</h3>
+<p>RUN indicates that the controller is executing its program, not that every machine condition is satisfied. The cause may be a missing permissive, incorrect logic, unavailable input, active fault, force, or downstream device problem.</p>
+<h3 id="q2-what-is-an-online-edit">Q2. What is an online edit?</h3>
+<p>An online edit is a supported method of modifying program logic while connected to a controller, potentially without a full offline download. Its availability and execution behavior depend on the PLC platform and the type of change.</p>
+<h3 id="q3-what-is-a-forced-bit">Q3. What is a forced bit?</h3>
+<p>A forced bit is a supported signal or variable whose normal value is overridden by an engineering or controller force mechanism. The exact point of override depends on the platform and object type.</p>
+<h3 id="q4-why-are-active-forces-dangerous">Q4. Why are active forces dangerous?</h3>
+<p>They can conceal failed signals or override normal logic behavior, potentially causing unexpected machine operation. Forces must be authorized, tracked, and removed according to the approved procedure.</p>
+<h3 id="q5-how-do-you-investigate-a-machine-that-stops-at-the-same-sequence-step-every-time">Q5. How do you investigate a machine that stops at the same sequence step every time?</h3>
+<p>Monitor the active sequence state and transition conditions. Identify the first condition that remains false, then verify the associated physical signal, communication data, timer, counter, and program logic.</p>
+<h3 id="q6-how-do-you-determine-whether-a-fault-is-in-the-plc-program-or-field-hardware">Q6. How do you determine whether a fault is in the PLC program or field hardware?</h3>
+<p>Compare the physical signal, input status, program variable, logic result, output command, and physical output response. The first point where actual behavior differs from the expected signal path narrows the investigation.</p>
+<h3 id="q7-why-is-program-comparison-useful">Q7. Why is program comparison useful?</h3>
+<p>It identifies differences between program versions or between the online controller and an offline project. The differences must then be evaluated against approved changes and machine requirements.</p>
+<h3 id="q8-what-should-be-done-after-a-logic-change">Q8. What should be done after a logic change?</h3>
+<p>Verify the change, confirm that no unintended forces remain, test the affected operation and relevant interlocks, check adjacent functions, save the approved program, and document the change and test results.</p>
+<h3 id="q9-why-should-a-permissive-not-be-removed-just-to-make-a-machine-run">Q9. Why should a permissive not be removed just to make a machine run?</h3>
+<p>The permissive may protect equipment, product quality, sequence integrity, or safe operation. Its purpose and dependencies must be understood before any approved modification is considered.</p>
+<h3 id="q10-what-is-the-difference-between-a-latched-bit-and-a-forced-bit">Q10. What is the difference between a latched bit and a forced bit?</h3>
+<p>A latched bit retains its state according to the program's set/reset or retention logic. A forced bit is overridden by a force mechanism that takes precedence over normal value determination according to the platform's behavior.</p>
+<h2 id="19-completion-checklist">19. Completion Checklist</h2>
+<ul>
+<li>Explain the PLC scan cycle and trace the signal path.</li>
+<li>Diagnose a machine that fails to start despite PLC RUN status.</li>
+<li>Monitor live logic and identify the first unexpected condition.</li>
+<li>Investigate recent online edits and program changes.</li>
+<li>Compare the running program with an approved project.</li>
+<li>Identify and safely remove authorized test forces.</li>
+<li>Distinguish forces, latches, and bypasses.</li>
+<li>Diagnose timer, counter, and retained-state problems.</li>
+<li>Verify tag mapping and data interpretation.</li>
+<li>Distinguish program faults from I/O and communication faults.</li>
+<li>Follow controlled program-change and backup procedures.</li>
+<li>Verify the repaired operation and relevant interlocks.</li>
+<li>Document the root cause, changes, and test evidence.</li>
+</ul>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\19_Breakdown\02_PLC_Fault\06_Sequence - Sequence: Stuck step, missing permissive</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>

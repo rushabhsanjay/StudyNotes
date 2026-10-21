@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Firmware Matching</title>
+<meta name="generator" content="04_FORMAT_TEXT_TO_HTML.py">
+
+<link rel="stylesheet" href="../../../../00_PLAN/02_NAV_STYLE.css">
+<script>
+(function () {
+  var base = "../../../../00_PLAN";
+  var v = 'v=' + Date.now() + '_' + Math.floor(Math.random() * 1e9);
+  var urls = [
+    base + '/nav_data.js?' + v,
+    base + '/02_NAV_SCRIPT.js?' + v
+  ];
+  for (var i = 0; i < urls.length; i++) {
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.async = false;                 /* keeps insertion order */
+    document.head.appendChild(s);
+  }
+})();
+</script>
+
+<script>
+  window.MathJax = {
+    tex: {
+      inlineMath:  [['\\(', '\\)']],
+      displayMath: [['\\[', '\\]']],
+      processEscapes: true,
+      tags: 'none'
+    },
+    options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+    chtml: { scale: 1.0, displayAlign: 'center' }
+  };
+</script>
+<script id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<style>
+
+:root {
+  --ink:#1a1a1a; --ink-soft:#4a4a4a; --ink-subtle:#6b6b6b;
+  --paper:#ffffff; --paper-tint:#f7f7f5;
+  --rule:#e7e7e5; --rule-strong:#cfcfcd;
+  --navy:#1a2e4a; --link:#1a4e8a;
+  --code-bg:#f5f5f4; --code-ink:#2b2b2b; --code-border:#e5e5e4;
+  --table-alt:#fafafa; --table-header:#eef2f7; --quote-bar:#9fb0c0;
+  --shadow-1:0 1px 3px rgba(0,0,0,.05),0 6px 20px rgba(0,0,0,.05);
+  --shadow-side:0 0 14px -6px rgba(0,0,0,.15);
+  --radius:8px;
+  --scrollbar-thumb:#d0d0ce; --scrollbar-thumb-hover:#9a9a98;
+  --scrollbar-track:transparent;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:#e8e8e6; --ink-soft:#b8b8b6; --ink-subtle:#8a8a88;
+    --paper:#16181c; --paper-tint:#101216;
+    --rule:#2a2e35; --rule-strong:#3a3f48;
+    --navy:#8fb0d4; --link:#7fb4e6;
+    --code-bg:#1f2228; --code-ink:#d8d8d6; --code-border:#2c3038;
+    --table-alt:#1b1e24; --table-header:#22262e; --quote-bar:#4a5a6a;
+    --shadow-1:0 1px 3px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.3);
+    --shadow-side:0 0 14px -6px rgba(0,0,0,.7);
+    --scrollbar-thumb:#3a3f48; --scrollbar-thumb-hover:#5a6068;
+  }
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;overflow:hidden;}
+body{
+  background:var(--paper-tint);color:var(--ink);
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,
+              "Book Antiqua",Georgia,"Times New Roman",serif;
+  font-size:17px;line-height:1.66;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) var(--scrollbar-track);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--scrollbar-track);}
+::-webkit-scrollbar-thumb{
+  background-color:var(--scrollbar-thumb);border-radius:6px;
+  border:2px solid transparent;background-clip:padding-box;
+  transition:background-color 150ms ease;
+}
+::-webkit-scrollbar-thumb:hover,::-webkit-scrollbar-thumb:active{
+  background-color:var(--scrollbar-thumb-hover);background-clip:padding-box;
+}
+::-webkit-scrollbar-corner{background:transparent;}
+
+#progress-bar{
+  position:fixed;top:0;left:0;right:0;height:2px;
+  background:var(--link);transform-origin:0 50%;transform:scaleX(0);
+  transition:transform 80ms linear;z-index:100;pointer-events:none;
+}
+
+.app{display:flex;height:100vh;width:100%;}
+
+.page-sidebar{
+  flex:0 0 auto;height:100vh;
+  border-right:1px solid var(--rule);
+  box-shadow:var(--shadow-side);
+  position:relative;z-index:2;
+}
+.page-sidebar-right{border-right:none;border-left:1px solid var(--rule);}
+.page-sidebar-left {width:clamp(240px,20vw,320px);}
+.page-sidebar-right{width:clamp(260px,22vw,340px);}
+
+.content-pane{
+  flex:1 1 auto;min-width:0;height:100vh;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--paper-tint);
+  padding:28px 40px 60px;
+  scroll-behavior:smooth;
+}
+.content{
+  max-width:1080px;margin:0 auto;padding:52px 68px 90px;
+  background:var(--paper);border-radius:var(--radius);
+  box-shadow:var(--shadow-1);
+}
+.content h1,.content h2,.content h3,.content h4,.content h5,.content h6{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  color:var(--navy);line-height:1.25;letter-spacing:-.01em;font-weight:600;
+  margin:1.9em 0 .55em;scroll-margin-top:32px;
+}
+.content h1{font-size:1.75em;padding-bottom:.3em;
+  border-bottom:2px solid var(--rule-strong);margin-top:0;}
+.content h2{font-size:1.4em;padding-bottom:.22em;
+  border-bottom:1px solid var(--rule);}
+.content h3{font-size:1.18em;}
+.content h4{font-size:1.05em;}
+.content h5{font-size:1em;font-style:italic;}
+.content h6{font-size:1em;font-style:italic;color:var(--ink-soft);}
+.content p{margin:0 0 1em;text-align:justify;hyphens:auto;}
+.content ul,.content ol{margin:.6em 0 1.1em;padding-left:1.6em;}
+.content li{margin:.25em 0;}
+.content strong{color:var(--ink);font-weight:700;}
+.content em{font-style:italic;}
+.content code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,
+              "Liberation Mono",monospace;
+  font-size:.88em;background:var(--code-bg);color:var(--code-ink);
+  padding:.14em .4em;border-radius:4px;border:1px solid var(--code-border);
+  white-space:nowrap;
+}
+.content pre{
+  background:var(--code-bg);border:1px solid var(--code-border);
+  border-radius:var(--radius);padding:16px 18px;overflow-x:auto;
+  font-size:.85em;line-height:1.55;margin:1.2em 0;
+}
+.content pre code{background:none;border:none;padding:0;font-size:1em;white-space:pre;}
+.content table{
+  border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.94em;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+              "Helvetica Neue",Arial,sans-serif;
+  overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--rule);
+}
+.content thead th{
+  background:var(--table-header);color:var(--navy);font-weight:600;
+  text-align:left;padding:10px 14px;border:1px solid var(--rule-strong);
+  font-size:.93em;letter-spacing:.01em;
+}
+.content tbody td{padding:9px 14px;border:1px solid var(--rule);
+  vertical-align:top;line-height:1.55;}
+.content tbody tr:nth-child(even){background:var(--table-alt);}
+.content blockquote{
+  margin:1.2em 0;padding:.5em 0 .5em 1.2em;
+  border-left:4px solid var(--quote-bar);
+  color:var(--ink-soft);font-style:italic;
+}
+.content blockquote p:last-child{margin-bottom:0;}
+.content img{
+  max-width:100%;height:auto;display:block;margin:1.6em auto;
+  border-radius:var(--radius);border:1px solid var(--rule);
+  box-shadow:var(--shadow-1);background:var(--paper);
+}
+.content a{color:var(--link);text-decoration:underline;
+  text-decoration-color:rgba(128,128,128,.4);text-underline-offset:2px;}
+.content a:hover{text-decoration-color:currentColor;}
+.content hr{border:none;border-top:1px solid var(--rule-strong);margin:2.4em 0;}
+.content .math-inline{font-size:1.02em;}
+.content .math-display{margin:1.6em 0;text-align:center;
+  overflow-x:auto;overflow-y:hidden;padding:4px 0;}
+
+.page-toc{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,
+          "Helvetica Neue",Arial,sans-serif;
+  font-size:.82rem;line-height:1.45;}
+.page-toc-title{font-size:.66rem;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--ink-subtle);font-weight:700;margin:0 0 10px;}
+.page-toc ul{list-style:none;padding:0;margin:0;}
+.page-toc ul ul{padding-left:12px;margin-left:4px;border-left:1px solid var(--rule);}
+.page-toc li{margin:0;}
+.page-toc a{display:block;padding:5px 8px;margin:1px 0;border-radius:4px;
+  color:var(--ink-soft);text-decoration:none;cursor:pointer;
+  transition:color 120ms ease,background 120ms ease;}
+.page-toc a:hover{color:var(--link);background:var(--code-bg);}
+
+@media (max-width:900px){
+  html,body{height:auto;overflow:auto;}
+  .app{display:block;height:auto;}
+  .page-sidebar,.content-pane{height:auto;overflow:visible;}
+  .page-sidebar-left,.page-sidebar-right{width:auto;}
+  .content-pane{padding:18px 16px 40px;}
+  .content{padding:32px 22px 48px;box-shadow:none;border-radius:0;background:transparent;}
+}
+@media print{
+  #progress-bar,.page-sidebar,.side-toggle{display:none !important;}
+  html,body{height:auto;overflow:visible;}
+  .app{display:block;height:auto;}
+  .content-pane{height:auto;overflow:visible;padding:0;background:#fff;}
+  .content{max-width:none;margin:0;padding:0;box-shadow:none;border-radius:0;background:#fff;}
+  body{background:#fff;font-size:11pt;line-height:1.5;}
+  .content a{color:inherit;text-decoration:none;}
+}
+
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="app">
+
+  <aside class="page-sidebar page-sidebar-left" id="page-sidebar-left">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Firmware Matching</h1>
+        <p class="page-sidebar-sub">Contents</p>
+      </div>
+    </div>
+    <div class="page-sidebar-scroll">
+      <nav class="page-toc" id="page-toc" aria-label="Table of contents">
+        <div class="page-toc-title">Contents</div>
+        <ul>
+<li><a href="#1-definition-and-purpose">1. Definition and Purpose</a></li>
+<li><a href="#2-firmware-software-hardware-revision-and-configuration">2. Firmware, Software, Hardware Revision, and Configuration</a></li>
+<li><a href="#3-why-firmware-matching-matters">3. Why Firmware Matching Matters</a></li>
+<li><a href="#4-firmware-compatibility-architecture">4. Firmware Compatibility Architecture</a></li>
+<li><a href="#5-firmware-version-identification">5. Firmware Version Identification</a></li>
+<li><a href="#6-firmware-compatibility-matrix">6. Firmware Compatibility Matrix</a></li>
+<li><a href="#7-compatibility-checks-before-updating">7. Compatibility Checks Before Updating</a><ul>
+<li><a href="#71-hardware-compatibility">7.1 Hardware compatibility</a></li>
+<li><a href="#72-engineering-software-compatibility">7.2 Engineering-software compatibility</a></li>
+<li><a href="#73-application-compatibility">7.3 Application compatibility</a></li>
+<li><a href="#74-network-and-protocol-compatibility">7.4 Network and protocol compatibility</a></li>
+<li><a href="#75-feature-and-option-compatibility">7.5 Feature and option compatibility</a></li>
+<li><a href="#76-safety-compatibility">7.6 Safety compatibility</a></li>
+<li><a href="#77-machine-builder-approval">7.7 Machine-builder approval</a></li>
+</ul>
+</li>
+<li><a href="#8-firmware-update-versus-firmware-matching">8. Firmware Update Versus Firmware Matching</a></li>
+<li><a href="#9-firmware-files-and-device-packages">9. Firmware Files and Device Packages</a></li>
+<li><a href="#10-firmware-update-preparation">10. Firmware Update Preparation</a></li>
+<li><a href="#11-typical-firmware-update-workflow">11. Typical Firmware Update Workflow</a></li>
+<li><a href="#12-device-specific-considerations">12. Device-Specific Considerations</a><ul>
+<li><a href="#121-plc-and-remote-io">12.1 PLC and remote I/O</a></li>
+<li><a href="#122-hmi-panels">12.2 HMI panels</a></li>
+<li><a href="#123-servo-drives-and-vfds">12.3 Servo drives and VFDs</a></li>
+<li><a href="#124-robot-controllers">12.4 Robot controllers</a></li>
+<li><a href="#125-cnc-controllers">12.5 CNC controllers</a></li>
+</ul>
+</li>
+<li><a href="#13-backup-and-recovery-strategy">13. Backup and Recovery Strategy</a><ul>
+<li><a href="#recovery-planning">Recovery planning</a></li>
+</ul>
+</li>
+<li><a href="#14-firmware-related-fault-diagnosis">14. Firmware-Related Fault Diagnosis</a></li>
+<li><a href="#15-firmware-matching-and-cybersecurity">15. Firmware Matching and Cybersecurity</a></li>
+<li><a href="#16-example-replacing-a-plc-cpu">16. Example: Replacing a PLC CPU</a></li>
+<li><a href="#17-firmware-change-management">17. Firmware Change Management</a></li>
+<li><a href="#18-common-firmware-matching-mistakes">18. Common Firmware Matching Mistakes</a></li>
+<li><a href="#19-interview-questions-and-answers">19. Interview Questions and Answers</a></li>
+<li><a href="#20-final-checklist">20. Final Checklist</a></li>
+<li><a href="#21-key-takeaways">21. Key Takeaways</a></li>
+<li><a href="#next-topic">NEXT TOPIC</a></li>
+</ul>
+      </nav>
+    </div>
+  </aside>
+
+  <main class="content-pane" id="content-pane">
+    <article class="content"><p>Study path: <code>02_PLAN_WISE_2026\02_INDUSTRY3_0\12_Site_Exec\03_Software\06_Firmware_Matching - Firmware matching</code></p>
+<h2 id="1-definition-and-purpose">1. Definition and Purpose</h2>
+<p>Firmware matching is the process of verifying that the firmware versions installed in connected industrial devices are compatible with one another, with the engineering software, and with the machine's approved hardware and configuration.</p>
+<p>Firmware is software stored in or associated with a device's control hardware. It manages functions such as communication, motion control, I/O handling, diagnostics, and device operation.</p>
+<p>In industrial site execution, firmware matching may involve:</p>
+<ul>
+<li>PLC CPUs and communication modules.</li>
+<li>Remote I/O adapters and modules.</li>
+<li>HMI panels.</li>
+<li>Servo drives and variable-frequency drives (VFDs).</li>
+<li>Robot controllers and robot-related devices.</li>
+<li>CNC controllers and associated drives.</li>
+<li>Industrial Ethernet switches and gateways.</li>
+<li>Safety controllers and safety-related devices.</li>
+<li>Industrial PCs, communication adapters, and peripheral equipment.</li>
+</ul>
+<p>The objective is not to make every device run the newest firmware. It is to establish a verified, supported, and approved combination of hardware, firmware, engineering tools, and application configuration.</p>
+<p>A firmware update can introduce new features, fix defects, change behavior, or remove compatibility with older components. Newer does not automatically mean safer or more suitable for an existing production machine.</p>
+<h2 id="2-firmware-software-hardware-revision-and-configuration">2. Firmware, Software, Hardware Revision, and Configuration</h2>
+<p>These terms describe different aspects of an industrial control system.</p>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hardware revision</td>
+<td>Physical hardware design or component revision</td>
+<td>A revised PLC CPU hardware version</td>
+</tr>
+<tr>
+<td>Firmware</td>
+<td>Low-level device software controlling hardware functions</td>
+<td>PLC operating firmware</td>
+</tr>
+<tr>
+<td>Engineering software</td>
+<td>Computer software used to configure or program the device</td>
+<td>PLC programming environment</td>
+</tr>
+<tr>
+<td>Application program</td>
+<td>Logic or instructions executed by the device</td>
+<td>PLC ladder logic or robot program</td>
+</tr>
+<tr>
+<td>Device configuration</td>
+<td>Parameters and settings defining how the device operates</td>
+<td>Network settings, I/O assignments</td>
+</tr>
+<tr>
+<td>Device description file</td>
+<td>File describing device capabilities and parameters to engineering software</td>
+<td>EDS, GSDML, or an applicable device package</td>
+</tr>
+<tr>
+<td>Bootloader</td>
+<td>Code responsible for starting or updating device firmware</td>
+<td>Controller bootloader</td>
+</tr>
+<tr>
+<td>Runtime version</td>
+<td>Software environment used to execute an application</td>
+<td>HMI or industrial PC runtime</td>
+</tr>
+</tbody>
+</table>
+<p>These items are related but not interchangeable. A compatible application program does not guarantee firmware compatibility, and a successful firmware update does not prove that the application configuration remains valid.</p>
+<h2 id="3-why-firmware-matching-matters">3. Why Firmware Matching Matters</h2>
+<p>Firmware compatibility affects whether devices can communicate, whether engineering software can configure them, and whether the machine behaves as expected.</p>
+<p>Potential consequences of an incompatible combination include:</p>
+<ul>
+<li>A PLC project cannot be downloaded to the target CPU.</li>
+<li>An engineering tool cannot go online with a controller.</li>
+<li>A remote I/O adapter fails to establish a connection.</li>
+<li>A drive rejects commands or reports compatibility faults.</li>
+<li>A robot controller cannot use a required option or device.</li>
+<li>An HMI project requires a newer runtime than the installed panel supports.</li>
+<li>A communication module behaves differently after an update.</li>
+<li>A safety system rejects a configuration or requires a new validation.</li>
+<li>An update changes timing, diagnostics, or application behavior.</li>
+</ul>
+<p>Firmware matching is therefore a commissioning, reliability, cybersecurity, and change-management activity, not merely a software maintenance task.</p>
+<h2 id="4-firmware-compatibility-architecture">4. Firmware Compatibility Architecture</h2>
+<p>Compatibility must be considered across the complete system rather than checking one device in isolation.</p>
+<pre><code>Machine Requirements and Approved Baseline
+        ↓
+Hardware Model and Revision
+        ↓
+Device Firmware and Bootloader
+        ↓
+Engineering Software and Device Packages
+        ↓
+Application Program and Configuration
+        ↓
+Connected Devices and Communication Interfaces
+        ↓
+Functional Verification and Release
+</code></pre>
+<p>The exact dependencies differ by manufacturer and product family. Some devices have strict firmware requirements; others support a range of compatible versions.</p>
+<p>A machine may contain individually functional components that nevertheless form an unsupported combination when connected together.</p>
+<h2 id="5-firmware-version-identification">5. Firmware Version Identification</h2>
+<p>Before planning an update, identify the actual installed versions.</p>
+<p>Information to record includes:</p>
+<ul>
+<li>Manufacturer and device model.</li>
+<li>Complete catalog or order number.</li>
+<li>Hardware revision.</li>
+<li>Firmware version and build identifier, where available.</li>
+<li>Bootloader version, if relevant.</li>
+<li>Engineering software version.</li>
+<li>Required device packages or electronic descriptions.</li>
+<li>Installed licenses and optional features.</li>
+<li>Current application revision.</li>
+<li>Communication protocol and connected-device versions.</li>
+</ul>
+<p>Version information may be available from the device display, engineering software, diagnostic web page, device identification service, or manufacturer-specific utility.</p>
+<p>Important: Read the version from the actual installed device whenever possible. A project file may describe the intended device version rather than the version currently running on the hardware.</p>
+<h2 id="6-firmware-compatibility-matrix">6. Firmware Compatibility Matrix</h2>
+<p>A firmware compatibility matrix records whether a particular combination of components is supported for the intended machine.</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Installed version</th>
+<th>Required or approved version</th>
+<th>Verification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PLC CPU</td>
+<td>Actual observed version</td>
+<td>Approved project-compatible version</td>
+<td>Manufacturer compatibility documentation</td>
+</tr>
+<tr>
+<td>PLC engineering software</td>
+<td>Actual installed version</td>
+<td>Version supporting the target CPU and project</td>
+<td>Software compatibility information</td>
+</tr>
+<tr>
+<td>Remote I/O adapter</td>
+<td>Actual observed version</td>
+<td>Version supported by the controller and I/O configuration</td>
+<td>Device manual and release notes</td>
+</tr>
+<tr>
+<td>Servo drive</td>
+<td>Actual observed version</td>
+<td>Version approved for the control architecture</td>
+<td>Drive and controller compatibility information</td>
+</tr>
+<tr>
+<td>HMI runtime</td>
+<td>Actual observed version</td>
+<td>Version supporting the HMI project</td>
+<td>Runtime and project requirements</td>
+</tr>
+<tr>
+<td>Robot controller</td>
+<td>Actual observed version</td>
+<td>Machine-builder-approved version</td>
+<td>Robot documentation and application baseline</td>
+</tr>
+<tr>
+<td>Device description package</td>
+<td>Actual installed revision</td>
+<td>Revision matching the device and engineering environment</td>
+<td>Package documentation</td>
+</tr>
+</tbody>
+</table>
+<p>The values must be obtained from the real machine, approved engineering documents, and manufacturer compatibility information. There is no universal firmware version that applies to all devices of a similar type.</p>
+<h2 id="7-compatibility-checks-before-updating">7. Compatibility Checks Before Updating</h2>
+<p>A firmware change should be assessed across several dimensions.</p>
+<h3 id="71-hardware-compatibility">7.1 Hardware compatibility</h3>
+<p>Verify that the firmware supports the exact device model and hardware revision. Closely related product variants may have different firmware requirements.</p>
+<h3 id="72-engineering-software-compatibility">7.2 Engineering-software compatibility</h3>
+<p>Check whether the engineering software can identify, configure, program, and diagnose the target device using the intended firmware version.</p>
+<h3 id="73-application-compatibility">7.3 Application compatibility</h3>
+<p>Determine whether the existing application program and configuration can be retained, converted, or require modification.</p>
+<h3 id="74-network-and-protocol-compatibility">7.4 Network and protocol compatibility</h3>
+<p>Check whether connected controllers, adapters, drives, and supervisory systems support the intended communication behavior.</p>
+<h3 id="75-feature-and-option-compatibility">7.5 Feature and option compatibility</h3>
+<p>Some features depend on firmware, hardware, license, or option versions. Verify that required functionality remains available after the proposed change.</p>
+<h3 id="76-safety-compatibility">7.6 Safety compatibility</h3>
+<p>For safety-related equipment, verify the approved combination of hardware, firmware, engineering tools, configuration, and safety validation requirements. A firmware update may require additional verification or recertification steps under the applicable manufacturer and regulatory requirements.</p>
+<h3 id="77-machine-builder-approval">7.7 Machine-builder approval</h3>
+<p>A device manufacturer may support a version that the machine builder has not approved for the production machine. The machine's approved baseline and change-control process still govern implementation.</p>
+<h2 id="8-firmware-update-versus-firmware-matching">8. Firmware Update Versus Firmware Matching</h2>
+<p>Firmware matching does not always require an update.</p>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>Appropriate action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Installed versions are supported and meet requirements</td>
+<td>Retain the existing versions</td>
+</tr>
+<tr>
+<td>Engineering software does not support the installed device version</td>
+<td>Assess a compatible engineering environment or an approved firmware change</td>
+</tr>
+<tr>
+<td>A replacement device has a different firmware version</td>
+<td>Verify compatibility before connecting it to production</td>
+</tr>
+<tr>
+<td>A known defect affects the installed version</td>
+<td>Evaluate an approved corrective update</td>
+</tr>
+<tr>
+<td>A new feature requires newer firmware</td>
+<td>Check all dependencies and approve the required changes</td>
+</tr>
+<tr>
+<td>A proposed update has no demonstrated benefit</td>
+<td>Avoid unnecessary changes</td>
+</tr>
+<tr>
+<td>A safety-related component has an unverified version</td>
+<td>Stop the affected commissioning activity until compatibility is established</td>
+</tr>
+</tbody>
+</table>
+<p>Key principle: Match the system to an approved compatibility baseline. Do not update firmware merely because a newer version exists.</p>
+<h2 id="9-firmware-files-and-device-packages">9. Firmware Files and Device Packages</h2>
+<p>Firmware updates may use manufacturer-specific files, utilities, bootloaders, or update procedures.</p>
+<p>Related files and packages can include:</p>
+<ul>
+<li>Firmware image files.</li>
+<li>Device description files.</li>
+<li>Engineering software updates.</li>
+<li>Hardware support packages.</li>
+<li>Communication drivers.</li>
+<li>Runtime installers.</li>
+<li>License or option information.</li>
+<li>Release notes and compatibility documentation.</li>
+<li>Recovery tools and approved previous firmware images.</li>
+</ul>
+<p>Common device description formats include EDS for many EtherNet/IP devices and GSDML for PROFINET devices. These describe device capabilities to compatible engineering tools. They are not themselves the device firmware.</p>
+<p>Do not rename, modify, or substitute firmware files without manufacturer authorization. A file intended for a similar-looking device may be incompatible with the actual hardware.</p>
+<h2 id="10-firmware-update-preparation">10. Firmware Update Preparation</h2>
+<p>Before updating a production device, complete a documented pre-update assessment.</p>
+<ol>
+<li>Identify the exact device model, hardware revision, and installed firmware.</li>
+<li>Identify the intended firmware and verify its authenticity and integrity using the manufacturer's prescribed method.</li>
+<li>Review release notes, compatibility requirements, known issues, and upgrade restrictions.</li>
+<li>Verify compatibility with the engineering software and all connected devices.</li>
+<li>Obtain machine-builder and plant approval where required.</li>
+<li>Back up the application, configuration, parameters, and relevant device data.</li>
+<li>Confirm that the backup can be restored using the supported procedure.</li>
+<li>Prepare a recovery plan, including the approved rollback method and required files.</li>
+<li>Assess production downtime, process risks, and the effect on connected equipment.</li>
+<li>Confirm stable power, suitable communication, and any manufacturer-required prerequisites.</li>
+</ol>
+<p>Some firmware updates require intermediate versions or a specific upgrade sequence. Others cannot be downgraded after certain changes. Confirm the exact supported procedure before beginning.</p>
+<h2 id="11-typical-firmware-update-workflow">11. Typical Firmware Update Workflow</h2>
+<p>The general process is shown below. Actual operations must follow the specific device manufacturer's instructions.</p>
+<pre><code>Identify Device and Current Version
+        ↓
+Check Compatibility and Release Notes
+        ↓
+Approve Change and Prepare Recovery Plan
+        ↓
+Back Up Application and Configuration
+        ↓
+Verify Firmware File and Update Method
+        ↓
+Perform Approved Firmware Update
+        ↓
+Confirm Successful Startup and Version
+        ↓
+Restore or Verify Application Configuration
+        ↓
+Test Communication and Device Functions
+        ↓
+Validate Machine Operation
+        ↓
+Save Final Baseline and Handover Records
+</code></pre>
+<p>During the update, do not interrupt power, disconnect communication, or restart the device unless the manufacturer's procedure explicitly permits it. An interrupted update can leave a device unable to start normally.</p>
+<h2 id="12-device-specific-considerations">12. Device-Specific Considerations</h2>
+<h3 id="121-plc-and-remote-io">12.1 PLC and remote I/O</h3>
+<p>For PLCs and remote I/O systems, verify:</p>
+<ul>
+<li>CPU and communication-module compatibility.</li>
+<li>Supported engineering software version.</li>
+<li>Hardware configuration and module catalog information.</li>
+<li>Firmware requirements for remote I/O adapters and modules.</li>
+<li>Communication protocol and connection settings.</li>
+<li>Application compatibility and required project conversion.</li>
+<li>Retention of required parameters and data.</li>
+<li>Startup behavior and diagnostic status after the change.</li>
+</ul>
+<p>A PLC CPU update may affect communication modules, project compatibility, motion functions, or connected devices. Validate the complete controller system, not just the CPU.</p>
+<h3 id="122-hmi-panels">12.2 HMI panels</h3>
+<p>For an HMI, verify the relationship between the engineering project and installed runtime.</p>
+<p>Important checks include:</p>
+<ul>
+<li>Panel model and hardware revision.</li>
+<li>Operating system or runtime version.</li>
+<li>Project compatibility.</li>
+<li>Communication drivers and protocol support.</li>
+<li>Fonts, graphics, and required system resources.</li>
+<li>Licenses and optional features.</li>
+<li>Alarm history, recipes, and other data that must be preserved.</li>
+<li>Correct communication with the PLC after the update.</li>
+</ul>
+<p>A panel may start successfully while failing to load the intended project or communicate with the PLC. Startup alone is not sufficient acceptance evidence.</p>
+<h3 id="123-servo-drives-and-vfds">12.3 Servo drives and VFDs</h3>
+<p>For drives, verify:</p>
+<ul>
+<li>Exact drive model and power rating.</li>
+<li>Supported motor and feedback-device combinations.</li>
+<li>Drive firmware compatibility with the controller.</li>
+<li>Parameter backup and restoration requirements.</li>
+<li>Fieldbus and communication configuration.</li>
+<li>Safety-related drive functions and validation requirements.</li>
+<li>Fault history and commissioning data.</li>
+<li>Motor identification or tuning requirements, if applicable.</li>
+</ul>
+<p>After an approved update, verify drive readiness, communication, motor identification data, and required motion behavior. Perform motion tests under the approved commissioning procedure.</p>
+<h3 id="124-robot-controllers">12.4 Robot controllers</h3>
+<p>For robot systems, verify:</p>
+<ul>
+<li>Controller model and installed system software.</li>
+<li>Robot arm and controller compatibility.</li>
+<li>Installed options and licenses.</li>
+<li>Program and system-data compatibility.</li>
+<li>Tool, workpiece-frame, and payload data.</li>
+<li>Fieldbus configuration and PLC handshake.</li>
+<li>External-axis and peripheral dependencies.</li>
+<li>Required calibration, mastering, and safety verification procedures.</li>
+</ul>
+<p>A robot software update may affect programs, options, communication, or system configuration. Preserve the approved baseline and use the robot manufacturer's update and recovery procedure.</p>
+<h3 id="125-cnc-controllers">12.5 CNC controllers</h3>
+<p>For CNC systems, verify:</p>
+<ul>
+<li>CNC model and software generation.</li>
+<li>Machine-builder-approved system software.</li>
+<li>Axis and spindle drive compatibility.</li>
+<li>PLC interface and machine data.</li>
+<li>Tool data and coordinate configuration.</li>
+<li>Compensation data and machine-specific parameters.</li>
+<li>Installed options and licenses.</li>
+<li>Backup and restoration requirements.</li>
+</ul>
+<p>CNC firmware or system-software changes can have machine-specific dependencies. An update must not be treated as an ordinary file replacement.</p>
+<h2 id="13-backup-and-recovery-strategy">13. Backup and Recovery Strategy</h2>
+<p>A backup should preserve the information necessary to restore the device to its approved operational state.</p>
+<p>Depending on the equipment, this may include:</p>
+<ul>
+<li>Firmware version records.</li>
+<li>PLC application and hardware configuration.</li>
+<li>HMI project and runtime configuration.</li>
+<li>Robot programs and associated system data.</li>
+<li>CNC machine data and parameters.</li>
+<li>Drive parameters and communication settings.</li>
+<li>Device descriptions and engineering packages.</li>
+<li>License and option information where export is supported.</li>
+<li>Relevant calibration and compensation data.</li>
+<li>Network configuration and approved interface settings.</li>
+</ul>
+<p>A backup of the application is not necessarily a backup of the firmware, and a firmware image is not necessarily a complete machine recovery package.</p>
+<h3 id="recovery-planning">Recovery planning</h3>
+<p>Before the update, identify:</p>
+<ul>
+<li>The last known-good firmware version.</li>
+<li>The approved rollback or recovery method.</li>
+<li>Whether downgrading is supported.</li>
+<li>Whether intermediate firmware versions are required.</li>
+<li>Whether the bootloader can recover an interrupted update.</li>
+<li>Whether restoring the application requires conversion.</li>
+<li>Whether factory reset or restoration would erase critical parameters.</li>
+<li>Who is authorized to perform recovery and validate the machine.</li>
+</ul>
+<p>Do not assume rollback is always possible. Some devices restrict downgrades or alter stored data during upgrades.</p>
+<h2 id="14-firmware-related-fault-diagnosis">14. Firmware-Related Fault Diagnosis</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible cause</th>
+<th>Diagnostic approach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Engineering software cannot connect</td>
+<td>Unsupported version, driver issue, communication fault</td>
+<td>Verify tool compatibility and network communication</td>
+</tr>
+<tr>
+<td>Device rejects a project download</td>
+<td>Firmware mismatch, hardware configuration mismatch</td>
+<td>Compare project requirements with actual device information</td>
+</tr>
+<tr>
+<td>Remote I/O connection fails</td>
+<td>Adapter/module compatibility or network configuration issue</td>
+<td>Check device diagnostics, supported versions, and connection settings</td>
+</tr>
+<tr>
+<td>Drive reports a compatibility fault</td>
+<td>Controller-drive mismatch or unsupported feature</td>
+<td>Verify the approved firmware combination</td>
+</tr>
+<tr>
+<td>HMI project fails to load</td>
+<td>Runtime incompatibility or missing dependencies</td>
+<td>Check panel model, runtime version, and project requirements</td>
+</tr>
+<tr>
+<td>Device fails to start after update</td>
+<td>Interrupted update, incompatible image, or recovery issue</td>
+<td>Follow the manufacturer's recovery procedure</td>
+</tr>
+<tr>
+<td>Device starts but behaves differently</td>
+<td>Changed defaults, firmware behavior, or application interaction</td>
+<td>Compare release notes and configuration against the baseline</td>
+</tr>
+<tr>
+<td>Communication fails after updating one device</td>
+<td>Protocol or compatibility change</td>
+<td>Verify the complete communication path and connected versions</td>
+</tr>
+<tr>
+<td>Safety system reports a configuration error</td>
+<td>Unsupported combination or required validation step</td>
+<td>Follow the approved safety-system documentation</td>
+</tr>
+<tr>
+<td>Previous firmware cannot be restored</td>
+<td>Downgrade restriction or incompatible stored data</td>
+<td>Use the documented recovery path; do not improvise</td>
+</tr>
+</tbody>
+</table>
+<p>Always capture the first fault, diagnostic codes, firmware version, and recent change history before modifying the configuration again.</p>
+<h2 id="15-firmware-matching-and-cybersecurity">15. Firmware Matching and Cybersecurity</h2>
+<p>Firmware versions can contain security vulnerabilities as well as functional defects. Firmware management must balance compatibility, availability, and security.</p>
+<p>Good practices include:</p>
+<ul>
+<li>Tracking installed firmware versions.</li>
+<li>Reviewing manufacturer security advisories.</li>
+<li>Evaluating vulnerabilities against the actual machine and network exposure.</li>
+<li>Using verified firmware obtained from authorized sources.</li>
+<li>Restricting update access to authorized personnel.</li>
+<li>Testing approved updates before production deployment where feasible.</li>
+<li>Maintaining backups and recovery procedures.</li>
+<li>Recording update approvals and verification results.</li>
+<li>Coordinating IT/OT security requirements with production engineering.</li>
+</ul>
+<p>The newest firmware is not automatically the right immediate choice for a production machine. A security update must be evaluated against compatibility and operational risk, with compensating controls considered when an update cannot be deployed immediately.</p>
+<h2 id="16-example-replacing-a-plc-cpu">16. Example: Replacing a PLC CPU</h2>
+<p>Suppose a failed PLC CPU must be replaced, and the available spare has a different firmware version from the failed unit.</p>
+<p>The correct process is:</p>
+<ol>
+<li>Record the original CPU model, hardware revision, firmware, and project version if available.</li>
+<li>Verify that the replacement has the correct hardware specification.</li>
+<li>Check the manufacturer's compatibility documentation for the replacement firmware.</li>
+<li>Verify the project and engineering-software requirements.</li>
+<li>Check connected communication modules, remote I/O, drives, and other dependent devices.</li>
+<li>Confirm the approved method for loading the application and required parameters.</li>
+<li>Preserve any necessary network settings and retained data using the documented procedure.</li>
+<li>Install and configure the replacement under the approved maintenance procedure.</li>
+<li>Verify controller startup, diagnostics, communication, I/O, and interlocks.</li>
+<li>Complete the required functional and safety verification before releasing the machine.</li>
+</ol>
+<p>If the spare is incompatible, use an approved compatible spare or a formally approved version-alignment plan. Do not force a download simply because the replacement CPU physically fits.</p>
+<h2 id="17-firmware-change-management">17. Firmware Change Management</h2>
+<p>Every firmware change should be traceable and approved.</p>
+<table>
+<thead>
+<tr>
+<th>Record</th>
+<th>Required information</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Device identity</td>
+<td>Equipment ID, model, catalog number</td>
+</tr>
+<tr>
+<td>Existing baseline</td>
+<td>Hardware revision and installed firmware</td>
+</tr>
+<tr>
+<td>Proposed baseline</td>
+<td>Target firmware and required engineering tools</td>
+</tr>
+<tr>
+<td>Reason for change</td>
+<td>Defect correction, compatibility, security, or feature</td>
+</tr>
+<tr>
+<td>Compatibility review</td>
+<td>Dependencies and manufacturer approval</td>
+</tr>
+<tr>
+<td>Risk assessment</td>
+<td>Production, safety, and recovery considerations</td>
+</tr>
+<tr>
+<td>Backup</td>
+<td>File identification and verification status</td>
+</tr>
+<tr>
+<td>Implementation</td>
+<td>Date, procedure, and responsible personnel</td>
+</tr>
+<tr>
+<td>Validation</td>
+<td>Diagnostics, communication, and functional test results</td>
+</tr>
+<tr>
+<td>Final baseline</td>
+<td>Actual installed version and configuration</td>
+</tr>
+<tr>
+<td>Recovery record</td>
+<td>Approved rollback or recovery status</td>
+</tr>
+</tbody>
+</table>
+<p>Do not record only the intended firmware version. Record the actual version confirmed after implementation.</p>
+<h2 id="18-common-firmware-matching-mistakes">18. Common Firmware Matching Mistakes</h2>
+<ul>
+<li>Updating firmware without checking the exact hardware model.</li>
+<li>Assuming all devices in the same product family use interchangeable firmware.</li>
+<li>Ignoring the engineering-software version.</li>
+<li>Confusing a device description file with firmware.</li>
+<li>Failing to check release notes and upgrade restrictions.</li>
+<li>Updating one device without checking connected-device compatibility.</li>
+<li>Assuming a program backup contains firmware and all system data.</li>
+<li>Assuming every update can be rolled back.</li>
+<li>Interrupting power or communication during an update.</li>
+<li>Ignoring safety validation requirements.</li>
+<li>Failing to verify the actual installed version after the update.</li>
+<li>Omitting the final compatibility matrix and change records.</li>
+</ul>
+<h2 id="19-interview-questions-and-answers">19. Interview Questions and Answers</h2>
+<p>Q1. What is firmware matching?</p>
+<p>It is the verification that device firmware versions are supported and compatible with the hardware, engineering tools, application configuration, and connected devices.</p>
+<p>Q2. Is the newest firmware always the best choice?</p>
+<p>No. The correct version is the one that satisfies the machine's functional, compatibility, security, and approval requirements.</p>
+<p>Q3. What is the difference between firmware and an application program?</p>
+<p>Firmware manages device-level functions, while the application program implements the machine's intended control or production logic.</p>
+<p>Q4. Why is hardware revision important?</p>
+<p>Different hardware revisions may have different firmware requirements, supported features, or update procedures.</p>
+<p>Q5. What should be checked before a firmware update?</p>
+<p>Device identity, hardware revision, target firmware, compatibility documentation, dependencies, backups, recovery options, change approval, and required tests.</p>
+<p>Q6. What is a device description file?</p>
+<p>It describes a device's capabilities and configuration information for compatible engineering tools. It is not the device's operating firmware.</p>
+<p>Q7. Why might a PLC project fail to download after an update?</p>
+<p>The project may require a different firmware version, hardware configuration, engineering software, or unsupported feature.</p>
+<p>Q8. Why is a backup necessary before firmware matching or updating?</p>
+<p>It provides a recovery reference and helps preserve application logic, parameters, configuration, and other required machine data.</p>
+<p>Q9. Can firmware always be downgraded?</p>
+<p>No. Downgrade support depends on the device, firmware transition, bootloader, stored data, and manufacturer restrictions.</p>
+<p>Q10. What is firmware compatibility validation?</p>
+<p>It is the documented confirmation that the actual hardware, firmware, engineering environment, application, and connected components form a supported and functional combination.</p>
+<p>Q11. How does firmware affect cybersecurity?</p>
+<p>Firmware can contain vulnerabilities or security fixes. Version management helps identify exposure and plan approved remediation.</p>
+<p>Q12. When is a firmware change complete?</p>
+<p>When the installed version is verified, required configuration is valid, functional and safety-related verification is complete, the final baseline is documented, and the machine is formally released under the applicable procedure.</p>
+<h2 id="20-final-checklist">20. Final Checklist</h2>
+<ul>
+<li>Device models and hardware revisions identified.</li>
+<li>Actual installed firmware versions recorded.</li>
+<li>Engineering software and device packages checked.</li>
+<li>Manufacturer compatibility documentation reviewed.</li>
+<li>Connected-device dependencies verified.</li>
+<li>Release notes and upgrade restrictions reviewed.</li>
+<li>Change approval and risk assessment completed.</li>
+<li>Application and configuration backups verified.</li>
+<li>Recovery and rollback feasibility confirmed.</li>
+<li>Firmware update performed using the approved procedure, if required.</li>
+<li>Actual installed version confirmed after implementation.</li>
+<li>Communication, diagnostics, and functional tests completed.</li>
+<li>Required safety validation completed.</li>
+<li>Final baseline and handover documentation updated.</li>
+</ul>
+<h2 id="21-key-takeaways">21. Key Takeaways</h2>
+<p>Firmware matching establishes a supported combination of device hardware, firmware, engineering software, application configuration, and connected components. The goal is not to standardize every device on the newest release, but to preserve a verified and recoverable system baseline.</p>
+<p>For industrial site execution, the essential sequence is identify, verify compatibility, back up, approve, implement, test, and document. Firmware changes are complete only when the actual device version and the required machine functions have been verified.</p>
+<h1 id="next-topic">NEXT TOPIC</h1>
+<p><code>02_PLAN_WISE_2026\02_INDUSTRY3_0\12_Site_Exec\04_Pre_Power_Checks\01_Wiring_Verify - Wiring verification</code></p></article>
+  </main>
+
+  <aside class="page-sidebar page-sidebar-right" id="page-sidebar-right">
+    <div class="page-sidebar-header">
+      <div class="page-sidebar-header-text">
+        <h1 class="page-sidebar-title">Navigation</h1>
+        <p class="page-sidebar-sub">Study Index</p>
+      </div>
+      <a class="gonav-btn" href="../../../../00_PLAN/03_HTML_INDEX.html">Index</a>
+    </div>
+    <div class="page-sidebar-scroll">
+      <div id="global-nav"></div>
+    </div>
+  </aside>
+
+</div>
+
+<button class="side-toggle side-toggle-left"  id="side-toggle-left"  aria-label="Toggle contents">&#8249;</button>
+<button class="side-toggle side-toggle-right" id="side-toggle-right" aria-label="Toggle navigation">&#8250;</button>
+
+</body>
+</html>
