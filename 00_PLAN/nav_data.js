@@ -1,7 +1,7 @@
 /* nav_data.js - auto-generated (relative paths, no drive letters). */
 window.NAV_DATA = {
   "version": 2,
-  "generated": "2026-10-21T12:22:37",
+  "generated": "2026-10-21T12:50:33",
   "files": [
     {
       "index": 1,

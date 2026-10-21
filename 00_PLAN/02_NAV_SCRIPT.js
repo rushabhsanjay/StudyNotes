@@ -152,15 +152,39 @@
     if (el) setTimeout(function () { try { el.scrollIntoView({ block: 'center' }); } catch (e) {} }, 40);
   }
 
+  var MQ = window.matchMedia('(max-width: 900px)');   // phone / narrow layout
+
+  function closeDrawers() {
+    ['page-sidebar-left', 'page-sidebar-right'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.classList.remove('is-open');
+    });
+    document.body.classList.remove('sb-open', 'sb-left-open', 'sb-right-open');
+  }
+
   function wireToggles() {
-    [['side-toggle-left', 'page-sidebar-left'],
-     ['side-toggle-right', 'page-sidebar-right']].forEach(function (p) {
+    var bd = document.createElement('div');
+    bd.id = 'sb-backdrop';
+    document.body.appendChild(bd);
+    bd.addEventListener('click', closeDrawers);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDrawers(); });
+
+    [['side-toggle-left',  'page-sidebar-left',  'sb-left-open'],
+     ['side-toggle-right', 'page-sidebar-right', 'sb-right-open']].forEach(function (p) {
       var btn = document.getElementById(p[0]), sb = document.getElementById(p[1]);
       if (!btn || !sb) return;
       var key = 'nav-collapsed-' + p[1];
-      try { if (localStorage.getItem(key) === '1') sb.classList.add('is-collapsed'); } catch (e) {}
+      if (!MQ.matches) {
+        try { if (localStorage.getItem(key) === '1') sb.classList.add('is-collapsed'); } catch (e) {}
+      }
       btn.addEventListener('click', function () {
-        sb.classList.toggle('is-collapsed');
+        if (MQ.matches) {                       // phone: slide-in drawer
+          var open = !sb.classList.contains('is-open');
+          closeDrawers();
+          if (open) { sb.classList.add('is-open'); document.body.classList.add('sb-open', p[2]); }
+          return;
+        }
+        sb.classList.toggle('is-collapsed');    // desktop: collapse
         try { localStorage.setItem(key, sb.classList.contains('is-collapsed') ? '1' : '0'); } catch (e) {}
       });
     });
@@ -172,6 +196,7 @@
         var t = document.querySelector(a.getAttribute('href'));
         if (!t) return;
         e.preventDefault();
+        if (MQ.matches) closeDrawers();
         t.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });
@@ -182,10 +207,19 @@
     var bar = document.getElementById('progress-bar');
     if (!pane || !bar) return;
     var upd = function () {
-      var max = pane.scrollHeight - pane.clientHeight;
-      bar.style.transform = 'scaleX(' + (max > 0 ? pane.scrollTop / max : 0) + ')';
+      var st, max;
+      if (MQ.matches) {                         // phone: the whole page scrolls
+        var de = document.documentElement;
+        st = window.pageYOffset || de.scrollTop;
+        max = de.scrollHeight - window.innerHeight;
+      } else {
+        st = pane.scrollTop;
+        max = pane.scrollHeight - pane.clientHeight;
+      }
+      bar.style.transform = 'scaleX(' + (max > 0 ? Math.min(1, st / max) : 0) + ')';
     };
     pane.addEventListener('scroll', upd, { passive: true });
+    window.addEventListener('scroll', upd, { passive: true });
     window.addEventListener('resize', upd);
     upd();
   }
