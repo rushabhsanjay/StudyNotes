@@ -30,6 +30,20 @@
       if (/02_NAV_SCRIPT\.js/.test(ss[i].src)) SELF = ss[i].src;
   }
   var ROOT = SELF ? new URL('../', SELF.split('?')[0]) : new URL('./', location.href);
+
+  /* ===== PWA: manifest + service worker (added) ===== */
+  try {
+    if (!document.querySelector('link[rel="manifest"]')) {
+      var mf = document.createElement('link');
+      mf.rel = 'manifest';
+      mf.href = new URL('manifest.json', ROOT).href;
+      document.head.appendChild(mf);
+    }
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register(new URL('sw.js', ROOT).href, { scope: ROOT.href });
+    }
+  } catch (e) { /* PWA is optional; never break navigation */ }
+  /* ===== end PWA ===== */
   var CUR = null;            // current page entry from NAV_DATA (if found)
 
   function esc(s) {

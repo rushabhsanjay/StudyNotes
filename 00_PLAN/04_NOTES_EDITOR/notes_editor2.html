@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Notes editor</title>
+<style>
+:root{--ink:#14202d;--navy:#123763;--amber:#e39a00;--rule:#d9dfe7;--bg:#f4f6f9}
+*{box-sizing:border-box}
+body{margin:0;height:100vh;display:flex;flex-direction:column;font:14px/1.4 "IBM Plex Sans Condensed","Segoe UI",system-ui,sans-serif;color:var(--ink);background:var(--bg)}
+header{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;padding:8px 12px;background:#fff;border-bottom:1px solid var(--rule)}
+.g{display:flex;gap:4px;align-items:center;padding-right:12px;border-right:1px solid var(--rule)}
+.g:last-child{border:0}
+button{font:inherit;padding:6px 10px;border:1px solid var(--rule);border-radius:6px;background:#fff;color:var(--ink);cursor:pointer}
+button:hover:not(:disabled){border-color:var(--navy);color:var(--navy)}
+button:disabled{opacity:.4;cursor:default}
+button.pri{background:var(--navy);border-color:var(--navy);color:#fff}
+button.pri:hover:not(:disabled){background:#1b58a8;color:#fff}
+#name{font-weight:600;color:var(--navy);margin-left:auto;font-size:12px;word-break:break-all}
+#ed{flex:1;border:0;width:100%;background:var(--bg)}
+footer{padding:6px 12px;font-size:12px;color:#667587;background:#fff;border-top:1px solid var(--rule)}
+#msg{color:var(--navy);font-weight:600}
+dialog{border:1px solid var(--rule);border-radius:12px;padding:18px;width:min(720px,92vw)}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+textarea{width:100%;height:240px;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;padding:8px;border:1px solid var(--rule);border-radius:8px}
+</style></head><body>
+<header>
+ <div class="g"><button id="save" class="pri" disabled title="Save to the same file it was opened from (Ctrl+S)">Save</button><button id="saveas" disabled title="Save a copy somewhere else (Ctrl+Shift+S)">Save as…</button></div>
+ <div class="g">
+  <button data-c="bold" title="Bold"><b>B</b></button><button data-c="italic" title="Italic"><i>I</i></button>
+  <button data-c="formatBlock" data-v="h3" title="Sub-heading">Subheading</button>
+  <button data-c="formatBlock" data-v="p" title="Normal paragraph">Normal</button>
+  <button data-c="formatBlock" data-v="blockquote" title="Highlighted callout card">Callout</button>
+  <button data-c="insertUnorderedList">List</button>
+  <button data-c="formatBlock" data-v="pre" title="Code / diagram block">Code</button>
+  <button id="link">Link</button><button data-c="undo">Undo</button><button data-c="redo">Redo</button>
+ </div>
+ <div class="g"><button id="img" disabled>Add image</button><button id="sim" disabled>Add simulation</button><button id="rm" disabled title="Click an added block first">Remove block</button></div>
+ <span id="name">No page open</span>
+</header>
+<iframe id="ed" title="Page editor"></iframe>
+<footer><span id="msg">Loading…</span> &nbsp;Only the page’s &lt;article&gt; content is rewritten; CSS and JS files are never touched. Paste or drop screenshots into the page. Double-click an added simulation to edit it. “Save as” writes a copy (its relative links only work if the copy stays at the same folder depth).</footer>
+<input type="file" id="imgf" accept="image/*" multiple hidden>
+<dialog id="dlg">
+ <h3 style="margin:0 0 6px">Simulation</h3>
+ <p style="margin:0 0 10px;color:#667587">Paste a complete, self-contained HTML page (HTML + CSS + JS). It runs in an isolated frame, so it cannot affect your page’s CSS or JS.</p>
+ <textarea id="code" spellcheck="false"></textarea>
+ <p>Height <input id="h" type="number" value="320" min="120" max="1400" style="width:80px"> px &nbsp;<button id="tpl" type="button">Load example</button></p>
+ <div style="text-align:right"><button id="cancel" type="button">Cancel</button> <button class="pri" id="ok" type="button">Insert</button></div>
+</dialog>
+<script>
+const $=s=>document.querySelector(s), ed=$('#ed');
+const PAGE=(new URLSearchParams(location.search).get('page')||'').replace(/^\/+/,'');
+let src='',dirty=false,saved=null,selBlock=null,scripts=[],editing=null;
+const say=t=>$('#msg').textContent=t, idoc=()=>ed.contentDocument, art=()=>idoc().querySelector('article');
+const EDCSS='article{outline:none}.user-block:hover{outline:2px dashed #e39a00;outline-offset:4px}[data-sel]{outline:2px solid #1b58a8!important;outline-offset:4px}.sim-block::after{content:"Double-click here to edit this simulation";display:block;font:12px sans-serif;color:#667587;margin-top:4px}';
+const TPL=`<!doctype html><meta charset=utf-8><style>body{font:15px system-ui;margin:0;padding:16px;color:#14202d;background:#fff}label{display:block;margin:6px 0}#o{margin-top:12px;padding:10px 14px;border-radius:8px;font-weight:600;background:#e7ebf0}#o.on{background:#0b8f7f;color:#fff}</style><b>Clamp interlock</b><label><input type=checkbox id=a> Part_Present</label><label><input type=checkbox id=b> Door_Closed</label><div id=o>Clamp_Extend = FALSE</div><script>const a=document.getElementById('a'),b=document.getElementById('b'),o=document.getElementById('o');function u(){const v=a.checked&&b.checked;o.className=v?'on':'';o.textContent='Clamp_Extend = '+(v?'TRUE':'FALSE')}a.onchange=b.onchange=u<\/script>`;
+
+async function api(url,opt){const r=await fetch(url,opt);if(!r.ok)throw new Error((await r.text())||r.status);return r}
+const POST={method:'POST',headers:{'X-Notes-Editor':'1'}};
+const span=t=>{const m=/<article\b[^>]*>/i.exec(t),e=m&&t.indexOf('</article>',m.index);return m&&e>0?{s:m.index+m[0].length,e}:null};
+
+async function boot(){
+ if(!PAGE){say('No page given. Open this editor with the Edit button on a page (…/?page=folder/page.html).');return}
+ $('#name').textContent=PAGE;
+ try{src=(await (await api('/api/page?path='+encodeURIComponent(PAGE))).json()).text}
+ catch(e){say('Could not open '+PAGE+': '+e.message);return}
+ const sp=span(src);if(!sp){say('No <article> found in this page.');return}
+ const d=new DOMParser().parseFromString(src,'text/html');
+ const head=[...d.querySelectorAll('link[rel~=stylesheet],style')].map(x=>x.outerHTML).join('\n');
+ const base=location.origin+'/files/'+PAGE.split('/').slice(0,-1).map(encodeURIComponent).join('/')+'/';
+ const t=document.createElement('template');t.innerHTML=src.slice(sp.s,sp.e);
+ t.content.querySelectorAll('script').forEach(s=>{scripts.push(s.outerHTML);const p=document.createElement('span');p.setAttribute('data-script',scripts.length-1);p.hidden=true;s.replaceWith(p)});
+ document.title='Editing '+PAGE.split('/').pop();
+ ed.srcdoc=`<!doctype html><html><head><meta charset="utf-8"><base href="${base}">${head}<style>${EDCSS}</style></head><body><div class="app"><main class="content-pane" id="content-pane"><article class="content doc" contenteditable="true" spellcheck="true">${t.innerHTML}</article></main></div></body></html>`;
+}
+
+ed.onload=()=>{
+ const d=idoc();if(!d.querySelector('article'))return;
+ d.execCommand('styleWithCSS',false,false);
+ d.addEventListener('selectionchange',()=>{const s=d.getSelection();if(s.rangeCount&&art().contains(s.anchorNode))saved=s.getRangeAt(0).cloneRange()});
+ d.addEventListener('input',()=>mark());
+ d.addEventListener('click',e=>{d.querySelectorAll('[data-sel]').forEach(x=>x.removeAttribute('data-sel'));selBlock=e.target.closest('.user-block');if(selBlock)selBlock.setAttribute('data-sel','1');$('#rm').disabled=!selBlock});
+ d.addEventListener('dblclick',e=>{const b=e.target.closest('.sim-block');if(b)simDialog(b)});
+ d.addEventListener('keydown',keys);
+ d.addEventListener('paste',e=>{const f=[...(e.clipboardData?.files||[])].filter(x=>x.type.startsWith('image/'));if(f.length){e.preventDefault();f.forEach(addImage)}});
+ d.addEventListener('drop',e=>{const f=[...(e.dataTransfer?.files||[])].filter(x=>x.type.startsWith('image/'));if(f.length){e.preventDefault();f.forEach(addImage)}});
+ $('#img').disabled=$('#sim').disabled=$('#saveas').disabled=false;
+ say('Editing '+PAGE+'. Type to edit notes, or use Add image / Add simulation.');
+};
+function mark(){dirty=true;$('#save').disabled=false}
+function keys(e){if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();e.shiftKey?saveAs():save()}}
+addEventListener('keydown',keys);
+addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
+
+/* ---- placing blocks (always after the top-level block holding the caret) ---- */
+function place(f){
+ const a=art();let n=null;
+ if(saved&&a.contains(saved.startContainer)){n=saved.startContainer;while(n.parentNode&&n.parentNode!==a)n=n.parentNode;if(n===a)n=null}
+ if(n)n.after(f);else a.append(f);
+ if(!f.nextElementSibling){const p=idoc().createElement('p');p.innerHTML='<br>';f.after(p)}
+ f.scrollIntoView({block:'center'});mark();
+}
+function block(inner){const f=idoc().createElement('figure');f.className='user-block';f.style.cssText='margin:1.4rem 0;text-align:center';f.innerHTML=inner;return f}
+const CAP='<figcaption style="font-size:.9rem;color:#667587;margin-top:.5rem">Caption</figcaption>';
+
+/* ---- images: written to <page folder>/img/ by the local server ---- */
+const dataUrl=f=>new Promise(r=>{const x=new FileReader();x.onload=()=>r(x.result);x.readAsDataURL(f)});
+async function addImage(file){
+ const nm=Date.now()+'-'+(file.name||'image.png').replace(/[^\w.-]/g,'_');
+ let url;
+ try{url=(await (await api('/api/image?page='+encodeURIComponent(PAGE)+'&name='+encodeURIComponent(nm),{...POST,body:file})).json()).rel;say('Image saved to the “img” folder next to this page.')}
+ catch(e){url=await dataUrl(file);say('Could not write the image file ('+e.message+'), so it was embedded in the page instead.')}
+ const f=block('<img alt="" style="max-width:100%;height:auto;border-radius:10px;border:1px solid #d9dfe7">'+CAP);
+ f.querySelector('img').setAttribute('src',url);
+ place(f);
+}
+$('#img').onclick=()=>$('#imgf').click();
+$('#imgf').onchange=e=>{[...e.target.files].forEach(addImage);e.target.value=''};
+
+/* ---- simulations ---- */
+function simDialog(existing){
+ editing=existing||null;
+ const i=existing&&existing.querySelector('iframe');
+ $('#code').value=i?i.getAttribute('srcdoc'):'';
+ $('#h').value=i?parseInt(i.style.height)||320:320;
+ $('#dlg').showModal();
+}
+$('#sim').onclick=()=>simDialog(null);
+$('#tpl').onclick=()=>$('#code').value=TPL;
+$('#cancel').onclick=()=>$('#dlg').close();
+$('#ok').onclick=()=>{
+ const code=$('#code').value.trim();if(!code)return;
+ const f=block('<iframe sandbox="allow-scripts" loading="lazy"></iframe>'+CAP);
+ f.className='user-block sim-block';f.setAttribute('contenteditable','false');
+ f.style.cssText='margin:1.4rem 0;padding:8px;border:1px solid #d9dfe7;border-radius:12px;background:#fff';
+ const i=f.querySelector('iframe');i.setAttribute('srcdoc',code);
+ i.style.cssText='width:100%;height:'+(+$('#h').value||320)+'px;border:0;display:block;background:#fff';
+ const c=f.querySelector('figcaption');c.setAttribute('contenteditable','true');
+ if(editing){const old=editing.querySelector('figcaption');if(old)c.innerHTML=old.innerHTML;editing.replaceWith(f);mark()}else place(f);
+ $('#dlg').close();
+};
+
+/* ---- toolbar ---- */
+document.querySelector('header').addEventListener('mousedown',e=>{if(e.target.closest('button'))e.preventDefault()});
+document.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{if(!idoc()||!art())return;ed.contentWindow.focus();idoc().execCommand(b.dataset.c,false,b.dataset.v||null);mark()});
+$('#link').onclick=()=>{if(!art())return;const u=prompt('Link URL');if(u){ed.contentWindow.focus();idoc().execCommand('createLink',false,u);mark()}};
+$('#rm').onclick=()=>{if(selBlock&&confirm('Remove this block from the page?')){selBlock.remove();selBlock=null;$('#rm').disabled=true;mark()}};
+
+/* ---- build the new file text: splice ONLY the <article> inner HTML into the original ---- */
+function build(){
+ const a=art().cloneNode(true);
+ a.querySelectorAll('[data-sel]').forEach(x=>x.removeAttribute('data-sel'));
+ a.querySelectorAll('.user-block,figcaption[contenteditable]').forEach(x=>x.removeAttribute('contenteditable'));
+ a.querySelectorAll('p').forEach(p=>{if(!p.textContent.trim()&&!p.querySelector('img,iframe'))p.remove()});
+ a.querySelectorAll('[data-script]').forEach(p=>{const t=document.createElement('template');t.innerHTML=scripts[+p.dataset.script];p.replaceWith(t.content)});
+ const r=span(src);return src.slice(0,r.s)+a.innerHTML+src.slice(r.e);
+}
+async function save(){
+ if(!art()||$('#save').disabled)return;
+ const text=build();
+ try{
+  const j=await (await api('/api/save',{...POST,headers:{...POST.headers,'Content-Type':'application/json'},body:JSON.stringify({path:PAGE,text})})).json();
+  src=text;dirty=false;$('#save').disabled=true;
+  say('Saved '+PAGE+'. (Untouched original kept as '+j.backup+'.) Refresh the site page to see it.');
+ }catch(e){say('Save failed: '+e.message)}
+}
+async function saveAs(){
+ if(!art())return;
+ const text=build(),name=PAGE.split('/').pop();
+ try{
+  if(window.showSaveFilePicker){
+   const h=await showSaveFilePicker({suggestedName:name,types:[{description:'HTML',accept:{'text/html':['.html']}}]});
+   const w=await h.createWritable();await w.write(text);await w.close();say('Saved a copy as '+h.name+'. The original page is still open for “Save”.');
+  }else{
+   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/html'}));a.download=name;a.click();say('Downloaded a copy.');
+  }
+ }catch(e){if(e.name!=='AbortError')say('Save as failed: '+e.message)}
+}
+$('#save').onclick=save;$('#saveas').onclick=saveAs;
+boot();
+</script></body></html>
