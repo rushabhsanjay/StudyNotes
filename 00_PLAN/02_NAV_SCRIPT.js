@@ -44,6 +44,49 @@
     }
   } catch (e) { /* PWA is optional; never break navigation */ }
   /* ===== end PWA ===== */
+
+  /* ===== System bar colour + edge blur (added) ===== */
+  // Status bar / navigation bar take the page's own background, in light and dark.
+  function syncThemeColor() {
+    try {
+      var c = getComputedStyle(document.documentElement).getPropertyValue('--nv-canvas').trim();
+      if (!c) return;
+      var metas = document.querySelectorAll('meta[name="theme-color"]');
+      if (!metas.length) {
+        var m = document.createElement('meta');
+        m.name = 'theme-color';
+        document.head.appendChild(m);
+        metas = [m];
+      }
+      for (var i = 0; i < metas.length; i++) {
+        metas[i].removeAttribute('media');
+        metas[i].setAttribute('content', c);
+      }
+    } catch (e) {}
+  }
+  try {
+    new MutationObserver(syncThemeColor)
+      .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    if (window.matchMedia) {
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+      if (mq.addEventListener) mq.addEventListener('change', syncThemeColor);
+    }
+    document.addEventListener('DOMContentLoaded', syncThemeColor);
+    window.addEventListener('load', syncThemeColor);
+    syncThemeColor();
+  } catch (e) {}
+  // Soft blur-and-fade where text scrolls under the top and bottom edges.
+  document.addEventListener('DOMContentLoaded', function () {
+    try {
+      ['top', 'bottom'].forEach(function (pos) {
+        var d = document.createElement('div');
+        d.className = 'edge-fade ' + pos;
+        d.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(d);
+      });
+    } catch (e) {}
+  });
+  /* ===== end system bar + edge blur ===== */
   var CUR = null;            // current page entry from NAV_DATA (if found)
 
   function esc(s) {

@@ -1,5 +1,5 @@
 /* Study Notes service worker. Lives at repo root so its scope covers /StudyNotes/ */
-const CACHE = 'study-v1';          // bump to v2, v3... to force-refresh everything
+const CACHE = 'study-v2';          // bump to v2, v3... to force-refresh everything
 const CORE = [
   './', './index.html', './manifest.json',
   './00_PLAN/03_HTML_INDEX.html', './00_PLAN/02_NAV_STYLE.css',
