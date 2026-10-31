@@ -1,9 +1,14 @@
 /* 02_NAV_SCRIPT.js
    NAV_SCRIPT_V2  (marker: do not remove)
-   V3: relative links (works from any folder / GitHub Pages) + Prev/Next bars.
-   V4: page enhancer (hero, ladder-rail sections, diagram/logic blocks, Q&A accordions,
-       scroll-spy TOC, theme toggle, sidebar search, dock) - all done in the browser,
-       so the Python generator needs no change.
+   V5: Enhanced Reader & Interactivity Engine:
+   - Dynamic Process Flows (turns A → B → C lines into visual interactive pipelines)
+   - Specialized Callout Wrappers (Distinctions, Examples, Case Studies)
+   - Interactive Tables: sticky headers, real-time table search/filter, and TSV copy
+   - Code & Schematic Panels with action headers (Logic, Diagram, Code)
+   - Floating Action Dock: Dynamic % reading badge, Zen/Focus Mode, Theme, Back to Top
+   - Left TOC Search Filter for long topic indexes
+   - Keyboard Navigation shortcuts: [ and ] for Prev/Next, Z for Zen, T for Theme, ? for Help
+   - Preserves window.NAV_SHOW_ALL_OPEN for 03_HTML_INDEX.html
    Static. Loaded by every generated HTML. Never rewritten by Python. */
 
 (function () {
@@ -46,7 +51,6 @@
   /* ===== end PWA ===== */
 
   /* ===== System bar colour + edge blur (added) ===== */
-  // Status bar / navigation bar take the page's own background, in light and dark.
   function syncThemeColor() {
     try {
       var c = getComputedStyle(document.documentElement).getPropertyValue('--nv-canvas').trim();
@@ -75,7 +79,7 @@
     window.addEventListener('load', syncThemeColor);
     syncThemeColor();
   } catch (e) {}
-  // Soft blur-and-fade where text scrolls under the top and bottom edges.
+
   document.addEventListener('DOMContentLoaded', function () {
     try {
       ['top', 'bottom'].forEach(function (pos) {
@@ -86,7 +90,7 @@
       });
     } catch (e) {}
   });
-  /* ===== end system bar + edge blur ===== */
+
   var CUR = null;            // current page entry from NAV_DATA (if found)
 
   function esc(s) {
@@ -107,7 +111,6 @@
     return new URL(rel, ROOT);
   }
 
-  /* "02_PLAN_WISE_2026" -> <span class=nn>02</span>Plan Wise 2026 ;  "INDUSTRY3_0" -> Industry3.0 */
   function prettyLabel(raw) {
     var s = String(raw == null ? '' : raw), num = '', m = s.match(/^(\d+)[_\s.\-]+(.+)$/);
     if (m) { num = m[1]; s = m[2]; }
@@ -152,13 +155,16 @@
     if (!items.length) return '';
     items.sort(function (a, b) { return cmp(a.name, b.name); });
 
+    var showAllOpen = (typeof window.NAV_SHOW_ALL_OPEN !== 'undefined' && window.NAV_SHOW_ALL_OPEN);
+
     var out = ['<ul>'];
     items.forEach(function (it) {
       if (it.kind === 'folder') {
         var child = node.children[it.payload];
         var inner = renderNode(child);
         if (!inner) return;
-        out.push('<li><details' + (child._hasCurrent ? ' open' : '') + '>');
+        var isOpen = showAllOpen || child._hasCurrent;
+        out.push('<li><details' + (isOpen ? ' open' : '') + '>');
         out.push('<summary><span class="gnav-folder-name">' + prettyLabel(it.payload) + '</span></summary>');
         out.push(inner + '</details></li>');
       } else {
@@ -177,14 +183,16 @@
     return out.join('');
   }
 
-  // ---- Previous / Next (global INDEX order, skips pages not generated yet)
+  // ---- Previous / Next (global INDEX order)
   function pad(n) { n = String(n); while (n.length < 4) n = '0' + n; return n; }
 
   function pnButton(f, dir) {
-    var lbl = dir === 'prev' ? '&larr; Previous' : 'Next &rarr;';
+    var isPrev = dir === 'prev';
+    var lbl = isPrev ? '&larr; Previous Topic' : 'Next Topic &rarr;';
+    var keyHint = isPrev ? '<kbd class="kb-key" style="margin-left:6px;font-size:.65rem;">[</kbd>' : '<kbd class="kb-key" style="margin-right:6px;font-size:.65rem;">]</kbd>';
     if (!f) return '<span class="pn-btn pn-' + dir + ' pn-disabled"><span class="pn-lbl">' + lbl + '</span></span>';
     return '<a class="pn-btn pn-' + dir + '" rel="' + dir + '" href="' + esc(f._href)
-         + '" title="' + esc(f.title) + '"><span class="pn-lbl">' + lbl
+         + '" title="' + esc(f.title) + '"><span class="pn-lbl">' + (isPrev ? lbl + keyHint : keyHint + lbl)
          + '</span><span class="pn-title">' + esc(f.title) + '</span></a>';
   }
   function pnBar(where, prev, next, cur, total) {
@@ -198,7 +206,7 @@
     var pane = document.getElementById('content-pane');
     if (!pane) return;
     var seq = files.filter(function (f) { return f === cur || f.exists !== false; })
-                   .sort(function (a, b) { return (a.index || 0) - (b.index || 0); });
+                    .sort(function (a, b) { return (a.index || 0) - (b.index || 0); });
     var pos = seq.indexOf(cur);
     var prev = pos > 0 ? seq[pos - 1] : null;
     var next = pos < seq.length - 1 ? seq[pos + 1] : null;
@@ -211,10 +219,10 @@
 
   /* ---------- sidebar search ---------- */
   function wireNavSearch(container) {
-    if (!container || container.previousElementSibling && container.previousElementSibling.classList.contains('gnav-search-wrap')) return;
+    if (!container || (container.previousElementSibling && container.previousElementSibling.classList.contains('gnav-search-wrap'))) return;
     var wrap = document.createElement('div');
     wrap.className = 'gnav-search-wrap';
-    wrap.innerHTML = '<input type="search" class="gnav-search" placeholder="Filter topics" aria-label="Filter topics" autocomplete="off">';
+    wrap.innerHTML = '<input type="search" class="gnav-search" placeholder="Filter topics..." aria-label="Filter topics" autocomplete="off">';
     container.parentNode.insertBefore(wrap, container);
     var input = wrap.firstChild, saved = null;
 
@@ -276,7 +284,7 @@
     if (el) setTimeout(function () { try { el.scrollIntoView({ block: 'center' }); } catch (e) {} }, 40);
   }
 
-  var MQ = window.matchMedia('(max-width: 900px)');   // phone / narrow layout
+  var MQ = window.matchMedia('(max-width: 900px)');
 
   function closeDrawers() {
     ['page-sidebar-left', 'page-sidebar-right'].forEach(function (id) {
@@ -302,13 +310,13 @@
         try { if (localStorage.getItem(key) === '1') sb.classList.add('is-collapsed'); } catch (e) {}
       }
       btn.addEventListener('click', function () {
-        if (MQ.matches) {                       // phone: slide-in drawer
+        if (MQ.matches) {
           var open = !sb.classList.contains('is-open');
           closeDrawers();
           if (open) { sb.classList.add('is-open'); document.body.classList.add('sb-open', p[2]); }
           return;
         }
-        sb.classList.toggle('is-collapsed');    // desktop: collapse
+        sb.classList.toggle('is-collapsed');
         try { localStorage.setItem(key, sb.classList.contains('is-collapsed') ? '1' : '0'); } catch (e) {}
         setTimeout(placeDock, 260);
       });
@@ -316,6 +324,23 @@
   }
 
   function wireTOC() {
+    var toc = document.getElementById('page-toc');
+    if (toc && !toc.querySelector('.toc-filter-wrap')) {
+      var fWrap = document.createElement('div');
+      fWrap.className = 'toc-filter-wrap';
+      fWrap.innerHTML = '<input type="search" class="toc-filter-input" placeholder="Filter contents..." aria-label="Filter contents">';
+      toc.insertBefore(fWrap, toc.firstChild);
+      var fInput = fWrap.firstChild;
+      fInput.addEventListener('input', function () {
+        var q = fInput.value.trim().toLowerCase();
+        var lis = toc.querySelectorAll('li');
+        lis.forEach(function (li) {
+          var txt = li.textContent.toLowerCase();
+          li.hidden = (q && txt.indexOf(q) === -1);
+        });
+      });
+    }
+
     document.querySelectorAll('.page-toc a[href^="#"]').forEach(function (a) {
       a.addEventListener('click', function (e) {
         var t = document.querySelector(a.getAttribute('href'));
@@ -330,10 +355,11 @@
   function wireProgress() {
     var pane = document.getElementById('content-pane');
     var bar = document.getElementById('progress-bar');
+    var badge = document.getElementById('dock-progress');
     if (!pane || !bar) return;
     var upd = function () {
       var st, max;
-      if (MQ.matches) {                         // phone: the whole page scrolls
+      if (MQ.matches) {
         var de = document.documentElement;
         st = window.pageYOffset || de.scrollTop;
         max = de.scrollHeight - window.innerHeight;
@@ -341,7 +367,11 @@
         st = pane.scrollTop;
         max = pane.scrollHeight - pane.clientHeight;
       }
-      bar.style.transform = 'scaleX(' + (max > 0 ? Math.min(1, st / max) : 0) + ')';
+      var frac = max > 0 ? Math.min(1, Math.max(0, st / max)) : 0;
+      bar.style.transform = 'scaleX(' + frac + ')';
+      if (badge) {
+        badge.textContent = Math.round(frac * 100) + '%';
+      }
     };
     pane.addEventListener('scroll', upd, { passive: true });
     window.addEventListener('scroll', upd, { passive: true });
@@ -350,7 +380,7 @@
   }
 
   /* =====================================================================
-     PAGE ENHANCER
+     PAGE ENHANCER & NEW INTERACTIVE PROCESS FLOWS / CALLOUTS
      ===================================================================== */
   function textNodes(root, fn) {
     var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null), n, list = [];
@@ -360,7 +390,7 @@
 
   function buildQA(wrap) {
     var kids = [].slice.call(wrap.children), cur = null, count = 0, first = null;
-    kids.shift();                                             // the heading
+    kids.shift();
     var isQ = function (el) { return el.tagName === 'P' && /^\s*Q\s?\d+[.)]/.test(el.textContent); };
     kids.forEach(function (el) {
       if (isQ(el)) {
@@ -388,12 +418,120 @@
     }
   }
 
+  /* ---- Enhance Process Flow lines (A → B → C) ---- */
+  function enhanceProcessFlows(art) {
+    var ps = [].slice.call(art.querySelectorAll('p, h2, h3'));
+    ps.forEach(function (p) {
+      if (p.closest('pre, .doc-hero, .pn-bar, .gnav, .page-toc, .doc-flow')) return;
+      var raw = p.textContent.trim();
+      if ((raw.indexOf('→') > -1 || raw.indexOf('->') > -1) && !p.querySelector('img, pre, table')) {
+        var parts = raw.split(/\s*(?:→|->)\s*/);
+        if (parts.length >= 3 && parts.every(function (s) { return s.length < 70; })) {
+          var flow = document.createElement('div');
+          flow.className = 'doc-flow';
+          flow.setAttribute('role', 'region');
+          flow.setAttribute('aria-label', 'Process Flow');
+          parts.forEach(function (step, i) {
+            var stepEl = document.createElement('span');
+            stepEl.className = 'doc-flow-step';
+            stepEl.innerHTML = '<span class="doc-flow-num">' + (i + 1) + '</span><span>' + esc(step) + '</span>';
+            flow.appendChild(stepEl);
+            if (i < parts.length - 1) {
+              var sep = document.createElement('span');
+              sep.className = 'doc-flow-sep';
+              sep.innerHTML = '&#10140;';
+              flow.appendChild(sep);
+            }
+          });
+          p.parentNode.replaceChild(flow, p);
+        }
+      }
+    });
+  }
+
+  /* ---- Distinct Callout Boxes for Examples & Distinctions ---- */
+  function enhanceCallouts(art) {
+    var heads = [].slice.call(art.querySelectorAll('h3, h4'));
+    heads.forEach(function (h) {
+      var txt = h.textContent.trim();
+      var kind = null;
+      var title = txt;
+      if (/^important distinction/i.test(txt) || /^important\b/i.test(txt) || /^note\b/i.test(txt)) {
+        kind = 'distinction';
+      } else if (/^example\b/i.test(txt) || /^case [a-z0-9]/i.test(txt)) {
+        kind = 'example';
+      } else if (/^advantages\b/i.test(txt)) {
+        var nextUl = h.nextElementSibling;
+        if (nextUl && nextUl.tagName === 'UL') nextUl.classList.add('list-pros');
+      } else if (/^disadvantages\b|^limitations\b|^challenges\b/i.test(txt)) {
+        var nextUl2 = h.nextElementSibling;
+        if (nextUl2 && nextUl2.tagName === 'UL') nextUl2.classList.add('list-cons');
+      }
+
+      if (kind) {
+        var callout = document.createElement('div');
+        callout.className = 'doc-callout doc-callout-' + kind;
+        var hdr = document.createElement('div');
+        hdr.className = 'doc-callout-header';
+        var icon = kind === 'distinction' ? '&#9888;' : '&#9881;';
+        hdr.innerHTML = '<span class="doc-callout-icon">' + icon + '</span><span>' + esc(title) + '</span>';
+        callout.appendChild(hdr);
+
+        var body = document.createElement('div');
+        body.className = 'doc-callout-body';
+        callout.appendChild(body);
+
+        h.parentNode.insertBefore(callout, h);
+        var curr = h.nextElementSibling;
+        h.remove();
+
+        while (curr && !/^(H1|H2|H3|H4)$/i.test(curr.tagName) && !curr.classList.contains('pn-bar') && !curr.classList.contains('sec-wrap')) {
+          var nxt = curr.nextElementSibling;
+          body.appendChild(curr);
+          curr = nxt;
+        }
+      }
+    });
+
+    // Check standalone paragraphs like "Advantages" or "Characteristics"
+    var ps = [].slice.call(art.querySelectorAll('p'));
+    ps.forEach(function (p) {
+      var t = p.textContent.trim().toLowerCase();
+      var next = p.nextElementSibling;
+      if (next && next.tagName === 'UL') {
+        if (t === 'advantages') {
+          next.classList.add('list-pros');
+          p.innerHTML = '<strong style="color:var(--nv-teal);">&#10003; ' + esc(p.textContent) + '</strong>';
+        } else if (t === 'disadvantages' || t === 'limitations') {
+          next.classList.add('list-cons');
+          p.innerHTML = '<strong style="color:var(--nv-red);">&#9888; ' + esc(p.textContent) + '</strong>';
+        } else if (t === 'characteristics') {
+          p.innerHTML = '<strong style="color:var(--nv-navy);">&#9670; ' + esc(p.textContent) + '</strong>';
+        }
+      }
+    });
+  }
+
+  /* ---- Terminology / Key Definition Badges ---- */
+  function enhanceTerminology(art) {
+    var ps = [].slice.call(art.querySelectorAll('p'));
+    ps.forEach(function (p) {
+      if (p.children.length === 0) {
+        var txt = p.textContent.trim();
+        var m = txt.match(/^([A-Za-z0-9\s\-/()]{2,30}):\s+(.+)$/);
+        if (m && !p.closest('.doc-callout, .qa, .doc-hero')) {
+          p.innerHTML = '<span class="term-badge">' + esc(m[1]) + '</span> ' + esc(m[2]);
+        }
+      }
+    });
+  }
+
   var spyItems = [];
   function runSpy() {
     if (!spyItems.length) return;
     var active = null;
     for (var i = 0; i < spyItems.length; i++) {
-      if (spyItems[i].el.getBoundingClientRect().top <= 150) active = spyItems[i]; else break;
+      if (spyItems[i].el.getBoundingClientRect().top <= 160) active = spyItems[i]; else break;
     }
     spyItems.forEach(function (it) {
       var on = (it === active);
@@ -439,26 +577,88 @@
     dock.style.right = Math.max(14, window.innerWidth - r.right + 18) + 'px';
   }
 
+  function showShortcutsHelp() {
+    if (document.getElementById('kb-modal')) return;
+    var modal = document.createElement('div');
+    modal.id = 'kb-modal';
+    modal.className = 'kb-modal-backdrop';
+    modal.innerHTML =
+      '<div class="kb-modal">'
+      + '<div class="kb-modal-header"><span>Keyboard Navigation</span><button type="button" class="kb-modal-close" aria-label="Close">&times;</button></div>'
+      + '<div class="kb-modal-body">'
+      + '<div class="kb-row"><span>Next Topic</span><kbd class="kb-key">]</kbd></div>'
+      + '<div class="kb-row"><span>Previous Topic</span><kbd class="kb-key">[</kbd></div>'
+      + '<div class="kb-row"><span>Zen Focus Mode (Toggle Sidebars)</span><kbd class="kb-key">Z</kbd></div>'
+      + '<div class="kb-row"><span>Switch Theme (Dark / Light)</span><kbd class="kb-key">T</kbd></div>'
+      + '<div class="kb-row"><span>Close Overlays</span><kbd class="kb-key">ESC</kbd></div>'
+      + '</div></div>';
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal || e.target.classList.contains('kb-modal-close')) modal.remove();
+    });
+  }
+
   function buildDock() {
     if (document.getElementById('fab-dock')) return;
     var dock = document.createElement('div');
     dock.id = 'fab-dock';
     dock.innerHTML =
-      '<button type="button" id="theme-toggle" aria-label="Switch light / dark theme" title="Switch light / dark theme">'
+      '<div class="fab-progress-badge" id="dock-progress" title="Reading Progress (Click to scroll down)">0%</div>'
+      + '<button type="button" id="zen-toggle" aria-label="Zen Focus Mode" title="Zen Focus Mode (Z)">'
+      + '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>'
+      + '<button type="button" id="theme-toggle" aria-label="Switch light / dark theme" title="Switch Theme (T)">'
       + '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18" /><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg></button>'
       + '<button type="button" id="to-top" aria-label="Back to top" title="Back to top">'
       + '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>';
     document.body.appendChild(dock);
+
     document.getElementById('theme-toggle').addEventListener('click', function () {
       var next = effectiveTheme() === 'dark' ? 'light' : 'dark';
       applyTheme(next);
       try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
     });
+
+    document.getElementById('zen-toggle').addEventListener('click', function () {
+      document.body.classList.toggle('zen-mode');
+      setTimeout(placeDock, 260);
+    });
+
+    document.getElementById('dock-progress').addEventListener('click', function () {
+      var pane = document.getElementById('content-pane');
+      if (pane) pane.scrollBy({ top: 380, behavior: 'smooth' });
+    });
+
     document.getElementById('to-top').addEventListener('click', function () {
       var pane = document.getElementById('content-pane');
       if (pane && pane.scrollTo) pane.scrollTo({ top: 0, behavior: 'smooth' });
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
+
+    // Global keyboard shortcuts
+    document.addEventListener('keydown', function (e) {
+      if (/INPUT|TEXTAREA|SELECT/i.test(e.target.tagName)) return;
+      var k = e.key;
+      if (k === ']') {
+        var n = document.querySelector('a.pn-next');
+        if (n && n.href) location.href = n.href;
+      } else if (k === '[') {
+        var p = document.querySelector('a.pn-prev');
+        if (p && p.href) location.href = p.href;
+      } else if (k === 'z' || k === 'Z') {
+        document.body.classList.toggle('zen-mode');
+        setTimeout(placeDock, 260);
+      } else if (k === 't' || k === 'T') {
+        var next = effectiveTheme() === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+        try { localStorage.setItem(THEME_KEY, next); } catch (e) {}
+      } else if (k === '?') {
+        showShortcutsHelp();
+      } else if (k === 'Escape') {
+        var m = document.getElementById('kb-modal');
+        if (m) m.remove();
+      }
+    });
+
     placeDock();
     window.addEventListener('resize', placeDock);
   }
@@ -471,7 +671,7 @@
     art.setAttribute('data-enhanced', '1');
     art.classList.add('doc');
 
-    /* 1. stray paste artefacts from the source markdown */
+    /* 1. stray paste artefacts from source markdown */
     textNodes(art, function (n) {
       if (/Pasted markdown\(\d+\)/.test(n.nodeValue))
         n.nodeValue = n.nodeValue.replace(/\s*Pasted markdown\(\d+\)/g, '');
@@ -517,15 +717,22 @@
       });
     }
 
-    /* 4. code blocks -> diagrams / logic / plain snippets */
+    /* 4. Process flows & Callout boxes */
+    enhanceProcessFlows(art);
+    enhanceCallouts(art);
+    enhanceTerminology(art);
+
+    /* 5. Code blocks -> diagrams / logic / plain snippets with action headers */
     var nDiagram = 0;
     [].forEach.call(art.querySelectorAll('pre'), function (pre) {
+      if (pre.parentNode.classList.contains('pre-box')) return;
       var code = pre.querySelector('code') || pre, txt = pre.textContent, kind;
       if (/\bIF\b/.test(txt) && /\bTHEN\b/.test(txt)) kind = 'logic';
       else if (/[\u2193\u2192\u2190\u2191\u2194\u2502\u250c\u2514\u251c\u2500\u2510\u2518\u2524]|->/.test(txt)) kind = 'diagram';
       else kind = 'plain';
       pre.classList.add(kind);
       if (kind === 'diagram') nDiagram++;
+
       if (!code.children.length && kind !== 'plain') {
         var html = esc(code.textContent);
         if (kind === 'logic') {
@@ -540,35 +747,84 @@
         }
         code.innerHTML = html;
       }
-      if (kind === 'logic') {
-        var box = document.createElement('div'); box.className = 'pre-wrap';
-        pre.parentNode.insertBefore(box, pre); box.appendChild(pre);
-        var b = document.createElement('button'); b.type = 'button'; b.className = 'copy-btn'; b.textContent = 'Copy';
-        b.addEventListener('click', function () {
-          var done = function () { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1400); };
-          try { navigator.clipboard.writeText(txt).then(done); } catch (e) {}
-        });
-        box.appendChild(b);
-      }
+
+      var box = document.createElement('div');
+      box.className = 'pre-box has-header';
+      pre.parentNode.insertBefore(box, pre);
+
+      var hdr = document.createElement('div');
+      hdr.className = 'pre-header';
+      var tagText = kind === 'diagram' ? 'Schematic Diagram' : (kind === 'logic' ? 'Logic Sequence' : 'Code');
+      hdr.innerHTML = '<span class="pre-tag">' + tagText + '</span><div class="pre-actions"><button type="button" class="pre-btn copy-btn">Copy</button></div>';
+
+      var cpBtn = hdr.querySelector('.copy-btn');
+      cpBtn.addEventListener('click', function () {
+        var done = function () { cpBtn.textContent = 'Copied'; setTimeout(function () { cpBtn.textContent = 'Copy'; }, 1400); };
+        try { navigator.clipboard.writeText(txt).then(done); } catch (e) {
+          var ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done();
+        }
+      });
+
+      box.appendChild(hdr);
+      box.appendChild(pre);
     });
 
-    /* 5. tables: scroll wrapper + two-tone header for A-vs-B comparisons */
+    /* 6. Tables: scroll wrapper + toolbar with search & TSV copy */
     [].forEach.call(art.querySelectorAll('table'), function (t) {
       if (t.parentNode.classList.contains('table-wrap')) return;
       var w = document.createElement('div'); w.className = 'table-wrap';
-      t.parentNode.insertBefore(w, t); w.appendChild(t);
+      t.parentNode.insertBefore(w, t);
+
+      var rows = [].slice.call(t.querySelectorAll('tbody tr'));
+      if (rows.length > 2) {
+        var tb = document.createElement('div');
+        tb.className = 'table-toolbar';
+        tb.innerHTML =
+          '<input type="search" class="table-filter-input" placeholder="Search table rows..." aria-label="Search table">'
+          + '<div style="display:flex;align-items:center;gap:8px;">'
+          + '<span class="table-count">' + rows.length + ' rows</span>'
+          + '<button type="button" class="table-btn" data-act="copy">Copy Table</button>'
+          + '</div>';
+        w.appendChild(tb);
+
+        var filter = tb.querySelector('.table-filter-input');
+        filter.addEventListener('input', function () {
+          var q = filter.value.trim().toLowerCase();
+          rows.forEach(function (r) {
+            r.hidden = (q && r.textContent.toLowerCase().indexOf(q) === -1);
+          });
+        });
+
+        var copyBtn = tb.querySelector('[data-act="copy"]');
+        copyBtn.addEventListener('click', function () {
+          var lines = [];
+          [].forEach.call(t.querySelectorAll('tr'), function (tr) {
+            var cols = [].map.call(tr.querySelectorAll('th, td'), function (c) { return c.textContent.trim().replace(/\t/g, ' '); });
+            lines.push(cols.join('\t'));
+          });
+          var text = lines.join('\n');
+          try {
+            navigator.clipboard.writeText(text).then(function () {
+              copyBtn.textContent = 'Copied!';
+              setTimeout(function () { copyBtn.textContent = 'Copy Table'; }, 1400);
+            });
+          } catch (e) {}
+        });
+      }
+
+      w.appendChild(t);
       if (t.rows && t.rows[0] && t.rows[0].cells.length === 2) t.classList.add('cmp');
     });
 
-    /* 6. short bullet lists become chip groups */
+    /* 7. Short bullet lists become chips */
     [].forEach.call(art.querySelectorAll('ul'), function (ul) {
-      if (ul.closest('.page-toc, nav, .qa')) return;
+      if (ul.closest('.page-toc, nav, .qa, .doc-flow, .chips')) return;
       var lis = [].filter.call(ul.children, function (c) { return c.tagName === 'LI'; });
       if (lis.length < 4 || ul.querySelector('ul,ol,p,pre')) return;
       if (lis.every(function (li) { return li.textContent.trim().length <= 34; })) ul.classList.add('chips');
     });
 
-    /* 7. hero */
+    /* 8. Hero */
     if (title) {
       var hero = document.createElement('header'); hero.className = 'doc-hero';
       title.parentNode.insertBefore(hero, title);
